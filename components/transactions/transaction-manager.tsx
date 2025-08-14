@@ -2,12 +2,15 @@
 
 import { useState, useMemo } from "react"
 import { TransactionFiltersComponent } from "./transaction-filters"
-import { TransactionTable } from "./transaction-table"
+import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
+import { DateRangeFilter } from "./date-range-filter"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovements } from "@/hooks/use-movements"
 import { useCategories } from "@/hooks/use-categories"
 import { useAccounts } from "@/hooks/use-accounts"
+import { Button } from "@/components/ui/button"
+import { Plus, Download, Upload, Filter } from "lucide-react"
 import type { ListMovementsParams } from "@/lib/data-adapter"
 import type { Movimiento } from "@/lib/types"
 
@@ -24,6 +27,7 @@ export function TransactionManager() {
   const [filters, setFilters] = useState<TransactionFilters>({})
   const [selectedMovement, setSelectedMovement] = useState<Movimiento | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const movementParams: ListMovementsParams = useMemo(
     () => ({
@@ -74,24 +78,101 @@ export function TransactionManager() {
   }
 
   return (
-    <div className="space-y-6">
-      <TransactionFiltersComponent
-        filters={filters}
-        onFiltersChange={setFilters}
-        onClearFilters={clearFilters}
-        categories={categories}
-      />
+    <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
+      {/* Desktop Sidebar Filters */}
+      <div
+        className={`hidden lg:block w-80 border-r bg-card transition-all duration-300 ${filtersOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+      >
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Filtros</h3>
+            <Button variant="ghost" size="sm" onClick={() => setFiltersOpen(!filtersOpen)} className="lg:hidden">
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
+          <TransactionFiltersComponent
+            filters={filters}
+            onFiltersChange={setFilters}
+            onClearFilters={clearFilters}
+            categories={categories}
+          />
+        </div>
+      </div>
 
-      <TransactionTable
-        movements={movements}
-        accounts={accounts}
-        categories={categories}
-        loading={loading}
-        error={error}
-        total={total}
-        onMovementClick={handleMovementClick}
-        onMovementUpdate={handleMovementUpdate}
-      />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header with Date Filter and Actions */}
+        <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
+          {/* Date Range Filter */}
+          <DateRangeFilter
+            dateFrom={filters.dateFrom}
+            dateTo={filters.dateTo}
+            onDateRangeChange={(dateFrom, dateTo) => setFilters((prev) => ({ ...prev, dateFrom, dateTo }))}
+          />
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {/* Mobile Filter Button */}
+              <Button variant="outline" size="sm" onClick={() => setFiltersOpen(!filtersOpen)} className="lg:hidden">
+                <Filter className="h-4 w-4 mr-2" />
+                Filtros
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Añadir</span>
+              </Button>
+              <Button variant="outline" size="sm">
+                <Upload className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Importar</span>
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Descargar</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Transaction List */}
+        <div className="flex-1 overflow-auto">
+          <TransactionList
+            movements={movements}
+            accounts={accounts}
+            categories={categories}
+            loading={loading}
+            error={error}
+            total={total}
+            onMovementClick={handleMovementClick}
+            onMovementUpdate={handleMovementUpdate}
+          />
+        </div>
+      </div>
+
+      {/* Mobile Filters Overlay */}
+      {filtersOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-background">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Filtros</h3>
+              <Button variant="ghost" size="sm" onClick={() => setFiltersOpen(false)}>
+                ✕
+              </Button>
+            </div>
+          </div>
+          <div className="p-4">
+            <TransactionFiltersComponent
+              filters={filters}
+              onFiltersChange={setFilters}
+              onClearFilters={clearFilters}
+              categories={categories}
+            />
+          </div>
+        </div>
+      )}
 
       <TransactionDetail
         movement={selectedMovement}

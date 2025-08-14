@@ -1,60 +1,71 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
 import { DateRangeFilter } from "./date-range-filter"
 import { useDelegationContext } from "@/contexts/delegation-context"
-import { useMovements } from "@/hooks/use-movements"
-import { useCategories } from "@/hooks/use-categories"
-import { useAccounts } from "@/hooks/use-accounts"
+import { useMovimientos } from "@/hooks/use-movimientos"
+import { useCategorias } from "@/hooks/use-categorias"
+import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
 import { Plus, Download, Upload, Filter } from "lucide-react"
-import type { ListMovementsParams } from "@/lib/data-adapter"
-import type { Movimiento } from "@/lib/types"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { MovimientoConRelaciones } from "@/lib/types/database"
 
 export interface TransactionFilters {
   dateFrom?: string
   dateTo?: string
   categoryId?: string
-  amountMin?: number
-  amountMax?: number
+  accountId?: string
+  search?: string
 }
 
 export function TransactionManager() {
-  const { selectedDelegation } = useDelegationContext()
+  const {
+    selectedDelegation,
+    setSelectedDelegation,
+    delegations,
+    loading: delegationsLoading,
+    getCurrentDelegation,
+  } = useDelegationContext()
+
   const [filters, setFilters] = useState<TransactionFilters>({})
-  const [selectedMovement, setSelectedMovement] = useState<Movimiento | null>(null)
+  const [selectedMovement, setSelectedMovement] = useState<MovimientoConRelaciones | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const movementParams: ListMovementsParams = useMemo(
-    () => ({
-      delegation_id: selectedDelegation || "",
-      date_from: filters.dateFrom,
-      date_to: filters.dateTo,
-      category_id: filters.categoryId,
-      amount_min: filters.amountMin,
-      amount_max: filters.amountMax,
-      page: 1,
-      page_size: 100,
-    }),
-    [selectedDelegation, filters.dateFrom, filters.dateTo, filters.categoryId, filters.amountMin, filters.amountMax],
-  )
+  const currentDelegation = getCurrentDelegation()
+  const organizacionId = currentDelegation?.organizacion_id
 
-  const { movements, total, loading, error, updateMovement } = useMovements(movementParams)
-  const { categories } = useCategories("org-1") // TODO: Get from delegation context
-  const { accounts } = useAccounts(selectedDelegation || "")
+  const {
+    movimientos: movements,
+    loading,
+    error,
+    updateCategoria,
+  } = useMovimientos(selectedDelegation, {
+    fechaDesde: filters.dateFrom,
+    fechaHasta: filters.dateTo,
+    categoriaId: filters.categoryId,
+    cuentaId: filters.accountId,
+    busqueda: filters.search,
+  })
 
-  const handleMovementClick = (movement: Movimiento) => {
+  const { categorias: categories } = useCategorias(organizacionId)
+  const { cuentas: accounts } = useCuentas(selectedDelegation)
+
+  const handleMovementClick = (movement: MovimientoConRelaciones) => {
     setSelectedMovement(movement)
     setDetailOpen(true)
   }
 
-  const handleMovementUpdate = async (movementId: string, patch: Partial<Movimiento>) => {
+  const handleMovementUpdate = async (movementId: string, patch: Partial<MovimientoConRelaciones>) => {
     try {
-      await updateMovement(movementId, patch)
+      if (patch.categoria_id !== undefined) {
+        await updateCategoria(movementId, patch.categoria_id)
+      }
+
       // Update selected movement if it's the one being edited
       if (selectedMovement?.id === movementId) {
         setSelectedMovement((prev) => (prev ? { ...prev, ...patch } : null))
@@ -69,10 +80,21 @@ export function TransactionManager() {
     setFilters({})
   }
 
-  if (!selectedDelegation) {
+  if (delegationsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Selecciona una delegación para ver las transacciones</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando delegaciones...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (delegations.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">No tienes acceso a ninguna delegación</p>
       </div>
     )
   }
@@ -90,11 +112,29 @@ export function TransactionManager() {
               <Filter className="h-4 w-4" />
             </Button>
           </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Delegación</label>
+            <Select value={selectedDelegation || ""} onValueChange={setSelectedDelegation}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar delegación" />
+              </SelectTrigger>
+              <SelectContent>
+                {delegations.map((delegacion) => (
+                  <SelectItem key={delegacion.id} value={delegacion.id}>
+                    {delegacion.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <TransactionFiltersComponent
             filters={filters}
             onFiltersChange={setFilters}
             onClearFilters={clearFilters}
             categories={categories}
+            accounts={accounts}
           />
         </div>
       </div>
@@ -103,6 +143,21 @@ export function TransactionManager() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header with Date Filter and Actions */}
         <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
+          <div className="lg:hidden">
+            <Select value={selectedDelegation || ""} onValueChange={setSelectedDelegation}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar delegación" />
+              </SelectTrigger>
+              <SelectContent>
+                {delegations.map((delegacion) => (
+                  <SelectItem key={delegacion.id} value={delegacion.id}>
+                    {delegacion.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Date Range Filter */}
           <DateRangeFilter
             dateFrom={filters.dateFrom}
@@ -145,7 +200,7 @@ export function TransactionManager() {
             categories={categories}
             loading={loading}
             error={error}
-            total={total}
+            total={movements.length}
             onMovementClick={handleMovementClick}
             onMovementUpdate={handleMovementUpdate}
           />
@@ -163,12 +218,30 @@ export function TransactionManager() {
               </Button>
             </div>
           </div>
-          <div className="p-4">
+          <div className="p-4 space-y-4">
+            {/* Delegation selector in mobile filters */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Delegación</label>
+              <Select value={selectedDelegation || ""} onValueChange={setSelectedDelegation}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar delegación" />
+                </SelectTrigger>
+                <SelectContent>
+                  {delegations.map((delegacion) => (
+                    <SelectItem key={delegacion.id} value={delegacion.id}>
+                      {delegacion.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <TransactionFiltersComponent
               filters={filters}
               onFiltersChange={setFilters}
               onClearFilters={clearFilters}
               categories={categories}
+              accounts={accounts}
             />
           </div>
         </div>

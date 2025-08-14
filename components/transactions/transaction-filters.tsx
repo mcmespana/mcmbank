@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import type { Categoria } from "@/lib/types"
+import type { Categoria, CuentaConDelegacion } from "@/lib/types/database"
 import type { TransactionFilters as Filters } from "./transaction-manager"
 
 interface TransactionFiltersProps {
@@ -13,6 +13,7 @@ interface TransactionFiltersProps {
   onFiltersChange: (filters: Filters) => void
   onClearFilters: () => void
   categories: Categoria[]
+  accounts?: CuentaConDelegacion[]
 }
 
 export function TransactionFiltersComponent({
@@ -20,6 +21,7 @@ export function TransactionFiltersComponent({
   onFiltersChange,
   onClearFilters,
   categories,
+  accounts = [],
 }: TransactionFiltersProps) {
   const updateFilter = (key: keyof Filters, value: any) => {
     onFiltersChange({ ...filters, [key]: value })
@@ -35,6 +37,49 @@ export function TransactionFiltersComponent({
           <X className="mr-2 h-4 w-4" />
           Limpiar filtros
         </Button>
+      )}
+
+      {/* Search */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Buscar</Label>
+        <Input
+          placeholder="Buscar en concepto o descripción..."
+          value={filters.search || ""}
+          onChange={(e) => updateFilter("search", e.target.value || undefined)}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Accounts */}
+      {accounts.length > 0 && (
+        <>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Cuenta</Label>
+            <Select
+              value={filters.accountId || "all"}
+              onValueChange={(value) => updateFilter("accountId", value === "all" ? undefined : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas las cuentas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las cuentas</SelectItem>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{account.nombre}</span>
+                      {account.banco_nombre && (
+                        <span className="text-xs text-muted-foreground">({account.banco_nombre})</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator />
+        </>
       )}
 
       {/* Categories */}
@@ -55,6 +100,7 @@ export function TransactionFiltersComponent({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las categorías</SelectItem>
+            <SelectItem value="uncategorized">Sin categoría</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 <div className="flex items-center gap-2">
@@ -65,45 +111,6 @@ export function TransactionFiltersComponent({
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      <Separator />
-
-      {/* Amount Range */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Rango de importe</Label>
-        <div className="space-y-2">
-          <div>
-            <Label htmlFor="amount-min" className="text-xs text-muted-foreground">
-              Mínimo
-            </Label>
-            <Input
-              id="amount-min"
-              type="number"
-              step="0.01"
-              placeholder="0,00"
-              value={filters.amountMin || ""}
-              onChange={(e) =>
-                updateFilter("amountMin", e.target.value ? Number.parseFloat(e.target.value) : undefined)
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor="amount-max" className="text-xs text-muted-foreground">
-              Máximo
-            </Label>
-            <Input
-              id="amount-max"
-              type="number"
-              step="0.01"
-              placeholder="0,00"
-              value={filters.amountMax || ""}
-              onChange={(e) =>
-                updateFilter("amountMax", e.target.value ? Number.parseFloat(e.target.value) : undefined)
-              }
-            />
-          </div>
-        </div>
       </div>
     </div>
   )

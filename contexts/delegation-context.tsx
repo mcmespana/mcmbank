@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { useDelegations } from "@/hooks/use-delegations"
-import type { Delegacion } from "@/lib/types"
+import type { Delegacion } from "@/lib/types/database"
 
 interface DelegationContextType {
   selectedDelegation: string | null
@@ -11,6 +11,7 @@ interface DelegationContextType {
   delegations: Delegacion[]
   loading: boolean
   error: string | null
+  getCurrentDelegation: () => Delegacion | null
 }
 
 const DelegationContext = createContext<DelegationContextType | undefined>(undefined)
@@ -26,6 +27,11 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
     }
   }, [delegations, selectedDelegation])
 
+  const getCurrentDelegation = () => {
+    if (!selectedDelegation) return null
+    return delegations.find((d) => d.id === selectedDelegation) || null
+  }
+
   return (
     <DelegationContext.Provider
       value={{
@@ -34,6 +40,7 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
         delegations,
         loading,
         error,
+        getCurrentDelegation,
       }}
     >
       {children}

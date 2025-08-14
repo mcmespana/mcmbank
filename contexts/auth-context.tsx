@@ -39,9 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const timeoutId = setTimeout(() => {
-      getInitialSession()
-    }, 0)
+    getInitialSession()
 
     // Listen for auth changes
     const {
@@ -50,12 +48,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (mounted) {
         setUser(session?.user ?? null)
         setLoading(false)
+
+        if (event === "SIGNED_IN" && session?.user) {
+          try {
+            // Check if profile exists, create if not
+            const { data: profile } = await supabase
+              .from("perfil")
+              .select("usuario_id")
+              .eq("usuario_id", session.user.id)
+              .single()
+
+            if (!profile) {
+              await supabase.from("perfil").insert({
+                usuario_id: session.user.id,
+                nombre_completo: session.user.email?.split("@")[0] || "Usuario",
+              })
+            }
+          } catch (error) {
+            console.error("Error creating profile:", error)
+          }
+        }
       }
     })
 
     return () => {
       mounted = false
-      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [])

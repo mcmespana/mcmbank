@@ -6,7 +6,7 @@ export class DatabaseService {
     return supabase
   }
 
-  // Movimiento operations (client-side)
+  // Movimiento operations (client-side only)
   static async updateMovimientoCategoria(movimientoId: string, categoriaId: string | null): Promise<void> {
     const supabase = this.getClient()
     const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
@@ -14,7 +14,7 @@ export class DatabaseService {
     if (error) throw error
   }
 
-  // Categoria operations (client-side)
+  // Categoria operations (client-side only)
   static async getCategoriasByOrganizacion(organizacionId: string): Promise<Categoria[]> {
     const supabase = this.getClient()
     const { data, error } = await supabase

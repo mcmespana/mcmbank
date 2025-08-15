@@ -16,6 +16,8 @@ import {
   Zap,
   Activity,
   Menu,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -102,9 +104,10 @@ const navigation = [
 
 interface SidebarContentProps {
   className?: string
+  collapsed?: boolean
 }
 
-function SidebarContent({ className }: SidebarContentProps) {
+function SidebarContent({ className, collapsed = false }: SidebarContentProps) {
   const pathname = usePathname()
 
   return (
@@ -113,7 +116,7 @@ function SidebarContent({ className }: SidebarContentProps) {
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
         <div className="flex items-center gap-2">
           <Building2 className="h-8 w-8 text-sidebar-primary" />
-          <span className="text-xl font-bold text-sidebar-foreground">MCM Bank</span>
+          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">MCM Bank</span>}
         </div>
       </div>
 
@@ -136,9 +139,9 @@ function SidebarContent({ className }: SidebarContentProps) {
             >
               <div className="flex items-center gap-3">
                 <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
+                {!collapsed && <span>{item.name}</span>}
               </div>
-              {item.count !== null && (
+              {!collapsed && item.count !== null && (
                 <span
                   className={cn(
                     "rounded-full px-2 py-0.5 text-xs",
@@ -168,12 +171,32 @@ function SidebarContent({ className }: SidebarContentProps) {
   )
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed?: boolean
+  onToggleCollapse?: () => void
+}
+
+export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-        <SidebarContent />
+      <div className={cn(
+        "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300",
+        collapsed ? "lg:w-16" : "lg:w-72"
+      )}>
+        <SidebarContent collapsed={collapsed} />
+        
+        {/* Collapse Toggle Button */}
+        <div className="absolute -right-3 top-8">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-6 w-6 rounded-full bg-background border-2 shadow-md"
+            onClick={onToggleCollapse}
+          >
+            {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Sidebar */}

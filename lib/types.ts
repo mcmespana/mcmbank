@@ -37,6 +37,7 @@ export interface Categoria {
   nombre: string
   tipo: TipoCategoria
   emoji: string | null
+  color: string | null
   orden: number
   categoria_padre_id: UUID | null
   creado_en: string

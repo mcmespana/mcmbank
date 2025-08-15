@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
-import { Edit } from "lucide-react"
+import { EmojiPickerButton } from "@/components/ui/emoji-picker"
+import { ColorPicker } from "@/components/ui/color-picker"
 import type { Categoria } from "@/lib/types/database"
 
 interface CategoryEditFormProps {
@@ -16,37 +17,12 @@ interface CategoryEditFormProps {
   onCancel: () => void
 }
 
-const emojiOptions = [
-  "📁",
-  "💰",
-  "🏠",
-  "🚗",
-  "🍔",
-  "🛒",
-  "💊",
-  "🎓",
-  "🎮",
-  "👕",
-  "⚡",
-  "📱",
-  "🎬",
-  "🏋️",
-  "✈️",
-  "🎨",
-  "📚",
-  "🍕",
-  "☕",
-  "🎵",
-  "💳",
-  "🏦",
-  "📊",
-  "💼",
-  "🔧",
-  "🎯",
-  "🌟",
-  "🎁",
-  "🏆",
-  "💡",
+// Colores predefinidos para categorías
+const DEFAULT_COLORS = [
+  "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7",
+  "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
+  "#F8C471", "#82E0AA", "#F1948A", "#D7BDE2", "#FAD7A0",
+  "#A9DFBF", "#F9E79F", "#D5A6BD", "#A3E4D7", "#FFB6C1"
 ]
 
 export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFormProps) {
@@ -54,9 +30,9 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
     nombre: category.nombre,
     emoji: category.emoji || "📁",
     tipo: category.tipo,
+    color: category.color || "#4ECDC4",
   })
   const [loading, setLoading] = useState(false)
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,6 +49,7 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
         nombre: formData.nombre.trim(),
         emoji: formData.emoji,
         tipo: formData.tipo,
+        color: formData.color,
       })
     } catch (error) {
       console.error("Error saving category:", error)
@@ -84,49 +61,40 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pt-6">
-      {/* Category Icon Preview */}
+      {/* Category Icon and Color Preview */}
       <div className="flex justify-center">
         <Card className="relative">
           <CardContent className="p-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-muted text-2xl">
+            <div 
+              className="flex h-16 w-16 items-center justify-center rounded-lg text-2xl"
+              style={{ backgroundColor: formData.color }}
+            >
               {formData.emoji}
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-background shadow-md"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Emoji Picker */}
-      {showEmojiPicker && (
-        <div className="space-y-3">
-          <Label>Seleccionar emoji</Label>
-          <div className="grid grid-cols-6 gap-2 p-4 border rounded-lg bg-muted/50">
-            {emojiOptions.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => {
-                  setFormData({ ...formData, emoji })
-                  setShowEmojiPicker(false)
-                }}
-                className={`h-10 w-10 rounded-lg text-xl hover:bg-background transition-colors ${
-                  formData.emoji === emoji ? "bg-background ring-2 ring-primary" : ""
-                }`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
+      {/* Emoji and Color Pickers */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Emoji</Label>
+          <EmojiPickerButton
+            value={formData.emoji}
+            onChange={(emoji) => setFormData({ ...formData, emoji })}
+            className="w-full justify-start"
+          />
         </div>
-      )}
+        
+        <div className="space-y-2">
+          <Label>Color</Label>
+          <ColorPicker
+            value={formData.color}
+            onChange={(color) => setFormData({ ...formData, color })}
+            className="w-full"
+          />
+        </div>
+      </div>
 
       {/* Category Name */}
       <div className="space-y-2">

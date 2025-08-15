@@ -55,6 +55,8 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
         `)
         .eq("cuenta.delegacion_id", delegacionId)
         .order("fecha", { ascending: false })
+        // Limit results to prevent UI freezing with large datasets
+        .limit(100)
 
       if (filters?.fechaDesde) {
         query = query.gte("fecha", filters.fechaDesde)

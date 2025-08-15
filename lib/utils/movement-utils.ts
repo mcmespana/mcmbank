@@ -1,4 +1,4 @@
-import type { Movimiento, Cuenta, Categoria } from "@/lib/types"
+import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 export interface MovimientoConDatos extends Movimiento {
   cuenta?: Cuenta

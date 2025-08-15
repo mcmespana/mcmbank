@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Plus } from "lucide-react"
-import type { Categoria } from "@/lib/types"
+import type { Categoria } from "@/lib/types/database"
 
 interface CategoryChipProps {
   category?: Categoria

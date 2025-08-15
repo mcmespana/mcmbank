@@ -3,7 +3,7 @@ import { DelegationSelector } from "./delegation-selector"
 import { Sidebar } from "./sidebar"
 
 interface TopbarProps {
-  selectedDelegation?: string
+  selectedDelegation?: string | null
   onDelegationChange?: (delegationId: string) => void
 }
 

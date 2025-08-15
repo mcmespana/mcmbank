@@ -38,7 +38,7 @@ export class ServerDatabaseService {
       .eq("usuario_id", userId)
 
     if (error) throw error
-    return data?.map((item) => item.delegacion).filter(Boolean) || []
+    return (data?.map((item) => item.delegacion).filter(Boolean) || []) as unknown as Delegacion[]
   }
 
   // Delegacion operations (server-side)

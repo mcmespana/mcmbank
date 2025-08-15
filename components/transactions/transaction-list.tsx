@@ -11,7 +11,7 @@ import { CategoryChip } from "./category-chip"
 import { formatCurrency, formatDate, getAmountColorClass } from "@/lib/utils/format"
 import { getAccountDisplayName } from "@/lib/utils/movement-utils"
 import { ChevronDown, ChevronUp } from "lucide-react"
-import type { Movimiento, Cuenta, Categoria } from "@/lib/types"
+import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListProps {
   movements: Movimiento[]
@@ -93,7 +93,7 @@ export function TransactionList({
 
       {movements.map((movement) => {
         const account = accounts.find((acc) => acc.id === movement.cuenta_id)
-        const category = categories.find((cat) => cat.id === movement.categoria_id)
+        const category = categories.find((cat) => cat.id === movement.categoria_id) as Categoria | undefined
         const isExpanded = expandedMovements.has(movement.id)
         const isUpdating = updatingMovements.has(movement.id)
 
@@ -121,8 +121,8 @@ export function TransactionList({
                     </div>
                   ) : (
                     <CategoryChip
-                      category={category}
-                      categories={categories}
+                      category={category as unknown as Categoria}
+                      categories={categories as unknown as Categoria[]}
                       onCategoryChange={(categoryId) => handleCategoryChange(movement.id, categoryId)}
                     />
                   )}

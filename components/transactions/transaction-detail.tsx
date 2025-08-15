@@ -15,7 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils/format"
 import { getAccountDisplayName, getAccountIcon } from "@/lib/utils/movement-utils"
-import type { Movimiento, Cuenta, Categoria } from "@/lib/types"
+import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionDetailProps {
   movement: Movimiento | null

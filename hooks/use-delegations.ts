@@ -38,7 +38,7 @@ export function useDelegations() {
 
       if (error) throw error
 
-      const userDelegations = data?.map((item) => item.delegacion).filter(Boolean) || []
+      const userDelegations = (data?.map((item) => item.delegacion).filter(Boolean) || []) as unknown as Delegacion[]
       setDelegations(userDelegations)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error loading delegations")

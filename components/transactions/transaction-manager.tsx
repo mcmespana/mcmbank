@@ -12,7 +12,7 @@ import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
 import { Plus, Download, Upload, Filter } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { MovimientoConRelaciones } from "@/lib/types/database"
+import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 
 export interface TransactionFilters {
   dateFrom?: string
@@ -196,13 +196,18 @@ export function TransactionManager() {
         <div className="flex-1 overflow-auto">
           <TransactionList
             movements={movements}
-            accounts={accounts}
-            categories={categories}
+            accounts={accounts as unknown as Cuenta[]}
+            categories={categories as unknown as Categoria[]}
             loading={loading}
             error={error}
             total={movements.length}
-            onMovementClick={handleMovementClick}
-            onMovementUpdate={handleMovementUpdate}
+            onMovementClick={(movement) =>
+              handleMovementClick(movement as unknown as MovimientoConRelaciones)
+            }
+            onMovementUpdate={async (movementId, patch) => {
+              const fullPatch: Partial<MovimientoConRelaciones> = patch
+              await handleMovementUpdate(movementId, fullPatch)
+            }}
           />
         </div>
       </div>
@@ -249,11 +254,14 @@ export function TransactionManager() {
 
       <TransactionDetail
         movement={selectedMovement}
-        accounts={accounts}
-        categories={categories}
+        accounts={accounts as unknown as Cuenta[]}
+        categories={categories as unknown as Categoria[]}
         open={detailOpen}
         onOpenChange={setDetailOpen}
-        onUpdate={handleMovementUpdate}
+        onUpdate={async (movementId, patch) => {
+          const fullPatch: Partial<MovimientoConRelaciones> = patch
+          await handleMovementUpdate(movementId, fullPatch)
+        }}
       />
     </div>
   )

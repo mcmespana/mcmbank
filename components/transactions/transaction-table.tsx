@@ -8,7 +8,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { formatCurrency, formatDate, getAmountColorClass } from "@/lib/utils/format"
 import { getAccountDisplayName, getAccountIcon } from "@/lib/utils/movement-utils"
-import type { Movimiento, Cuenta, Categoria } from "@/lib/types"
+import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionTableProps {
   movements: Movimiento[]

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { MovimientoConRelaciones } from "@/lib/types/database"
 
@@ -17,7 +17,24 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const fetchIdRef = useRef(0)
+  const lastQueryKeyRef = useRef<string | null>(null)
+
   const fetchMovimientos = useCallback(async () => {
+    const queryKey = [
+      delegacionId || "",
+      filters?.fechaDesde || "",
+      filters?.fechaHasta || "",
+      filters?.categoriaId || "",
+      filters?.cuentaId || "",
+      filters?.busqueda || "",
+    ].join("|")
+
+    if (lastQueryKeyRef.current === queryKey) {
+      return
+    }
+    lastQueryKeyRef.current = queryKey
+    const fetchId = ++fetchIdRef.current
     if (!delegacionId) {
       setMovimientos([])
       setLoading(false)
@@ -76,6 +93,10 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
 
       const { data, error } = await query
 
+      if (fetchId !== fetchIdRef.current) {
+        return
+      }
+
       if (error) throw error
       setMovimientos(data || [])
     } catch (err) {
@@ -83,10 +104,26 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
     } finally {
       setLoading(false)
     }
-  }, [delegacionId, filters])
+  }, [
+    delegacionId,
+    filters?.fechaDesde,
+    filters?.fechaHasta,
+    filters?.categoriaId,
+    filters?.cuentaId,
+    filters?.busqueda,
+  ])
 
   useEffect(() => {
-    fetchMovimientos()
+    let cancelled = false
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) {
+        fetchMovimientos()
+      }
+    }, 80)
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+    }
   }, [fetchMovimientos])
 
   const updateCategoria = async (movimientoId: string, categoriaId: string | null) => {

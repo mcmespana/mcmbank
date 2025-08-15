@@ -2,7 +2,8 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Banknote } from "lucide-react"
-import type { Cuenta } from "@/lib/types"
+import type { Cuenta } from "@/lib/types/database"
+import { useMemo, useState } from "react"
 
 interface BankAvatarProps {
   account?: Cuenta
@@ -18,6 +19,7 @@ const BANK_COLORS = {
   Openbank: "bg-green-600",
   Revolut: "bg-purple-600",
   N26: "bg-cyan-600",
+  Sabadell: "bg-blue-500",
   "Banco Sabadell": "bg-blue-500",
   Unicaja: "bg-green-700",
   Kutxabank: "bg-blue-700",
@@ -41,8 +43,8 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
     )
   }
 
-  // Extract bank name from account name or use tipo_cuenta
-  const bankName = account.nombre_banco || account.tipo_cuenta || "Caja"
+  // Extract bank name from account name or use tipo
+  const bankName = account.banco_nombre || account.nombre || "Caja"
   const isCash = bankName.toLowerCase().includes("caja") || bankName.toLowerCase().includes("efectivo")
 
   // Get bank color
@@ -52,14 +54,35 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
   // Generate initials
   const initials = bankName
     .split(" ")
-    .map((word) => word.charAt(0))
+    .map((word: string) => word.charAt(0))
     .join("")
     .substring(0, 2)
     .toUpperCase()
 
+  // Build asset base name: lowercase, remove diacritics and non-alphanumeric, remove spaces
+  const assetBase = useMemo(() => {
+    return bankName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "")
+  }, [bankName])
+
+  // Try .png first, then .jpg, then placeholder
+  const [logoSrc, setLogoSrc] = useState<string>(`/bank-logos/${assetBase}.png`)
+  const handleImageError = () => {
+    if (logoSrc.endsWith(".png")) {
+      setLogoSrc(`/bank-logos/${assetBase}.jpg`)
+    } else if (logoSrc.endsWith(`/${assetBase}.jpg`)) {
+      setLogoSrc("/placeholder-logo.png")
+    }
+  }
+
   return (
     <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
-      <AvatarImage src={`/bank-logos/${bankName.toLowerCase().replace(/\s+/g, "-")}.png`} />
+      {!isCash && (
+        <AvatarImage src={logoSrc} onError={handleImageError} alt={bankName} />
+      )}
       <AvatarFallback className={`${colorClass} text-white font-semibold`}>
         {isCash ? (
           <Banknote className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-5 w-5" : "h-4 w-4"} />

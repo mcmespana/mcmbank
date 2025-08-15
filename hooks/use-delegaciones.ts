@@ -40,8 +40,8 @@ export function useDelegaciones() {
         return
       }
 
-      const delegacionesData = data?.map((item) => item.delegacion).filter(Boolean) as Delegacion[]
-      setDelegaciones(delegacionesData || [])
+      const delegacionesData = (data?.map((item) => item.delegacion).filter(Boolean) || []) as unknown as Delegacion[]
+      setDelegaciones(delegacionesData)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
     } finally {

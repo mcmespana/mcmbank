@@ -14,6 +14,7 @@ import {
   Settings,
   Users,
   Zap,
+  Activity,
   Menu,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -89,6 +90,13 @@ const navigation = [
     icon: Settings,
     count: null,
     enabled: false,
+  },
+  {
+    name: "Diagnóstico",
+    href: "/diagnostico",
+    icon: Activity,
+    count: null,
+    enabled: true,
   },
 ]
 

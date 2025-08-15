@@ -2,25 +2,25 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase/client"
+import { useAuth } from "@/contexts/auth-context"
 import type { Delegacion } from "@/lib/types/database"
 
 export function useDelegations() {
   const [delegations, setDelegations] = useState<Delegacion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
   const fetchDelegations = async () => {
+    if (!user) {
+      setDelegations([])
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser()
-      if (userError || !user) {
-        throw new Error("Usuario no autenticado")
-      }
 
       const { data, error } = await supabase
         .from("membresia")
@@ -49,7 +49,7 @@ export function useDelegations() {
 
   useEffect(() => {
     fetchDelegations()
-  }, [])
+  }, [user])
 
   return { delegations, loading, error, refetch: fetchDelegations }
 }

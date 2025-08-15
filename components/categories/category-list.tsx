@@ -56,8 +56,11 @@ function CategoryCard({ category, index, onEdit, onSearch, onDelete }: CategoryC
               </div>
 
               {/* Category Icon */}
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                <span className="text-xl">{category.emoji || "📁"}</span>
+              <div 
+                className="flex h-12 w-12 items-center justify-center rounded-lg text-xl"
+                style={{ backgroundColor: category.color || "#e5e7eb" }}
+              >
+                {category.emoji || "📁"}
               </div>
 
               {/* Category Info */}
@@ -161,6 +164,7 @@ export function CategoryList() {
           nombre: patch.nombre!,
           tipo: patch.tipo!,
           emoji: patch.emoji || "📁",
+          color: patch.color || "#4ECDC4",
           orden: maxOrder + 1,
           categoria_padre_id: null,
         })
@@ -323,6 +327,7 @@ export function CategoryList() {
               nombre: "",
               tipo: "gasto",
               emoji: "📁",
+              color: "#4ECDC4",
               orden: 0,
               categoria_padre_id: null,
               creado_en: "",

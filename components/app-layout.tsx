@@ -7,6 +7,7 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -17,6 +18,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   useEffect(() => {
     if (!loading && !user && !isRedirecting) {
@@ -45,10 +47,16 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
-      <Sidebar />
+      <Sidebar 
+        collapsed={sidebarCollapsed} 
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
+      />
 
       {/* Main Content */}
-      <div className="lg:pl-72">
+      <div className={cn(
+        "transition-all duration-300",
+        sidebarCollapsed ? "lg:pl-16" : "lg:pl-72"
+      )}>
         {/* Topbar */}
         <Topbar selectedDelegation={selectedDelegation} onDelegationChange={setSelectedDelegation} />
 

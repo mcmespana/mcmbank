@@ -118,7 +118,6 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
       <Select value={selectedPreset} onValueChange={handlePresetChange}>
         <SelectTrigger className="w-[200px] sm:w-[250px]">
           <SelectValue>{getDisplayValue()}</SelectValue>
-          <ChevronDown className="h-4 w-4 opacity-50" />
         </SelectTrigger>
         <SelectContent>
           {DATE_PRESETS.map((preset) => (

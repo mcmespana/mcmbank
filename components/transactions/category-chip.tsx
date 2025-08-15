@@ -30,8 +30,12 @@ const CATEGORY_COLORS = [
 export function CategoryChip({ category, categories, onCategoryChange }: CategoryChipProps) {
   const [open, setOpen] = useState(false)
 
-  const getCategoryColor = (categoryId: string) => {
-    const index = categoryId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const getCategoryColor = (category: Categoria) => {
+    if (category.color) {
+      return `bg-[${category.color}] text-white border-[${category.color}]`
+    }
+    // Fallback to predefined colors if no custom color
+    const index = category.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
     return CATEGORY_COLORS[index % CATEGORY_COLORS.length]
   }
 
@@ -41,7 +45,7 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
         <PopoverTrigger asChild>
           <Badge
             variant="secondary"
-            className={`cursor-pointer hover:opacity-80 transition-opacity rounded-full px-3 py-1 ${getCategoryColor(category.id)}`}
+            className={`cursor-pointer hover:opacity-80 transition-opacity rounded-full px-3 py-1 ${getCategoryColor(category)}`}
           >
             {category.emoji && <span className="mr-1">{category.emoji}</span>}
             <span className="text-xs font-medium">{category.nombre}</span>

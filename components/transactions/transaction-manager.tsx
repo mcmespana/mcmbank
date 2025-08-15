@@ -4,13 +4,14 @@ import { useState } from "react"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
+import { TransactionForm } from "./transaction-form"
 import { DateRangeFilter } from "./date-range-filter"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
-import { Plus, Download, Upload, Filter } from "lucide-react"
+import { Plus, Download, Upload, Filter, ChevronDown, ChevronUp } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 
@@ -35,6 +36,8 @@ export function TransactionManager() {
   const [selectedMovement, setSelectedMovement] = useState<MovimientoConRelaciones | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [createFormOpen, setCreateFormOpen] = useState(false)
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
@@ -76,6 +79,19 @@ export function TransactionManager() {
     }
   }
 
+  const handleCreateMovement = async (data: Partial<MovimientoConRelaciones>) => {
+    try {
+      // Aquí implementarías la lógica para crear un nuevo movimiento
+      console.log("Creating new movement:", data)
+      // Por ahora solo cerramos el formulario
+      setCreateFormOpen(false)
+      // TODO: Implementar createMovement en useMovimientos
+    } catch (error) {
+      console.error("Error creating movement:", error)
+      throw error
+    }
+  }
+
   const clearFilters = () => {
     setFilters({})
   }
@@ -103,39 +119,36 @@ export function TransactionManager() {
     <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
       {/* Desktop Sidebar Filters */}
       <div
-        className={`hidden lg:block w-80 border-r bg-card transition-all duration-300 ${filtersOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        className={`hidden lg:block border-r bg-card transition-all duration-300 ${
+          sidebarCollapsed ? "w-16" : "w-80"
+        }`}
       >
         <div className="p-6 space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Filtros</h3>
-            <Button variant="ghost" size="sm" onClick={() => setFiltersOpen(!filtersOpen)} className="lg:hidden">
-              <Filter className="h-4 w-4" />
+            <h3 className={`text-lg font-semibold transition-opacity ${sidebarCollapsed ? "opacity-0" : "opacity-100"}`}>
+              Filtros
+            </h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="lg:hidden"
+            >
+              {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Delegación</label>
-            <Select value={selectedDelegation || ""} onValueChange={setSelectedDelegation}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar delegación" />
-              </SelectTrigger>
-              <SelectContent>
-                {delegations.map((delegacion) => (
-                  <SelectItem key={delegacion.id} value={delegacion.id}>
-                    {delegacion.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <TransactionFiltersComponent
-            filters={filters}
-            onFiltersChange={setFilters}
-            onClearFilters={clearFilters}
-            categories={categories}
-            accounts={accounts}
-          />
+          {!sidebarCollapsed && (
+            <>
+              <TransactionFiltersComponent
+                filters={filters}
+                onFiltersChange={setFilters}
+                onClearFilters={clearFilters}
+                categories={categories}
+                accounts={accounts}
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -143,9 +156,10 @@ export function TransactionManager() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header with Date Filter and Actions */}
         <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
-          <div className="lg:hidden">
+          {/* Delegation selector always visible in topbar */}
+          <div className="flex items-center justify-between">
             <Select value={selectedDelegation || ""} onValueChange={setSelectedDelegation}>
-              <SelectTrigger>
+              <SelectTrigger className="w-64">
                 <SelectValue placeholder="Seleccionar delegación" />
               </SelectTrigger>
               <SelectContent>
@@ -156,6 +170,17 @@ export function TransactionManager() {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Collapse/Expand Filters Button */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden lg:flex"
+            >
+              {sidebarCollapsed ? <ChevronRight className="h-4 w-4 mr-2" /> : <ChevronLeft className="h-4 w-4 mr-2" />}
+              {sidebarCollapsed ? "Mostrar filtros" : "Ocultar filtros"}
+            </Button>
           </div>
 
           {/* Date Range Filter */}
@@ -176,7 +201,7 @@ export function TransactionManager() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setCreateFormOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Añadir</span>
               </Button>
@@ -263,6 +288,21 @@ export function TransactionManager() {
           await handleMovementUpdate(movementId, fullPatch)
         }}
       />
+
+      {/* Create Transaction Form Dialog */}
+      {createFormOpen && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
+            <TransactionForm
+              accounts={accounts as unknown as Cuenta[]}
+              categories={categories as unknown as Categoria[]}
+              onSave={handleCreateMovement}
+              onCancel={() => setCreateFormOpen(false)}
+              mode="create"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

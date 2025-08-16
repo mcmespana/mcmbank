@@ -73,9 +73,9 @@ export function ColorPicker({ value = "#4ECDC4", onChange, className }: ColorPic
           <div className="space-y-2">
             <Label className="text-sm text-muted-foreground">Colores predefinidos</Label>
             <div className="grid grid-cols-5 gap-2">
-              {PREDEFINED_COLORS.map((color) => (
+              {PREDEFINED_COLORS.map((color, index) => (
                 <button
-                  key={color}
+                  key={`${color}-${index}`}
                   type="button"
                   onClick={() => handleColorSelect(color)}
                   className={`h-8 w-8 rounded-full border-2 transition-all hover:scale-110 ${

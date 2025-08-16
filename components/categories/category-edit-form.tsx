@@ -53,7 +53,7 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
       })
     } catch (error) {
       console.error("Error saving category:", error)
-      alert("Error al guardar la categoría")
+      alert("Error al guardar la categoría" + error)
     } finally {
       setLoading(false)
     }

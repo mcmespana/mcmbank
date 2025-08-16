@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Smile } from "lucide-react"
 import dynamic from "next/dynamic"
 
 // Importar el emoji picker de forma dinámica para evitar problemas de SSR

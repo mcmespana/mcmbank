@@ -11,7 +11,7 @@ import { CalendarIcon, DollarSign, Tag, Building2, Calendar } from "lucide-react
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 
@@ -32,7 +32,7 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
     categoria_id: movement?.categoria_id || "",
     cuenta_id: movement?.cuenta_id || "",
     notas: movement?.notas || "",
-    tipo: movement?.tipo || "gasto",
+    tipo: (movement && "tipo" in movement ? (movement as any).tipo : undefined) || "gasto",
   })
   const [loading, setLoading] = useState(false)
   const [dateOpen, setDateOpen] = useState(false)
@@ -55,7 +55,6 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
         categoria_id: formData.categoria_id,
         cuenta_id: formData.cuenta_id,
         notas: formData.notas.trim(),
-        tipo: formData.tipo,
       })
     } catch (error) {
       console.error("Error saving transaction:", error)
@@ -142,7 +141,7 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
+                  <CalendarComponent
                     mode="single"
                     selected={formData.fecha}
                     onSelect={(date) => {

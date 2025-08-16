@@ -11,7 +11,7 @@ import { useMovimientos } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
-import { Plus, Download, Upload, Filter, ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronRight, ChevronLeft, Plus, Download, Upload, Filter } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 

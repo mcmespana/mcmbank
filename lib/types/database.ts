@@ -137,6 +137,7 @@ export type Database = {
       }
       categoria: {
         Row: {
+          color: string
           id: string
           organizacion_id: string
           nombre: string

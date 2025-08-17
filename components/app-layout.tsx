@@ -24,6 +24,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (!loading && !user && !isRedirecting) {
       setIsRedirecting(true)
       router.push("/auth/login")
+    } else if (!loading && user && isRedirecting) {
+      // Reset redirecting state when user is authenticated
+      setIsRedirecting(false)
     }
   }, [user, loading, router, isRedirecting])
 

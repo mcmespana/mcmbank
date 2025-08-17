@@ -1,10 +1,13 @@
 "use client"
-import { X, Plus } from "lucide-react"
+import { X, Plus, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { DateRangeFilter } from "./date-range-filter"
+import { AmountFilter } from "./amount-filter"
+import { UncategorizedFilter } from "./uncategorized-filter"
 import type { Categoria, CuentaConDelegacion } from "@/lib/types/database"
 import type { TransactionFilters as Filters } from "./transaction-manager"
 
@@ -14,6 +17,7 @@ interface TransactionFiltersProps {
   onClearFilters: () => void
   categories: Categoria[]
   accounts?: CuentaConDelegacion[]
+  uncategorizedCount: number
 }
 
 export function TransactionFiltersComponent({
@@ -22,6 +26,7 @@ export function TransactionFiltersComponent({
   onClearFilters,
   categories,
   accounts = [],
+  uncategorizedCount,
 }: TransactionFiltersProps) {
   const updateFilter = (key: keyof Filters, value: any) => {
     onFiltersChange({ ...filters, [key]: value })
@@ -31,13 +36,61 @@ export function TransactionFiltersComponent({
 
   return (
     <div className="space-y-6">
-      {/* Clear Filters */}
-      {hasActiveFilters && (
-        <Button variant="outline" size="sm" onClick={onClearFilters} className="w-full bg-transparent">
-          <X className="mr-2 h-4 w-4" />
-          Limpiar filtros
-        </Button>
-      )}
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Filter className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-lg font-semibold">Filtros</h3>
+        </div>
+        {hasActiveFilters && (
+          <Button variant="outline" size="sm" onClick={onClearFilters} className="bg-transparent">
+            <X className="mr-2 h-4 w-4" />
+            Limpiar filtros
+          </Button>
+        )}
+      </div>
+
+      {/* Date Range Filter */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Rango de fechas</Label>
+        <DateRangeFilter
+          dateFrom={filters.dateFrom}
+          dateTo={filters.dateTo}
+          onDateRangeChange={(dateFrom, dateTo) => {
+            updateFilter("dateFrom", dateFrom)
+            updateFilter("dateTo", dateTo)
+          }}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Amount Filter */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Importe</Label>
+        <AmountFilter
+          minAmount={filters.minAmount}
+          maxAmount={filters.maxAmount}
+          onAmountChange={(minAmount, maxAmount) => {
+            updateFilter("minAmount", minAmount)
+            updateFilter("maxAmount", maxAmount)
+          }}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Uncategorized Filter */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Estado de categorización</Label>
+        <UncategorizedFilter
+          active={filters.uncategorized === true}
+          count={uncategorizedCount}
+          onToggle={(active) => updateFilter("uncategorized", active ? true : undefined)}
+        />
+      </div>
+
+      <Separator />
 
       {/* Search */}
       <div className="space-y-2">
@@ -100,7 +153,6 @@ export function TransactionFiltersComponent({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las categorías</SelectItem>
-            <SelectItem value="uncategorized">Sin categoría</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 <div className="flex items-center gap-2">

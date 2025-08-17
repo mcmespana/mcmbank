@@ -1,16 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { CalendarIcon, ChevronDown } from "lucide-react"
-import { format, subDays, subMonths, subYears, startOfDay, endOfDay } from "date-fns"
-import { es } from "date-fns/locale"
+import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Badge } from "@/components/ui/badge"
+import { format, subDays, subMonths, subYears, startOfDay, endOfDay } from "date-fns"
+import { es } from "date-fns/locale"
 
-interface DateRangeFilterProps {
+interface CategoryDateFilterProps {
   dateFrom?: string
   dateTo?: string
   onDateRangeChange: (dateFrom?: string, dateTo?: string) => void
@@ -31,7 +30,7 @@ const DATE_PRESETS = [
   { label: "Desde el inicio", value: "all-time" },
 ]
 
-export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRangeFilterProps) {
+export function CategoryDateFilter({ dateFrom, dateTo, onDateRangeChange }: CategoryDateFilterProps) {
   const [customRangeOpen, setCustomRangeOpen] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState("all-time")
 
@@ -113,13 +112,11 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
     return DATE_PRESETS.find((p) => p.value === selectedPreset)?.label || "Desde el inicio"
   }
 
-  const hasCustomRange = dateFrom || dateTo
-
   return (
     <div className="flex items-center gap-2">
       <CalendarIcon className="h-4 w-4 text-muted-foreground" />
       <Select value={selectedPreset} onValueChange={handlePresetChange}>
-        <SelectTrigger className="w-[200px] sm:w-[250px]">
+        <SelectTrigger className="w-[200px]">
           <SelectValue>{getDisplayValue()}</SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -130,13 +127,6 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
           ))}
         </SelectContent>
       </Select>
-
-      {/* Custom Range Badge */}
-      {hasCustomRange && (
-        <Badge variant="secondary" className="text-xs">
-          Personalizado
-        </Badge>
-      )}
 
       {/* Custom Range Popover */}
       <Popover open={customRangeOpen} onOpenChange={setCustomRangeOpen}>

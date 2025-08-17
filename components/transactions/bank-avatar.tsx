@@ -1,7 +1,8 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Banknote } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Banknote, Building2, Link, User } from "lucide-react"
 import type { Cuenta } from "@/lib/types/database"
 import { useMemo, useState } from "react"
 
@@ -46,6 +47,8 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
   // Extract bank name from account name or use tipo
   const bankName = account.banco_nombre || account.nombre || "Caja"
   const isCash = bankName.toLowerCase().includes("caja") || bankName.toLowerCase().includes("efectivo")
+  const isManual = account.origen === "manual"
+  const isConnected = account.origen === "conectada"
 
   // Get bank color
   const bankColor = Object.keys(BANK_COLORS).find((bank) => bankName.toLowerCase().includes(bank.toLowerCase()))
@@ -78,7 +81,7 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
     }
   }
 
-  return (
+  const avatarContent = (
     <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
       {!isCash && (
         <AvatarImage src={logoSrc} onError={handleImageError} alt={bankName} />
@@ -91,5 +94,65 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
         )}
       </AvatarFallback>
     </Avatar>
+  )
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {avatarContent}
+        </TooltipTrigger>
+        <TooltipContent 
+          side="right" 
+          className="max-w-xs p-4 bg-white border border-gray-200 shadow-xl rounded-xl"
+        >
+          <div className="space-y-3">
+            {/* Header */}
+            <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${colorClass}`}>
+                {isCash ? (
+                  <Banknote className="w-4 h-4 text-white" />
+                ) : (
+                  <Building2 className="w-4 h-4 text-white" />
+                )}
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">{account.nombre}</p>
+                <p className="text-xs text-gray-500">
+                  {isCash ? "Caja" : "Banco"}
+                </p>
+              </div>
+            </div>
+
+            {/* Bank Info */}
+            {!isCash && account.banco_nombre && (
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-gray-400" />
+                <span className="text-sm text-gray-700">{account.banco_nombre}</span>
+              </div>
+            )}
+
+            {/* Connection Status */}
+            <div className="flex items-center gap-2">
+              {isManual ? (
+                <User className="w-4 h-4 text-orange-500" />
+              ) : (
+                <Link className="w-4 h-4 text-green-500" />
+              )}
+              <span className="text-sm text-gray-700">
+                {isManual ? "Cuenta manual" : "Cuenta conectada"}
+              </span>
+            </div>
+
+            {/* IBAN if available */}
+            {account.iban && (
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500 font-mono">{account.iban}</p>
+              </div>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }

@@ -34,6 +34,9 @@ export const mockCuentas: Cuenta[] = [
     origen: "conectada",
     banco_nombre: "Banco Santander",
     iban: "ES91 2100 0418 4502 0005 1332",
+    color: "#ec0000",
+    descripcion: "Cuenta principal para operaciones diarias",
+    personas_autorizadas: "Juan Pérez, María García",
     creado_en: "2024-01-01T00:00:00Z",
   },
   {
@@ -44,6 +47,9 @@ export const mockCuentas: Cuenta[] = [
     origen: "manual",
     banco_nombre: null,
     iban: null,
+    color: "#10b981",
+    descripcion: "Caja para gastos menores y efectivo",
+    personas_autorizadas: "Ana Martín",
     creado_en: "2024-01-01T00:00:00Z",
   },
   {
@@ -54,6 +60,9 @@ export const mockCuentas: Cuenta[] = [
     origen: "conectada",
     banco_nombre: "BBVA",
     iban: "ES76 0182 1111 2806 3030 2035",
+    color: "#004cdb",
+    descripcion: null,
+    personas_autorizadas: "Juan Pérez",
     creado_en: "2024-01-01T00:00:00Z",
   },
 ]

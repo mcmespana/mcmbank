@@ -21,6 +21,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useCuentas } from "@/hooks/use-cuentas"
+import { useDelegationContext } from "@/contexts/delegation-context"
 
 const navigation = [
   {
@@ -49,7 +51,7 @@ const navigation = [
     href: "/cuentas",
     icon: Banknote,
     count: 3,
-    enabled: false,
+    enabled: true,
   },
   {
     name: "Facturas",
@@ -109,6 +111,16 @@ interface SidebarContentProps {
 
 function SidebarContent({ className, collapsed = false }: SidebarContentProps) {
   const pathname = usePathname()
+  const { selectedDelegation } = useDelegationContext()
+  const { cuentas } = useCuentas(selectedDelegation)
+
+  // Create navigation items with dynamic counts
+  const navigationWithCounts = navigation.map(item => {
+    if (item.name === "Cuentas") {
+      return { ...item, count: cuentas.length }
+    }
+    return item
+  })
 
   return (
     <div className={cn("flex h-full flex-col bg-sidebar", className)}>
@@ -122,7 +134,7 @@ function SidebarContent({ className, collapsed = false }: SidebarContentProps) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => {
+        {navigationWithCounts.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = !item.enabled
 

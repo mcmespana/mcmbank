@@ -28,6 +28,9 @@ export interface Cuenta {
   origen: OrigenCuenta
   banco_nombre: string | null
   iban: string | null
+  color: string | null
+  descripcion: string | null
+  personas_autorizadas: string | null
   creado_en: string
 }
 

@@ -27,7 +27,7 @@ export function TransactionFiltersComponent({
     onFiltersChange({ ...filters, [key]: value })
   }
 
-  const hasActiveFilters = Object.values(filters).some((value) => value !== undefined && value !== "")
+  const hasActiveFilters = Object.values(filters).some((value) => value !== undefined && value !== "" && value !== false)
 
   return (
     <div className="space-y-6">
@@ -100,7 +100,6 @@ export function TransactionFiltersComponent({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las categorías</SelectItem>
-            <SelectItem value="uncategorized">Sin categoría</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 <div className="flex items-center gap-2">
@@ -111,6 +110,52 @@ export function TransactionFiltersComponent({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <Separator />
+
+      {/* Amount Filter */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Rango de importe</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Input
+              type="number"
+              placeholder="Mín €"
+              value={filters.amountFrom || ""}
+              onChange={(e) => updateFilter("amountFrom", e.target.value ? Number(e.target.value) : undefined)}
+              step="0.01"
+            />
+          </div>
+          <div>
+            <Input
+              type="number"
+              placeholder="Máx €"
+              value={filters.amountTo || ""}
+              onChange={(e) => updateFilter("amountTo", e.target.value ? Number(e.target.value) : undefined)}
+              step="0.01"
+            />
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Uncategorized Filter */}
+      <div className="space-y-3">
+        <Button
+          variant={filters.uncategorized ? "default" : "outline"}
+          size="sm"
+          className="w-full relative"
+          onClick={() => updateFilter("uncategorized", !filters.uncategorized)}
+        >
+          Sin categoría
+          {filters.uncategorized && (
+            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              ✓
+            </span>
+          )}
+        </Button>
       </div>
     </div>
   )

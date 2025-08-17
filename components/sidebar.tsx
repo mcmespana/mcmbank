@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
-const navigation = [
+const getNavigation = (transactionCount?: number, categoryCount?: number) => [
   {
     name: "Dashboard",
     href: "/",
@@ -34,14 +34,14 @@ const navigation = [
     name: "Transacciones",
     href: "/transacciones",
     icon: ArrowLeftRight,
-    count: 6,
+    count: transactionCount,
     enabled: true,
   },
   {
     name: "Categorías",
     href: "/categorias",
     icon: Tag,
-    count: 7,
+    count: categoryCount,
     enabled: true,
   },
   {
@@ -105,10 +105,13 @@ const navigation = [
 interface SidebarContentProps {
   className?: string
   collapsed?: boolean
+  transactionCount?: number
+  categoryCount?: number
 }
 
-function SidebarContent({ className, collapsed = false }: SidebarContentProps) {
+function SidebarContent({ className, collapsed = false, transactionCount, categoryCount }: SidebarContentProps) {
   const pathname = usePathname()
+  const navigation = getNavigation(transactionCount, categoryCount)
 
   return (
     <div className={cn("flex h-full flex-col bg-sidebar", className)}>
@@ -174,9 +177,11 @@ function SidebarContent({ className, collapsed = false }: SidebarContentProps) {
 interface SidebarProps {
   collapsed?: boolean
   onToggleCollapse?: () => void
+  transactionCount?: number
+  categoryCount?: number
 }
 
-export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ collapsed = false, onToggleCollapse, transactionCount, categoryCount }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
@@ -184,7 +189,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
         "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300",
         collapsed ? "lg:w-16" : "lg:w-72"
       )}>
-        <SidebarContent collapsed={collapsed} />
+        <SidebarContent collapsed={collapsed} transactionCount={transactionCount} categoryCount={categoryCount} />
         
         {/* Collapse Toggle Button */}
         <div className="absolute -right-3 top-8">
@@ -208,7 +213,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 p-0">
-          <SidebarContent />
+          <SidebarContent transactionCount={transactionCount} categoryCount={categoryCount} />
         </SheetContent>
       </Sheet>
     </>

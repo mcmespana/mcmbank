@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { signIn } from "@/lib/actions/auth"
+import { useFeatureFlags } from "@/lib/feature-flags"
+import { delay } from "@/lib/autologin"
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -31,13 +33,77 @@ function SubmitButton() {
 export default function LoginForm() {
   const router = useRouter()
   const [state, formAction] = useActionState(signIn, null)
+  const featureFlags = useFeatureFlags()
+  const [isAutoLogging, setIsAutoLogging] = useState(false)
+  const [autoLoginTriggered, setAutoLoginTriggered] = useState(false)
 
   // Handle successful login by redirecting
   useEffect(() => {
     if (state?.success) {
-      router.push("/")
+      if (isAutoLogging) {
+        // For auto-login, reload the page to properly refresh the session
+        window.location.reload()
+      } else {
+        router.push("/")
+      }
     }
-  }, [state, router])
+  }, [state, router, isAutoLogging])
+
+  // Handle failed auto-login
+  useEffect(() => {
+    if (state?.error && isAutoLogging) {
+      console.error('Auto-login failed:', state.error)
+      setIsAutoLogging(false)
+    }
+  }, [state?.error, isAutoLogging])
+
+  // Auto-login effect when feature flag is enabled
+  useEffect(() => {
+    const performAutoLoginSequence = async () => {
+      if (featureFlags.autologin && !isAutoLogging && !state && !autoLoginTriggered) {
+        setAutoLoginTriggered(true)
+        setIsAutoLogging(true)
+        
+        try {
+          // Show "iniciando autologin" message for 1 second
+          await delay(1000)
+          
+          // Create form data with auto-login credentials
+          const formData = new FormData()
+          formData.append('email', 'admin@movimientoconsolacion.com')
+          formData.append('password', '1234')
+          
+          // Submit using the form action
+          formAction(formData)
+        } catch (error) {
+          console.error('Auto-login error:', error)
+          setIsAutoLogging(false)
+        }
+      }
+    }
+
+    performAutoLoginSequence()
+  }, [featureFlags.autologin, isAutoLogging, state, autoLoginTriggered, formAction])
+
+  // Show auto-login message when feature is enabled and in progress
+  if (featureFlags.autologin && isAutoLogging && !state?.error) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Bienvenido</CardTitle>
+          <CardDescription className="text-center">MCM Bank</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-center text-sm text-muted-foreground">
+              Iniciando autologin...
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="w-full max-w-md">

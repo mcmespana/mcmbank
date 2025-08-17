@@ -49,7 +49,7 @@ const navigation = [
     href: "/cuentas",
     icon: Banknote,
     count: 3,
-    enabled: false,
+    enabled: true,
   },
   {
     name: "Facturas",

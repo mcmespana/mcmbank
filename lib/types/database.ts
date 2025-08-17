@@ -53,6 +53,9 @@ export type Database = {
           origen: string
           banco_nombre: string | null
           iban: string | null
+          color: string | null
+          personas_autorizadas: string | null
+          descripcion: string | null
           creado_en: string
         }
         Insert: {
@@ -63,6 +66,9 @@ export type Database = {
           origen: string
           banco_nombre?: string | null
           iban?: string | null
+          color?: string | null
+          personas_autorizadas?: string | null
+          descripcion?: string | null
           creado_en?: string
         }
         Update: {
@@ -73,6 +79,9 @@ export type Database = {
           origen?: string
           banco_nombre?: string | null
           iban?: string | null
+          color?: string | null
+          personas_autorizadas?: string | null
+          descripcion?: string | null
           creado_en?: string
         }
       }

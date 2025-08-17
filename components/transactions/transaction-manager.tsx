@@ -21,6 +21,9 @@ export interface TransactionFilters {
   categoryId?: string
   accountId?: string
   search?: string
+  minAmount?: number
+  maxAmount?: number
+  uncategorized?: boolean
 }
 
 export function TransactionManager() {
@@ -57,6 +60,9 @@ export function TransactionManager() {
 
   const { categorias: categories } = useCategorias(organizacionId)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
+
+  // Calculate uncategorized count
+  const uncategorizedCount = movements.filter(mov => !mov.categoria_id).length
 
   const handleMovementClick = (movement: MovimientoConRelaciones) => {
     setSelectedMovement(movement)
@@ -146,6 +152,7 @@ export function TransactionManager() {
                 onClearFilters={clearFilters}
                 categories={categories}
                 accounts={accounts}
+                uncategorizedCount={uncategorizedCount}
               />
             </>
           )}
@@ -272,6 +279,7 @@ export function TransactionManager() {
               onClearFilters={clearFilters}
               categories={categories}
               accounts={accounts}
+              uncategorizedCount={uncategorizedCount}
             />
           </div>
         </div>

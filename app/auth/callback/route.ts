@@ -9,10 +9,14 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const {
+      error,
+      data: { user },
+    } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
-      return NextResponse.redirect(`${redirectUrl}${next}`)
+      // Supabase docs recommend this to secure the session
+      await supabase.auth.getUser()
+      return NextResponse.redirect(next)
     }
   }
 

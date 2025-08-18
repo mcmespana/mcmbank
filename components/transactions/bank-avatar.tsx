@@ -1,7 +1,8 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Banknote } from "lucide-react"
+import { Tooltip } from "@/components/ui/tooltip"
+import { Banknote, Building2, Coins, Wifi, WifiOff } from "lucide-react"
 import type { Cuenta } from "@/lib/types/database"
 import { useMemo, useState } from "react"
 
@@ -45,9 +46,9 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
 
   // Extract bank name from account name or use tipo
   const bankName = account.banco_nombre || account.nombre || "Caja"
-  const isCash = bankName.toLowerCase().includes("caja") || bankName.toLowerCase().includes("efectivo")
+  const isCash = account.tipo === "caja"
 
-  // Get bank color
+  // Get bank color based on bank name
   const bankColor = Object.keys(BANK_COLORS).find((bank) => bankName.toLowerCase().includes(bank.toLowerCase()))
   const colorClass = bankColor ? BANK_COLORS[bankColor as keyof typeof BANK_COLORS] : BANK_COLORS.default
 
@@ -78,18 +79,44 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
     }
   }
 
-  return (
+  // Tooltip content
+  const tooltipContent = (
+    <div className="space-y-1">
+      <div className="font-medium">{account.nombre}</div>
+      <div className="text-xs text-muted-foreground">
+        {isCash ? "Caja" : "Banco"}
+        {!isCash && account.banco_nombre && (
+          <div className="flex items-center gap-1 mt-1">
+            <span>{account.banco_nombre}</span>
+            {account.origen === "conectada" ? (
+              <Wifi className="h-3 w-3 text-green-500" />
+            ) : (
+              <WifiOff className="h-3 w-3 text-gray-500" />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const avatarContent = (
     <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
       {!isCash && (
         <AvatarImage src={logoSrc} onError={handleImageError} alt={bankName} />
       )}
       <AvatarFallback className={`${colorClass} text-white font-semibold`}>
         {isCash ? (
-          <Banknote className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
+          <Coins className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
         ) : (
           <span className={size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm"}>{initials}</span>
         )}
       </AvatarFallback>
     </Avatar>
+  )
+
+  return (
+    <Tooltip content={tooltipContent} side="top">
+      {avatarContent}
+    </Tooltip>
   )
 }

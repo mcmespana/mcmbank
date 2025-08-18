@@ -16,6 +16,7 @@ interface DateRangeFilterProps {
 }
 
 const DATE_PRESETS = [
+  { label: "Rango personalizado", value: "custom" },
   { label: "Hoy", value: "today" },
   { label: "Ayer", value: "yesterday" },
   { label: "Esta semana", value: "this-week" },
@@ -27,12 +28,13 @@ const DATE_PRESETS = [
   { label: "Este año", value: "this-year" },
   { label: "Año pasado", value: "last-year" },
   { label: "Desde el inicio", value: "all-time" },
-  { label: "Rango personalizado", value: "custom" },
 ]
 
 export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRangeFilterProps) {
   const [customRangeOpen, setCustomRangeOpen] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState("all-time")
+  const [tempDateFrom, setTempDateFrom] = useState<string | undefined>(dateFrom)
+  const [tempDateTo, setTempDateTo] = useState<string | undefined>(dateTo)
 
   const handlePresetChange = (preset: string) => {
     setSelectedPreset(preset)
@@ -92,6 +94,8 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
         onDateRangeChange(undefined, undefined)
         break
       case "custom":
+        setTempDateFrom(dateFrom)
+        setTempDateTo(dateTo)
         setCustomRangeOpen(true)
         break
     }
@@ -136,39 +140,71 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
         <PopoverContent className="w-auto p-0" align="start">
           <div className="p-4 space-y-4">
             <div className="text-sm font-medium">Rango personalizado</div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-muted-foreground">Desde</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Fecha inicio</label>
                 <Calendar
                   mode="single"
-                  selected={dateFrom ? new Date(dateFrom) : undefined}
+                  selected={tempDateFrom ? new Date(tempDateFrom) : undefined}
                   onSelect={(date) => {
                     if (date) {
-                      onDateRangeChange(format(date, "yyyy-MM-dd"), dateTo)
+                      setTempDateFrom(format(date, "yyyy-MM-dd"))
                     }
                   }}
+                  locale={es}
+                  weekStartsOn={1}
+                  className="rounded-md border"
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Hasta</label>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Fecha fin</label>
                 <Calendar
                   mode="single"
-                  selected={dateTo ? new Date(dateTo) : undefined}
+                  selected={tempDateTo ? new Date(tempDateTo) : undefined}
                   onSelect={(date) => {
                     if (date) {
-                      onDateRangeChange(dateFrom, format(date, "yyyy-MM-dd"))
+                      setTempDateTo(format(date, "yyyy-MM-dd"))
                     }
                   }}
+                  locale={es}
+                  weekStartsOn={1}
+                  className="rounded-md border"
+                  disabled={(date) => tempDateFrom ? date < new Date(tempDateFrom) : false}
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCustomRangeOpen(false)}>
-                Cancelar
-              </Button>
-              <Button size="sm" onClick={() => setCustomRangeOpen(false)}>
-                Aplicar
-              </Button>
+            <div className="flex justify-between items-center">
+              <div className="text-xs text-muted-foreground">
+                {tempDateFrom && tempDateTo && (
+                  <span>
+                    {format(new Date(tempDateFrom), "dd MMM yyyy", { locale: es })} - {format(new Date(tempDateTo), "dd MMM yyyy", { locale: es })}
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setCustomRangeOpen(false)
+                    setTempDateFrom(dateFrom)
+                    setTempDateTo(dateTo)
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    onDateRangeChange(tempDateFrom, tempDateTo)
+                    setSelectedPreset("custom")
+                    setCustomRangeOpen(false)
+                  }}
+                  disabled={!tempDateFrom || !tempDateTo}
+                >
+                  Aplicar
+                </Button>
+              </div>
             </div>
           </div>
         </PopoverContent>

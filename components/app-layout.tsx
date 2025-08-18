@@ -28,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       // Reset redirecting state when user is authenticated
       setIsRedirecting(false)
     }
-  }, [user, loading, router, isRedirecting])
+  }, [user, loading, router])
 
   // Show loading state while auth is loading or redirecting
   if (loading || isRedirecting) {

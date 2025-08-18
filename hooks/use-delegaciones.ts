@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { useAuth } from "@/contexts/auth-context"
 import type { Delegacion } from "@/lib/types/database"
@@ -11,7 +11,7 @@ export function useDelegaciones() {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
-  const fetchDelegaciones = async () => {
+  const fetchDelegaciones = useCallback(async () => {
     if (!user) {
       setDelegaciones([])
       setLoading(false)
@@ -47,11 +47,11 @@ export function useDelegaciones() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
   useEffect(() => {
     fetchDelegaciones()
-  }, [user])
+  }, [fetchDelegaciones])
 
   return { delegaciones, loading, error }
 }

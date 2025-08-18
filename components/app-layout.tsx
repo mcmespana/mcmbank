@@ -17,34 +17,24 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { selectedDelegation, setSelectedDelegation } = useDelegationContext()
   const { user, loading } = useAuth()
   const router = useRouter()
-  const [isRedirecting, setIsRedirecting] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   useEffect(() => {
-    if (!loading && !user && !isRedirecting) {
-      setIsRedirecting(true)
+    if (!loading && !user) {
       router.push("/auth/login")
-    } else if (!loading && user && isRedirecting) {
-      // Reset redirecting state when user is authenticated
-      setIsRedirecting(false)
     }
   }, [user, loading, router])
 
-  // Show loading state while auth is loading or redirecting
-  if (loading || isRedirecting) {
+  // Show loading state while auth is loading or while redirecting (no user but not loading)
+  if (loading || (!loading && !user)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">{isRedirecting ? "Redirigiendo..." : "Cargando..."}</p>
+          <p className="text-muted-foreground">{loading ? "Cargando..." : "Redirigiendo..."}</p>
         </div>
       </div>
     )
-  }
-
-  // Don't render anything if no user (will redirect)
-  if (!user) {
-    return null
   }
 
   return (

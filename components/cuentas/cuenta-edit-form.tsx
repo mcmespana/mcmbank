@@ -204,24 +204,28 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
         )}
       </div>
 
-      {/* Connection Type */}
-      <div className="space-y-2">
-        <Label>Tipo de conexión</Label>
-        <Select value={formData.origen} onValueChange={(value) => setFormData({ ...formData, origen: value as "manual" | "conectada" })}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="manual">Manual</SelectItem>
-            <SelectItem value="conectada" disabled>Conectada (Próximamente)</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-sm text-gray-500">Por ahora solo se permiten cuentas manuales</p>
-      </div>
+      {/* Connection Type - Only for bank accounts */}
+      {formData.tipo === "banco" && (
+        <div className="space-y-2">
+          <Label>Tipo de conexión</Label>
+          <Select value={formData.origen} onValueChange={(value) => setFormData({ ...formData, origen: value as "manual" | "conectada" })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="manual">Manual</SelectItem>
+              <SelectItem value="conectada" disabled>Conectada (Próximamente)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-gray-500">Por ahora solo se permiten cuentas manuales</p>
+        </div>
+      )}
 
       {/* Authorized Persons */}
       <div className="space-y-2">
-        <Label htmlFor="personas">Personas autorizadas</Label>
+        <Label htmlFor="personas">
+          {formData.tipo === "caja" ? "Personas con acceso a la caja" : "Personas autorizadas"}
+        </Label>
         <div className="space-y-3">
           <Input
             id="personas"

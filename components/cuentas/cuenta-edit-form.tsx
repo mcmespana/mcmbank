@@ -75,10 +75,7 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
       return
     }
 
-    if (formData.tipo === "banco" && !formData.iban.trim()) {
-      alert("El IBAN es obligatorio para cuentas bancarias")
-      return
-    }
+    /**/
 
     setLoading(true)
 
@@ -200,13 +197,12 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
       {/* IBAN - Only for bank accounts */}
       {formData.tipo === "banco" && (
         <div className="space-y-2">
-          <Label htmlFor="iban">IBAN *</Label>
+          <Label htmlFor="iban">IBAN</Label>
           <Input
             id="iban"
             value={formData.iban}
             onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
             placeholder="ES91 2100 0418 4502 0005 1332"
-            required
           />
         </div>
       )}

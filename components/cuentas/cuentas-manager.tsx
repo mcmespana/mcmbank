@@ -43,15 +43,27 @@ export function CuentasManager() {
 
   // Función para actualizar el estado de una operación
   const setOperationState = useCallback((cuentaId: string, state: 'creating' | 'updating' | 'deleting' | null) => {
+    console.log(`🔄 setOperationState: ${cuentaId} -> ${state}`)
     setOperationStates(prev => {
       if (state === null) {
         const newStates = { ...prev }
         delete newStates[cuentaId]
+        console.log(`🧹 Limpiando estado para cuenta ${cuentaId}`)
         return newStates
       }
+      console.log(`✅ Estableciendo estado ${state} para cuenta ${cuentaId}`)
       return { ...prev, [cuentaId]: state }
     })
   }, [])
+
+  // Función para limpiar automáticamente el estado de una operación
+  const clearOperationStateAfterDelay = useCallback((cuentaId: string, delay: number = 1500) => {
+    console.log(`⏰ Programando limpieza automática para cuenta ${cuentaId} en ${delay}ms`)
+    setTimeout(() => {
+      console.log(`⏰ Ejecutando limpieza automática para cuenta ${cuentaId}`)
+      setOperationState(cuentaId, null)
+    }, delay)
+  }, [setOperationState])
 
   useEffect(() => {
     console.log("CuentasManager: cuentas state updated", cuentas)
@@ -82,6 +94,20 @@ export function CuentasManager() {
       setBalances({})
     }
   }, [cuentas])
+
+  // Limpiar estados de operación cuando cambie la delegación
+  useEffect(() => {
+    console.log("🧹 Limpiando estados de operación por cambio de delegación")
+    setOperationStates({})
+  }, [selectedDelegation])
+
+  // Limpiar estados de operación al desmontar el componente
+  useEffect(() => {
+    return () => {
+      console.log("🧹 Limpiando estados de operación al desmontar componente")
+      setOperationStates({})
+    }
+  }, [])
 
   const handleCreateCuenta = async (cuentaData: Partial<Cuenta>) => {
     if (!selectedDelegation) return
@@ -119,6 +145,12 @@ export function CuentasManager() {
           }
         }
         addCuenta(newCuenta)
+        
+        // Marcar como en proceso de creación
+        setOperationState(newCuenta.id, 'creating')
+        
+        // Limpiar el estado después de 1.5 segundos
+        clearOperationStateAfterDelay(newCuenta.id, 1500)
       }
 
       console.log("handleCreateCuenta: Account created successfully")
@@ -133,6 +165,9 @@ export function CuentasManager() {
     if (!editingCuenta) return
 
     console.log("handleUpdateCuenta: Attempting to update account", cuentaData)
+    
+    // Marcar como en proceso de actualización
+    setOperationState(editingCuenta.id, 'updating')
     
     // Aplicar actualización optimista inmediatamente
     updateCuenta(editingCuenta.id, cuentaData)
@@ -151,15 +186,22 @@ export function CuentasManager() {
       }
 
       console.log("handleUpdateCuenta: Account updated successfully")
+      // Limpiar estado inmediatamente después de éxito
+      setOperationState(editingCuenta.id, null)
       setEditingCuenta(null)
     } catch (error) {
       console.error("handleUpdateCuenta: Error in try-catch", error)
+      // Limpiar estado en caso de error
+      setOperationState(editingCuenta.id, null)
       throw error
     }
   }
 
   const handleDeleteCuenta = async (cuentaId: string) => {
     console.log("handleDeleteCuenta: Attempting to delete account", cuentaId)
+    
+    // Marcar como en proceso de eliminación
+    setOperationState(cuentaId, 'deleting')
     
     // Aplicar eliminación optimista inmediatamente
     removeCuenta(cuentaId)
@@ -173,9 +215,12 @@ export function CuentasManager() {
         throw error
       }
       console.log("handleDeleteCuenta: Account deleted successfully")
+      // No necesitamos limpiar el estado aquí porque la cuenta ya no existe
       setDeletingCuenta(null)
     } catch (error) {
       console.error("handleDeleteCuenta: Error in try-catch", error)
+      // Limpiar estado en caso de error
+      setOperationState(cuentaId, null)
       throw error
     }
   }
@@ -270,7 +315,12 @@ export function CuentasManager() {
             />
           </div>
 
-          <Button onClick={() => setIsCreateSheetOpen(true)} className="w-full sm:w-auto h-11 px-6" size="default">
+          <Button 
+            onClick={() => setIsCreateSheetOpen(true)} 
+            className="w-full sm:w-auto h-11 px-6" 
+            size="default"
+            disabled={Object.values(operationStates).some(state => state === 'creating')}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Nueva Cuenta
           </Button>
@@ -322,11 +372,18 @@ export function CuentasManager() {
               const connectionStatus = getConnectionStatus(cuenta)
               const bankColor = getBankColor(cuenta)
               const balance = balances[cuenta.id] || 0
+              const isCreating = operationStates[cuenta.id] === 'creating'
+              const isUpdating = operationStates[cuenta.id] === 'updating'
+              const isDeleting = operationStates[cuenta.id] === 'deleting'
 
               return (
                 <Card
                   key={cuenta.id}
-                  className="group hover:shadow-lg transition-all duration-200 border-border bg-card"
+                  className={`group hover:shadow-lg transition-all duration-200 border-border bg-card ${
+                    isCreating ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20' :
+                    isUpdating ? 'ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
+                    isDeleting ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''
+                  }`}
                 >
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-6">
@@ -334,7 +391,11 @@ export function CuentasManager() {
                         {/* Account Icon with improved styling */}
                         <div className="relative flex-shrink-0">
                           <div
-                            className="h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105"
+                            className={`h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 ${
+                              isCreating ? 'animate-pulse' :
+                              isUpdating ? 'animate-pulse' :
+                              isDeleting ? 'animate-pulse' : ''
+                            }`}
                             style={{ backgroundColor: bankColor }}
                           >
                             {getBankIcon(cuenta)}
@@ -348,6 +409,23 @@ export function CuentasManager() {
                               <div className="h-full w-full rounded-full bg-current opacity-80" />
                             </div>
                           )}
+
+                          {/* Operation Status Badge */}
+                          {isCreating && (
+                            <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-blue-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
+                              <div className="h-3 w-3 rounded-full bg-white animate-pulse" />
+                            </div>
+                          )}
+                          {isUpdating && (
+                            <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-yellow-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
+                              <div className="h-3 w-3 rounded-full bg-white animate-pulse" />
+                            </div>
+                          )}
+                          {isDeleting && (
+                            <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-red-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
+                              <div className="h-3 w-3 rounded-full bg-white animate-pulse" />
+                            </div>
+                          )}
                         </div>
 
                         {/* Account Details with improved typography */}
@@ -356,6 +434,21 @@ export function CuentasManager() {
                             <div className="flex items-center gap-2">
                               <h3 className="text-xl font-semibold text-foreground truncate leading-tight">
                                 {cuenta.nombre}
+                                {isCreating && (
+                                  <span className="ml-2 text-sm text-blue-600 dark:text-blue-400 font-normal">
+                                    (Creando...)
+                                  </span>
+                                )}
+                                {isUpdating && (
+                                  <span className="ml-2 text-sm text-yellow-600 dark:text-yellow-400 font-normal">
+                                    (Actualizando...)
+                                  </span>
+                                )}
+                                {isDeleting && (
+                                  <span className="ml-2 text-sm text-red-600 dark:text-red-400 font-normal">
+                                    (Eliminando...)
+                                  </span>
+                                )}
                               </h3>
                               {cuenta.descripcion && (
                                 <Popover>
@@ -491,7 +584,8 @@ export function CuentasManager() {
                             variant="outline"
                             size="sm"
                             onClick={() => setEditingCuenta(cuenta)}
-                            className="h-9 w-9 p-0 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950"
+                            disabled={isCreating || isUpdating || isDeleting}
+                            className="h-9 w-9 p-0 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Editar cuenta"
                           >
                             <Edit className="h-4 w-4" />
@@ -500,7 +594,8 @@ export function CuentasManager() {
                             variant="outline"
                             size="sm"
                             onClick={() => setDeletingCuenta(cuenta)}
-                            className="h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950"
+                            disabled={isCreating || isUpdating || isDeleting}
+                            className="h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Eliminar cuenta"
                           >
                             <Trash2 className="h-4 w-4" />

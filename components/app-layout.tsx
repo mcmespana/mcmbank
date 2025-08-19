@@ -11,9 +11,10 @@ import { cn } from "@/lib/utils"
 
 interface AppLayoutProps {
   children: React.ReactNode
+  transactionCount?: number // Added prop for transaction count
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, transactionCount }: AppLayoutProps) {
   const { selectedDelegation, setSelectedDelegation } = useDelegationContext()
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -47,16 +48,14 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
-      <Sidebar 
-        collapsed={sidebarCollapsed} 
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        transactionCount={transactionCount} // Pass transaction count to sidebar
       />
 
       {/* Main Content */}
-      <div className={cn(
-        "transition-all duration-300",
-        sidebarCollapsed ? "lg:pl-16" : "lg:pl-72"
-      )}>
+      <div className={cn("transition-all duration-300", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
         {/* Topbar */}
         <Topbar selectedDelegation={selectedDelegation} onDelegationChange={setSelectedDelegation} />
 

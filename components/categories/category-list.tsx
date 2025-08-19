@@ -3,16 +3,17 @@
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { CategoryEditForm } from "./category-edit-form"
 import { useCategorias } from "@/hooks/use-categorias"
+import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { DatabaseService } from "@/lib/services/database"
-import { GripVertical, Search, Edit, Trash2, Plus } from "lucide-react"
+import { GripVertical, Search, Edit, Trash2, Plus, Building2, Wallet } from "lucide-react"
+import { AmountDisplay } from "@/components/amount-display"
 import type { Categoria } from "@/lib/types/database"
 
 const getCategoryTypeColor = (tipo: string) => {
@@ -31,12 +32,13 @@ const getCategoryTypeColor = (tipo: string) => {
 interface CategoryCardProps {
   category: Categoria
   index: number
+  balance: number
   onEdit: (category: Categoria) => void
   onSearch: (category: Categoria) => void
   onDelete: (category: Categoria) => void
 }
 
-function CategoryCard({ category, index, onEdit, onSearch, onDelete }: CategoryCardProps) {
+function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: CategoryCardProps) {
   return (
     <Draggable draggableId={category.id} index={index}>
       {(provided, snapshot) => (
@@ -45,8 +47,8 @@ function CategoryCard({ category, index, onEdit, onSearch, onDelete }: CategoryC
           {...provided.draggableProps}
           className={cn("transition-shadow hover:shadow-md", snapshot.isDragging && "shadow-lg rotate-2")}
         >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
               {/* Drag Handle */}
               <div
                 {...provided.dragHandleProps}
@@ -56,19 +58,21 @@ function CategoryCard({ category, index, onEdit, onSearch, onDelete }: CategoryC
               </div>
 
               {/* Category Icon */}
-              <div 
-                className="flex h-12 w-12 items-center justify-center rounded-lg text-xl"
+              <div
+                className="flex h-16 w-16 items-center justify-center rounded-xl text-2xl shadow-sm"
                 style={{ backgroundColor: category.color || "#e5e7eb" }}
               >
                 {category.emoji || "📁"}
               </div>
 
               {/* Category Info */}
-              <div className="flex-1">
-                <h3 className="font-medium">{category.nombre}</h3>
-                <Badge className={getCategoryTypeColor(category.tipo)} variant="secondary">
-                  {category.tipo === "ingreso" ? "Ingreso" : category.tipo === "gasto" ? "Gasto" : "Mixto"}
-                </Badge>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-semibold text-lg truncate">{category.nombre}</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AmountDisplay amount={balance} size="sm" />
+                </div>
               </div>
 
               {/* Action Buttons */}
@@ -76,7 +80,7 @@ function CategoryCard({ category, index, onEdit, onSearch, onDelete }: CategoryC
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-gray-600 hover:bg-gray-50"
+                  className="h-9 w-9 text-gray-600 hover:bg-gray-50"
                   onClick={() => onSearch(category)}
                   title="Buscar transacciones"
                 >
@@ -85,7 +89,7 @@ function CategoryCard({ category, index, onEdit, onSearch, onDelete }: CategoryC
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-gray-600 hover:bg-gray-50"
+                  className="h-9 w-9 text-gray-600 hover:bg-gray-50"
                   onClick={() => onEdit(category)}
                   title="Editar categoría"
                 >
@@ -94,7 +98,7 @@ function CategoryCard({ category, index, onEdit, onSearch, onDelete }: CategoryC
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-red-600 hover:bg-red-50"
+                  className="h-9 w-9 text-red-600 hover:bg-red-50"
                   onClick={() => onDelete(category)}
                   title="Eliminar categoría"
                 >
@@ -121,6 +125,12 @@ export function CategoryList() {
   const organizacionId = currentDelegation?.organizacion_id
 
   const { categorias: categories, loading, error, updateCategoria } = useCategorias(organizacionId)
+
+  const { movimientos } = useMovimientos(selectedDelegation?.id || null)
+
+  const getCategoryBalance = (categoryId: string) => {
+    return movimientos.filter((mov) => mov.categoria_id === categoryId).reduce((sum, mov) => sum + mov.importe, 0)
+  }
 
   const handleEdit = (category: Categoria) => {
     setEditingCategory(category)
@@ -241,10 +251,10 @@ export function CategoryList() {
       {/* Header with Search */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Categorías</h2>
-          <p className="text-muted-foreground">{categories.length} categorías • Arrastra para reordenar</p>
+          <h2 className="text-3xl font-bold">Categorías</h2>
+          <p className="text-muted-foreground mt-1">{categories.length} categorías • Arrastra para reordenar</p>
         </div>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} size="lg">
           <Plus className="h-4 w-4 mr-2" />
           Añadir categoría
         </Button>
@@ -257,7 +267,7 @@ export function CategoryList() {
           placeholder="Filtrar por nombre de la categoría..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          className="pl-10 h-12"
         />
       </div>
 
@@ -280,12 +290,13 @@ export function CategoryList() {
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="categories">
             {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
                 {sortedCategories.map((category, index) => (
                   <CategoryCard
                     key={category.id}
                     category={category}
                     index={index}
+                    balance={getCategoryBalance(category.id)}
                     onEdit={handleEdit}
                     onSearch={handleSearch}
                     onDelete={handleDelete}

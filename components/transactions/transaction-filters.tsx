@@ -1,5 +1,5 @@
 "use client"
-import { X, Tag } from "lucide-react"
+import { X, Tag, Building2, PiggyBank } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { CategorySelector } from "./category-selector"
+import { AmountRangeFilter } from "./amount-range-filter"
 import type { Categoria, CuentaConDelegacion } from "@/lib/types/database"
 import type { TransactionFilters as Filters } from "./transaction-manager"
 
@@ -87,6 +88,23 @@ export function TransactionFiltersComponent({
         )}
       </Button>
 
+      <Separator className="bg-border" />
+
+      <div className="space-y-3">
+        <Label className="text-sm font-semibold text-foreground">Categorías</Label>
+        <CategorySelector
+          categories={categories}
+          selectedCategories={filters.categoryIds || []}
+          onSelectionChange={(categoryIds) =>
+            updateFilter("categoryIds", categoryIds.length > 0 ? categoryIds : undefined)
+          }
+          allowMultiple={true}
+          placeholder="Seleccionar categorías..."
+        />
+      </div>
+
+      <Separator className="bg-border" />
+
       <div className="space-y-3">
         <Label className="text-sm font-semibold text-foreground">Buscar transacciones</Label>
         <div className="relative">
@@ -101,7 +119,6 @@ export function TransactionFiltersComponent({
 
       <Separator className="bg-border" />
 
-      {/* Accounts */}
       {accounts.length > 0 && (
         <>
           <div className="space-y-3">
@@ -118,6 +135,11 @@ export function TransactionFiltersComponent({
                 {accounts.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
                     <div className="flex items-center gap-2">
+                      {account.tipo === "caja" ? (
+                        <PiggyBank className="h-4 w-4 text-amber-600" />
+                      ) : (
+                        <Building2 className="h-4 w-4 text-blue-600" />
+                      )}
                       <span>{account.nombre}</span>
                       {account.banco_nombre && (
                         <span className="text-xs text-muted-foreground">({account.banco_nombre})</span>
@@ -133,15 +155,14 @@ export function TransactionFiltersComponent({
       )}
 
       <div className="space-y-3">
-        <Label className="text-sm font-semibold text-foreground">Categorías</Label>
-        <CategorySelector
-          categories={categories}
-          selectedCategories={filters.categoryIds || []}
-          onSelectionChange={(categoryIds) =>
-            updateFilter("categoryIds", categoryIds.length > 0 ? categoryIds : undefined)
-          }
-          allowMultiple={true}
-          placeholder="Seleccionar categorías..."
+        <Label className="text-sm font-semibold text-foreground">Importe</Label>
+        <AmountRangeFilter
+          amountFrom={filters.amountFrom}
+          amountTo={filters.amountTo}
+          onAmountRangeChange={(amountFrom, amountTo) => {
+            updateFilter("amountFrom", amountFrom)
+            updateFilter("amountTo", amountTo)
+          }}
         />
       </div>
     </div>

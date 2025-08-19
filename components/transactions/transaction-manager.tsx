@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
@@ -11,7 +11,8 @@ import { useMovimientos } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
-import { ChevronRight, ChevronLeft, Plus, Download, Upload, Filter } from "lucide-react"
+import { Card } from "@/components/ui/card"
+import { ChevronRight, ChevronLeft, Plus, Download, Upload, Filter, ChevronUp } from "lucide-react"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 
 export interface TransactionFilters {
@@ -25,7 +26,11 @@ export interface TransactionFilters {
   uncategorized?: boolean
 }
 
-export function TransactionManager() {
+interface TransactionManagerProps {
+  onTransactionCountChange?: (count: number) => void
+}
+
+export function TransactionManager({ onTransactionCountChange }: TransactionManagerProps) {
   const {
     selectedDelegation,
     setSelectedDelegation,
@@ -103,6 +108,20 @@ export function TransactionManager() {
 
   const uncategorizedCount = movements.filter((m) => !m.categoria_id).length
 
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+    if (key === "dateFrom" || key === "dateTo") return false
+    if (key === "categoryIds") {
+      return Array.isArray(value) && value.length > 0
+    }
+    return value !== undefined && value !== "" && value !== false
+  })
+
+  useEffect(() => {
+    if (onTransactionCountChange) {
+      onTransactionCountChange(movements.length)
+    }
+  }, [movements.length, onTransactionCountChange])
+
   if (delegationsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -175,34 +194,100 @@ export function TransactionManager() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header with Date Filter and Actions */}
         <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <DateRangeFilter
-              dateFrom={filters.dateFrom}
-              dateTo={filters.dateTo}
-              onDateRangeChange={(dateFrom, dateTo) => setFilters((prev) => ({ ...prev, dateFrom, dateTo }))}
-            />
+          <div className="flex items-center justify-between gap-2 min-h-[40px]">
+            {/* Date Filter - Responsive width */}
+            <div className="flex-shrink-0">
+              <div className="w-[200px] sm:w-[240px] md:w-[280px] lg:w-[320px]">
+                <DateRangeFilter
+                  dateFrom={filters.dateFrom}
+                  dateTo={filters.dateTo}
+                  onDateRangeChange={(dateFrom, dateTo) => setFilters((prev) => ({ ...prev, dateFrom, dateTo }))}
+                />
+              </div>
+            </div>
 
-            <div className="flex items-center gap-2">
+            {/* Action Buttons - Responsive text visibility */}
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {/* Mobile Filter Button */}
-              <Button variant="outline" size="sm" onClick={() => setFiltersOpen(!filtersOpen)} className="lg:hidden">
-                <Filter className="h-4 w-4 mr-2" />
-                Filtros
+              <Button
+                variant={hasActiveFilters ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className={`lg:hidden flex-shrink-0 relative ${
+                  hasActiveFilters ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
+                }`}
+                title="Filtros"
+              >
+                <Filter className="h-4 w-4" />
+                <span className="hidden sm:ml-2 sm:inline">Filtros</span>
+                {hasActiveFilters && (
+                  <div className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+                )}
               </Button>
 
-              <Button variant="outline" size="sm" onClick={() => setCreateFormOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Añadir</span>
+              {/* Add Button - Always show text on sm+ screens */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCreateFormOpen(true)}
+                className="flex-shrink-0"
+                title="Añadir transacción"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:ml-2 sm:inline">Añadir</span>
               </Button>
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Importar</span>
+
+              {/* Import Button - Hide text on smaller screens */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0 bg-transparent"
+                title="Importar transacciones"
+              >
+                <Upload className="h-4 w-4" />
+                <span className="hidden lg:ml-2 lg:inline">Importar</span>
               </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Descargar</span>
+
+              {/* Download Button - Hide text on smaller screens */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0 bg-transparent"
+                title="Descargar transacciones"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden lg:ml-2 lg:inline">Descargar</span>
               </Button>
             </div>
           </div>
+
+          {filtersOpen && (
+            <Card className="lg:hidden p-4 border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-blue-600" />
+                  <h3 className="font-semibold text-blue-700 dark:text-blue-300">Filtros</h3>
+                  {hasActiveFilters && <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFiltersOpen(false)}
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+              </div>
+              <TransactionFiltersComponent
+                filters={filters}
+                onFiltersChange={setFilters}
+                onClearFilters={clearFilters}
+                categories={categories}
+                accounts={accounts}
+                uncategorizedCount={uncategorizedCount}
+              />
+            </Card>
+          )}
         </div>
 
         {/* Transaction List */}
@@ -222,30 +307,6 @@ export function TransactionManager() {
           />
         </div>
       </div>
-
-      {/* Mobile Filters Overlay */}
-      {filtersOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-background">
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Filtros</h3>
-              <Button variant="ghost" size="sm" onClick={() => setFiltersOpen(false)}>
-                ✕
-              </Button>
-            </div>
-          </div>
-          <div className="p-4 space-y-4">
-            <TransactionFiltersComponent
-              filters={filters}
-              onFiltersChange={setFilters}
-              onClearFilters={clearFilters}
-              categories={categories}
-              accounts={accounts}
-              uncategorizedCount={uncategorizedCount}
-            />
-          </div>
-        </div>
-      )}
 
       <TransactionDetail
         movement={selectedMovement}

@@ -3,15 +3,14 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { BankAvatar } from "./bank-avatar"
 import { CategoryChip } from "./category-chip"
-import { formatCurrency, formatDate } from "@/lib/utils/format"
-import { getAccountDisplayName } from "@/lib/utils/movement-utils"
-import { Info } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { AmountDisplay } from "@/components/ui/amount-display"
+import { AccountTooltip } from "./account-tooltip"
+import { formatDate } from "@/lib/utils/format"
+import { Input } from "@/components/ui/input"
 import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListProps {
@@ -36,6 +35,8 @@ export function TransactionList({
   onMovementUpdate,
 }: TransactionListProps) {
   const [updatingMovements, setUpdatingMovements] = useState<Set<string>>(new Set())
+  const [editingConcept, setEditingConcept] = useState<string | null>(null)
+  const [conceptValue, setConceptValue] = useState("")
 
   const handleCategoryChange = async (movementId: string, categoryId: string | null) => {
     setUpdatingMovements((prev) => new Set(prev).add(movementId))
@@ -52,9 +53,32 @@ export function TransactionList({
     }
   }
 
+  const handleConceptClick = (movement: Movimiento, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingConcept(movement.id)
+    setConceptValue(movement.concepto)
+  }
+
+  const handleConceptSave = async (movementId: string) => {
+    if (conceptValue.trim() !== "") {
+      try {
+        await onMovementUpdate(movementId, { concepto: conceptValue.trim() })
+      } catch (error) {
+        console.error("Error updating concept:", error)
+      }
+    }
+    setEditingConcept(null)
+    setConceptValue("")
+  }
+
+  const handleConceptCancel = () => {
+    setEditingConcept(null)
+    setConceptValue("")
+  }
+
   const handleTransactionClick = (movement: Movimiento, e: React.MouseEvent) => {
     const target = e.target as HTMLElement
-    if (!target.closest("button") && !target.closest('[role="button"]')) {
+    if (!target.closest("button") && !target.closest('[role="button"]') && !target.closest("input")) {
       onMovementClick(movement)
     }
   }
@@ -80,78 +104,84 @@ export function TransactionList({
   }
 
   return (
-    <div className="space-y-1 p-4">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="space-y-1 p-2 sm:p-4">
+      <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">{total} transacciones encontradas</p>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
-              <Info className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-3" align="start">
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm">Información</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Haz clic en cualquier transacción para cambiar su categoría rápidamente.
-              </p>
-            </div>
-          </PopoverContent>
-        </Popover>
       </div>
 
       {movements.map((movement) => {
         const account = accounts.find((acc) => acc.id === movement.cuenta_id)
         const category = categories.find((cat) => cat.id === movement.categoria_id) as Categoria | undefined
         const isUpdating = updatingMovements.has(movement.id)
+        const isEditingThisConcept = editingConcept === movement.id
 
         return (
           <div key={movement.id} className="relative">
             <div
-              className="bg-card rounded-lg border p-3 hover:bg-muted/50 transition-colors cursor-pointer"
+              className="bg-card rounded-lg border p-3 sm:p-4 hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={(e) => handleTransactionClick(movement, e)}
             >
-              <div className="flex items-center gap-3">
-                {/* Bank Avatar */}
-                <BankAvatar account={account} />
+              <div className="flex items-start gap-3">
+                <AccountTooltip account={account}>
+                  <div
+                    className="rounded-full p-0.5 cursor-pointer hover:scale-105 transition-transform flex-shrink-0"
+                    style={{
+                      backgroundColor: account?.color || "#4ECDC4",
+                      boxShadow: `0 0 0 2px ${account?.color || "#4ECDC4"}20`,
+                    }}
+                  >
+                    <BankAvatar account={account} />
+                  </div>
+                </AccountTooltip>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  {/* Title and Date in same line */}
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-sm leading-tight truncate">{movement.concepto}</h3>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{formatDate(movement.fecha)}</span>
-                      {movement.descripcion && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Info className="h-3 w-3" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80 p-3" align="start">
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-sm">Descripción</h4>
-                              <p className="text-sm text-muted-foreground leading-relaxed">{movement.descripcion}</p>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                {/* Content - Mobile optimized */}
+                <div className="flex-1 min-w-0 space-y-2">
+                  {/* Top row: Concept and Amount */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      {isEditingThisConcept ? (
+                        <Input
+                          value={conceptValue}
+                          onChange={(e) => setConceptValue(e.target.value)}
+                          onBlur={() => handleConceptSave(movement.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleConceptSave(movement.id)
+                            } else if (e.key === "Escape") {
+                              handleConceptCancel()
+                            }
+                          }}
+                          className="text-sm font-semibold h-6 px-2"
+                          autoFocus
+                        />
+                      ) : (
+                        <h3
+                          className="font-semibold text-sm leading-tight cursor-pointer hover:text-primary line-clamp-2 sm:line-clamp-1"
+                          onClick={(e) => handleConceptClick(movement, e)}
+                        >
+                          {movement.concepto}
+                        </h3>
                       )}
+                    </div>
+
+                    <div className="flex-shrink-0">
+                      <AmountDisplay amount={movement.importe} size="sm" />
                     </div>
                   </div>
 
-                  {/* Category and Account */}
-                  <div className="flex items-center justify-between">
-                    <div onClick={(e) => e.stopPropagation()}>
+                  {/* Bottom row: Date and Category */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-md whitespace-nowrap">
+                        {formatDate(movement.fecha)}
+                      </span>
+                    </div>
+
+                    <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
                       {isUpdating ? (
                         <div className="flex items-center gap-2">
                           <LoadingSpinner size="sm" />
-                          <span className="text-xs text-muted-foreground">Actualizando...</span>
+                          <span className="text-xs text-muted-foreground hidden sm:inline">Actualizando...</span>
                         </div>
                       ) : (
                         <CategoryChip
@@ -161,24 +191,6 @@ export function TransactionList({
                         />
                       )}
                     </div>
-                    {account && (
-                      <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                        {getAccountDisplayName(account)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Amount */}
-                <div className="text-right">
-                  <div
-                    className={`font-bold text-sm px-2 py-1 rounded-md border ${
-                      movement.importe > 0
-                        ? "text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950/20 dark:border-green-800"
-                        : "text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/20 dark:border-red-800"
-                    }`}
-                  >
-                    {formatCurrency(movement.importe)}
                   </div>
                 </div>
               </div>

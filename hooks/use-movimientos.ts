@@ -29,7 +29,7 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
       delegacionId || "",
       filters?.fechaDesde || "",
       filters?.fechaHasta || "",
-      (filters?.categoryIds || []).join(","),
+      (filters?.categoriaIds || []).join(","),
       filters?.cuentaId || "",
       filters?.busqueda || "",
       filters?.amountFrom || "",
@@ -88,8 +88,8 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
       if (filters?.fechaHasta) {
         query = query.lte("fecha", filters.fechaHasta)
       }
-      if (filters?.categoryIds && filters.categoryIds.length > 0) {
-        query = query.in("categoria_id", filters.categoryIds)
+      if (filters?.categoriaIds && filters.categoriaIds.length > 0) {
+        query = query.in("categoria_id", filters.categoriaIds)
       }
       if (filters?.uncategorized) {
         query = query.is("categoria_id", null)
@@ -124,9 +124,12 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
     delegacionId,
     filters?.fechaDesde,
     filters?.fechaHasta,
-    filters?.categoriaId,
+    filters?.categoriaIds,
     filters?.cuentaId,
     filters?.busqueda,
+    filters?.amountFrom,
+    filters?.amountTo,
+    filters?.uncategorized,
   ])
 
   useEffect(() => {

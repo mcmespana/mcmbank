@@ -194,6 +194,23 @@ export type Database = {
           rol?: string
         }
       }
+      perfil: {
+        Row: {
+          usuario_id: string
+          nombre_completo: string
+          creado_en: string
+        }
+        Insert: {
+          usuario_id: string
+          nombre_completo: string
+          creado_en?: string
+        }
+        Update: {
+          usuario_id?: string
+          nombre_completo?: string
+          creado_en?: string
+        }
+      }
     }
   }
 }
@@ -204,6 +221,7 @@ export type Cuenta = Database["public"]["Tables"]["cuenta"]["Row"]
 export type Movimiento = Database["public"]["Tables"]["movimiento"]["Row"]
 export type Categoria = Database["public"]["Tables"]["categoria"]["Row"]
 export type Membresia = Database["public"]["Tables"]["membresia"]["Row"]
+export type Perfil = Database["public"]["Tables"]["perfil"]["Row"]
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {

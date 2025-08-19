@@ -19,20 +19,21 @@ export function useCuentas(
   const [error, setError] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const forceRefreshRef = useRef<number>(0) // Para forzar refrescos
   
-    // DEBUG: Track excessive calls  
+  // DEBUG: Track excessive calls  
   useDebugCalls('useCuentas', [delegacionId])
   
   // AGGRESSIVE MEMOIZATION: Prevent unnecessary re-renders
   const memoizedDelegacionId = useMemo(() => delegacionId, [delegacionId])
   
-  // DEBOUNCING: Only fetch if delegacionId actually changed
+  // DEBOUNCING: Only fetch if delegacionId actually changed OR force refresh is requested
   const lastDelegacionIdRef = useRef<string | null>(null)
   
-  const fetchCuentas = useCallback(async () => {
-    // Skip if same delegacionId
-    if (memoizedDelegacionId === lastDelegacionIdRef.current) {
-      console.log('🔄 useCuentas: Skipping fetch - same delegacionId')
+  const fetchCuentas = useCallback(async (force = false) => {
+    // Skip if same delegacionId and no force refresh, unless it's the first load
+    if (!force && memoizedDelegacionId === lastDelegacionIdRef.current && cuentas.length > 0) {
+      console.log('🔄 useCuentas: Skipping fetch - same delegacionId and no force refresh')
       return
     }
     
@@ -112,7 +113,13 @@ export function useCuentas(
         throw error
       }
 
-      setCuentas(data || [])
+      // Transform data to match CuentaConDelegacion type
+      const transformedData = (data || []).map((item: any) => ({
+        ...item,
+        delegacion: Array.isArray(item.delegacion) ? item.delegacion[0] : item.delegacion
+      }))
+
+      setCuentas(transformedData)
     } catch (err) {
       if (abortController.signal.aborted) {
         console.log("Cuentas query was cancelled")
@@ -133,11 +140,17 @@ export function useCuentas(
         timeoutRef.current = null
       }
     }
-  }, [memoizedDelegacionId, timeout])
+  }, [memoizedDelegacionId, timeout, cuentas.length])
+
+  // Función para forzar un refresh completo
+  const forceRefresh = useCallback(() => {
+    forceRefreshRef.current += 1
+    fetchCuentas(true)
+  }, [fetchCuentas])
 
   useEffect(() => {
-    // Only fetch if delegacionId changed
-    if (memoizedDelegacionId !== lastDelegacionIdRef.current) {
+    // Fetch if delegacionId changed OR if it's the first load
+    if (memoizedDelegacionId !== lastDelegacionIdRef.current || cuentas.length === 0) {
       fetchCuentas()
     }
     
@@ -150,13 +163,26 @@ export function useCuentas(
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [memoizedDelegacionId, fetchCuentas])
+  }, [memoizedDelegacionId, fetchCuentas, cuentas.length])
 
   return { 
     cuentas, 
     loading, 
     error, 
     refetch: fetchCuentas,
+    forceRefresh, // Nueva función para forzar refresh
+    // Funciones para actualizaciones optimistas
+    addCuenta: (cuenta: CuentaConDelegacion) => {
+      setCuentas(prev => [cuenta, ...prev])
+    },
+    updateCuenta: (cuentaId: string, updates: Partial<CuentaConDelegacion>) => {
+      setCuentas(prev => prev.map(c => 
+        c.id === cuentaId ? { ...c, ...updates } : c
+      ))
+    },
+    removeCuenta: (cuentaId: string) => {
+      setCuentas(prev => prev.filter(c => c.id !== cuentaId))
+    },
     cancel: () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()

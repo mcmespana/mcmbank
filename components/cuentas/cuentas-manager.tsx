@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,12 +17,18 @@ import { supabase } from "@/lib/supabase/client"
 
 export function CuentasManager() {
   const { selectedDelegation } = useDelegationContext()
+  console.log("CuentasManager: selectedDelegation", selectedDelegation)
   const {
     cuentas: cuentasWithDelegacion,
     loading,
     error,
     refetch,
+    forceRefresh,
+    addCuenta,
+    updateCuenta,
+    removeCuenta,
   } = useCuentas(selectedDelegation)
+  console.log("CuentasManager: cuentas after useCuentas", cuentasWithDelegacion)
   const cuentas = useMemo(
     () => cuentasWithDelegacion.map(({ delegacion, ...cuenta }) => cuenta),
     [cuentasWithDelegacion],
@@ -33,8 +39,22 @@ export function CuentasManager() {
   const [deletingCuenta, setDeletingCuenta] = useState<Cuenta | null>(null)
   const [copiedIban, setCopiedIban] = useState<string | null>(null)
   const [balances, setBalances] = useState<Record<string, number>>({})
+  const [operationStates, setOperationStates] = useState<Record<string, 'creating' | 'updating' | 'deleting'>>({})
+
+  // Función para actualizar el estado de una operación
+  const setOperationState = useCallback((cuentaId: string, state: 'creating' | 'updating' | 'deleting' | null) => {
+    setOperationStates(prev => {
+      if (state === null) {
+        const newStates = { ...prev }
+        delete newStates[cuentaId]
+        return newStates
+      }
+      return { ...prev, [cuentaId]: state }
+    })
+  }, [])
 
   useEffect(() => {
+    console.log("CuentasManager: cuentas state updated", cuentas)
     async function fetchBalances() {
       const entries = await Promise.all(
         cuentas.map(async (c) => {
@@ -66,41 +86,98 @@ export function CuentasManager() {
   const handleCreateCuenta = async (cuentaData: Partial<Cuenta>) => {
     if (!selectedDelegation) return
 
-    const { error } = await supabase.from("cuenta").insert({
-      delegacion_id: selectedDelegation,
-      nombre: cuentaData.nombre || "",
-      tipo: cuentaData.tipo,
-      origen: cuentaData.origen,
-      banco_nombre: cuentaData.banco_nombre || null,
-      iban: cuentaData.iban || null,
-      color: cuentaData.color || "#4ECDC4",
-      personas_autorizadas: cuentaData.personas_autorizadas || null,
-      descripcion: cuentaData.descripcion || null,
-    })
+    console.log("handleCreateCuenta: Attempting to create account", cuentaData)
+    
+    try {
+      const { data, error } = await supabase.from("cuenta").insert({
+        delegacion_id: selectedDelegation,
+        nombre: cuentaData.nombre || "",
+        tipo: cuentaData.tipo,
+        origen: cuentaData.origen,
+        banco_nombre: cuentaData.banco_nombre || null,
+        iban: cuentaData.iban || null,
+        color: cuentaData.color || "#4ECDC4",
+        personas_autorizadas: cuentaData.personas_autorizadas || null,
+        descripcion: cuentaData.descripcion || null,
+      }).select()
 
-    if (error) throw error
-    await refetch()
-    setIsCreateSheetOpen(false)
+      if (error) {
+        console.error("handleCreateCuenta: Error creating account", error)
+        throw error
+      }
+
+      // Aplicar actualización optimista inmediatamente
+      if (data && data[0]) {
+        const newCuenta = {
+          ...data[0],
+          delegacion: {
+            id: selectedDelegation,
+            organizacion_id: "", // Se llenará con el refresh
+            codigo: null,
+            nombre: "", // Se llenará con el refresh
+            creado_en: new Date().toISOString()
+          }
+        }
+        addCuenta(newCuenta)
+      }
+
+      console.log("handleCreateCuenta: Account created successfully")
+      setIsCreateSheetOpen(false)
+    } catch (error) {
+      console.error("handleCreateCuenta: Error in try-catch", error)
+      throw error
+    }
   }
 
   const handleUpdateCuenta = async (cuentaData: Partial<Cuenta>) => {
     if (!editingCuenta) return
 
-    const { error } = await supabase
-      .from("cuenta")
-      .update(cuentaData)
-      .eq("id", editingCuenta.id)
+    console.log("handleUpdateCuenta: Attempting to update account", cuentaData)
+    
+    // Aplicar actualización optimista inmediatamente
+    updateCuenta(editingCuenta.id, cuentaData)
+    
+    try {
+      const { error } = await supabase
+        .from("cuenta")
+        .update(cuentaData)
+        .eq("id", editingCuenta.id)
 
-    if (error) throw error
-    await refetch()
-    setEditingCuenta(null)
+      if (error) {
+        console.error("handleUpdateCuenta: Error updating account", error)
+        // Revertir actualización optimista en caso de error
+        await forceRefresh()
+        throw error
+      }
+
+      console.log("handleUpdateCuenta: Account updated successfully")
+      setEditingCuenta(null)
+    } catch (error) {
+      console.error("handleUpdateCuenta: Error in try-catch", error)
+      throw error
+    }
   }
 
   const handleDeleteCuenta = async (cuentaId: string) => {
-    const { error } = await supabase.from("cuenta").delete().eq("id", cuentaId)
-    if (error) throw error
-    await refetch()
-    setDeletingCuenta(null)
+    console.log("handleDeleteCuenta: Attempting to delete account", cuentaId)
+    
+    // Aplicar eliminación optimista inmediatamente
+    removeCuenta(cuentaId)
+    
+    try {
+      const { error } = await supabase.from("cuenta").delete().eq("id", cuentaId)
+      if (error) {
+        console.error("handleDeleteCuenta: Error deleting account", error)
+        // Revertir eliminación optimista en caso de error
+        await forceRefresh()
+        throw error
+      }
+      console.log("handleDeleteCuenta: Account deleted successfully")
+      setDeletingCuenta(null)
+    } catch (error) {
+      console.error("handleDeleteCuenta: Error in try-catch", error)
+      throw error
+    }
   }
 
   const getConnectionStatus = (cuenta: Cuenta) => {
@@ -202,9 +279,9 @@ export function CuentasManager() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-lg border">
             <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Cuentas</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{filteredCuentas.length}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{cuentas.length}</div>
           </div>
-          <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 p-4 rounded-lg border">
+          <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-blue-900 p-4 rounded-lg border">
             <div className="text-sm font-medium text-green-700 dark:text-green-300">Saldo Total</div>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
               {Object.values(balances)
@@ -216,7 +293,7 @@ export function CuentasManager() {
           <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-4 rounded-lg border">
             <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Bancos</div>
             <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-              {filteredCuentas.filter((c) => c.tipo === "banco").length}
+              {cuentas.filter((c) => c.tipo === "banco").length}
             </div>
           </div>
         </div>

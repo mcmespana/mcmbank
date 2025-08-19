@@ -15,4 +15,3 @@ export const supabase = createBrowserClient<Database>(supabaseUrl, supabaseAnonK
 export function createClient() {
   return supabase
 }
-

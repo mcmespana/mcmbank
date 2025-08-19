@@ -12,15 +12,26 @@ const globalCallTracker: CallTracker = {}
 export function useDebugCalls(hookName: string, dependencies?: any[]) {
   const renderCountRef = useRef(0)
   const lastDepsRef = useRef<any[]>([])
+  const isFirstRender = useRef(true)
 
-  // Increment render count
-  renderCountRef.current++
-  
-  // Track global calls
-  if (!globalCallTracker[hookName]) {
-    globalCallTracker[hookName] = 0
+  // Only increment on actual renders, not just function calls
+  useEffect(() => {
+    renderCountRef.current++
+    
+    // Track global calls
+    if (!globalCallTracker[hookName]) {
+      globalCallTracker[hookName] = 0
+    }
+    globalCallTracker[hookName]++
+  })
+
+  // Skip first render for dependency tracking
+  if (isFirstRender.current) {
+    isFirstRender.current = false
+    if (dependencies) {
+      lastDepsRef.current = [...dependencies]
+    }
   }
-  globalCallTracker[hookName]++
 
   useEffect(() => {
     console.log(`🔄 ${hookName} - Render #${renderCountRef.current}`)

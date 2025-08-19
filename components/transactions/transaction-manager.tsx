@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
-import { TransactionForm } from "./transaction-form"
+import { TransactionCreatePanel } from "./transaction-create-panel"
 import { DateRangeFilter } from "./date-range-filter"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
@@ -320,20 +320,14 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
         }}
       />
 
-      {/* Create Transaction Form Dialog */}
-      {createFormOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
-          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
-            <TransactionForm
-              accounts={accounts as unknown as Cuenta[]}
-              categories={categories as unknown as Categoria[]}
-              onSave={handleCreateMovement}
-              onCancel={() => setCreateFormOpen(false)}
-              mode="create"
-            />
-          </div>
-        </div>
-      )}
+      {/* Create Transaction Panel */}
+      <TransactionCreatePanel
+        accounts={accounts as unknown as Cuenta[]}
+        categories={categories as unknown as Categoria[]}
+        open={createFormOpen}
+        onOpenChange={setCreateFormOpen}
+        onCreate={handleCreateMovement}
+      />
     </div>
   )
 }

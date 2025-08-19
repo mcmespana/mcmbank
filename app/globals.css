@@ -93,3 +93,42 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom styles for transaction cards */
+@layer components {
+  .transaction-card {
+    @apply relative bg-card border border-border/50 rounded-xl p-3 sm:p-4 hover:bg-muted/50 hover:border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md;
+  }
+  
+  .transaction-card::before {
+    content: '';
+    @apply absolute inset-0 rounded-xl bg-gradient-to-r from-transparent to-transparent opacity-0 transition-opacity duration-200;
+  }
+  
+  .transaction-card:hover::before {
+    @apply opacity-5;
+  }
+  
+  .account-avatar {
+    @apply rounded-full p-1 cursor-pointer hover:scale-105 transition-transform flex-shrink-0 shadow-sm;
+  }
+  
+  .transaction-amount-positive {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800/30;
+  }
+  
+  .transaction-amount-negative {
+    @apply bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/30;
+  }
+  
+  /* Mobile-specific improvements */
+  @media (max-width: 640px) {
+    .transaction-card {
+      @apply p-3 mx-2;
+    }
+    
+    .account-avatar {
+      @apply p-0.5;
+    }
+  }
+}

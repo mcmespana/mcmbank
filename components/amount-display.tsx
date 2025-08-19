@@ -13,7 +13,7 @@ export function AmountDisplay({ amount, size = "md", className }: AmountDisplayP
   const isPositive = amount > 0
 
   const sizeClasses = {
-    sm: "text-sm px-3 py-1",
+    sm: "text-sm px-2 py-0.5",
     md: "text-base px-4 py-2",
     lg: "text-lg px-5 py-2.5",
   }
@@ -21,10 +21,10 @@ export function AmountDisplay({ amount, size = "md", className }: AmountDisplayP
   return (
     <div
       className={cn(
-        "inline-flex items-center justify-center rounded-full font-semibold transition-colors",
+        "inline-flex items-center justify-center rounded-full font-semibold transition-all duration-200",
         isPositive
-          ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-          : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
+          ? "transaction-amount-positive"
+          : "transaction-amount-negative",
         sizeClasses[size],
         className,
       )}

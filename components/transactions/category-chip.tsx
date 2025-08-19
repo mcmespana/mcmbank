@@ -39,11 +39,11 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
     return (
       <div className="flex items-center gap-2">
         <Badge
-          className="cursor-pointer hover:opacity-80 transition-opacity rounded-full px-2 py-1 text-white font-medium flex items-center gap-1 text-xs"
+          className="cursor-pointer hover:opacity-80 transition-all duration-200 rounded-full px-3 py-1.5 text-white font-medium flex items-center gap-1.5 text-xs shadow-sm hover:shadow-md transform hover:scale-105"
           style={{ backgroundColor: getCategoryColor(category) }}
           onClick={() => setOpen(true)}
         >
-          {category.emoji && <span>{category.emoji}</span>}
+          {category.emoji && <span className="text-xs">{category.emoji}</span>}
           <span className="text-xs font-medium">{category.nombre}</span>
         </Badge>
 
@@ -93,10 +93,10 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
       <Button
         variant="outline"
         size="sm"
-        className="h-6 px-2 text-xs rounded-full border-dashed hover:bg-muted bg-transparent"
+        className="h-7 px-3 text-xs rounded-full border-dashed hover:bg-primary/5 hover:border-primary/30 bg-transparent transition-all duration-200 text-muted-foreground hover:text-primary"
         onClick={() => setOpen(true)}
       >
-        <Plus className="h-3 w-3 mr-1" />
+        <Plus className="h-3 w-3 mr-1.5" />
         Etiquetar
       </Button>
 

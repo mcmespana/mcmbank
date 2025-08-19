@@ -11,6 +11,7 @@ import { AmountDisplay } from "@/components/ui/amount-display"
 import { AccountTooltip } from "./account-tooltip"
 import { formatDate } from "@/lib/utils/format"
 import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListProps {
@@ -97,16 +98,24 @@ export function TransactionList({
 
   if (movements.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">No se encontraron transacciones</p>
+      <div className="flex flex-col items-center justify-center py-12 px-4">
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 mx-auto bg-muted/50 rounded-full flex items-center justify-center">
+            <span className="text-2xl text-muted-foreground">📊</span>
+          </div>
+          <h3 className="text-lg font-medium text-foreground">No se encontraron transacciones</h3>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            Prueba ajustando los filtros o agrega una nueva transacción para comenzar.
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-1 p-2 sm:p-4">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-muted-foreground">{total} transacciones encontradas</p>
+      <div className="flex items-center justify-between mb-3 px-1 sm:px-0">
+        <p className="text-sm text-muted-foreground font-medium">{total} transacciones encontradas</p>
       </div>
 
       {movements.map((movement) => {
@@ -118,27 +127,29 @@ export function TransactionList({
         return (
           <div key={movement.id} className="relative">
             <div
-              className="bg-card rounded-lg border p-3 sm:p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+              className={cn(
+                "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md",
+                !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10"
+              )}
               onClick={(e) => handleTransactionClick(movement, e)}
             >
               <div className="flex items-start gap-3">
                 <AccountTooltip account={account}>
                   <div
-                    className="rounded-full p-0.5 cursor-pointer hover:scale-105 transition-transform flex-shrink-0"
+                    className="rounded-full p-0.5 cursor-pointer hover:scale-105 transition-transform flex-shrink-0 shadow-sm"
                     style={{
                       backgroundColor: account?.color || "#4ECDC4",
-                      boxShadow: `0 0 0 2px ${account?.color || "#4ECDC4"}20`,
                     }}
                   >
                     <BankAvatar account={account} />
                   </div>
                 </AccountTooltip>
 
-                {/* Content - Mobile optimized */}
-                <div className="flex-1 min-w-0 space-y-2">
-                  {/* Top row: Concept and Amount */}
+                {/* Content - Reorganized as requested */}
+                <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
+                      {/* Title */}
                       {isEditingThisConcept ? (
                         <Input
                           value={conceptValue}
@@ -156,40 +167,38 @@ export function TransactionList({
                         />
                       ) : (
                         <h3
-                          className="font-semibold text-sm leading-tight cursor-pointer hover:text-primary line-clamp-2 sm:line-clamp-1"
+                          className="font-semibold text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors mb-1"
                           onClick={(e) => handleConceptClick(movement, e)}
                         >
                           {movement.concepto}
                         </h3>
                       )}
+                      
+                      {/* Category directly below title */}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        {isUpdating ? (
+                          <div className="flex items-center gap-2">
+                            <LoadingSpinner size="sm" />
+                            <span className="text-xs text-muted-foreground hidden sm:inline">Actualizando...</span>
+                          </div>
+                        ) : (
+                          <CategoryChip
+                            category={category as unknown as Categoria}
+                            categories={categories as unknown as Categoria[]}
+                            onCategoryChange={(categoryId) => handleCategoryChange(movement.id, categoryId)}
+                          />
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex-shrink-0">
-                      <AmountDisplay amount={movement.importe} size="sm" />
-                    </div>
-                  </div>
-
-                  {/* Bottom row: Date and Category */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-md whitespace-nowrap">
+                    {/* Right side: Amount and Date stacked */}
+                    <div className="flex-shrink-0 text-right min-w-0">
+                      <div className="mb-0.5">
+                        <AmountDisplay amount={movement.importe} size="sm" />
+                      </div>
+                      <div className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-md whitespace-nowrap inline-block">
                         {formatDate(movement.fecha)}
-                      </span>
-                    </div>
-
-                    <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
-                      {isUpdating ? (
-                        <div className="flex items-center gap-2">
-                          <LoadingSpinner size="sm" />
-                          <span className="text-xs text-muted-foreground hidden sm:inline">Actualizando...</span>
-                        </div>
-                      ) : (
-                        <CategoryChip
-                          category={category as unknown as Categoria}
-                          categories={categories as unknown as Categoria[]}
-                          onCategoryChange={(categoryId) => handleCategoryChange(movement.id, categoryId)}
-                        />
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>

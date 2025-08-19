@@ -66,7 +66,7 @@ export default function LoginForm() {
             MCM Bank
           </CardTitle>
           <CardDescription className="text-base text-muted-foreground">
-            Bienvenido al futuro de la banca digital
+            Bienvenido a la aplicación de tesorería del MCM
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -79,13 +79,13 @@ export default function LoginForm() {
 
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium text-foreground/80">
-                Email
+                Mail MCM Local para el acceso
               </label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                placeholder="tu@email.com"
+                placeholder="tumcm@movimientoconsolacion.com"
                 required
                 className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
               />
@@ -93,7 +93,7 @@ export default function LoginForm() {
 
             <div className="space-y-2">
               <label htmlFor="password" className="block text-sm font-medium text-foreground/80">
-                Contraseña
+                Código de acceso
               </label>
               <Input
                 id="password"
@@ -107,12 +107,12 @@ export default function LoginForm() {
             <SubmitButton />
 
             <div className="text-center text-sm text-muted-foreground">
-              ¿No tienes cuenta?{" "}
+              ¿No tienes cuenta? Solicítala a tu responsable{" "}
               <Link
                 href="/auth/sign-up"
                 className="text-primary hover:underline transition-all duration-200 hover:text-primary/80"
               >
-                Regístrate
+                desde aquí
               </Link>
             </div>
           </form>
@@ -125,7 +125,7 @@ export default function LoginForm() {
             </div>
             <div className="flex items-center space-x-2 text-xs text-muted-foreground">
               <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: "0.5s" }}></div>
-              <span>Encriptado</span>
+              <span>Conectado</span>
             </div>
             <div className="flex items-center space-x-2 text-xs text-muted-foreground">
               <div className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" style={{ animationDelay: "1s" }}></div>

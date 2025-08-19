@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,105 +11,95 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CuentaEditForm } from "./cuenta-edit-form"
 import { DeleteAccountDialog } from "./delete-account-dialog"
 import type { Cuenta } from "@/lib/types/database"
-
-// Mock data para desarrollo
-const mockCuentas: Cuenta[] = [
-  {
-    id: "1",
-    delegacion_id: "1",
-    nombre: "Cuenta Principal",
-    tipo: "banco",
-    origen: "manual",
-    banco_nombre: "Banco Santander",
-    iban: "ES91 2100 0418 4502 0005 1332",
-    color: "#4ECDC4",
-    personas_autorizadas: "Juan Pérez, María García",
-    descripcion: "Cuenta principal para gastos diarios y recibos",
-    creado_en: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "2",
-    delegacion_id: "1",
-    nombre: "Caja de Ahorro",
-    tipo: "caja",
-    origen: "manual",
-    banco_nombre: null,
-    iban: null,
-    color: "#FF6B6B",
-    personas_autorizadas: "Juan Pérez",
-    descripcion: "Ahorros para emergencias",
-    creado_en: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "3",
-    delegacion_id: "1",
-    nombre: "Cuenta Empresarial",
-    tipo: "banco",
-    origen: "manual",
-    banco_nombre: "BBVA",
-    iban: "ES91 2100 0418 4502 0005 1333",
-    color: "#45B7D1",
-    personas_autorizadas: "Juan Pérez, Ana López",
-    descripcion: "Cuenta para gastos empresariales",
-    creado_en: "2025-01-01T00:00:00Z",
-  },
-]
-
-// Mock balances para desarrollo
-const mockBalances: Record<string, number> = {
-  "1": 1250.75,
-  "2": 500.0,
-  "3": -250.5,
-}
+import { useCuentas } from "@/hooks/use-cuentas"
+import { useDelegationContext } from "@/contexts/delegation-context"
+import { supabase } from "@/lib/supabase/client"
 
 export function CuentasManager() {
-  const [cuentas, setCuentas] = useState<Cuenta[]>([])
+  const { selectedDelegation } = useDelegationContext()
+  const {
+    cuentas: cuentasWithDelegacion,
+    loading,
+    error,
+    refetch,
+  } = useCuentas(selectedDelegation)
+  const cuentas = useMemo(
+    () => cuentasWithDelegacion.map(({ delegacion, ...cuenta }) => cuenta),
+    [cuentasWithDelegacion],
+  )
   const [searchTerm, setSearchTerm] = useState("")
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
   const [editingCuenta, setEditingCuenta] = useState<Cuenta | null>(null)
   const [deletingCuenta, setDeletingCuenta] = useState<Cuenta | null>(null)
   const [copiedIban, setCopiedIban] = useState<string | null>(null)
+  const [balances, setBalances] = useState<Record<string, number>>({})
 
   useEffect(() => {
-    // En producción, aquí se cargarían las cuentas desde la API
-    setCuentas(mockCuentas)
-  }, [])
+    async function fetchBalances() {
+      const entries = await Promise.all(
+        cuentas.map(async (c) => {
+          const { data, error } = await supabase
+            .from("movimiento")
+            .select("importe")
+            .eq("cuenta_id", c.id)
+
+          if (error) {
+            console.error("Error fetching balance:", error)
+            return [c.id, 0]
+          }
+
+          const balance = (data || []).reduce((sum, m) => sum + m.importe, 0)
+          return [c.id, balance]
+        }),
+      )
+
+      setBalances(Object.fromEntries(entries))
+    }
+
+    if (cuentas.length) {
+      fetchBalances()
+    } else {
+      setBalances({})
+    }
+  }, [cuentas])
 
   const handleCreateCuenta = async (cuentaData: Partial<Cuenta>) => {
-    // En producción, aquí se guardaría en la API
-    const newCuenta: Cuenta = {
-      id: Date.now().toString(),
-      delegacion_id: "1",
+    if (!selectedDelegation) return
+
+    const { error } = await supabase.from("cuenta").insert({
+      delegacion_id: selectedDelegation,
       nombre: cuentaData.nombre || "",
-      tipo: cuentaData.tipo as "banco" | "caja",
-      origen: cuentaData.origen as "manual" | "conectada",
+      tipo: cuentaData.tipo,
+      origen: cuentaData.origen,
       banco_nombre: cuentaData.banco_nombre || null,
       iban: cuentaData.iban || null,
       color: cuentaData.color || "#4ECDC4",
       personas_autorizadas: cuentaData.personas_autorizadas || null,
       descripcion: cuentaData.descripcion || null,
-      creado_en: new Date().toISOString(),
-    }
+    })
 
-    setCuentas([...cuentas, newCuenta])
+    if (error) throw error
+    await refetch()
     setIsCreateSheetOpen(false)
   }
 
   const handleUpdateCuenta = async (cuentaData: Partial<Cuenta>) => {
     if (!editingCuenta) return
 
-    // En producción, aquí se actualizaría en la API
-    const updatedCuentas = cuentas.map((cuenta) =>
-      cuenta.id === editingCuenta.id ? { ...cuenta, ...cuentaData } : cuenta,
-    )
+    const { error } = await supabase
+      .from("cuenta")
+      .update(cuentaData)
+      .eq("id", editingCuenta.id)
 
-    setCuentas(updatedCuentas)
+    if (error) throw error
+    await refetch()
     setEditingCuenta(null)
   }
 
   const handleDeleteCuenta = async (cuentaId: string) => {
-    // En producción, aquí se eliminaría de la API
-    setCuentas(cuentas.filter((cuenta) => cuenta.id !== cuentaId))
+    const { error } = await supabase.from("cuenta").delete().eq("id", cuentaId)
+    if (error) throw error
+    await refetch()
     setDeletingCuenta(null)
   }
 
@@ -151,6 +141,22 @@ export function CuentasManager() {
     } catch (err) {
       console.error("Error copying to clipboard:", err)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Cargando cuentas...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-destructive">Error: {error}</p>
+      </div>
+    )
   }
 
   const filteredCuentas = cuentas
@@ -201,7 +207,7 @@ export function CuentasManager() {
           <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 p-4 rounded-lg border">
             <div className="text-sm font-medium text-green-700 dark:text-green-300">Saldo Total</div>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              {Object.values(mockBalances)
+              {Object.values(balances)
                 .reduce((sum, balance) => sum + balance, 0)
                 .toFixed(2)}{" "}
               €
@@ -238,7 +244,7 @@ export function CuentasManager() {
             {filteredCuentas.map((cuenta) => {
               const connectionStatus = getConnectionStatus(cuenta)
               const bankColor = getBankColor(cuenta)
-              const balance = mockBalances[cuenta.id] || 0
+              const balance = balances[cuenta.id] || 0
 
               return (
                 <Card
@@ -452,7 +458,7 @@ export function CuentasManager() {
               cuenta={
                 editingCuenta || {
                   id: "",
-                  delegacion_id: "1",
+                  delegacion_id: selectedDelegation || "",
                   nombre: "",
                   tipo: "banco",
                   origen: "manual",

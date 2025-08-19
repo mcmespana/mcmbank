@@ -6,13 +6,11 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
-import { InlineEdit } from "@/components/ui/inline-edit"
-import { Tooltip } from "@/components/ui/tooltip"
 import { BankAvatar } from "./bank-avatar"
-import { CategoryChipMulti } from "./category-chip-multi"
+import { CategoryChip } from "./category-chip"
 import { formatCurrency, formatDate, getAmountColorClass } from "@/lib/utils/format"
 import { getAccountDisplayName } from "@/lib/utils/movement-utils"
-import { FileText, Info } from "lucide-react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListProps {
@@ -36,7 +34,21 @@ export function TransactionList({
   onMovementClick,
   onMovementUpdate,
 }: TransactionListProps) {
+  const [expandedMovements, setExpandedMovements] = useState<Set<string>>(new Set())
   const [updatingMovements, setUpdatingMovements] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = (movementId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExpandedMovements((prev) => {
+      const next = new Set(prev)
+      if (next.has(movementId)) {
+        next.delete(movementId)
+      } else {
+        next.add(movementId)
+      }
+      return next
+    })
+  }
 
   const handleCategoryChange = async (movementId: string, categoryId: string | null) => {
     setUpdatingMovements((prev) => new Set(prev).add(movementId))
@@ -50,15 +62,6 @@ export function TransactionList({
         next.delete(movementId)
         return next
       })
-    }
-  }
-
-  const handleTitleUpdate = async (movementId: string, newTitle: string) => {
-    try {
-      await onMovementUpdate(movementId, { concepto: newTitle })
-    } catch (error) {
-      console.error("Error updating title:", error)
-      throw error
     }
   }
 
@@ -91,6 +94,7 @@ export function TransactionList({
       {movements.map((movement) => {
         const account = accounts.find((acc) => acc.id === movement.cuenta_id)
         const category = categories.find((cat) => cat.id === movement.categoria_id) as Categoria | undefined
+        const isExpanded = expandedMovements.has(movement.id)
         const isUpdating = updatingMovements.has(movement.id)
 
         return (
@@ -105,15 +109,8 @@ export function TransactionList({
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                {/* Title - Inline Editable */}
-                <div className="mb-1" onClick={(e) => e.stopPropagation()}>
-                  <InlineEdit
-                    value={movement.concepto}
-                    onSave={(newTitle) => handleTitleUpdate(movement.id, newTitle)}
-                    className="font-semibold text-base leading-tight"
-                    placeholder="Sin título"
-                  />
-                </div>
+                {/* Title */}
+                <h3 className="font-semibold text-base leading-tight mb-1 truncate">{movement.concepto}</h3>
 
                 {/* Category */}
                 <div className="mb-2" onClick={(e) => e.stopPropagation()}>
@@ -123,7 +120,7 @@ export function TransactionList({
                       <span className="text-xs text-muted-foreground">Actualizando...</span>
                     </div>
                   ) : (
-                    <CategoryChipMulti
+                    <CategoryChip
                       category={category as unknown as Categoria}
                       categories={categories as unknown as Categoria[]}
                       onCategoryChange={(categoryId) => handleCategoryChange(movement.id, categoryId)}
@@ -131,20 +128,38 @@ export function TransactionList({
                   )}
                 </div>
 
-                {/* Date and Description Icon */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                {/* Date and Account */}
+                <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
                   <span>{formatDate(movement.fecha)}</span>
-                  {movement.descripcion && (
-                    <Tooltip content={
-                      <div className="max-w-xs">
-                        <div className="font-medium mb-1">Descripción</div>
-                        <p className="text-sm leading-relaxed">{movement.descripcion}</p>
-                      </div>
-                    }>
-                      <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help" />
-                    </Tooltip>
-                  )}
+                  {account && <span className="truncate max-w-[120px]">{getAccountDisplayName(account)}</span>}
                 </div>
+
+                {/* Description (expandable) */}
+                {movement.descripcion && (
+                  <div className="mt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={(e) => toggleExpanded(movement.id, e)}
+                    >
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="h-3 w-3 mr-1" />
+                          Ocultar descripción
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-3 w-3 mr-1" />
+                          Ver descripción
+                        </>
+                      )}
+                    </Button>
+                    {isExpanded && (
+                      <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{movement.descripcion}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Amount */}

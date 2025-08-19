@@ -10,41 +10,33 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { CategoryEditForm } from "./category-edit-form"
 import { useCategorias } from "@/hooks/use-categorias"
-import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { DatabaseService } from "@/lib/services/database"
-import { DateRangeFilter } from "@/components/transactions/date-range-filter"
 import { GripVertical, Search, Edit, Trash2, Plus } from "lucide-react"
 import type { Categoria } from "@/lib/types/database"
 
-const getBalanceColor = (balance: number) => {
-  if (balance > 0) {
-    return "bg-green-100 text-green-800 hover:bg-green-200"
-  } else if (balance < 0) {
-    return "bg-red-100 text-red-800 hover:bg-red-200"
-  } else {
-    return "bg-blue-100 text-blue-800 hover:bg-blue-200"
+const getCategoryTypeColor = (tipo: string) => {
+  switch (tipo) {
+    case "ingreso":
+      return "bg-green-100 text-green-800 hover:bg-green-200"
+    case "gasto":
+      return "bg-red-100 text-red-800 hover:bg-red-200"
+    case "mixto":
+      return "bg-blue-100 text-blue-800 hover:bg-blue-200"
+    default:
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200"
   }
-}
-
-const formatBalance = (balance: number) => {
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(balance)
 }
 
 interface CategoryCardProps {
   category: Categoria
   index: number
-  balance: number
   onEdit: (category: Categoria) => void
   onSearch: (category: Categoria) => void
   onDelete: (category: Categoria) => void
 }
 
-function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: CategoryCardProps) {
+function CategoryCard({ category, index, onEdit, onSearch, onDelete }: CategoryCardProps) {
   return (
     <Draggable draggableId={category.id} index={index}>
       {(provided, snapshot) => (
@@ -74,8 +66,8 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
               {/* Category Info */}
               <div className="flex-1">
                 <h3 className="font-medium">{category.nombre}</h3>
-                <Badge className={getBalanceColor(balance)} variant="secondary">
-                  {formatBalance(balance)}
+                <Badge className={getCategoryTypeColor(category.tipo)} variant="secondary">
+                  {category.tipo === "ingreso" ? "Ingreso" : category.tipo === "gasto" ? "Gasto" : "Mixto"}
                 </Badge>
               </div>
 
@@ -123,25 +115,12 @@ export function CategoryList() {
   const [editingCategory, setEditingCategory] = useState<Categoria | null>(null)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
-  const [dateFrom, setDateFrom] = useState<string | undefined>()
-  const [dateTo, setDateTo] = useState<string | undefined>()
 
   // Get organization ID from selected delegation
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
 
   const { categorias: categories, loading, error, updateCategoria } = useCategorias(organizacionId)
-  const { movimientos: movements } = useMovimientos(selectedDelegation, {
-    fechaDesde: dateFrom,
-    fechaHasta: dateTo,
-  })
-
-  // Calculate balance for each category
-  const getCategoryBalance = (categoryId: string) => {
-    return movements
-      .filter(movement => movement.categoria_id === categoryId)
-      .reduce((total, movement) => total + movement.importe, 0)
-  }
 
   const handleEdit = (category: Categoria) => {
     setEditingCategory(category)
@@ -271,26 +250,14 @@ export function CategoryList() {
         </Button>
       </div>
 
-      {/* Search Bar and Date Filter */}
-      <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Filtrar por nombre de la categoría..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        {/* Date Range Filter */}
-        <DateRangeFilter
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          onDateRangeChange={(from, to) => {
-            setDateFrom(from)
-            setDateTo(to)
-          }}
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Filtrar por nombre de la categoría..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
         />
       </div>
 
@@ -319,7 +286,6 @@ export function CategoryList() {
                     key={category.id}
                     category={category}
                     index={index}
-                    balance={getCategoryBalance(category.id)}
                     onEdit={handleEdit}
                     onSearch={handleSearch}
                     onDelete={handleDelete}

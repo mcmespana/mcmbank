@@ -4,7 +4,7 @@ import { useState } from "react"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
-import { TransactionFormEnhanced } from "./transaction-form-enhanced"
+import { TransactionForm } from "./transaction-form"
 import { DateRangeFilter } from "./date-range-filter"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
@@ -21,9 +21,6 @@ export interface TransactionFilters {
   categoryId?: string
   accountId?: string
   search?: string
-  amountFrom?: number
-  amountTo?: number
-  uncategorized?: boolean
 }
 
 export function TransactionManager() {
@@ -292,15 +289,20 @@ export function TransactionManager() {
         }}
       />
 
-      {/* Create Transaction Form */}
-      <TransactionFormEnhanced
-        open={createFormOpen}
-        onOpenChange={setCreateFormOpen}
-        accounts={accounts as unknown as Cuenta[]}
-        categories={categories as unknown as Categoria[]}
-        onSave={handleCreateMovement}
-        mode="create"
-      />
+      {/* Create Transaction Form Dialog */}
+      {createFormOpen && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
+            <TransactionForm
+              accounts={accounts as unknown as Cuenta[]}
+              categories={categories as unknown as Categoria[]}
+              onSave={handleCreateMovement}
+              onCancel={() => setCreateFormOpen(false)}
+              mode="create"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

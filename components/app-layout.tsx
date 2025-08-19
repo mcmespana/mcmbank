@@ -7,7 +7,6 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { useSidebarCounts } from "@/hooks/use-sidebar-counts"
 import { cn } from "@/lib/utils"
 
 interface AppLayoutProps {
@@ -20,7 +19,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter()
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const { transactionCount, categoryCount } = useSidebarCounts()
 
   useEffect(() => {
     if (!loading && !user && !isRedirecting) {
@@ -51,9 +49,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Desktop Sidebar */}
       <Sidebar 
         collapsed={sidebarCollapsed} 
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        transactionCount={transactionCount}
-        categoryCount={categoryCount}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
       />
 
       {/* Main Content */}

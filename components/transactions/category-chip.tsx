@@ -32,8 +32,7 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
 
   const getCategoryColor = (category: Categoria) => {
     if (category.color) {
-      // Use the color directly from the database
-      return `text-white border-transparent`
+      return `bg-[${category.color}] text-white border-[${category.color}]`
     }
     // Fallback to predefined colors if no custom color
     const index = category.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
@@ -47,7 +46,6 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
           <Badge
             variant="secondary"
             className={`cursor-pointer hover:opacity-80 transition-opacity rounded-full px-3 py-1 ${getCategoryColor(category)}`}
-            style={category.color ? { backgroundColor: category.color } : undefined}
           >
             {category.emoji && <span className="mr-1">{category.emoji}</span>}
             <span className="text-xs font-medium">{category.nombre}</span>

@@ -1,9 +1,20 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
+import { Geist, Geist_Mono } from "next/font/google"
 import { AppProviders } from "@/contexts/app-providers"
 import "./globals.css"
+
+const geist = Geist({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-geist",
+})
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-geist-mono",
+})
 
 export const metadata: Metadata = {
   title: "MCM Bank - Gestión Financiera",
@@ -17,16 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
-      <head>
-        <style>{`
-html {
-  font-family: ${GeistSans.style.fontFamily};
-  --font-sans: ${GeistSans.variable};
-  --font-mono: ${GeistMono.variable};
-}
-        `}</style>
-      </head>
+    <html lang="es" className={`${geist.variable} ${geistMono.variable} antialiased`}>
       <body suppressHydrationWarning>
         <AppProviders>{children}</AppProviders>
       </body>

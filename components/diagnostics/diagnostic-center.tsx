@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { CallStatsViewer } from "@/components/debug/call-stats-viewer"
 
 interface Status {
   db: string
@@ -36,40 +37,75 @@ export function DiagnosticCenter() {
     const newStatus = { ...status, lastChecked: new Date().toLocaleString() }
     
     try {
-      // Test basic connection with movimiento table
-      const { error: dbError } = await supabase.from("movimiento").select("id").limit(1)
-      newStatus.db = dbError ? `Error: ${dbError.message}` : "✅ Conectado"
-
-      // Test perfil table (this is the problem table)
+      // Test basic connection with movimiento table (with timeout)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Timeout después de 10 segundos")), 10000)
+      })
+      
       try {
-        const { error: perfilError } = await supabase.from("perfil").select("usuario_id").limit(1)
-        newStatus.perfil = perfilError ? `❌ Error: ${perfilError.message}` : "✅ Conectado"
+        const queryPromise = supabase.from("movimiento").select("id").limit(1)
+        const { error: dbError } = await Promise.race([queryPromise, timeoutPromise])
+        newStatus.db = dbError ? `❌ Error: ${dbError.message}` : "✅ Conectado"
       } catch (err) {
-        newStatus.perfil = `❌ Tabla no existe o error grave: ${err instanceof Error ? err.message : 'Error desconocido'}`
+        newStatus.db = `❌ Timeout o error: ${err instanceof Error ? err.message : 'Error desconocido'}`
       }
 
-      // Test membresia table for user permissions
+      // Test perfil table with timeout
+      try {
+        const perfilPromise = supabase.from("perfil").select("usuario_id").limit(1)
+        const { error: perfilError } = await Promise.race([perfilPromise, timeoutPromise])
+        newStatus.perfil = perfilError ? `❌ Error: ${perfilError.message}` : "✅ Conectado"
+      } catch (err) {
+        newStatus.perfil = `❌ Timeout o tabla no existe: ${err instanceof Error ? err.message : 'Error desconocido'}`
+      }
+
+      // Test membresia table for user permissions with timeout
       if (user) {
         try {
-          const { error: membresiaError } = await supabase
+          const membresiaPromise = supabase
             .from("membresia")
             .select("delegacion_id")
             .eq("usuario_id", user.id)
             .limit(1)
+          const { error: membresiaError } = await Promise.race([membresiaPromise, timeoutPromise])
           newStatus.membresia = membresiaError ? `❌ Error: ${membresiaError.message}` : "✅ Conectado"
         } catch (err) {
-          newStatus.membresia = `❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`
+          newStatus.membresia = `❌ Timeout o error: ${err instanceof Error ? err.message : 'Error desconocido'}`
         }
       } else {
         newStatus.membresia = "⚠️ Usuario no autenticado"
       }
 
-      // Test delegacion table
+      // Test delegacion table with timeout
       try {
-        const { error: delegacionError } = await supabase.from("delegacion").select("id").limit(1)
+        const delegacionPromise = supabase.from("delegacion").select("id").limit(1)
+        const { error: delegacionError } = await Promise.race([delegacionPromise, timeoutPromise])
         newStatus.delegacion = delegacionError ? `❌ Error: ${delegacionError.message}` : "✅ Conectado"
       } catch (err) {
-        newStatus.delegacion = `❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`
+        newStatus.delegacion = `❌ Timeout o error: ${err instanceof Error ? err.message : 'Error desconocido'}`
+      }
+
+      // Test complex query that typically hangs (movimiento with JOINs)
+      if (user) {
+        try {
+          const complexPromise = supabase
+            .from("movimiento")
+            .select(`
+              id,
+              fecha,
+              concepto,
+              cuenta:cuenta_id (
+                id,
+                nombre,
+                delegacion:delegacion_id (id, nombre)
+              )
+            `)
+            .limit(5)
+          const { error: complexError } = await Promise.race([complexPromise, timeoutPromise])
+          newStatus.db += ` | JOINs: ${complexError ? '❌ Error' : '✅ OK'}`
+        } catch (err) {
+          newStatus.db += ` | JOINs: ❌ Timeout/Error`
+        }
       }
 
     } catch (err) {
@@ -130,6 +166,8 @@ export function DiagnosticCenter() {
           </div>
         </div>
       </Card>
+
+      <CallStatsViewer />
     </div>
   )
 }

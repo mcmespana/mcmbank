@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { MovimientoConRelaciones } from "@/lib/types/database"
+import { useDebugCalls } from "./use-debug-calls"
 
 interface UseTransaccionesProps {
   delegacionId?: string
@@ -22,6 +23,15 @@ export function useTransacciones({
   const [transacciones, setTransacciones] = useState<MovimientoConRelaciones[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // DEBUG: Track excessive calls
+  const debugInfo = useDebugCalls('useTransacciones', [delegacionId, fechaInicio, fechaFin, categoriaId, busqueda])
+  
+  if (debugInfo.renderCount > 10) {
+    console.warn(`🚨 useTransacciones se ha ejecutado ${debugInfo.renderCount} veces con deps:`, {
+      delegacionId, fechaInicio, fechaFin, categoriaId, busqueda
+    })
+  }
 
   const fetchTransacciones = useCallback(async () => {
     try {

@@ -4,12 +4,20 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { useAuth } from "@/contexts/auth-context"
 import type { Delegacion } from "@/lib/types/database"
+import { useDebugCalls } from "./use-debug-calls"
 
 export function useDelegaciones() {
   const [delegaciones, setDelegaciones] = useState<Delegacion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  
+  // DEBUG: Track excessive calls
+  const debugInfo = useDebugCalls('useDelegaciones', [user?.id])
+  
+  if (debugInfo.renderCount > 5) {
+    console.warn(`🚨 useDelegaciones se ha ejecutado ${debugInfo.renderCount} veces con user:`, user?.id)
+  }
 
   const fetchDelegaciones = async () => {
     if (!user) {

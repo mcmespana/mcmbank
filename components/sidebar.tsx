@@ -40,7 +40,7 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       enabled: true,
     },
     {
-      name: "Transacciones",
+      name: "Movimientos",
       href: "/transacciones",
       icon: ArrowLeftRight,
       count: transactionCount || 6, // Use dynamic transaction count

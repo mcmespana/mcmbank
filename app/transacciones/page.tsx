@@ -11,8 +11,8 @@ export default function TransaccionesPage() {
     <AppLayout transactionCount={transactionCount}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Transacciones</h1>
-          <p className="text-muted-foreground">Gestiona todos los movimientos de tu delegación</p>
+          <h1 className="text-3xl font-bold tracking-tight">Movimientos</h1>
+          <p className="text-muted-foreground">Categoriza los ingresos o gastos en el banco y del efectivo</p>
         </div>
         <TransactionManager onTransactionCountChange={setTransactionCount} />
       </div>

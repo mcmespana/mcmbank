@@ -8,6 +8,7 @@ import * as XLSX from "xlsx"
 import { es } from "date-fns/locale"
 import { supabase } from "@/lib/supabase/client"
 import type { Cuenta } from "@/lib/types/database"
+import { useCategorias } from "@/hooks/use-categorias"
 import {
   Sheet,
   SheetContent,
@@ -41,6 +42,8 @@ interface ParsedTransaction {
   concepto: string
   importe: number
   descripcion: string | null
+  contraparte?: string | null
+  categoria_id?: string | null
 }
 
 interface DuplicateTransaction extends ParsedTransaction {
@@ -56,6 +59,10 @@ export function TransactionImportPanel({
   delegacionId,
   onImported,
 }: TransactionImportPanelProps) {
+  // Obtener las categorías disponibles para matching
+  // Por ahora usaremos un valor predeterminado, pero deberíamos obtener el organizacion_id del delegacionId
+  const { categorias: availableCategories } = useCategorias(delegacionId || undefined)
+  
   const [source, setSource] = useState<SourceType | null>("manual")
   const [file, setFile] = useState<File | null>(null)
   const [accountId, setAccountId] = useState<string>("")
@@ -112,12 +119,25 @@ export function TransactionImportPanel({
       setErrorCode(null)
       return
     }
-    if (!/\.xls[x]?$/i.test(selectedFile.name)) {
-      setError("Formato de archivo no soportado")
-      setErrorCode("BAD_FORMAT")
-      setFile(null)
-      return
+    
+    // Para Excel manual: permitir CSV, XLSX y XLS
+    if (source === "manual") {
+      if (!/\.(csv|xls[x]?)$/i.test(selectedFile.name)) {
+        setError("Formato de archivo no soportado para Excel manual. Usa CSV, XLS o XLSX")
+        setErrorCode("BAD_FORMAT")
+        setFile(null)
+        return
+      }
+    } else {
+      // Para bancos: solo XLSX y XLS
+      if (!/\.xls[x]?$/i.test(selectedFile.name)) {
+        setError("Formato de archivo no soportado")
+        setErrorCode("BAD_FORMAT")
+        setFile(null)
+        return
+      }
     }
+    
     setError(null)
     setErrorCode(null)
     setFile(selectedFile)
@@ -138,7 +158,12 @@ export function TransactionImportPanel({
   const parseEuropeanNumber = (value: string | number): number => {
     if (typeof value === 'number') return value
     
-    const cleanValue = String(value).trim().replace(/\s/g, '')
+    // Limpiar el valor: quitar espacios, símbolos de euro, paréntesis, etc.
+    let cleanValue = String(value).trim()
+      .replace(/\s/g, '')                    // Quitar espacios
+      .replace(/€/g, '')                     // Quitar símbolo de euro
+      .replace(/[\(\)]/g, '')                // Quitar paréntesis (para números negativos)
+      .replace(/^[\+\-]\s*/, (match) => match.replace(/\s/g, '')) // Mantener signo pero sin espacios
     
     // Si no tiene comas ni puntos, es un número entero
     if (!/[,.]/.test(cleanValue)) {
@@ -305,8 +330,126 @@ export function TransactionImportPanel({
     return result
   }
 
+  const parseManual = (rows: any[][]): ParsedTransaction[] => {
+    const result: ParsedTransaction[] = []
+    const skippedRows: number[] = []
+    let categoriesFound = 0
+    let categoriesNotFound: string[] = []
+    
+    // Saltar la primera fila que contiene los headers
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i]
+      if (!row || row.length === 0) continue
+      
+      const dateStr = row[0]  // Fecha
+      const conceptStr = row[1]  // Concepto
+      const amountStr = row[2]  // Importe
+      const descStr = row[3]  // Descripción (Opcional)
+      const categoryStr = row[4]  // Categoría (Opcional)
+      const contactStr = row[5]  // Contacto (Opcional)
+      
+      // Verificar que tenemos fecha e importe (campos obligatorios)
+      if (!dateStr || !amountStr || 
+          String(dateStr).trim() === '' || String(amountStr).trim() === '') {
+        skippedRows.push(i + 1)
+        continue
+      }
+      
+      // Manejar fechas de Excel - pueden ser números seriales o texto
+      let date: Date
+      if (typeof dateStr === 'number') {
+        // Convertir número serial de Excel a fecha
+        date = new Date((dateStr - 25569) * 86400 * 1000)
+      } else {
+        // Intentar parsear como texto en varios formatos
+        const dateString = String(dateStr).trim()
+        if (dateString.includes('/')) {
+          // Formato dd/MM/yyyy o d/M/yyyy
+          date = parse(dateString, dateString.length <= 9 ? "d/M/yyyy" : "dd/MM/yyyy", new Date(), { locale: es })
+        } else {
+          date = new Date(dateString)
+        }
+      }
+      
+      if (isNaN(date.getTime())) {
+        skippedRows.push(i + 1)
+        continue
+      }
+      
+      const importe = parseEuropeanNumber(amountStr)
+      if (isNaN(importe)) {
+        skippedRows.push(i + 1)
+        continue
+      }
+      
+      // Si no hay concepto, usar "SIN NOMBRE"
+      const concepto = conceptStr && String(conceptStr).trim() !== '' 
+        ? formatConcept(String(conceptStr)) 
+        : "SIN NOMBRE"
+      
+      // Procesar contacto (contraparte)
+      const contraparte = contactStr && String(contactStr).trim() !== '' 
+        ? String(contactStr).trim() 
+        : null
+      
+      // Procesar categoría - buscar coincidencia exacta por nombre
+      let categoria_id: string | null = null
+      let categoriaEnDescripcion: string | null = null
+      
+      if (categoryStr && String(categoryStr).trim() !== '') {
+        const categoryName = String(categoryStr).trim()
+        const matchingCategory = availableCategories?.find(
+          cat => cat.nombre.toLowerCase() === categoryName.toLowerCase()
+        )
+        
+        if (matchingCategory) {
+          categoria_id = matchingCategory.id
+          categoriesFound++
+        } else {
+          // Si no encontramos la categoría, añadirla a la descripción
+          categoriaEnDescripcion = `Categoría de importación: ${categoryName}`
+          if (!categoriesNotFound.includes(categoryName)) {
+            categoriesNotFound.push(categoryName)
+          }
+        }
+      }
+      
+      // Combinar descripción opcional con otros campos
+      const extraFields = [
+        descStr && String(descStr).trim() !== '' ? String(descStr).trim() : null,
+        categoriaEnDescripcion,
+      ].filter(Boolean)
+      
+      const descripcion = extraFields.length > 0 ? extraFields.join('\n') : null
+      
+      result.push({
+        fecha: format(date, "yyyy-MM-dd"),
+        concepto,
+        importe,
+        descripcion,
+        contraparte,
+        categoria_id,
+      })
+    }
+    
+    // Mostrar información sobre el procesamiento
+    if (skippedRows.length > 0) {
+      console.log(`ℹ️ Se omitieron ${skippedRows.length} filas por falta de fecha o importe: ${skippedRows.join(', ')}`)
+    }
+    
+    if (categoriesFound > 0) {
+      console.log(`✅ Se encontraron y asignaron ${categoriesFound} categorías automáticamente`)
+    }
+    
+    if (categoriesNotFound.length > 0) {
+      console.log(`⚠️ Categorías no encontradas (se añadieron a descripción): ${categoriesNotFound.join(', ')}`)
+    }
+    
+    return result
+  }
+
   const handleImport = async () => {
-    if (!file || !accountId || !source || source === "manual") return
+    if (!file || !accountId || !source) return
     setIsImporting(true)
     setError(null)
     setErrorCode(null)
@@ -315,21 +458,58 @@ export function TransactionImportPanel({
     setDuplicateCount(0)
 
     try {
-      const data = await file.arrayBuffer()
-      const workbook = XLSX.read(data, { 
-        type: "array",
-        cellDates: true,  // Importante: convertir números seriales a fechas
-        cellNF: false,    // No aplicar formato numérico automáticamente
-        cellText: false   // No convertir todo a texto
-      })
-      const sheet = workbook.Sheets[workbook.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { 
-        header: 1,
-        raw: false,       // No usar valores raw, permitir conversión de tipos
-        dateNF: 'dd/mm/yyyy' // Formato de fecha preferido
-      }) as any[][]
+      let rows: any[][]
+      
+      // Manejar archivos CSV de manera diferente
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        const text = await file.text()
+        // Parsear CSV simple (asumiendo separador por comas)
+        const lines = text.split('\n')
+        rows = lines.map(line => {
+          // Parseo simple de CSV - podrías usar una librería más robusta si es necesario
+          const cells: string[] = []
+          let currentCell = ''
+          let inQuotes = false
+          
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i]
+            if (char === '"') {
+              inQuotes = !inQuotes
+            } else if (char === ',' && !inQuotes) {
+              cells.push(currentCell.trim())
+              currentCell = ''
+            } else {
+              currentCell += char
+            }
+          }
+          cells.push(currentCell.trim()) // Añadir la última celda
+          return cells
+        }).filter(row => row.some(cell => cell.length > 0)) // Filtrar filas completamente vacías
+      } else {
+        // Manejar archivos Excel (XLSX/XLS)
+        const data = await file.arrayBuffer()
+        const workbook = XLSX.read(data, { 
+          type: "array",
+          cellDates: true,  // Importante: convertir números seriales a fechas
+          cellNF: false,    // No aplicar formato numérico automáticamente
+          cellText: false   // No convertir todo a texto
+        })
+        const sheet = workbook.Sheets[workbook.SheetNames[0]]
+        rows = XLSX.utils.sheet_to_json<any[]>(sheet, { 
+          header: 1,
+          raw: false,       // No usar valores raw, permitir conversión de tipos
+          dateNF: 'dd/mm/yyyy' // Formato de fecha preferido
+        }) as any[][]
+      }
 
-      const parsed = source === "sabadell" ? parseSabadell(rows) : parseCaixabank(rows)
+      let parsed: ParsedTransaction[]
+      if (source === "manual") {
+        parsed = parseManual(rows)
+      } else if (source === "sabadell") {
+        parsed = parseSabadell(rows)
+      } else {
+        parsed = parseCaixabank(rows)
+      }
 
       const {
         data: { user },
@@ -341,7 +521,7 @@ export function TransactionImportPanel({
       
       for (let i = 0; i < parsed.length; i++) {
         const trx = parsed[i]
-        toInsert.push({
+        const insertData: any = {
           cuenta_id: accountId,
           fecha: trx.fecha,
           concepto: trx.concepto,
@@ -349,7 +529,19 @@ export function TransactionImportPanel({
           importe: trx.importe,
           ignorado: false,
           creado_por: user?.id || "",
-        })
+        }
+        
+        // Añadir contraparte y categoria_id solo para importación manual
+        if (source === "manual") {
+          if (trx.contraparte) {
+            insertData.contraparte = trx.contraparte
+          }
+          if (trx.categoria_id) {
+            insertData.categoria_id = trx.categoria_id
+          }
+        }
+        
+        toInsert.push(insertData)
         setProgress(Math.round(((i + 1) / parsed.length) * 100))
       }
 
@@ -462,7 +654,7 @@ export function TransactionImportPanel({
       // Agregar un timestamp único a la descripción para evitar el conflicto de duplicados
       const uniqueDescription = `${transaction.descripcion || ''}\n[Posible duplicado - Importación forzada el ${new Date().toISOString()}]`
       
-      const { error } = await supabase.from("movimiento").insert([{
+      const insertData: any = {
         cuenta_id: accountId,
         fecha: transaction.fecha,
         concepto: transaction.concepto,
@@ -470,7 +662,17 @@ export function TransactionImportPanel({
         importe: transaction.importe,
         ignorado: false,
         creado_por: (await supabase.auth.getUser()).data?.user?.id || "",
-      }])
+      }
+
+      // Añadir contraparte y categoria_id si están disponibles (para importación manual)
+      if (transaction.contraparte) {
+        insertData.contraparte = transaction.contraparte
+      }
+      if (transaction.categoria_id) {
+        insertData.categoria_id = transaction.categoria_id
+      }
+      
+      const { error } = await supabase.from("movimiento").insert([insertData])
 
       if (error) {
         setError(`Error al forzar inserción: ${error.message}`)
@@ -520,11 +722,11 @@ export function TransactionImportPanel({
                 </div>
                 <span>Seleccionar origen de datos</span>
               </div>
-              <div className={`flex items-center gap-2 ${file ? 'text-green-600' : source && (source === "caixabank" || source === "sabadell") ? 'text-foreground' : 'text-muted-foreground'}`}>
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium ${file ? 'bg-green-100 text-green-700' : source && (source === "caixabank" || source === "sabadell") ? 'bg-blue-100 text-blue-700' : 'bg-muted text-muted-foreground'}`}>
+              <div className={`flex items-center gap-2 ${file ? 'text-green-600' : source && (source === "caixabank" || source === "sabadell" || source === "manual") ? 'text-foreground' : 'text-muted-foreground'}`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium ${file ? 'bg-green-100 text-green-700' : source && (source === "caixabank" || source === "sabadell" || source === "manual") ? 'bg-blue-100 text-blue-700' : 'bg-muted text-muted-foreground'}`}>
                   {file ? '✓' : '2'}
                 </div>
-                <span>Subir archivo Excel</span>
+                <span>{source === "manual" ? "Subir archivo (CSV/Excel)" : "Subir archivo Excel"}</span>
               </div>
               <div className={`flex items-center gap-2 ${accountId ? 'text-green-600' : source ? 'text-foreground' : 'text-muted-foreground'}`}>
                 <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium ${accountId ? 'bg-green-100 text-green-700' : source ? 'bg-blue-100 text-blue-700' : 'bg-muted text-muted-foreground'}`}>
@@ -576,10 +778,19 @@ export function TransactionImportPanel({
               </button>
             </div>
             {source === "manual" && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
-                <p className="text-sm text-amber-800">
-                  ⚠️ Esta opción estará disponible próximamente
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3 space-y-3">
+                <p className="text-sm text-blue-800">
+                  • Usa la plantilla de importación disponible en Google Drive<br />
+                  • Expórtala en CSV o XLSX y súbela<br />
                 </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open('https://docs.google.com/spreadsheets/d/1lf9AHxgkjKKXacT2BwGrpMMPvM2bfvRUUEsa2BykX20/edit?usp=sharing', '_blank')}
+                  className="w-full text-xs"
+                >
+                  📊 Descargar plantilla de Google Drive
+                </Button>
               </div>
             )}
             {(source === "caixabank" || source === "sabadell") && (
@@ -595,16 +806,29 @@ export function TransactionImportPanel({
           </div>
 
           {/* File Upload Section */}
-          {source && (source === "caixabank" || source === "sabadell") && (
+          {source && (source === "caixabank" || source === "sabadell" || source === "manual") && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${file ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                   {file ? '✓' : '2'}
                 </div>
-                <Label className="text-base font-medium">Subir archivo Excel</Label>
+                <Label className="text-base font-medium">
+                  {source === "manual" ? "Subir archivo (CSV, XLSX o XLS)" : "Subir archivo Excel"}
+                </Label>
               </div>
 
-              <FileDropzone onFileChange={handleFileChange} />
+              <FileDropzone 
+                onFileChange={handleFileChange}
+                accept={source === "manual" ? {
+                  "text/csv": [".csv"],
+                  "application/vnd.ms-excel": [".xls"],
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                } : {
+                  "application/vnd.ms-excel": [".xls"],
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                }}
+                formatInfo={source === "manual" ? "Compatible con .csv, .xls y .xlsx" : "Compatible con .xls y .xlsx"}
+              />
             </div>
           )}
 
@@ -633,45 +857,34 @@ export function TransactionImportPanel({
 
           {/* Import Button */}
           <div className="pt-6 border-t">
-            {source === "manual" ? (
-              <div className="text-center space-y-2">
-                <Button className="w-full" disabled>
-                  Funcionalidad no disponible
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  La importación manual estará disponible próximamente
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {(!file || !accountId) && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-red-800 text-sm">
-                      <span>⚠️</span>
-                      <span className="font-medium">Faltan campos requeridos:</span>
-                    </div>
-                    <ul className="mt-1 text-xs text-red-700 ml-6 list-disc">
-                      {!file && <li>Debes subir un archivo Excel</li>}
-                      {!accountId && <li>Debes seleccionar una cuenta de destino</li>}
-                    </ul>
+            <div className="space-y-3">
+              {(!file || !accountId) && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-red-800 text-sm">
+                    <span>⚠️</span>
+                    <span className="font-medium">Faltan campos requeridos:</span>
                   </div>
+                  <ul className="mt-1 text-xs text-red-700 ml-6 list-disc">
+                    {!file && <li>Debes subir un archivo {source === "manual" ? "(CSV/Excel)" : "Excel"}</li>}
+                    {!accountId && <li>Debes seleccionar una cuenta de destino</li>}
+                  </ul>
+                </div>
+              )}
+              <Button
+                className="w-full"
+                onClick={handleImport}
+                disabled={!file || !accountId || !source || isImporting}
+              >
+                {isImporting ? (
+                  <div className="flex items-center gap-2">
+                    <LoadingSpinner size="sm" />
+                    <span>Importando... {progress}%</span>
+                  </div>
+                ) : (
+                  `Importar transacciones${file && accountId ? ' ✓' : ''}`
                 )}
-                <Button
-                  className="w-full"
-                  onClick={handleImport}
-                  disabled={!file || !accountId || !source || isImporting}
-                >
-                  {isImporting ? (
-                    <div className="flex items-center gap-2">
-                      <LoadingSpinner size="sm" />
-                      <span>Importando... {progress}%</span>
-                    </div>
-                  ) : (
-                    `Importar transacciones${file && accountId ? ' ✓' : ''}`
-                  )}
-                </Button>
-              </div>
-            )}
+              </Button>
+            </div>
           </div>
 
           {/* Status Messages */}

@@ -126,7 +126,7 @@ export function CategoryList() {
 
   const { categorias: categories, loading, error, updateCategoria } = useCategorias(organizacionId)
 
-  const { movimientos } = useMovimientos(selectedDelegation?.id || null)
+  const { movimientos } = useMovimientos(selectedDelegation || null)
 
   const getCategoryBalance = (categoryId: string) => {
     return movimientos.filter((mov) => mov.categoria_id === categoryId).reduce((sum, mov) => sum + mov.importe, 0)

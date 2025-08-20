@@ -63,6 +63,6 @@ export const useAppStatus = () => {
 export const useRevalidateOnFocus = (revalidate: () => void) => {
   useEffect(() => {
     const unsubscribe = appStatusEmitter.subscribe(revalidate)
-    return unsubscribe
+    return () => { unsubscribe() }
   }, [revalidate])
 }

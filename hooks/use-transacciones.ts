@@ -140,7 +140,7 @@ export function useTransacciones({
             creado_en: ''
           }
         } : null
-      })) as MovimientoConRelaciones[]
+      })) as unknown as MovimientoConRelaciones[]
 
       setTransacciones(processedData)
     } catch (err) {

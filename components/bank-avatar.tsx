@@ -35,7 +35,7 @@ const BANK_COLORS = {
 }
 
 export function BankAvatar({ bankName, accountColor, account, size = "md" }: BankAvatarProps) {
-  const finalBankName = bankName || account?.banco || account?.nombre || "Caja"
+  const finalBankName = bankName || account?.banco_nombre || account?.nombre || "Caja"
   const finalAccountColor = accountColor || account?.color
 
   // Build asset base name: lowercase, remove diacritics and non-alphanumeric, remove spaces

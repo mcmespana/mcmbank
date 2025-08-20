@@ -144,12 +144,12 @@ export function TransactionDetail({
                 <div className="flex items-center gap-2 sm:gap-3">
                   {account && (
                     <>
-                      <BankAvatar bankName={account.banco} accountColor={account.color} size="sm" />
+                      <BankAvatar bankName={account.banco_nombre || undefined} accountColor={account.color || undefined} size="sm" />
                       <div className="flex items-center gap-2">
                         {account.tipo === "banco" ? <Building2 className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
                         <div>
                           <p className="font-medium text-sm">{account.nombre}</p>
-                          <p className="text-xs text-muted-foreground">{account.banco}</p>
+                          <p className="text-xs text-muted-foreground">{account.banco_nombre}</p>
                         </div>
                       </div>
                     </>

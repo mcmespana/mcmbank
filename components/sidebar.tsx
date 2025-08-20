@@ -33,8 +33,8 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
 
   const navigation = [
     {
-      name: "Dashboard",
-      href: "/",
+      name: "Dashboards",
+      href: "/dashboards",
       icon: LayoutDashboard,
       count: null,
       enabled: true,

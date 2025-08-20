@@ -109,7 +109,7 @@ export class ServerDatabaseService {
           creado_en
         )
       `)
-      .eq("cuenta.delegacion_id", delegacionId)
+      .eq("delegacion_id", delegacionId)
       .order("fecha", { ascending: false })
 
     if (filters?.fechaDesde) {

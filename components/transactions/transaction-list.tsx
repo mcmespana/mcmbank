@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { BankAvatar } from "./bank-avatar"
@@ -21,8 +21,11 @@ interface TransactionListProps {
   loading: boolean
   error: string | null
   total: number
+  hasMore: boolean
+  loadingMore: boolean
   onMovementClick: (movement: Movimiento) => void
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
+  onLoadMore: () => void
 }
 
 export function TransactionList({
@@ -30,10 +33,13 @@ export function TransactionList({
   accounts,
   categories,
   loading,
+  loadingMore,
   error,
   total,
+  hasMore,
   onMovementClick,
   onMovementUpdate,
+  onLoadMore,
 }: TransactionListProps) {
   const [updatingMovements, setUpdatingMovements] = useState<Set<string>>(new Set())
   const [editingConcept, setEditingConcept] = useState<string | null>(null)
@@ -84,7 +90,23 @@ export function TransactionList({
     }
   }
 
-  if (loading) {
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!hasMore) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        onLoadMore()
+      }
+    })
+    const current = loadMoreRef.current
+    if (current) observer.observe(current)
+    return () => {
+      if (current) observer.unobserve(current)
+    }
+  }, [hasMore, onLoadMore])
+
+  if (loading && movements.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
         <LoadingSpinner size="lg" />
@@ -211,6 +233,12 @@ export function TransactionList({
           </div>
         )
       })}
+      <div ref={loadMoreRef} />
+      {loadingMore && (
+        <div className="flex justify-center py-4">
+          <LoadingSpinner size="lg" />
+        </div>
+      )}
     </div>
   )
 }

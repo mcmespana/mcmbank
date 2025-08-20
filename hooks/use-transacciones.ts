@@ -71,6 +71,7 @@ export function useTransacciones({
           metodo,
           notas,
           cuenta_id,
+          delegacion_id,
           categoria_id,
           creado_en,
           cuenta:cuenta_id (
@@ -92,7 +93,7 @@ export function useTransacciones({
         .limit(50) // Reduced from 100 to improve performance
 
       if (delegacionId) {
-        query = query.eq("cuenta.delegacion_id", delegacionId)
+        query = query.eq("delegacion_id", delegacionId)
       }
 
       if (fechaInicio) {

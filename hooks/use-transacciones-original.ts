@@ -52,7 +52,7 @@ export function useTransacciones({
         .order("creado_en", { ascending: false })
 
       if (delegacionId) {
-        query = query.eq("cuenta.delegacion_id", delegacionId)
+        query = query.eq("delegacion_id", delegacionId)
       }
 
       if (fechaInicio) {

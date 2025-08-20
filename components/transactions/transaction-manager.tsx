@@ -70,9 +70,13 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const {
     movimientos: movements,
     loading,
+    loadingMore,
     error,
     updateCategoria,
     refetch,
+    hasMore,
+    total,
+    loadMore,
   } = useMovimientos(selectedDelegation, {
     fechaDesde: filters.dateFrom,
     fechaHasta: filters.dateTo,
@@ -154,9 +158,9 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
 
   useEffect(() => {
     if (onTransactionCountChange) {
-      onTransactionCountChange(movements.length)
+      onTransactionCountChange(total)
     }
-  }, [movements.length, onTransactionCountChange])
+  }, [total, onTransactionCountChange])
 
   if (delegationsLoading) {
     return (
@@ -355,13 +359,16 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
             accounts={accounts as unknown as Cuenta[]}
             categories={categories as unknown as Categoria[]}
             loading={loading}
+            loadingMore={loadingMore}
             error={error}
-            total={movements.length}
+            total={total}
+            hasMore={hasMore}
             onMovementClick={(movement) => handleMovementClick(movement as unknown as MovimientoConRelaciones)}
             onMovementUpdate={async (movementId, patch) => {
               const fullPatch: Partial<MovimientoConRelaciones> = patch
               await handleMovementUpdate(movementId, fullPatch)
             }}
+            onLoadMore={loadMore}
           />
         </div>
       </div>

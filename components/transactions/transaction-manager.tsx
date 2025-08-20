@@ -12,7 +12,19 @@ import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ChevronRight, ChevronLeft, Plus, Download, Upload, Filter, ChevronUp } from "lucide-react"
+import {
+  ChevronRight,
+  ChevronLeft,
+  Plus,
+  Download,
+  Upload,
+  Filter,
+  ChevronUp,
+  Check,
+} from "lucide-react"
+import { toast } from "sonner"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
 import { DebugDelegationInfo } from "@/components/debug/debug-delegation-info"
@@ -48,6 +60,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [createFormOpen, setCreateFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle")
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
@@ -73,6 +86,23 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
 
   const { categorias: categories } = useCategorias(organizacionId)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
+
+  const handleDownload = async () => {
+    setDownloadState("downloading")
+    toast.success("Descarga iniciada")
+    try {
+      await exportMovementsToExcel(
+        movements as unknown as MovimientoConRelaciones[],
+        accounts as unknown as Cuenta[],
+        categories as unknown as Categoria[],
+      )
+      setDownloadState("success")
+      setTimeout(() => setDownloadState("idle"), 2000)
+    } catch (error) {
+      toast.error("No se pudo generar el archivo")
+      setDownloadState("idle")
+    }
+  }
 
   const handleMovementClick = (movement: MovimientoConRelaciones) => {
     setSelectedMovement(movement)
@@ -259,11 +289,27 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-shrink-0 bg-transparent"
+                onClick={handleDownload}
+                disabled={downloadState === "downloading"}
+                className={`flex-shrink-0 bg-transparent ${
+                  downloadState === "success" ? "bg-green-500 hover:bg-green-600 text-white" : ""
+                }`}
                 title="Descargar transacciones"
               >
-                <Download className="h-4 w-4" />
-                <span className="hidden lg:ml-2 lg:inline">Descargar</span>
+                {downloadState === "downloading" ? (
+                  <LoadingSpinner size="sm" />
+                ) : downloadState === "success" ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span className="hidden lg:ml-2 lg:inline">
+                  {downloadState === "downloading"
+                    ? "Descargando..."
+                    : downloadState === "success"
+                    ? "Descargado"
+                    : "Descargar"}
+                </span>
               </Button>
             </div>
           </div>

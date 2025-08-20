@@ -27,10 +27,7 @@ export class MockAdapter implements DataAdapter {
   async listMovements(params: ListMovementsParams): Promise<{ items: Movimiento[]; total: number }> {
     await new Promise((resolve) => setTimeout(resolve, 150))
 
-    let filtered = this.movimientos.filter((mov) => {
-      const cuenta = this.cuentas.find((c) => c.id === mov.cuenta_id)
-      return cuenta?.delegacion_id === params.delegation_id
-    })
+    let filtered = this.movimientos.filter((mov) => mov.delegacion_id === params.delegation_id)
 
     // Apply filters
     if (params.date_from) {

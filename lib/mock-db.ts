@@ -142,6 +142,7 @@ export const mockMovimientos: Movimiento[] = [
   {
     id: "mov-1",
     cuenta_id: "cuenta-1",
+    delegacion_id: "del-1",
     fecha: "2025-01-11",
     concepto: "Cabify business",
     descripcion: "Transporte para reunión cliente",
@@ -160,6 +161,7 @@ export const mockMovimientos: Movimiento[] = [
   {
     id: "mov-2",
     cuenta_id: "cuenta-1",
+    delegacion_id: "del-1",
     fecha: "2025-01-11",
     concepto: "Ventas tpv online ES",
     descripcion: "Venta productos online España",
@@ -178,6 +180,7 @@ export const mockMovimientos: Movimiento[] = [
   {
     id: "mov-3",
     cuenta_id: "cuenta-1",
+    delegacion_id: "del-1",
     fecha: "2025-01-11",
     concepto: "Ventas tpv online PT",
     descripcion: "Venta productos online Portugal",
@@ -196,6 +199,7 @@ export const mockMovimientos: Movimiento[] = [
   {
     id: "mov-4",
     cuenta_id: "cuenta-1",
+    delegacion_id: "del-1",
     fecha: "2025-01-11",
     concepto: "Ventas tpv online US",
     descripcion: "Venta productos online Estados Unidos",
@@ -214,6 +218,7 @@ export const mockMovimientos: Movimiento[] = [
   {
     id: "mov-5",
     cuenta_id: "cuenta-3",
+    delegacion_id: "del-1",
     fecha: "2025-01-10",
     concepto: "Vodafone",
     descripcion: "Factura mensual telefonía",
@@ -232,6 +237,7 @@ export const mockMovimientos: Movimiento[] = [
   {
     id: "mov-6",
     cuenta_id: "cuenta-1",
+     delegacion_id: "del-1",
     fecha: "2025-01-08",
     concepto: "Slack",
     descripcion: "Suscripción mensual Slack Pro",

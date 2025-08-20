@@ -88,16 +88,7 @@ export class ServerDatabaseService {
       .from("movimiento")
       .select(`
         *,
-        cuenta:cuenta_id (
-          *,
-          delegacion:delegacion_id (
-            id,
-            organizacion_id,
-            codigo,
-            nombre,
-            creado_en
-          )
-        ),
+        cuenta:cuenta_id (*),
         categoria:categoria_id (
           id,
           organizacion_id,
@@ -109,7 +100,7 @@ export class ServerDatabaseService {
           creado_en
         )
       `)
-      .eq("cuenta.delegacion_id", delegacionId)
+      .eq("delegacion_id", delegacionId)
       .order("fecha", { ascending: false })
 
     if (filters?.fechaDesde) {

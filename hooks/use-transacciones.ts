@@ -71,6 +71,7 @@ export function useTransacciones({
           metodo,
           notas,
           cuenta_id,
+          delegacion_id,
           categoria_id,
           creado_en,
           cuenta:cuenta_id (
@@ -89,10 +90,10 @@ export function useTransacciones({
         `)
         .eq("ignorado", false)
         .order("fecha", { ascending: false })
-        .limit(50) // Reduced from 100 to improve performance
+        .limit(50)
 
       if (delegacionId) {
-        query = query.eq("cuenta.delegacion_id", delegacionId)
+        query = query.eq("delegacion_id", delegacionId)
       }
 
       if (fechaInicio) {
@@ -128,22 +129,7 @@ export function useTransacciones({
         throw error
       }
 
-      // Process data to match expected type structure
-      const processedData = (data || []).map(item => ({
-        ...item,
-        cuenta: item.cuenta ? {
-          ...item.cuenta,
-          delegacion: {
-            id: '', // Will be populated if needed
-            organizacion_id: '',
-            codigo: '',
-            nombre: '',
-            creado_en: ''
-          }
-        } : null
-      })) as MovimientoConRelaciones[]
-
-      setTransacciones(processedData)
+      setTransacciones((data as MovimientoConRelaciones[]) || [])
     } catch (err) {
       if (abortController.signal.aborted) {
         console.log("Query was cancelled")

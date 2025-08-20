@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { BankAvatar } from "./bank-avatar"
@@ -23,6 +23,9 @@ interface TransactionListProps {
   total: number
   onMovementClick: (movement: Movimiento) => void
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
+  onLoadMore?: () => void
+  hasMore?: boolean
+  loadingMore?: boolean
 }
 
 export function TransactionList({
@@ -34,10 +37,14 @@ export function TransactionList({
   total,
   onMovementClick,
   onMovementUpdate,
+  onLoadMore,
+  hasMore,
+  loadingMore,
 }: TransactionListProps) {
   const [updatingMovements, setUpdatingMovements] = useState<Set<string>>(new Set())
   const [editingConcept, setEditingConcept] = useState<string | null>(null)
   const [conceptValue, setConceptValue] = useState("")
+  const loaderRef = useRef<HTMLDivElement | null>(null)
 
   const handleCategoryChange = async (movementId: string, categoryId: string | null) => {
     setUpdatingMovements((prev) => new Set(prev).add(movementId))
@@ -83,6 +90,21 @@ export function TransactionList({
       onMovementClick(movement)
     }
   }
+
+  useEffect(() => {
+    if (!onLoadMore) return
+    const el = loaderRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        onLoadMore()
+      }
+    })
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [onLoadMore])
 
   if (loading) {
     return (
@@ -133,7 +155,7 @@ export function TransactionList({
               )}
               onClick={(e) => handleTransactionClick(movement, e)}
               data-account-id={movement.cuenta_id}
-              data-delegation-id={account?.delegacion_id}
+              data-delegation-id={movement.delegacion_id}
             >
               <div className="flex items-start gap-3">
                 <AccountTooltip account={account}>
@@ -211,6 +233,11 @@ export function TransactionList({
           </div>
         )
       })}
+      {onLoadMore && hasMore && (
+        <div ref={loaderRef} className="flex justify-center py-4">
+          {loadingMore && <LoadingSpinner />}
+        </div>
+      )}
     </div>
   )
 }

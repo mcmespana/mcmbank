@@ -18,10 +18,9 @@ export function DebugDelegationInfo({ movements = [], accounts = [] }: DebugDele
     return null
   }
 
-  const uniqueAccountDelegations = [...new Set(movements.map(m => {
-    const account = accounts.find(a => a.id === m.cuenta_id)
-    return account?.delegacion_id
-  }).filter(Boolean))]
+  const uniqueAccountDelegations = [
+    ...new Set(movements.map(m => m.delegacion_id).filter(Boolean)),
+  ]
 
   return (
     <Card className="p-4 mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">

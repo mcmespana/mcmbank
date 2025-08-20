@@ -89,6 +89,7 @@ export type Database = {
         Row: {
           id: string
           cuenta_id: string
+          delegacion_id: string
           fecha: string
           concepto: string
           descripcion: string | null
@@ -108,6 +109,7 @@ export type Database = {
         Insert: {
           id?: string
           cuenta_id: string
+          delegacion_id: string
           fecha: string
           concepto: string
           descripcion?: string | null
@@ -127,6 +129,7 @@ export type Database = {
         Update: {
           id?: string
           cuenta_id?: string
+          delegacion_id?: string
           fecha?: string
           concepto?: string
           descripcion?: string | null
@@ -225,9 +228,7 @@ export type Perfil = Database["public"]["Tables"]["perfil"]["Row"]
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {
-  cuenta: Cuenta & {
-    delegacion: Delegacion
-  }
+  cuenta?: Cuenta
   categoria?: Categoria
 }
 

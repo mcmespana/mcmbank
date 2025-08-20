@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
-import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
+import type { Movimiento, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
 import { DebugDelegationInfo } from "@/components/debug/debug-delegation-info"
 
@@ -54,7 +54,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   } = useDelegationContext()
 
   const [filters, setFilters] = useState<TransactionFilters>({})
-  const [selectedMovement, setSelectedMovement] = useState<MovimientoConRelaciones | null>(null)
+  const [selectedMovement, setSelectedMovement] = useState<Movimiento | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -73,6 +73,9 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     error,
     updateCategoria,
     refetch,
+    loadMore,
+    hasMore,
+    loadingMore,
   } = useMovimientos(selectedDelegation, {
     fechaDesde: filters.dateFrom,
     fechaHasta: filters.dateTo,
@@ -92,7 +95,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     toast.success("Descarga iniciada")
     try {
       await exportMovementsToExcel(
-        movements as unknown as MovimientoConRelaciones[],
+        movements as unknown as Movimiento[],
         accounts as unknown as Cuenta[],
         categories as unknown as Categoria[],
       )
@@ -104,12 +107,12 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     }
   }
 
-  const handleMovementClick = (movement: MovimientoConRelaciones) => {
+  const handleMovementClick = (movement: Movimiento) => {
     setSelectedMovement(movement)
     setDetailOpen(true)
   }
 
-  const handleMovementUpdate = async (movementId: string, patch: Partial<MovimientoConRelaciones>) => {
+  const handleMovementUpdate = async (movementId: string, patch: Partial<Movimiento>) => {
     try {
       if (patch.categoria_id !== undefined) {
         await updateCategoria(movementId, patch.categoria_id)
@@ -125,7 +128,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     }
   }
 
-  const handleCreateMovement = async (data: Partial<MovimientoConRelaciones>) => {
+  const handleCreateMovement = async (data: Partial<Movimiento>) => {
     try {
       // Aquí implementarías la lógica para crear un nuevo movimiento
       console.log("Creating new movement:", data)
@@ -357,11 +360,14 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
             loading={loading}
             error={error}
             total={movements.length}
-            onMovementClick={(movement) => handleMovementClick(movement as unknown as MovimientoConRelaciones)}
+            onMovementClick={handleMovementClick}
             onMovementUpdate={async (movementId, patch) => {
-              const fullPatch: Partial<MovimientoConRelaciones> = patch
+              const fullPatch: Partial<Movimiento> = patch
               await handleMovementUpdate(movementId, fullPatch)
             }}
+            onLoadMore={loadMore}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
           />
         </div>
       </div>
@@ -373,7 +379,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onUpdate={async (movementId, patch) => {
-          const fullPatch: Partial<MovimientoConRelaciones> = patch
+          const fullPatch: Partial<Movimiento> = patch
           await handleMovementUpdate(movementId, fullPatch)
         }}
       />

@@ -160,7 +160,7 @@ export function TransactionList({
               )}
               onClick={(e) => handleTransactionClick(movement, e)}
               data-account-id={movement.cuenta_id}
-              data-delegation-id={account?.delegacion_id}
+              data-delegation-id={movement.delegacion_id}
             >
               <div className="flex items-start gap-3">
                 <AccountTooltip account={account}>

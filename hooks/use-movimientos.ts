@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
-import type { MovimientoConRelaciones } from "@/lib/types/database"
+import type { Movimiento, MovimientoConRelaciones } from "@/lib/types/database"
 import { useRevalidateOnFocus } from "./use-app-status"
 
 interface MovimientosFilters {
@@ -127,14 +127,56 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
     fetchMovimientos(nextPage, true)
   }, [loading, hasMore, page, fetchMovimientos])
 
-  const updateCategoria = async (movimientoId: string, categoriaId: string | null) => {
+  const updateMovimiento = async (movimientoId: string, patch: Partial<Movimiento>) => {
     try {
-      const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
+      const { error } = await supabase.from("movimiento").update(patch).eq("id", movimientoId)
       if (error) throw error
-      setMovimientos(prev => prev.map(mov => (mov.id === movimientoId ? { ...mov, categoria_id: categoriaId } : mov)))
+      setMovimientos(prev => prev.map(mov => (mov.id === movimientoId ? { ...mov, ...patch } : mov)))
     } catch (err) {
       throw err
     }
+  }
+
+  const updateCategoria = (movimientoId: string, categoriaId: string | null) =>
+    updateMovimiento(movimientoId, { categoria_id: categoriaId })
+
+  const createMovimiento = async (data: Partial<Movimiento>) => {
+    if (!delegacionId) throw new Error("Delegacion ID is required")
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    const insertData = {
+      ...data,
+      categoria_id: data.categoria_id || null,
+      delegacion_id: delegacionId,
+      creado_por: user?.id || "",
+      ignorado: false,
+    }
+
+    const { data: inserted, error } = await supabase
+      .from("movimiento")
+      .insert(insertData)
+      .select(
+        `*,
+        cuenta:cuenta_id (*),
+        categoria:categoria_id (
+          id,
+          organizacion_id,
+          nombre,
+          tipo,
+          emoji,
+          orden,
+          categoria_padre_id,
+          creado_en
+        )`
+      )
+      .single()
+
+    if (error) throw error
+
+    setMovimientos(prev => [inserted as MovimientoConRelaciones, ...prev])
+    return inserted as MovimientoConRelaciones
   }
 
   const refetch = () => {
@@ -150,6 +192,8 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
     error,
     refetch,
     updateCategoria,
+    updateMovimiento,
+    createMovimiento,
     loadMore,
     hasMore,
   }

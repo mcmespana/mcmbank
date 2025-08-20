@@ -16,173 +16,141 @@ interface MovimientosFilters {
   uncategorized?: boolean
 }
 
+const PAGE_SIZE = 100
+
 export function useMovimientos(delegacionId: string | null, filters?: MovimientosFilters) {
   const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
 
   const fetchIdRef = useRef(0)
-  const lastQueryKeyRef = useRef<string | null>(null)
 
-  const fetchMovimientos = useCallback(async (forceRefresh = false) => {
-    const queryKey = [
-      delegacionId || "",
-      filters?.fechaDesde || "",
-      filters?.fechaHasta || "",
-      (filters?.categoriaIds || []).join(","),
-      filters?.cuentaId || "",
-      filters?.busqueda || "",
-      filters?.amountFrom || "",
-      filters?.amountTo || "",
-      filters?.uncategorized || "",
-    ].join("|")
+  const fetchMovimientos = useCallback(
+    async (pageToLoad = 0, append = false) => {
+      const fetchId = ++fetchIdRef.current
 
-    if (!forceRefresh && lastQueryKeyRef.current === queryKey) {
-      return
-    }
-    lastQueryKeyRef.current = queryKey
-    const fetchId = ++fetchIdRef.current
-    if (!delegacionId) {
-      setMovimientos([])
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-
-      console.log(`🔍 useMovimientos: Fetching movements for delegacion: ${delegacionId}`)
-      
-      let query = supabase
-        .from("movimiento")
-        .select(`
-          *,
-          cuenta:cuenta_id (
-            *,
-            delegacion:delegacion_id (
-              id,
-              organizacion_id,
-              codigo,
-              nombre,
-              creado_en
-            )
-          ),
-          categoria:categoria_id (
-            id,
-            organizacion_id,
-            nombre,
-            tipo,
-            emoji,
-            orden,
-            categoria_padre_id,
-            creado_en
-          )
-        `)
-        .eq("cuenta.delegacion_id", delegacionId)
-        .order("fecha", { ascending: false })
-        .order("creado_en", { ascending: false })
-        // Limit results to prevent UI freezing with large datasets
-        .limit(200)
-
-      if (filters?.fechaDesde) {
-        query = query.gte("fecha", filters.fechaDesde)
-      }
-      if (filters?.fechaHasta) {
-        query = query.lte("fecha", filters.fechaHasta)
-      }
-      if (filters?.categoriaIds && filters.categoriaIds.length > 0) {
-        query = query.in("categoria_id", filters.categoriaIds)
-      }
-      if (filters?.uncategorized) {
-        query = query.is("categoria_id", null)
-      }
-      if (filters?.cuentaId) {
-        query = query.eq("cuenta_id", filters.cuentaId)
-      }
-      if (filters?.busqueda) {
-        query = query.or(`concepto.ilike.%${filters.busqueda}%,descripcion.ilike.%${filters.busqueda}%`)
-      }
-      if (filters?.amountFrom !== undefined) {
-        query = query.gte("importe", filters.amountFrom)
-      }
-      if (filters?.amountTo !== undefined) {
-        query = query.lte("importe", filters.amountTo)
-      }
-
-      const { data, error } = await query
-
-      if (fetchId !== fetchIdRef.current) {
+      if (!delegacionId) {
+        setMovimientos([])
+        setHasMore(false)
         return
       }
 
-      if (error) throw error
-      console.log(`✅ useMovimientos: Fetched ${data?.length || 0} movimientos for delegation ${delegacionId}`)
-      console.log(`🏪 useMovimientos: Filtered accounts in results:`, data?.map(m => ({ 
-        movId: m.id, 
-        cuentaId: m.cuenta_id, 
-        cuentaNombre: m.cuenta?.nombre,
-        delegacionId: m.cuenta?.delegacion_id,
-        delegacionNombre: m.cuenta?.delegacion?.nombre 
-      })).slice(0, 3))
-      setMovimientos(data || [])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido")
-    } finally {
-      setLoading(false)
-    }
-  }, [
-    delegacionId,
-    filters?.fechaDesde,
-    filters?.fechaHasta,
-    filters?.categoriaIds,
-    filters?.cuentaId,
-    filters?.busqueda,
-    filters?.amountFrom,
-    filters?.amountTo,
-    filters?.uncategorized,
-  ])
+      try {
+        setLoading(true)
+        setError(null)
+
+        const from = pageToLoad * PAGE_SIZE
+        const to = from + PAGE_SIZE - 1
+
+        let query = supabase
+          .from("movimiento")
+          .select(
+            `*,
+            cuenta:cuenta_id (*),
+            categoria:categoria_id (
+              id,
+              organizacion_id,
+              nombre,
+              tipo,
+              emoji,
+              orden,
+              categoria_padre_id,
+              creado_en
+            )
+          `,
+            { count: "exact" }
+          )
+          .eq("delegacion_id", delegacionId)
+          .order("fecha", { ascending: false })
+          .order("creado_en", { ascending: false })
+          .range(from, to)
+
+        if (filters?.fechaDesde) {
+          query = query.gte("fecha", filters.fechaDesde)
+        }
+        if (filters?.fechaHasta) {
+          query = query.lte("fecha", filters.fechaHasta)
+        }
+        if (filters?.categoriaIds && filters.categoriaIds.length > 0) {
+          query = query.in("categoria_id", filters.categoriaIds)
+        }
+        if (filters?.uncategorized) {
+          query = query.is("categoria_id", null)
+        }
+        if (filters?.cuentaId) {
+          query = query.eq("cuenta_id", filters.cuentaId)
+        }
+        if (filters?.busqueda) {
+          query = query.or(`concepto.ilike.%${filters.busqueda}%,descripcion.ilike.%${filters.busqueda}%`)
+        }
+        if (filters?.amountFrom !== undefined) {
+          query = query.gte("importe", filters.amountFrom)
+        }
+        if (filters?.amountTo !== undefined) {
+          query = query.lte("importe", filters.amountTo)
+        }
+
+        const { data, error } = await query
+
+        if (fetchId !== fetchIdRef.current) return
+
+        if (error) throw error
+
+        setMovimientos(prev => (append ? [...prev, ...(data || [])] : (data || [])))
+        if ((data || []).length < PAGE_SIZE) {
+          setHasMore(false)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error desconocido")
+      } finally {
+        setLoading(false)
+      }
+    },
+    [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized]
+  )
 
   useEffect(() => {
-    let cancelled = false
-    const timeoutId = setTimeout(() => {
-      if (!cancelled) {
-        fetchMovimientos()
-      }
-    }, 80)
-    return () => {
-      cancelled = true
-      clearTimeout(timeoutId)
-    }
-  }, [fetchMovimientos])
+    setMovimientos([])
+    setPage(0)
+    setHasMore(true)
+    fetchMovimientos(0, false)
+  }, [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized, fetchMovimientos])
 
-  // Revalidate on focus
-  useRevalidateOnFocus(fetchMovimientos)
+  useRevalidateOnFocus(() => fetchMovimientos(0, false))
+
+  const loadMore = useCallback(() => {
+    if (loading || !hasMore) return
+    const nextPage = page + 1
+    setPage(nextPage)
+    fetchMovimientos(nextPage, true)
+  }, [loading, hasMore, page, fetchMovimientos])
 
   const updateCategoria = async (movimientoId: string, categoriaId: string | null) => {
     try {
       const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
-
       if (error) throw error
-
-      // Update local state
-      setMovimientos((prev) =>
-        prev.map((mov) => (mov.id === movimientoId ? { ...mov, categoria_id: categoriaId } : mov)),
-      )
+      setMovimientos(prev => prev.map(mov => (mov.id === movimientoId ? { ...mov, categoria_id: categoriaId } : mov)))
     } catch (err) {
       throw err
     }
+  }
+
+  const refetch = () => {
+    setMovimientos([])
+    setPage(0)
+    setHasMore(true)
+    return fetchMovimientos(0, false)
   }
 
   return {
     movimientos,
     loading,
     error,
-    refetch: () => {
-      // Forzar invalidación completa de la cache
-      lastQueryKeyRef.current = null
-      return fetchMovimientos(true)
-    },
+    refetch,
     updateCategoria,
+    loadMore,
+    hasMore,
   }
 }

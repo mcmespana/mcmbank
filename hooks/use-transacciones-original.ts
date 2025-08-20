@@ -41,10 +41,7 @@ export function useTransacciones({
         .from("movimiento")
         .select(`
           *,
-          cuenta:cuenta_id (
-            *,
-            delegacion:delegacion_id (*)
-          ),
+          cuenta:cuenta_id (*),
           categoria:categoria_id (*)
         `)
         .eq("ignorado", false)
@@ -52,7 +49,7 @@ export function useTransacciones({
         .order("creado_en", { ascending: false })
 
       if (delegacionId) {
-        query = query.eq("cuenta.delegacion_id", delegacionId)
+        query = query.eq("delegacion_id", delegacionId)
       }
 
       if (fechaInicio) {

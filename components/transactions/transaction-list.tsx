@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { BankAvatar } from "./bank-avatar"
@@ -23,6 +23,8 @@ interface TransactionListProps {
   total: number
   onMovementClick: (movement: Movimiento) => void
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
+  onLoadMore?: () => void
+  hasMore?: boolean
 }
 
 export function TransactionList({
@@ -34,10 +36,35 @@ export function TransactionList({
   total,
   onMovementClick,
   onMovementUpdate,
+  onLoadMore,
+  hasMore,
 }: TransactionListProps) {
   const [updatingMovements, setUpdatingMovements] = useState<Set<string>>(new Set())
   const [editingConcept, setEditingConcept] = useState<string | null>(null)
   const [conceptValue, setConceptValue] = useState("")
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!onLoadMore || !hasMore) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        onLoadMore()
+      }
+    })
+
+    const current = loadMoreRef.current
+    if (current) {
+      observer.observe(current)
+    }
+
+    return () => {
+      if (current) {
+        observer.unobserve(current)
+      }
+    }
+  }, [onLoadMore, hasMore])
 
   const handleCategoryChange = async (movementId: string, categoryId: string | null) => {
     setUpdatingMovements((prev) => new Set(prev).add(movementId))
@@ -84,7 +111,7 @@ export function TransactionList({
     }
   }
 
-  if (loading) {
+  if (loading && movements.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
         <LoadingSpinner size="lg" />
@@ -211,6 +238,11 @@ export function TransactionList({
           </div>
         )
       })}
+      {hasMore && (
+        <div ref={loadMoreRef} className="py-4 flex justify-center">
+          <LoadingSpinner size="sm" />
+        </div>
+      )}
     </div>
   )
 }

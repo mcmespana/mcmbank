@@ -5,6 +5,7 @@ import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
 import { TransactionCreatePanel } from "./transaction-create-panel"
+import { TransactionImportPanel } from "./transaction-import-panel"
 import { DateRangeFilter } from "./date-range-filter"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
@@ -45,6 +46,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [createFormOpen, setCreateFormOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
@@ -54,6 +56,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     loading,
     error,
     updateCategoria,
+    refetch: refetchMovements,
   } = useMovimientos(selectedDelegation, {
     fechaDesde: filters.dateFrom,
     fechaHasta: filters.dateTo,
@@ -243,6 +246,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
                 size="sm"
                 className="flex-shrink-0 bg-transparent"
                 title="Importar transacciones"
+                onClick={() => setImportOpen(true)}
               >
                 <Upload className="h-4 w-4" />
                 <span className="hidden lg:ml-2 lg:inline">Importar</span>
@@ -327,6 +331,14 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
         open={createFormOpen}
         onOpenChange={setCreateFormOpen}
         onCreate={handleCreateMovement}
+      />
+
+      <TransactionImportPanel
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        accounts={accounts as unknown as Cuenta[]}
+        delegacionId={selectedDelegation}
+        onImported={refetchMovements}
       />
     </div>
   )

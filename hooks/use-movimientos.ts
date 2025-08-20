@@ -24,7 +24,7 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
   const fetchIdRef = useRef(0)
   const lastQueryKeyRef = useRef<string | null>(null)
 
-  const fetchMovimientos = useCallback(async () => {
+  const fetchMovimientos = useCallback(async (forceRefresh = false) => {
     const queryKey = [
       delegacionId || "",
       filters?.fechaDesde || "",
@@ -37,7 +37,7 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
       filters?.uncategorized || "",
     ].join("|")
 
-    if (lastQueryKeyRef.current === queryKey) {
+    if (!forceRefresh && lastQueryKeyRef.current === queryKey) {
       return
     }
     lastQueryKeyRef.current = queryKey
@@ -52,6 +52,8 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
       setLoading(true)
       setError(null)
 
+      console.log(`🔍 useMovimientos: Fetching movements for delegacion: ${delegacionId}`)
+      
       let query = supabase
         .from("movimiento")
         .select(`
@@ -79,8 +81,9 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
         `)
         .eq("cuenta.delegacion_id", delegacionId)
         .order("fecha", { ascending: false })
+        .order("creado_en", { ascending: false })
         // Limit results to prevent UI freezing with large datasets
-        .limit(100)
+        .limit(200)
 
       if (filters?.fechaDesde) {
         query = query.gte("fecha", filters.fechaDesde)
@@ -114,6 +117,14 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
       }
 
       if (error) throw error
+      console.log(`✅ useMovimientos: Fetched ${data?.length || 0} movimientos for delegation ${delegacionId}`)
+      console.log(`🏪 useMovimientos: Filtered accounts in results:`, data?.map(m => ({ 
+        movId: m.id, 
+        cuentaId: m.cuenta_id, 
+        cuentaNombre: m.cuenta?.nombre,
+        delegacionId: m.cuenta?.delegacion_id,
+        delegacionNombre: m.cuenta?.delegacion?.nombre 
+      })).slice(0, 3))
       setMovimientos(data || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
@@ -167,7 +178,11 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
     movimientos,
     loading,
     error,
-    refetch: fetchMovimientos,
+    refetch: () => {
+      // Forzar invalidación completa de la cache
+      lastQueryKeyRef.current = null
+      return fetchMovimientos(true)
+    },
     updateCategoria,
   }
 }

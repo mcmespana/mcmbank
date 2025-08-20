@@ -125,13 +125,15 @@ export function TransactionList({
         const isEditingThisConcept = editingConcept === movement.id
 
         return (
-          <div key={movement.id} className="relative">
+          <div key={movement.id} className="relative" data-testid="transaction-row">
             <div
               className={cn(
                 "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md",
                 !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10"
               )}
               onClick={(e) => handleTransactionClick(movement, e)}
+              data-account-id={movement.cuenta_id}
+              data-delegation-id={account?.delegacion_id}
             >
               <div className="flex items-start gap-3">
                 <AccountTooltip account={account}>
@@ -140,6 +142,8 @@ export function TransactionList({
                     style={{
                       backgroundColor: account?.color || "#4ECDC4",
                     }}
+                    data-testid="account-info"
+                    title={`Cuenta: ${account?.nombre || 'Sin nombre'} - Delegación ID: ${account?.delegacion_id || 'Sin delegación'}`}
                   >
                     <BankAvatar account={account} />
                   </div>

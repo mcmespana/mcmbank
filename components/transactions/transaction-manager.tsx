@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card"
 import { ChevronRight, ChevronLeft, Plus, Download, Upload, Filter, ChevronUp } from "lucide-react"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
+import { DebugDelegationInfo } from "@/components/debug/debug-delegation-info"
 
 export interface TransactionFilters {
   dateFrom?: string
@@ -50,6 +51,8 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
+
+  console.log(`🏢 TransactionManager: selectedDelegation = ${selectedDelegation}, currentDelegation = ${currentDelegation?.nombre}`)
 
   const {
     movimientos: movements,
@@ -296,6 +299,11 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
 
         {/* Transaction List */}
         <div className="flex-1 overflow-auto">
+          {/* Debug info - solo en desarrollo */}
+          <div className="p-4 pb-0">
+            <DebugDelegationInfo movements={movements} accounts={accounts} />
+          </div>
+          
           <TransactionList
             movements={movements}
             accounts={accounts as unknown as Cuenta[]}
@@ -338,7 +346,15 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
         open={importOpen}
         onOpenChange={setImportOpen}
         delegacionId={selectedDelegation}
-        onImported={() => refetch()}
+        onImported={(importedCount) => {
+          console.log(`🔄 TransactionManager: Iniciando refetch después de importar ${importedCount || 0} transacciones para delegación ${selectedDelegation}`)
+          refetch()
+          // Refetch adicional después de un delay para asegurar sincronización
+          setTimeout(() => {
+            console.log('🔄 TransactionManager: Segundo refetch para asegurar sincronización')
+            refetch()
+          }, 1000)
+        }}
       />
     </div>
   )

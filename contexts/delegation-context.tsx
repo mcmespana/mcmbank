@@ -17,8 +17,15 @@ interface DelegationContextType {
 const DelegationContext = createContext<DelegationContextType | undefined>(undefined)
 
 export function DelegationProvider({ children }: { children: React.ReactNode }) {
-  const [selectedDelegation, setSelectedDelegation] = useState<string | null>(null)
+  const [selectedDelegation, setSelectedDelegationState] = useState<string | null>(null)
   const { delegations, loading, error } = useDelegations()
+
+  const setSelectedDelegation = (delegationId: string) => {
+    console.log(`🏢 DelegationContext: Changing delegation from ${selectedDelegation} to ${delegationId}`)
+    const newDelegation = delegations.find(d => d.id === delegationId)
+    console.log(`🏢 DelegationContext: New delegation details:`, newDelegation)
+    setSelectedDelegationState(delegationId)
+  }
 
   // Auto-select first delegation when loaded
   useEffect(() => {

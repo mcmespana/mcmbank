@@ -57,7 +57,7 @@ export function useDebugCalls(hookName: string, dependencies?: any[]) {
 
   // Log excessive renders in development
   if (process.env.NODE_ENV === 'development' && renderCountRef.current > 20) {
-    console.error(`🚨 ${hookName} - POSIBLE LOOP INFINITO: ${renderCountRef.current} renders`)
+    console.warn(`🚨 ${hookName} - POSIBLE LOOP INFINITO: ${renderCountRef.current} renders`)
   }
 
   return {

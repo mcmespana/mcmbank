@@ -73,6 +73,8 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     error,
     updateCategoria,
     refetch,
+    loadMore,
+    hasMore,
   } = useMovimientos(selectedDelegation, {
     fechaDesde: filters.dateFrom,
     fechaHasta: filters.dateTo,
@@ -362,6 +364,8 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
               const fullPatch: Partial<MovimientoConRelaciones> = patch
               await handleMovementUpdate(movementId, fullPatch)
             }}
+            onLoadMore={loadMore}
+            hasMore={hasMore}
           />
         </div>
       </div>

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ChevronRight, ChevronLeft, Plus, Download, Upload, Filter, ChevronUp } from "lucide-react"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
+import { TransactionImportPanel } from "./transaction-import-panel"
 
 export interface TransactionFilters {
   dateFrom?: string
@@ -45,6 +46,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [createFormOpen, setCreateFormOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
@@ -54,6 +56,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     loading,
     error,
     updateCategoria,
+    refetch,
   } = useMovimientos(selectedDelegation, {
     fechaDesde: filters.dateFrom,
     fechaHasta: filters.dateTo,
@@ -243,6 +246,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
                 size="sm"
                 className="flex-shrink-0 bg-transparent"
                 title="Importar transacciones"
+                onClick={() => setImportOpen(true)}
               >
                 <Upload className="h-4 w-4" />
                 <span className="hidden lg:ml-2 lg:inline">Importar</span>
@@ -327,6 +331,14 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
         open={createFormOpen}
         onOpenChange={setCreateFormOpen}
         onCreate={handleCreateMovement}
+      />
+
+      <TransactionImportPanel
+        accounts={accounts as unknown as Cuenta[]}
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        delegacionId={selectedDelegation}
+        onImported={() => refetch()}
       />
     </div>
   )

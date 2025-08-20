@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client"
-import type { Categoria } from "@/lib/types/database"
+import type { Categoria, Database } from "@/lib/types/database"
 
 export class DatabaseService {
   private static getClient() {
@@ -10,6 +10,13 @@ export class DatabaseService {
   static async updateMovimientoCategoria(movimientoId: string, categoriaId: string | null): Promise<void> {
     const supabase = this.getClient()
     const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
+
+    if (error) throw error
+  }
+
+  static async insertMovimientos(movimientos: Database["public"]["Tables"]["movimiento"]["Insert"][]): Promise<void> {
+    const supabase = this.getClient()
+    const { error } = await supabase.from("movimiento").insert(movimientos)
 
     if (error) throw error
   }

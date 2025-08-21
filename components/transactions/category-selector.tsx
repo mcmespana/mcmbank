@@ -33,14 +33,27 @@ export function CategorySelector({
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
 
+  const flatCategories = useMemo(() => {
+    const roots = categories.filter((c) => !c.categoria_padre_id).sort((a, b) => a.orden - b.orden)
+    const result: Categoria[] = []
+    roots.forEach((parent) => {
+      result.push(parent)
+      const subs = categories
+        .filter((c) => c.categoria_padre_id === parent.id)
+        .sort((a, b) => a.orden - b.orden)
+      result.push(...subs)
+    })
+    return result
+  }, [categories])
+
   const filteredCategories = useMemo(() => {
-    if (!searchValue) return categories
-    return categories.filter(
+    if (!searchValue) return flatCategories
+    return flatCategories.filter(
       (category) =>
         category.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
         (category.emoji && category.emoji.includes(searchValue)),
     )
-  }, [categories, searchValue])
+  }, [flatCategories, searchValue])
 
   const selectedCategoryObjects = useMemo(() => {
     return categories.filter((cat) => selectedCategories.includes(cat.id))
@@ -87,6 +100,14 @@ export function CategorySelector({
     }
   }
 
+  const getCategoryDisplayName = (category: Categoria) => {
+    if (category.categoria_padre_id) {
+      const parent = categories.find((c) => c.id === category.categoria_padre_id)
+      return `${parent?.nombre || ""} > ${category.nombre}`
+    }
+    return category.nombre
+  }
+
   return (
     <div className="space-y-3">
       <Popover open={open} onOpenChange={setOpen}>
@@ -102,7 +123,7 @@ export function CategorySelector({
                 ? placeholder
                 : allowMultiple
                   ? `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`
-                  : selectedCategoryObjects[0]?.nombre || "Categoría seleccionada"}
+                  : getCategoryDisplayName(selectedCategoryObjects[0] as Categoria) || "Categoría seleccionada"}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -132,6 +153,7 @@ export function CategorySelector({
                       key={category.id}
                       className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
                       onClick={() => handleSelect(category.id)}
+                      style={{ paddingLeft: category.categoria_padre_id ? 24 : 8 }}
                     >
                       <Badge
                         className="text-white font-medium rounded-full px-2 py-1 text-xs flex items-center gap-1"
@@ -182,7 +204,7 @@ export function CategorySelector({
                 style={{ backgroundColor: getCategoryColor(category) }}
               >
                 {category.emoji && <span>{category.emoji}</span>}
-                <span>{category.nombre}</span>
+                <span>{getCategoryDisplayName(category)}</span>
                 <Button
                   variant="ghost"
                   size="sm"

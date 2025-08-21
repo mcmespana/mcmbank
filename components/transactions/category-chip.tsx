@@ -31,6 +31,14 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
     }
   }
 
+  const getCategoryDisplayName = (category: Categoria) => {
+    if (category.categoria_padre_id) {
+      const parent = categories.find((c) => c.id === category.categoria_padre_id)
+      return `${parent?.nombre || ""} > ${category.nombre}`
+    }
+    return category.nombre
+  }
+
   const handleCategoryRemove = (categoryId: string) => {
     onCategoryChange(null)
   }
@@ -44,7 +52,7 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
           onClick={() => setOpen(true)}
         >
           {category.emoji && <span className="text-xs">{category.emoji}</span>}
-          <span className="text-xs font-medium">{category.nombre}</span>
+          <span className="text-xs font-medium">{getCategoryDisplayName(category)}</span>
         </Badge>
 
         <Button

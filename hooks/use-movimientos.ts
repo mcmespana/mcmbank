@@ -58,6 +58,12 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
               orden,
               categoria_padre_id,
               creado_en
+            ),
+            archivos:movimiento_archivo!movimiento_id (
+              id,
+              nombre_original,
+              es_factura,
+              bucket
             )
           `,
             { count: "exact" }

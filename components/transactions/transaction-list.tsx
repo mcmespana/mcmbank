@@ -9,19 +9,20 @@ import { BankAvatar } from "./bank-avatar"
 import { CategoryChip } from "./category-chip"
 import { AmountDisplay } from "@/components/ui/amount-display"
 import { AccountTooltip } from "./account-tooltip"
+import { TransactionRowIndicators } from "./transaction-row-indicators"
 import { formatDate } from "@/lib/utils/format"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
+import type { Movimiento, Cuenta, Categoria, MovimientoConRelaciones } from "@/lib/types/database"
 
 interface TransactionListProps {
-  movements: Movimiento[]
+  movements: MovimientoConRelaciones[]
   accounts: Cuenta[]
   categories: Categoria[]
   loading: boolean
   error: string | null
   total: number
-  onMovementClick: (movement: Movimiento) => void
+  onMovementClick: (movement: MovimientoConRelaciones) => void
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onLoadMore?: () => void
   hasMore?: boolean
@@ -104,7 +105,7 @@ export function TransactionList({
     setConceptValue("")
   }
 
-  const handleTransactionClick = (movement: Movimiento, e: React.MouseEvent) => {
+  const handleTransactionClick = (movement: MovimientoConRelaciones, e: React.MouseEvent) => {
     const target = e.target as HTMLElement
     if (!target.closest("button") && !target.closest('[role="button"]') && !target.closest("input")) {
       onMovementClick(movement)
@@ -197,12 +198,20 @@ export function TransactionList({
                           autoFocus
                         />
                       ) : (
-                        <h3
-                          className="font-semibold text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors mb-1"
-                          onClick={(e) => handleConceptClick(movement, e)}
-                        >
-                          {movement.concepto}
-                        </h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3
+                            className="font-semibold text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors flex-1"
+                            onClick={(e) => handleConceptClick(movement, e)}
+                          >
+                            {movement.concepto}
+                          </h3>
+                          
+                          {/* Indicadores modernos */}
+                          <TransactionRowIndicators 
+                            description={movement.descripcion}
+                            fileCount={movement.archivos?.length || 0}
+                          />
+                        </div>
                       )}
                       
                       {/* Category directly below title */}

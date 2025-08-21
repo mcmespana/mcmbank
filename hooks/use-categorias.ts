@@ -58,5 +58,5 @@ export function useCategorias(organizacionId?: string) {
     }
   }
 
-  return { categorias, loading, error, updateCategoria }
+  return { categorias, loading, error, updateCategoria, fetchCategorias }
 }

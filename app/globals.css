@@ -11,6 +11,33 @@
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* Scrollbar personalizado */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 0.375rem;
+  }
+  
+  .scrollbar-track-gray-100::-webkit-scrollbar-track {
+    background-color: #f3f4f6;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 0.375rem;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background-color: #f3f4f6;
+  }
 }
 
 @layer base {
@@ -131,4 +158,25 @@
       @apply p-0.5;
     }
   }
+}
+
+.force-scroll::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 12px;
+}
+
+.force-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.force-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.force-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.6);
 }

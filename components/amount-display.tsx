@@ -11,6 +11,7 @@ interface AmountDisplayProps {
 
 export function AmountDisplay({ amount, size = "md", className }: AmountDisplayProps) {
   const isPositive = amount > 0
+  const isZero = amount === 0
 
   const sizeClasses = {
     sm: "text-sm px-2 py-0.5",
@@ -22,7 +23,9 @@ export function AmountDisplay({ amount, size = "md", className }: AmountDisplayP
     <div
       className={cn(
         "inline-flex items-center justify-center rounded-full font-semibold transition-all duration-200",
-        isPositive
+        isZero
+          ? "bg-muted/30 text-muted-foreground/60"
+          : isPositive
           ? "transaction-amount-positive"
           : "transaction-amount-negative",
         sizeClasses[size],

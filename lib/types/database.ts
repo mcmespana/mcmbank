@@ -211,6 +211,53 @@ export type Database = {
           creado_en?: string
         }
       }
+      movimiento_archivo: {
+        Row: {
+          id: string
+          movimiento_id: string
+          nombre_original: string
+          nombre_archivo: string
+          tipo_mime: string
+          tamaño_bytes: number
+          bucket: string
+          path_storage: string
+          url_publica: string
+          es_factura: boolean
+          descripcion: string | null
+          subido_por: string
+          subido_en: string
+        }
+        Insert: {
+          id?: string
+          movimiento_id: string
+          nombre_original: string
+          nombre_archivo: string
+          tipo_mime: string
+          tamaño_bytes: number
+          bucket: string
+          path_storage: string
+          url_publica: string
+          es_factura?: boolean
+          descripcion?: string | null
+          subido_por: string
+          subido_en?: string
+        }
+        Update: {
+          id?: string
+          movimiento_id?: string
+          nombre_original?: string
+          nombre_archivo?: string
+          tipo_mime?: string
+          tamaño_bytes?: number
+          bucket?: string
+          path_storage?: string
+          url_publica?: string
+          es_factura?: boolean
+          descripcion?: string | null
+          subido_por?: string
+          subido_en?: string
+        }
+      }
     }
   }
 }
@@ -222,6 +269,7 @@ export type Movimiento = Database["public"]["Tables"]["movimiento"]["Row"]
 export type Categoria = Database["public"]["Tables"]["categoria"]["Row"]
 export type Membresia = Database["public"]["Tables"]["membresia"]["Row"]
 export type Perfil = Database["public"]["Tables"]["perfil"]["Row"]
+export type MovimientoArchivo = Database["public"]["Tables"]["movimiento_archivo"]["Row"]
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {
@@ -229,6 +277,7 @@ export type MovimientoConRelaciones = Movimiento & {
     delegacion: Delegacion
   }
   categoria?: Categoria
+  archivos?: MovimientoArchivo[]
 }
 
 export type CuentaConDelegacion = Cuenta & {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check } from "lucide-react"
+import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -257,11 +257,29 @@ export function CuentasManager() {
 
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text)
+      // Verificar si navigator.clipboard está disponible
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        // Fallback para navegadores que no soportan la API moderna
+        const textArea = document.createElement('textarea')
+        textArea.value = text
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
+      
       setCopiedIban(text)
       setTimeout(() => setCopiedIban(null), 2000)
     } catch (err) {
       console.error("Error copying to clipboard:", err)
+      // Mostrar un mensaje al usuario o usar un fallback
+      alert("No se pudo copiar al portapapeles. Por favor, selecciona y copia el texto manualmente.")
     }
   }
 
@@ -300,24 +318,26 @@ export function CuentasManager() {
       return a.nombre.localeCompare(b.nombre)
     })
 
+  const bancosCount = cuentas.filter((c) => c.tipo === "banco").length
+
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:gap-6">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 max-w-sm order-2 sm:order-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               type="text"
               placeholder="Buscar cuentas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 bg-background border-border"
+              className="pl-10 h-10 sm:h-11 bg-background border-border"
             />
           </div>
 
           <Button 
             onClick={() => setIsCreateSheetOpen(true)} 
-            className="w-full sm:w-auto h-11 px-6" 
+            className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-6 order-1 sm:order-2" 
             size="default"
             disabled={Object.values(operationStates).some(state => state === 'creating')}
           >
@@ -326,26 +346,28 @@ export function CuentasManager() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-lg border">
-            <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Cuentas</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{cuentas.length}</div>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-2 sm:p-3 lg:p-4 rounded-lg border">
+            <div className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300">Total Cuentas</div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-900 dark:text-blue-100">{cuentas.length}</div>
           </div>
-          <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-blue-900 p-4 rounded-lg border">
-            <div className="text-sm font-medium text-green-700 dark:text-green-300">Saldo Total</div>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+          <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-blue-900 p-2 sm:p-3 lg:p-4 rounded-lg border">
+            <div className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300">Saldo Total</div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-900 dark:text-green-100">
               {Object.values(balances)
                 .reduce((sum, balance) => sum + balance, 0)
                 .toFixed(2)}{" "}
               €
             </div>
           </div>
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-4 rounded-lg border">
-            <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Bancos</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-              {cuentas.filter((c) => c.tipo === "banco").length}
+          {bancosCount > 1 && (
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-2 sm:p-3 lg:p-4 rounded-lg border col-span-2">
+              <div className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300">Bancos</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-900 dark:text-purple-100">
+                {bancosCount}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -385,13 +407,14 @@ export function CuentasManager() {
                     isDeleting ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''
                   }`}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                      <div className="flex items-start gap-4 flex-1 min-w-0">
-                        {/* Account Icon with improved styling */}
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col gap-4">
+                      {/* Primera fila: Icono + Info básica + Saldo */}
+                      <div className="flex items-center gap-4">
+                        {/* Account Icon */}
                         <div className="relative flex-shrink-0">
                           <div
-                            className={`h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 ${
+                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 ${
                               isCreating ? 'animate-pulse' :
                               isUpdating ? 'animate-pulse' :
                               isDeleting ? 'animate-pulse' : ''
@@ -404,7 +427,7 @@ export function CuentasManager() {
                           {/* Connection Status Badge */}
                           {connectionStatus && (
                             <div
-                              className={`absolute -top-1 -right-1 h-5 w-5 rounded-full ${getConnectionBadgeColor(connectionStatus)} border-3 border-white dark:border-gray-800 shadow-sm`}
+                              className={`absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full ${getConnectionBadgeColor(connectionStatus)} border-2 sm:border-3 border-white dark:border-gray-800 shadow-sm`}
                             >
                               <div className="h-full w-full rounded-full bg-current opacity-80" />
                             </div>
@@ -412,103 +435,140 @@ export function CuentasManager() {
 
                           {/* Operation Status Badge */}
                           {isCreating && (
-                            <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-blue-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
-                              <div className="h-3 w-3 rounded-full bg-white animate-pulse" />
+                            <div className="absolute -bottom-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-blue-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
+                              <div className="h-2 w-2 sm:h-3 sm:w-3 rounded-full bg-white animate-pulse" />
                             </div>
                           )}
                           {isUpdating && (
-                            <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-yellow-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
-                              <div className="h-3 w-3 rounded-full bg-white animate-pulse" />
+                            <div className="absolute -bottom-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-yellow-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
+                              <div className="h-2 w-2 sm:h-3 sm:w-3 rounded-full bg-white animate-pulse" />
                             </div>
                           )}
                           {isDeleting && (
-                            <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-red-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
-                              <div className="h-3 w-3 rounded-full bg-white animate-pulse" />
+                            <div className="absolute -bottom-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-red-500 border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center">
+                              <div className="h-2 w-2 sm:h-3 sm:w-3 rounded-full bg-white animate-pulse" />
                             </div>
                           )}
                         </div>
 
-                        {/* Account Details with improved typography */}
-                        <div className="space-y-3 flex-1 min-w-0">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-xl font-semibold text-foreground truncate leading-tight">
-                                {cuenta.nombre}
-                                {isCreating && (
-                                  <span className="ml-2 text-sm text-blue-600 dark:text-blue-400 font-normal">
-                                    (Creando...)
-                                  </span>
+                        {/* Account Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-lg sm:text-xl font-semibold text-foreground truncate leading-tight">
+                                  {cuenta.nombre}
+                                  {isCreating && (
+                                    <span className="ml-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-normal">
+                                      (Creando...)
+                                    </span>
+                                  )}
+                                  {isUpdating && (
+                                    <span className="ml-2 text-xs sm:text-sm text-yellow-600 dark:text-yellow-400 font-normal">
+                                      (Actualizando...)
+                                    </span>
+                                  )}
+                                  {isDeleting && (
+                                    <span className="ml-2 text-xs sm:text-sm text-red-600 dark:text-red-400 font-normal">
+                                      (Eliminando...)
+                                    </span>
+                                  )}
+                                </h3>
+                                {cuenta.descripcion && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+                                      >
+                                        <Info className="h-3 w-3 sm:h-4 sm:w-4" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80 p-3">
+                                      <div className="space-y-2">
+                                        <h4 className="font-medium text-sm">Descripción</h4>
+                                        <p className="text-sm text-muted-foreground">{cuenta.descripcion}</p>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
                                 )}
-                                {isUpdating && (
-                                  <span className="ml-2 text-sm text-yellow-600 dark:text-yellow-400 font-normal">
-                                    (Actualizando...)
-                                  </span>
-                                )}
-                                {isDeleting && (
-                                  <span className="ml-2 text-sm text-red-600 dark:text-red-400 font-normal">
-                                    (Eliminando...)
-                                  </span>
-                                )}
-                              </h3>
-                              {cuenta.descripcion && (
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                    >
-                                      <Info className="h-4 w-4" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-80 p-3">
-                                    <div className="space-y-2">
-                                      <h4 className="font-medium text-sm">Descripción</h4>
-                                      <p className="text-sm text-muted-foreground">{cuenta.descripcion}</p>
-                                    </div>
-                                  </PopoverContent>
-                                </Popover>
-                              )}
+                              </div>
+                              <p className="text-sm sm:text-base text-muted-foreground font-medium">
+                                {cuenta.tipo === "banco" ? cuenta.banco_nombre : "Caja - Efectivo"}
+                              </p>
                             </div>
-                            <p className="text-muted-foreground font-medium">
-                              {cuenta.tipo === "banco" ? cuenta.banco_nombre : "Caja - Efectivo"}
-                            </p>
-                          </div>
 
-                          {/* IBAN with improved mobile layout */}
-                          {cuenta.tipo === "banco" && cuenta.iban && (
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <code className="text-sm text-muted-foreground font-mono bg-muted px-3 py-1.5 rounded-md border break-all">
-                                {cuenta.iban}
-                              </code>
+                            {/* Balance - Always visible on the right */}
+                            <div className="flex-shrink-0">
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => copyToClipboard(cuenta.iban!)}
-                                    className={`h-8 w-8 p-0 hover:bg-muted flex-shrink-0 transition-all duration-200 ${
-                                      copiedIban === cuenta.iban
-                                        ? "bg-green-100 hover:bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
-                                        : "hover:bg-muted"
-                                    }`}
-                                  >
-                                    {copiedIban === cuenta.iban ? (
-                                      <Check className="h-3.5 w-3.5" />
-                                    ) : (
-                                      <Copy className="h-3.5 w-3.5" />
-                                    )}
+                                  <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
+                                    <Badge
+                                      variant="secondary"
+                                      className={`text-sm sm:text-lg font-semibold px-2 sm:px-4 py-1 sm:py-2 cursor-pointer hover:opacity-80 transition-opacity ${
+                                        balance >= 0
+                                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                                      }`}
+                                    >
+                                      {balance >= 0 ? "+" : ""}
+                                      {balance.toFixed(2)} €
+                                    </Badge>
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-2">
-                                  <p className="text-sm">{copiedIban === cuenta.iban ? "¡Copiado!" : "Copiar IBAN"}</p>
+                                <PopoverContent className="w-80 p-3">
+                                  <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">Información del Saldo</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      Saldo calculado según las transacciones registradas, no tiene porque coincidir con el
+                                      del banco si no lo tienes bien sincronizado
+                                    </p>
+                                  </div>
                                 </PopoverContent>
                               </Popover>
                             </div>
-                          )}
+                          </div>
+                        </div>
+                      </div>
 
-                          {/* Description and authorized persons */}
-                          <div className="flex items-center gap-4 flex-wrap">
+                      {/* Segunda fila: IBAN y personas autorizadas */}
+                      <div className="space-y-3">
+                        {/* IBAN */}
+                        {cuenta.tipo === "banco" && cuenta.iban && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <code className="text-xs sm:text-sm text-muted-foreground font-mono bg-muted px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border break-all inline-block">
+                              {cuenta.iban}
+                            </code>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyToClipboard(cuenta.iban!)}
+                                  className={`h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-muted flex-shrink-0 transition-all duration-200 ${
+                                    copiedIban === cuenta.iban
+                                      ? "bg-green-100 hover:bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
+                                      : "hover:bg-muted"
+                                  }`}
+                                >
+                                  {copiedIban === cuenta.iban ? (
+                                    <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                  ) : (
+                                    <Copy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-2">
+                                <p className="text-sm">{copiedIban === cuenta.iban ? "¡Copiado!" : "Copiar IBAN"}</p>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )}
+
+                        {/* Personas autorizadas y botones de acción */}
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1">
                             {cuenta.personas_autorizadas && (
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -536,7 +596,7 @@ export function CuentasManager() {
                                           key={index}
                                           className="text-sm text-muted-foreground flex items-center gap-2"
                                         >
-                                          <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                                          <User className="h-3 w-3 text-green-500" />
                                           {persona.trim()}
                                         </div>
                                       ))}
@@ -546,60 +606,30 @@ export function CuentasManager() {
                               </Popover>
                             )}
                           </div>
-                        </div>
-                      </div>
 
-                      <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-4 lg:gap-3">
-                        {/* Balance with improved styling */}
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
-                              <Badge
-                                variant="secondary"
-                                className={`text-lg font-semibold px-4 py-2 cursor-pointer hover:opacity-80 transition-opacity ${
-                                  balance >= 0
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                                }`}
-                              >
-                                {balance >= 0 ? "+" : ""}
-                                {balance.toFixed(2)} €
-                              </Badge>
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingCuenta(cuenta)}
+                              disabled={isCreating || isUpdating || isDeleting}
+                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Editar cuenta"
+                            >
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80 p-3">
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-sm">Información del Saldo</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Saldo calculado según las transacciones registradas, no tiene porque coincidir con el
-                                del banco si no lo tienes bien sincronizado
-                              </p>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-
-                        {/* Action Buttons with improved styling */}
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingCuenta(cuenta)}
-                            disabled={isCreating || isUpdating || isDeleting}
-                            className="h-9 w-9 p-0 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Editar cuenta"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setDeletingCuenta(cuenta)}
-                            disabled={isCreating || isUpdating || isDeleting}
-                            className="h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Eliminar cuenta"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDeletingCuenta(cuenta)}
+                              disabled={isCreating || isUpdating || isDeleting}
+                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Eliminar cuenta"
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

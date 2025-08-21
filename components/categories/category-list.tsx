@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { CategoryEditForm } from "./category-edit-form"
+import { DateRangeFilter } from "@/components/transactions/date-range-filter"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { DatabaseService } from "@/lib/services/database"
-import { GripVertical, Search, Edit, Trash2, Plus, Building2, Wallet } from "lucide-react"
+import { GripVertical, Search, Edit, Trash2, Plus, Building2, Wallet, X } from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
+import { DeleteCategoryDialog } from "./delete-category-dialog"
 import type { Categoria } from "@/lib/types/database"
 
 const getCategoryTypeColor = (tipo: string) => {
@@ -47,19 +49,19 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
           {...provided.draggableProps}
           className={cn("transition-shadow hover:shadow-md", snapshot.isDragging && "shadow-lg rotate-2")}
         >
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
               {/* Drag Handle */}
               <div
                 {...provided.dragHandleProps}
-                className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-muted cursor-grab active:cursor-grabbing"
+                className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-muted cursor-grab active:cursor-grabbing flex-shrink-0"
               >
                 <GripVertical className="h-4 w-4" />
               </div>
 
               {/* Category Icon */}
               <div
-                className="flex h-16 w-16 items-center justify-center rounded-xl text-2xl shadow-sm"
+                className="flex h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 items-center justify-center rounded-xl text-xl sm:text-2xl shadow-sm flex-shrink-0"
                 style={{ backgroundColor: category.color || "#e5e7eb" }}
               >
                 {category.emoji || "📁"}
@@ -67,42 +69,51 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
 
               {/* Category Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-lg truncate">{category.nombre}</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <AmountDisplay amount={balance} size="sm" />
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-base sm:text-lg truncate">{category.nombre}</h3>
+                    <div className="flex items-center gap-2 mt-1 sm:mt-0">
+                      
+                      
+                      
+                    <AmountDisplay amount={balance} size="sm" />
+
+
+                    </div>
+                  </div>
+                  
+             
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 text-gray-600 hover:bg-gray-50"
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-blue-600 hover:bg-blue-50"
                   onClick={() => onSearch(category)}
                   title="Buscar transacciones"
                 >
-                  <Search className="h-4 w-4" />
+                  <Search className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 text-gray-600 hover:bg-gray-50"
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-gray-600 hover:bg-gray-50"
                   onClick={() => onEdit(category)}
                   title="Editar categoría"
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 text-red-600 hover:bg-red-50"
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-red-600 hover:bg-red-50"
                   onClick={() => onDelete(category)}
                   title="Eliminar categoría"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </div>
@@ -114,22 +125,38 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
 }
 
 export function CategoryList() {
-  const { selectedDelegation, delegations, getCurrentDelegation } = useDelegationContext()
+  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
   const [searchTerm, setSearchTerm] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Categoria | null>(null)
+  const [deletingCategory, setDeletingCategory] = useState<Categoria | null>(null)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
+  const [dateFrom, setDateFrom] = useState<string | undefined>()
+  const [dateTo, setDateTo] = useState<string | undefined>()
 
-  // Get organization ID from selected delegation
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
 
-  const { categorias: categories, loading, error, updateCategoria } = useCategorias(organizacionId)
-
+  const { categorias: categories, loading, error, updateCategoria, fetchCategorias } = useCategorias(organizacionId)
   const { movimientos } = useMovimientos(selectedDelegation || null)
 
   const getCategoryBalance = (categoryId: string) => {
-    return movimientos.filter((mov) => mov.categoria_id === categoryId).reduce((sum, mov) => sum + mov.importe, 0)
+    let filteredMovements = movimientos.filter((mov) => mov.categoria_id === categoryId)
+    
+    if (dateFrom) {
+      filteredMovements = filteredMovements.filter((mov) => mov.fecha >= dateFrom)
+    }
+    if (dateTo) {
+      filteredMovements = filteredMovements.filter((mov) => mov.fecha <= dateTo)
+    }
+    
+    return filteredMovements.reduce((sum, mov) => sum + mov.importe, 0)
+  }
+
+  const handleDateRangeChange = (newDateFrom?: string, newDateTo?: string) => {
+    setDateFrom(newDateFrom)
+    setDateTo(newDateTo)
   }
 
   const handleEdit = (category: Categoria) => {
@@ -143,31 +170,32 @@ export function CategoryList() {
   }
 
   const handleSearch = (category: Categoria) => {
-    // Navigate to transactions page with category filter
     window.location.href = `/transacciones?categoria=${category.id}`
   }
 
-  const handleDelete = async (category: Categoria) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar la categoría "${category.nombre}"?`)) {
-      return
-    }
+  const handleDeleteRequest = (category: Categoria) => {
+    setDeletingCategory(category)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingCategory) return
 
     try {
-      await DatabaseService.deleteCategoria(category.id)
-      // The hook will automatically refetch the data
+      await DatabaseService.deleteCategoria(deletingCategory.id)
+      await fetchCategorias()
     } catch (error) {
       console.error("Error deleting category:", error)
       alert("Error al eliminar la categoría")
+    } finally {
+      setDeletingCategory(null)
     }
   }
 
   const handleSaveCategory = async (patch: Partial<Categoria>) => {
     try {
       if (editingCategory) {
-        // Update existing category
         await updateCategoria(editingCategory.id, patch)
       } else if (organizacionId) {
-        // Create new category
         const maxOrder = Math.max(...categories.map((c) => c.orden), 0)
         await DatabaseService.createCategoria({
           organizacion_id: organizacionId,
@@ -178,6 +206,7 @@ export function CategoryList() {
           orden: maxOrder + 1,
           categoria_padre_id: null,
         })
+        await fetchCategorias()
       }
 
       setEditSheetOpen(false)
@@ -196,7 +225,6 @@ export function CategoryList() {
     const [reorderedItem] = items.splice(result.source.index, 1)
     items.splice(result.destination.index, 0, reorderedItem)
 
-    // Update order for all affected categories
     try {
       const updates = items.map((item, index) => ({
         id: item.id,
@@ -238,48 +266,96 @@ export function CategoryList() {
     )
   }
 
-  // Filter categories by search term
   const filteredCategories = categories.filter((category) =>
     category.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  // Sort by order
   const sortedCategories = [...filteredCategories].sort((a, b) => a.orden - b.orden)
 
   return (
-    <div className="space-y-6">
-      {/* Header with Search */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold">Categorías</h2>
-          <p className="text-muted-foreground mt-1">{categories.length} categorías • Arrastra para reordenar</p>
+          <h2 className="text-2xl sm:text-3xl font-bold">Categorías</h2>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+            {categories.length} categorías • Arrastra para reordenar
+          </p>
         </div>
-        <Button onClick={handleCreate} size="lg">
+        <Button onClick={handleCreate} size="default" className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Añadir categoría
         </Button>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Filtrar por nombre de la categoría..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 h-12"
-        />
+      {/* Filters */}
+      <div className="flex gap-4">
+        <div className="flex-1 sm:flex-1">
+          <DateRangeFilter
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onDateRangeChange={handleDateRangeChange}
+          />
+        </div>
+        
+        <div className="w-auto sm:flex-1">
+          <div className="sm:hidden">
+            {searchOpen ? (
+              <div className="relative flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Filtrar categorías..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-12"
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 flex-shrink-0"
+                  onClick={() => {
+                    setSearchOpen(false)
+                    setSearchTerm("")
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12"
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          <div className="hidden sm:block relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Filtrar por nombre de la categoría..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-12"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Categories List */}
       {sortedCategories.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <p className="text-muted-foreground mb-4">
+        <div className="flex items-center justify-center py-8 sm:py-12">
+          <div className="text-center px-4">
+            <p className="text-muted-foreground mb-4 text-sm sm:text-base">
               {searchTerm ? "No se encontraron categorías que coincidan con tu búsqueda" : "No hay categorías creadas"}
             </p>
             {!searchTerm && (
-              <Button onClick={handleCreate}>
+              <Button onClick={handleCreate} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Crear primera categoría
               </Button>
@@ -290,7 +366,7 @@ export function CategoryList() {
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="categories">
             {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3 sm:space-y-4">
                 {sortedCategories.map((category, index) => (
                   <CategoryCard
                     key={category.id}
@@ -299,7 +375,7 @@ export function CategoryList() {
                     balance={getCategoryBalance(category.id)}
                     onEdit={handleEdit}
                     onSearch={handleSearch}
-                    onDelete={handleDelete}
+                    onDelete={handleDeleteRequest}
                   />
                 ))}
                 {provided.placeholder}
@@ -309,9 +385,17 @@ export function CategoryList() {
         </DragDropContext>
       )}
 
-      {/* Edit Category Sheet */}
+      {/* Sheets and Dialogs */}
+      {deletingCategory && (
+        <DeleteCategoryDialog
+          categoria={deletingCategory}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeletingCategory(null)}
+        />
+      )}
+
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-        <SheetContent>
+        <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Editar categoría</SheetTitle>
           </SheetHeader>
@@ -325,9 +409,8 @@ export function CategoryList() {
         </SheetContent>
       </Sheet>
 
-      {/* Create Category Sheet */}
       <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
-        <SheetContent>
+        <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Crear categoría</SheetTitle>
           </SheetHeader>

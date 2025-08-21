@@ -36,18 +36,23 @@ interface CategoryCardProps {
   onEdit: (category: Categoria) => void
   onSearch: (category: Categoria) => void
   onDelete: (category: Categoria) => void
+  isSubcategory?: boolean
 }
 
-function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: CategoryCardProps) {
+function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete, isSubcategory = false }: CategoryCardProps) {
   return (
     <Draggable draggableId={category.id} index={index}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={cn("transition-shadow hover:shadow-md", snapshot.isDragging && "shadow-lg rotate-2")}
+          className={cn(
+            "transition-shadow hover:shadow-md",
+            isSubcategory && "ml-8",
+            snapshot.isDragging && "shadow-lg rotate-2",
+          )}
         >
-          <CardContent className="p-6">
+          <CardContent className={cn("p-6", isSubcategory && "py-4 pl-4")}>  
             <div className="flex items-center gap-4">
               {/* Drag Handle */}
               <div
@@ -59,7 +64,10 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
 
               {/* Category Icon */}
               <div
-                className="flex h-16 w-16 items-center justify-center rounded-xl text-2xl shadow-sm"
+                className={cn(
+                  "flex items-center justify-center rounded-xl text-2xl shadow-sm",
+                  isSubcategory ? "h-12 w-12" : "h-16 w-16",
+                )}
                 style={{ backgroundColor: category.color || "#e5e7eb" }}
               >
                 {category.emoji || "📁"}
@@ -68,7 +76,7 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
               {/* Category Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-lg truncate">{category.nombre}</h3>
+                  <h3 className={cn("font-semibold truncate", isSubcategory ? "text-base" : "text-lg")}>{category.nombre}</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   <AmountDisplay amount={balance} size="sm" />
@@ -190,21 +198,48 @@ export function CategoryList() {
   }
 
   const handleDragEnd = async (result: any) => {
-    if (!result.destination) return
+    const { destination, source, draggableId } = result
+    if (!destination) return
 
-    const items = Array.from(sortedCategories)
-    const [reorderedItem] = items.splice(result.source.index, 1)
-    items.splice(result.destination.index, 0, reorderedItem)
+    const sourceParentId = source.droppableId === "root" ? null : source.droppableId.replace("sub-", "")
+    const destParentId = destination.droppableId === "root" ? null : destination.droppableId.replace("sub-", "")
 
-    // Update order for all affected categories
-    try {
-      const updates = items.map((item, index) => ({
+    const sourceItems = categories
+      .filter((c) => c.categoria_padre_id === sourceParentId)
+      .sort((a, b) => a.orden - b.orden)
+    const destItems = categories
+      .filter((c) => c.categoria_padre_id === destParentId)
+      .sort((a, b) => a.orden - b.orden)
+
+    const [movedItem] = sourceItems.splice(source.index, 1)
+    movedItem.categoria_padre_id = destParentId
+
+    if (destParentId) {
+      const parent = categories.find((c) => c.id === destParentId)
+      if (parent) movedItem.color = parent.color
+    }
+
+    destItems.splice(destination.index, 0, movedItem)
+
+    const updates: { id: string; orden: number; categoria_padre_id?: string | null; color?: string }[] = []
+    sourceItems.forEach((item, idx) => {
+      updates.push({ id: item.id, orden: idx + 1 })
+    })
+    destItems.forEach((item, idx) => {
+      const update: { id: string; orden: number; categoria_padre_id?: string | null; color?: string } = {
         id: item.id,
-        orden: index + 1,
-      }))
+        orden: idx + 1,
+      }
+      if (item.id === draggableId) {
+        update.categoria_padre_id = destParentId
+        update.color = item.color
+      }
+      updates.push(update)
+    })
 
+    try {
       for (const update of updates) {
-        await updateCategoria(update.id, { orden: update.orden })
+        await updateCategoria(update.id, update)
       }
     } catch (error) {
       console.error("Error reordering categories:", error)
@@ -243,8 +278,13 @@ export function CategoryList() {
     category.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  // Sort by order
-  const sortedCategories = [...filteredCategories].sort((a, b) => a.orden - b.orden)
+  const rootCategories = filteredCategories
+    .filter((c) => !c.categoria_padre_id)
+    .sort((a, b) => a.orden - b.orden)
+  const getSubcategories = (parentId: string) =>
+    filteredCategories
+      .filter((c) => c.categoria_padre_id === parentId)
+      .sort((a, b) => a.orden - b.orden)
 
   return (
     <div className="space-y-6">
@@ -272,7 +312,7 @@ export function CategoryList() {
       </div>
 
       {/* Categories List */}
-      {sortedCategories.length === 0 ? (
+      {rootCategories.length === 0 ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <p className="text-muted-foreground mb-4">
@@ -288,19 +328,43 @@ export function CategoryList() {
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="categories">
+          <Droppable droppableId="root">
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-                {sortedCategories.map((category, index) => (
-                  <CategoryCard
-                    key={category.id}
-                    category={category}
-                    index={index}
-                    balance={getCategoryBalance(category.id)}
-                    onEdit={handleEdit}
-                    onSearch={handleSearch}
-                    onDelete={handleDelete}
-                  />
+                {rootCategories.map((category, index) => (
+                  <div key={category.id} className="space-y-2">
+                    <CategoryCard
+                      category={category}
+                      index={index}
+                      balance={getCategoryBalance(category.id)}
+                      onEdit={handleEdit}
+                      onSearch={handleSearch}
+                      onDelete={handleDelete}
+                    />
+                    <Droppable droppableId={`sub-${category.id}`}>
+                      {(subProvided) => (
+                        <div
+                          ref={subProvided.innerRef}
+                          {...subProvided.droppableProps}
+                          className="space-y-2"
+                        >
+                          {getSubcategories(category.id).map((sub, subIndex) => (
+                            <CategoryCard
+                              key={sub.id}
+                              category={sub}
+                              index={subIndex}
+                              balance={getCategoryBalance(sub.id)}
+                              onEdit={handleEdit}
+                              onSearch={handleSearch}
+                              onDelete={handleDelete}
+                              isSubcategory
+                            />
+                          ))}
+                          {subProvided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
                 ))}
                 {provided.placeholder}
               </div>
@@ -318,6 +382,7 @@ export function CategoryList() {
           {editingCategory && (
             <CategoryEditForm
               category={editingCategory}
+              parentCategory={categories.find((c) => c.id === editingCategory.categoria_padre_id) || undefined}
               onSave={handleSaveCategory}
               onCancel={() => setEditSheetOpen(false)}
             />

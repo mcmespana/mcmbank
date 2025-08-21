@@ -33,13 +33,29 @@ export function CategorySelector({
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
 
-  const filteredCategories = useMemo(() => {
-    if (!searchValue) return categories
-    return categories.filter(
-      (category) =>
-        category.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
-        (category.emoji && category.emoji.includes(searchValue)),
-    )
+  const groupedCategories = useMemo(() => {
+    const match = (category: Categoria) =>
+      category.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
+      (category.emoji && category.emoji.includes(searchValue))
+
+    const roots = categories
+      .filter((c) => !c.categoria_padre_id)
+      .sort((a, b) => a.orden - b.orden)
+
+    return roots
+      .map((root) => {
+        const children = categories
+          .filter((c) => c.categoria_padre_id === root.id)
+          .sort((a, b) => a.orden - b.orden)
+        return { root, children }
+      })
+      .filter(({ root, children }) =>
+        searchValue ? match(root) || children.some(match) : true,
+      )
+      .map(({ root, children }) => ({
+        root,
+        children: searchValue ? children.filter(match) : children,
+      }))
   }, [categories, searchValue])
 
   const selectedCategoryObjects = useMemo(() => {
@@ -121,28 +137,47 @@ export function CategorySelector({
           </div>
           <ScrollArea className="h-[280px]">
             <div className="p-2">
-              {filteredCategories.length === 0 ? (
+              {groupedCategories.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <p className="text-sm">No se encontraron categorías</p>
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {filteredCategories.map((category) => (
-                    <div
-                      key={category.id}
-                      className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
-                      onClick={() => handleSelect(category.id)}
-                    >
-                      <Badge
-                        className="text-white font-medium rounded-full px-2 py-1 text-xs flex items-center gap-1"
-                        style={{ backgroundColor: getCategoryColor(category) }}
+                  {groupedCategories.map(({ root, children }) => (
+                    <div key={root.id} className="space-y-1">
+                      <div
+                        className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                        onClick={() => handleSelect(root.id)}
                       >
-                        {category.emoji && <span>{category.emoji}</span>}
-                        <span>{category.nombre}</span>
-                      </Badge>
-                      <div className="ml-auto">
-                        {selectedCategories.includes(category.id) && <Check className="h-4 w-4 text-primary" />}
+                        <Badge
+                          className="text-white font-medium rounded-full px-2 py-1 text-xs flex items-center gap-1"
+                          style={{ backgroundColor: getCategoryColor(root) }}
+                        >
+                          {root.emoji && <span>{root.emoji}</span>}
+                          <span>{root.nombre}</span>
+                        </Badge>
+                        <div className="ml-auto">
+                          {selectedCategories.includes(root.id) && <Check className="h-4 w-4 text-primary" />}
+                        </div>
                       </div>
+                      {children.map((child) => (
+                        <div
+                          key={child.id}
+                          className="flex items-center gap-2 p-2 pl-6 hover:bg-muted/50 rounded cursor-pointer"
+                          onClick={() => handleSelect(child.id)}
+                        >
+                          <Badge
+                            className="text-white font-medium rounded-full px-2 py-1 text-xs flex items-center gap-1"
+                            style={{ backgroundColor: getCategoryColor(child) }}
+                          >
+                            {child.emoji && <span>{child.emoji}</span>}
+                            <span>{child.nombre}</span>
+                          </Badge>
+                          <div className="ml-auto">
+                            {selectedCategories.includes(child.id) && <Check className="h-4 w-4 text-primary" />}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>

@@ -10,9 +10,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { EmojiPickerButton } from "@/components/ui/emoji-picker"
 import { ColorPicker } from "@/components/ui/color-picker"
 import type { Categoria } from "@/lib/types/database"
+import { cn } from "@/lib/utils"
 
 interface CategoryEditFormProps {
   category: Categoria
+  parentCategory?: Categoria
   onSave: (patch: Partial<Categoria>) => Promise<void>
   onCancel: () => void
 }
@@ -25,12 +27,12 @@ const DEFAULT_COLORS = [
   "#A9DFBF", "#F9E79F", "#D5A6BD", "#A3E4D7", "#FFB6C1"
 ]
 
-export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFormProps) {
+export function CategoryEditForm({ category, parentCategory, onSave, onCancel }: CategoryEditFormProps) {
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: category.emoji || "📁",
     tipo: category.tipo,
-    color: category.color || "#4ECDC4",
+    color: parentCategory?.color || category.color || "#4ECDC4",
   })
   const [loading, setLoading] = useState(false)
 
@@ -85,19 +87,26 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
             className="w-full justify-start"
           />
         </div>
-        
+
         <div className="space-y-2">
-          <Label>Color</Label>
+          <Label>Color{parentCategory && " (heredado)"}</Label>
           <ColorPicker
             value={formData.color}
-            onChange={(color) => setFormData({ ...formData, color })}
-            className="w-full"
+            onChange={(color) => {
+              if (!parentCategory) setFormData({ ...formData, color })
+            }}
+            className={cn("w-full", parentCategory && "opacity-50 pointer-events-none")}
           />
         </div>
       </div>
 
       {/* Category Name */}
       <div className="space-y-2">
+        {parentCategory && (
+          <div className="text-sm text-muted-foreground">
+            Subcategoría de {parentCategory.emoji} {parentCategory.nombre}
+          </div>
+        )}
         <Label htmlFor="nombre">Nombre *</Label>
         <Input
           id="nombre"

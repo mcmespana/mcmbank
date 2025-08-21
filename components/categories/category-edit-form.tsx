@@ -15,6 +15,7 @@ interface CategoryEditFormProps {
   category: Categoria
   onSave: (patch: Partial<Categoria>) => Promise<void>
   onCancel: () => void
+  parentCategory?: Categoria | null
 }
 
 // Colores predefinidos para categorías
@@ -25,7 +26,8 @@ const DEFAULT_COLORS = [
   "#A9DFBF", "#F9E79F", "#D5A6BD", "#A3E4D7", "#FFB6C1"
 ]
 
-export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFormProps) {
+export function CategoryEditForm({ category, onSave, onCancel, parentCategory }: CategoryEditFormProps) {
+  const isSubcategory = !!parentCategory
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: category.emoji || "📁",
@@ -65,7 +67,7 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
       <div className="flex justify-center">
         <Card className="relative">
           <CardContent className="p-6">
-            <div 
+            <div
               className="flex h-16 w-16 items-center justify-center rounded-lg text-2xl"
               style={{ backgroundColor: formData.color }}
             >
@@ -74,6 +76,12 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
           </CardContent>
         </Card>
       </div>
+
+      {isSubcategory && (
+        <p className="text-sm text-center text-muted-foreground">
+          Subcategoría de <span className="font-medium">{parentCategory?.nombre}</span>
+        </p>
+      )}
 
       {/* Emoji and Color Pickers */}
       <div className="grid grid-cols-2 gap-4">
@@ -85,15 +93,27 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
             className="w-full justify-start"
           />
         </div>
-        
-        <div className="space-y-2">
-          <Label>Color</Label>
-          <ColorPicker
-            value={formData.color}
-            onChange={(color) => setFormData({ ...formData, color })}
-            className="w-full"
-          />
-        </div>
+        {isSubcategory ? (
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <div
+              className="h-10 w-full rounded-md border"
+              style={{ backgroundColor: formData.color }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Hereda el color de {parentCategory?.nombre}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <ColorPicker
+              value={formData.color}
+              onChange={(color) => setFormData({ ...formData, color })}
+              className="w-full"
+            />
+          </div>
+        )}
       </div>
 
       {/* Category Name */}
@@ -111,7 +131,11 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
       {/* Category Type */}
       <div className="space-y-2">
         <Label>Tipo *</Label>
-        <Select value={formData.tipo} onValueChange={(value) => setFormData({ ...formData, tipo: value })}>
+        <Select
+          value={formData.tipo}
+          onValueChange={(value) => setFormData({ ...formData, tipo: value })}
+          disabled={isSubcategory}
+        >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -121,6 +145,11 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
             <SelectItem value="mixto">Mixto</SelectItem>
           </SelectContent>
         </Select>
+        {isSubcategory && (
+          <p className="text-xs text-muted-foreground">
+            Hereda el tipo de {parentCategory?.nombre}
+          </p>
+        )}
       </div>
 
       {/* Action Buttons */}

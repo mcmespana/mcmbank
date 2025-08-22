@@ -523,6 +523,7 @@ export function TransactionImportPanel({
         const trx = parsed[i]
         const insertData: any = {
           cuenta_id: accountId,
+          delegacion_id: delegacionId!,
           fecha: trx.fecha,
           concepto: trx.concepto,
           descripcion: trx.descripcion,
@@ -656,6 +657,7 @@ export function TransactionImportPanel({
       
       const insertData: any = {
         cuenta_id: accountId,
+        delegacion_id: delegacionId!,
         fecha: transaction.fecha,
         concepto: transaction.concepto,
         descripcion: uniqueDescription,

@@ -71,6 +71,7 @@ export function useTransacciones({
           metodo,
           notas,
           cuenta_id,
+          delegacion_id,
           categoria_id,
           creado_en,
           cuenta:cuenta_id (

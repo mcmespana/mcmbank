@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
-import type { MovimientoConRelaciones } from "@/lib/types/database"
+import type { Movimiento, MovimientoConRelaciones } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { runQuery } from "@/lib/db/query"
 
@@ -167,6 +167,54 @@ export function useMovimientos(
     }
   }
 
+  const updateMovimiento = async (movimientoId: string, updates: Partial<Movimiento>) => {
+    try {
+      const { error } = await supabase.from("movimiento").update(updates).eq("id", movimientoId)
+      if (error) throw error
+      setMovimientos(prev => prev.map(mov => (mov.id === movimientoId ? { ...mov, ...updates } : mov)))
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const createMovimiento = async (data: Omit<Movimiento, "id" | "creado_en" | "creado_por">) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) throw new Error("Usuario no autenticado")
+
+      const { data: inserted, error } = await supabase
+        .from("movimiento")
+        .insert({ ...data, creado_por: userId })
+        .select(
+          `*,
+          cuenta:cuenta_id (*),
+          categoria:categoria_id (
+            id,
+            organizacion_id,
+            nombre,
+            tipo,
+            emoji,
+            orden,
+            categoria_padre_id,
+            creado_en
+          ),
+          archivos:movimiento_archivo!movimiento_id (
+            id,
+            nombre_original,
+            es_factura,
+            bucket
+          )`
+        )
+        .single()
+      if (error || !inserted) throw error
+      setMovimientos(prev => [inserted as MovimientoConRelaciones, ...prev])
+      return inserted as MovimientoConRelaciones
+    } catch (err) {
+      throw err
+    }
+  }
+
   const refetch = () => {
     setMovimientos([])
     setPage(0)
@@ -180,6 +228,8 @@ export function useMovimientos(
     error,
     refetch,
     updateCategoria,
+    updateMovimiento,
+    createMovimiento,
     loadMore,
     hasMore,
   }

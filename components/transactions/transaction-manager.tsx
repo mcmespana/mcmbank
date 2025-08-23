@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
-import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
+import type { MovimientoConRelaciones, Categoria, Cuenta, Movimiento } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
 import { DebugDelegationInfo } from "@/components/debug/debug-delegation-info"
 
@@ -71,7 +71,8 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     movimientos: movements,
     loading,
     error,
-    updateCategoria,
+    updateMovimiento,
+    createMovimiento,
     refetch,
     loadMore,
     hasMore,
@@ -113,11 +114,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
 
   const handleMovementUpdate = async (movementId: string, patch: Partial<MovimientoConRelaciones>) => {
     try {
-      if (patch.categoria_id !== undefined) {
-        await updateCategoria(movementId, patch.categoria_id)
-      }
-
-      // Update selected movement if it's the one being edited
+      await updateMovimiento(movementId, patch)
       if (selectedMovement?.id === movementId) {
         setSelectedMovement((prev) => (prev ? { ...prev, ...patch } : null))
       }
@@ -129,11 +126,12 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
 
   const handleCreateMovement = async (data: Partial<MovimientoConRelaciones>) => {
     try {
-      // Aquí implementarías la lógica para crear un nuevo movimiento
-      console.log("Creating new movement:", data)
-      // Por ahora solo cerramos el formulario
+      const newMovement = await createMovimiento(
+        data as Omit<Movimiento, "id" | "creado_en" | "creado_por">
+      )
       setCreateFormOpen(false)
-      // TODO: Implementar createMovement en useMovimientos
+      setSelectedMovement(newMovement)
+      setDetailOpen(true)
     } catch (error) {
       console.error("Error creating movement:", error)
       throw error

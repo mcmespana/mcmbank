@@ -157,6 +157,63 @@ export function useMovimientos(
     fetchMovimientos(nextPage, true)
   }, [loading, hasMore, page, fetchMovimientos])
 
+  const createMovimiento = async (
+    data: Partial<MovimientoConRelaciones>,
+  ) => {
+    try {
+      const { data: created, error } = await supabase
+        .from("movimiento")
+        .insert(data as any)
+        .select(
+          `*,
+          cuenta:cuenta_id (*),
+          categoria:categoria_id (
+            id,
+            organizacion_id,
+            nombre,
+            tipo,
+            emoji,
+            orden,
+            categoria_padre_id,
+            creado_en
+          ),
+          archivos:movimiento_archivo!movimiento_id (
+            id,
+            nombre_original,
+            es_factura,
+            bucket
+          )
+        `,
+        { head: false }
+        )
+        .single()
+
+      if (error) throw error
+      setMovimientos(prev => [created as any, ...prev])
+      return created as MovimientoConRelaciones
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const updateMovimiento = async (
+    movimientoId: string,
+    patch: Partial<MovimientoConRelaciones>,
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("movimiento")
+        .update(patch as any)
+        .eq("id", movimientoId)
+      if (error) throw error
+      setMovimientos(prev =>
+        prev.map(mov => (mov.id === movimientoId ? { ...mov, ...patch } : mov)),
+      )
+    } catch (err) {
+      throw err
+    }
+  }
+
   const updateCategoria = async (movimientoId: string, categoriaId: string | null) => {
     try {
       const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
@@ -180,6 +237,8 @@ export function useMovimientos(
     error,
     refetch,
     updateCategoria,
+    updateMovimiento,
+    createMovimiento,
     loadMore,
     hasMore,
   }

@@ -28,8 +28,29 @@ export function AppLayout({ children, transactionCount }: AppLayoutProps) {
     }
   }, [user, loading, router, isRedirecting])
 
+  // If a user appears (e.g., after sign-in finishes), clear redirecting state
+  useEffect(() => {
+    if (user && isRedirecting) {
+      setIsRedirecting(false)
+    }
+  }, [user, isRedirecting])
+
+  // Safety net: if stuck in redirecting state for a while, force a refresh/navigation
+  useEffect(() => {
+    if (!isRedirecting) return
+    const t = setTimeout(() => {
+      // Using a hard navigation ensures cookies/session are fully applied
+      try {
+        window.location.href = "/auth/login"
+      } catch {
+        // no-op
+      }
+    }, 500)
+    return () => clearTimeout(t)
+  }, [isRedirecting])
+
   // Show loading state while auth is loading or redirecting
-  if (loading || isRedirecting) {
+  if (loading || (isRedirecting && !user)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

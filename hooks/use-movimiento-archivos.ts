@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { MovimientoArchivo } from "@/lib/types/database"
 import { FileService, type FileUploadResult } from "@/lib/services/file-service"
+import { useRevalidateOnFocusJitter } from "./use-app-status"
+import { runQuery } from "@/lib/db/query"
 
 export function useMovimientoArchivos(movimientoId: string | null, delegacionCodigo?: string) {
   const [archivos, setArchivos] = useState<MovimientoArchivo[]>([])
@@ -12,29 +14,53 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
   const [uploading, setUploading] = useState(false)
 
   // Cargar archivos del movimiento
+  const abortRef = useRef<AbortController | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const TIMEOUT_MS = 10000
+
   const fetchArchivos = useCallback(async () => {
     if (!movimientoId) {
       setArchivos([])
       return
     }
 
+    if (abortRef.current) abortRef.current.abort()
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+
+    const ac = new AbortController()
+    abortRef.current = ac
+
     setLoading(true)
     setError(null)
 
     try {
-      const { data, error } = await supabase
-        .from("movimiento_archivo")
-        .select("*")
-        .eq("movimiento_id", movimientoId)
-        .order("subido_en", { ascending: false })
+      timeoutRef.current = setTimeout(() => ac.abort(), TIMEOUT_MS)
+      const { data, error } = await runQuery<any[]>({
+        label: 'fetch-movimiento-archivos',
+        table: 'movimiento_archivo',
+        timeoutMs: TIMEOUT_MS,
+        build: async (signal) =>
+          await supabase
+            .from("movimiento_archivo")
+            .select("*")
+            .eq("movimiento_id", movimientoId)
+            .order("subido_en", { ascending: false })
+            .abortSignal(signal)
+      })
 
       if (error) throw error
 
       setArchivos(data || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar archivos")
+      if (!ac.signal.aborted) {
+        setError(err instanceof Error ? err.message : "Error al cargar archivos")
+      }
     } finally {
       setLoading(false)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
     }
   }, [movimientoId])
 
@@ -182,7 +208,13 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
 
   useEffect(() => {
     fetchArchivos()
+    return () => {
+      if (abortRef.current) abortRef.current.abort()
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
   }, [fetchArchivos])
+
+  useRevalidateOnFocusJitter(fetchArchivos, { minMs: 80, maxMs: 180 })
 
   return {
     archivos,

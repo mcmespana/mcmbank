@@ -153,10 +153,8 @@ export function useTransacciones({
       console.error("Error fetching transactions:", errorMessage)
       setError(errorMessage)
     } finally {
-      if (!abortController.signal.aborted) {
-        setLoading(false)
-      }
-      
+      // Always clear loading to avoid spinner lock; next fetch will set true
+      setLoading(false)
       // Cleanup
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)

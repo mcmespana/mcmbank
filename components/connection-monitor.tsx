@@ -1,17 +1,46 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { useAppStatus } from "@/hooks/use-app-status"
+import { supabase } from "@/lib/supabase/client"
 
+// Lightweight background monitor to keep auth/session healthy and nudge the client on focus.
 export function ConnectionMonitor() {
-  // Simple tab visibility monitoring without database queries
-  const { isFocused } = useAppStatus()
-  
-  // The useAppStatus hook already logs visibility changes internally.
-  // This component can remain for future extensions or if specific side effects are needed here.
-  // For now, it just ensures the hook is active at a high level.
-  
+  const { isFocused, isOnline } = useAppStatus()
+  const runningRef = useRef(false)
 
-  // This component doesn't render anything visible
-  // It just monitors tab visibility in the background
+  useEffect(() => {
+    // On regaining focus and being online, proactively refresh session and do a tiny warm-up query
+    const run = async () => {
+      if (!isFocused || !isOnline || runningRef.current) return
+      runningRef.current = true
+      try {
+        // Ensure session is valid; explicitly refresh on focus to avoid paused timers
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          await supabase.auth.refreshSession()
+        } else {
+          // Touch getUser() to force a roundtrip if we have no session cached
+          await supabase.auth.getUser()
+        }
+        // Warm-up: minimal queries with short timeout to kick PostgREST/RLS
+        const ac1 = new AbortController()
+        const t1 = setTimeout(() => ac1.abort(), 3000)
+        await supabase.from("movimiento").select("id").limit(1).abortSignal(ac1.signal)
+        clearTimeout(t1)
+
+        const ac2 = new AbortController()
+        const t2 = setTimeout(() => ac2.abort(), 3000)
+        await supabase.from("membresia").select("usuario_id").limit(1).abortSignal(ac2.signal)
+        clearTimeout(t2)
+      } catch {
+        // Silent: UI hooks will surface errors as needed
+      } finally {
+        runningRef.current = false
+      }
+    }
+    run()
+  }, [isFocused, isOnline])
+
   return null
 }

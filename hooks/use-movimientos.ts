@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { MovimientoConRelaciones } from "@/lib/types/database"
-import { useRevalidateOnFocus } from "./use-app-status"
+import { useRevalidateOnFocusJitter } from "./use-app-status"
+import { runQuery } from "@/lib/db/query"
 
 interface MovimientosFilters {
   fechaDesde?: string
@@ -18,7 +19,11 @@ interface MovimientosFilters {
 
 const PAGE_SIZE = 100
 
-export function useMovimientos(delegacionId: string | null, filters?: MovimientosFilters) {
+export function useMovimientos(
+  delegacionId: string | null,
+  filters?: MovimientosFilters,
+  options: { timeoutMs?: number } = {}
+) {
   const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +31,9 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
   const [hasMore, setHasMore] = useState(true)
 
   const fetchIdRef = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutMs = options.timeoutMs ?? 15000
 
   const fetchMovimientos = useCallback(
     async (pageToLoad = 0, append = false) => {
@@ -37,6 +45,13 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
         return
       }
 
+      // Cancel previous in-flight query
+      if (abortRef.current) abortRef.current.abort()
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+
+      const ac = new AbortController()
+      abortRef.current = ac
+
       try {
         setLoading(true)
         setError(null)
@@ -44,61 +59,55 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
         const from = pageToLoad * PAGE_SIZE
         const to = from + PAGE_SIZE - 1
 
-        let query = supabase
-          .from("movimiento")
-          .select(
-            `*,
-            cuenta:cuenta_id (*),
-            categoria:categoria_id (
-              id,
-              organizacion_id,
-              nombre,
-              tipo,
-              emoji,
-              orden,
-              categoria_padre_id,
-              creado_en
-            ),
-            archivos:movimiento_archivo!movimiento_id (
-              id,
-              nombre_original,
-              es_factura,
-              bucket
+        const build = async (signal: AbortSignal) => {
+          let query = supabase
+            .from("movimiento")
+            .select(
+              `*,
+              cuenta:cuenta_id (*),
+              categoria:categoria_id (
+                id,
+                organizacion_id,
+                nombre,
+                tipo,
+                emoji,
+                orden,
+                categoria_padre_id,
+                creado_en
+              ),
+              archivos:movimiento_archivo!movimiento_id (
+                id,
+                nombre_original,
+                es_factura,
+                bucket
+              )
+            `,
+              { count: "exact" }
             )
-          `,
-            { count: "exact" }
-          )
-          .eq("delegacion_id", delegacionId)
-          .order("fecha", { ascending: false })
-          .order("creado_en", { ascending: false })
-          .range(from, to)
+            .eq("delegacion_id", delegacionId)
+            .order("fecha", { ascending: false })
+            .order("creado_en", { ascending: false })
+            .range(from, to)
+            .abortSignal(signal)
 
-        if (filters?.fechaDesde) {
-          query = query.gte("fecha", filters.fechaDesde)
-        }
-        if (filters?.fechaHasta) {
-          query = query.lte("fecha", filters.fechaHasta)
-        }
-        if (filters?.categoriaIds && filters.categoriaIds.length > 0) {
-          query = query.in("categoria_id", filters.categoriaIds)
-        }
-        if (filters?.uncategorized) {
-          query = query.is("categoria_id", null)
-        }
-        if (filters?.cuentaId) {
-          query = query.eq("cuenta_id", filters.cuentaId)
-        }
-        if (filters?.busqueda) {
-          query = query.or(`concepto.ilike.%${filters.busqueda}%,descripcion.ilike.%${filters.busqueda}%`)
-        }
-        if (filters?.amountFrom !== undefined) {
-          query = query.gte("importe", filters.amountFrom)
-        }
-        if (filters?.amountTo !== undefined) {
-          query = query.lte("importe", filters.amountTo)
+          if (filters?.fechaDesde) query = query.gte("fecha", filters.fechaDesde)
+          if (filters?.fechaHasta) query = query.lte("fecha", filters.fechaHasta)
+          if (filters?.categoriaIds && filters.categoriaIds.length > 0) query = query.in("categoria_id", filters.categoriaIds)
+          if (filters?.uncategorized) query = query.is("categoria_id", null)
+          if (filters?.cuentaId) query = query.eq("cuenta_id", filters.cuentaId)
+          if (filters?.busqueda) query = query.or(`concepto.ilike.%${filters.busqueda}%,descripcion.ilike.%${filters.busqueda}%`)
+          if (filters?.amountFrom !== undefined) query = query.gte("importe", filters.amountFrom)
+          if (filters?.amountTo !== undefined) query = query.lte("importe", filters.amountTo)
+          return await query
         }
 
-        const { data, error } = await query
+        timeoutRef.current = setTimeout(() => ac.abort(), timeoutMs)
+        const { data, error } = await runQuery<any[]>({
+          label: 'fetch-movimientos',
+          table: 'movimiento',
+          timeoutMs,
+          build
+        })
 
         if (fetchId !== fetchIdRef.current) return
 
@@ -109,22 +118,37 @@ export function useMovimientos(delegacionId: string | null, filters?: Movimiento
           setHasMore(false)
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error desconocido")
+        if (ac.signal.aborted) {
+          setError(null)
+        } else {
+          setError(err instanceof Error ? err.message : "Error desconocido")
+        }
       } finally {
         setLoading(false)
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
       }
     },
-    [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized]
+    [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized, timeoutMs]
   )
 
   useEffect(() => {
-    setMovimientos([])
+    // Cleanup any in-flight when dependencies change
+    if (abortRef.current) abortRef.current.abort()
+
+    // keep current data to avoid empty flash if new fetch fails; replace on success
     setPage(0)
     setHasMore(true)
     fetchMovimientos(0, false)
+    return () => {
+      if (abortRef.current) abortRef.current.abort()
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
   }, [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized, fetchMovimientos])
 
-  useRevalidateOnFocus(() => fetchMovimientos(0, false))
+  useRevalidateOnFocusJitter(() => fetchMovimientos(0, false), { minMs: 90, maxMs: 220 })
 
   const loadMore = useCallback(() => {
     if (loading || !hasMore) return

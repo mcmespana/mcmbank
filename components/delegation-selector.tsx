@@ -59,7 +59,8 @@ export function DelegationSelector({ value, onValueChange }: DelegationSelectorP
                   key={delegation.id}
                   value={delegation.id}
                   onSelect={(currentValue) => {
-                    onValueChange?.(currentValue === value ? "" : currentValue)
+                    // Always set the selected delegation; avoid toggling to empty string
+                    onValueChange?.(currentValue)
                     setOpen(false)
                   }}
                 >

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useDelegaciones } from "./use-delegaciones"
+import { useDelegations } from "./use-delegations"
 
 interface UseDelegationDebouncedOptions {
   debounceMs?: number
@@ -14,7 +14,7 @@ export function useDelegationDebounced(options: UseDelegationDebouncedOptions = 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const lastDelegationRef = useRef<string | null>(null)
   
-  const { delegaciones, loading, error } = useDelegaciones({ timeout })
+  const { delegations, loading, error } = useDelegations({ timeout })
   
   // Debounced delegation change
   const changeDelegation = useCallback((delegationId: string | null) => {
@@ -39,13 +39,13 @@ export function useDelegationDebounced(options: UseDelegationDebouncedOptions = 
   
   // Auto-select first delegation when loaded
   useEffect(() => {
-    if (!selectedDelegation && delegaciones.length > 0 && !loading) {
-      const firstDelegation = delegaciones[0].id
+    if (!selectedDelegation && delegations.length > 0 && !loading) {
+      const firstDelegation = delegations[0].id
       console.log('🔄 useDelegationDebounced: Auto-selecting first delegation:', firstDelegation)
       setSelectedDelegation(firstDelegation)
       lastDelegationRef.current = firstDelegation
     }
-  }, [delegaciones, selectedDelegation, loading])
+  }, [delegations, selectedDelegation, loading])
   
   // Cleanup
   useEffect(() => {
@@ -59,7 +59,7 @@ export function useDelegationDebounced(options: UseDelegationDebouncedOptions = 
   return {
     selectedDelegation,
     changeDelegation,
-    delegaciones,
+    delegaciones: delegations,
     loading,
     error
   }

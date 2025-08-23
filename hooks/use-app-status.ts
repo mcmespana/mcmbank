@@ -66,3 +66,20 @@ export const useRevalidateOnFocus = (revalidate: () => void) => {
     return () => { unsubscribe() }
   }, [revalidate])
 }
+
+// Same as above but adds a small jitter to avoid thundering herd on focus
+export const useRevalidateOnFocusJitter = (
+  revalidate: () => void,
+  { minMs = 40, maxMs = 160 }: { minMs?: number; maxMs?: number } = {}
+) => {
+  useEffect(() => {
+    const handler = () => {
+      const jitter = Math.floor(minMs + Math.random() * (maxMs - minMs))
+      const id = setTimeout(() => revalidate(), jitter)
+      return () => clearTimeout(id)
+    }
+    const wrapped = () => { handler() }
+    const unsubscribe = appStatusEmitter.subscribe(wrapped)
+    return () => { unsubscribe() }
+  }, [revalidate, minMs, maxMs])
+}

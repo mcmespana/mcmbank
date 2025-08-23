@@ -4,17 +4,19 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { CuentaConDelegacion } from "@/lib/types/database"
 import { useDebugCalls } from "./use-debug-calls"
-import { useRevalidateOnFocus } from "./use-app-status"
+import { useRevalidateOnFocusJitter } from "./use-app-status"
+import { runQuery } from "@/lib/db/query"
 
 interface UseCuentasOptions {
   timeout?: number // milliseconds, default 10000 (10s)
+  ttlMs?: number // cache TTL before auto refetch, default 30000 (30s)
 }
 
 export function useCuentas(
   delegacionId: string | null, 
   options: UseCuentasOptions = {}
 ) {
-  const { timeout = 10000 } = options
+  const { timeout = 10000, ttlMs = 30000 } = options
   const [cuentas, setCuentas] = useState<CuentaConDelegacion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,17 +30,19 @@ export function useCuentas(
   // SIMPLIFIED: Just track the delegacionId
   const memoizedDelegacionId = useMemo(() => delegacionId, [delegacionId])
   
-  // DEBOUNCING: Only fetch if delegacionId actually changed OR force refresh is requested
+  // Track last fetch for TTL-based revalidation
   const lastDelegacionIdRef = useRef<string | null>(null)
+  const lastFetchAtRef = useRef<number>(0)
   
   const fetchCuentas = useCallback(async (force = false) => {
-    // Skip if same delegacionId and no force refresh, unless it's the first load
-    if (!force && memoizedDelegacionId === lastDelegacionIdRef.current && cuentas.length > 0) {
-      console.log('🔄 useCuentas: Skipping fetch - same delegacionId and no force refresh')
+    // TTL guard: if same delegacion and fetched recently, skip unless forced
+    const now = Date.now()
+    const isSameDelegacion = memoizedDelegacionId === lastDelegacionIdRef.current
+    const isFresh = now - lastFetchAtRef.current < ttlMs
+    if (!force && isSameDelegacion && isFresh && cuentas.length > 0) {
       return
     }
-    
-    // Update last delegacionId
+
     lastDelegacionIdRef.current = memoizedDelegacionId
     if (!delegacionId) {
       setCuentas([])
@@ -64,41 +68,36 @@ export function useCuentas(
       setError(null)
 
       // Set timeout
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutRef.current = setTimeout(() => {
-          abortController.abort()
-          reject(new Error(`Consulta de cuentas cancelada por timeout (${timeout}ms)`))
-        }, timeout)
+      const { data, error } = await runQuery<any[]>({
+        label: 'fetch-cuentas',
+        table: 'cuenta',
+        timeoutMs: timeout,
+        build: async (signal) =>
+          await supabase
+            .from("cuenta")
+            .select(`
+              id,
+              delegacion_id,
+              nombre,
+              tipo,
+              origen,
+              banco_nombre,
+              iban,
+              color,
+              personas_autorizadas,
+              descripcion,
+              creado_en,
+              delegacion:delegacion_id (
+                id,
+                organizacion_id,
+                codigo,
+                nombre,
+                creado_en
+              )
+            `)
+            .eq("delegacion_id", delegacionId)
+            .abortSignal(signal)
       })
-
-      // OPTIMIZED QUERY: Simplified delegacion JOIN
-      const queryPromise = supabase
-        .from("cuenta")
-        .select(`
-          id,
-          delegacion_id,
-          nombre,
-          tipo,
-          origen,
-          banco_nombre,
-          iban,
-          color,
-          personas_autorizadas,
-          descripcion,
-          creado_en,
-          delegacion:delegacion_id (
-            id,
-            organizacion_id,
-            codigo,
-            nombre,
-            creado_en
-          )
-        `)
-        .eq("delegacion_id", delegacionId)
-        .abortSignal(abortController.signal)
-
-      // Race between the query and timeout
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise])
 
       // Clear timeout if query completed successfully
       if (timeoutRef.current) {
@@ -121,6 +120,7 @@ export function useCuentas(
       }))
 
       setCuentas(transformedData)
+      lastFetchAtRef.current = Date.now()
     } catch (err) {
       if (abortController.signal.aborted) {
         console.log("Cuentas query was cancelled")
@@ -131,10 +131,8 @@ export function useCuentas(
       console.error("Error fetching cuentas:", errorMessage)
       setError(errorMessage)
     } finally {
-      if (!abortController.signal.aborted) {
-        setLoading(false)
-      }
-      
+      // Always clear loading to avoid spinner lock; next fetch will set true
+      setLoading(false)
       // Cleanup
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -166,8 +164,8 @@ export function useCuentas(
     }
   }, [memoizedDelegacionId, fetchCuentas, cuentas.length])
 
-  // Revalidate on focus
-  useRevalidateOnFocus(fetchCuentas)
+  // Revalidate on focus (force = true to bypass skip guard)
+  useRevalidateOnFocusJitter(() => fetchCuentas(true), { minMs: 70, maxMs: 180 })
 
   return { 
     cuentas, 

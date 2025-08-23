@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { useAuth } from "@/contexts/auth-context"
 import { Card } from "@/components/ui/card"
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { CallStatsViewer } from "@/components/debug/call-stats-viewer"
 import { useAppStatus } from "@/hooks/use-app-status"
+import { getMetrics, subscribe } from "@/lib/db/telemetry"
 
 interface Status {
   db: string
@@ -23,6 +24,7 @@ export function DiagnosticCenter() {
   
   // App status (online/focused)
   const { isFocused, isOnline } = useAppStatus()
+  const [metrics, setMetrics] = useState(getMetrics())
   
   const [status, setStatus] = useState<Status>({
     db: "No verificado",
@@ -36,6 +38,12 @@ export function DiagnosticCenter() {
     },
   })
   const [checking, setChecking] = useState(false)
+
+  // Subscribe to query metrics
+  useEffect(() => {
+    const unsub = subscribe(() => setMetrics(getMetrics()))
+    return () => unsub()
+  }, [])
 
   const checkConnection = async () => {
     setChecking(true)
@@ -194,6 +202,21 @@ export function DiagnosticCenter() {
       </Card>
 
       <CallStatsViewer />
+
+      <Card className="p-6 space-y-3">
+        <h2 className="text-xl font-semibold">Métricas de Consultas (últimas {Math.min(metrics.length, 30)})</h2>
+        <div className="text-xs text-muted-foreground">Etiqueta | Tabla | ms | estado</div>
+        <div className="max-h-64 overflow-auto text-sm font-mono">
+          {(metrics.slice(-30)).reverse().map((m, idx) => (
+            <div key={idx} className="flex gap-3">
+              <span>{m.label}</span>
+              <span>{m.table || '-'}</span>
+              <span>{m.ms}ms</span>
+              <span className={m.status === 'ok' ? 'text-green-600' : m.status === 'timeout' ? 'text-orange-600' : 'text-red-600'}>{m.status}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   )
 }

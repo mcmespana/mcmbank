@@ -4,9 +4,16 @@ import { useState } from "react"
 import { CalendarIcon } from "lucide-react"
 import { format, subDays, subMonths, subYears, startOfDay, endOfDay } from "date-fns"
 import { es } from "date-fns/locale"
+import { type DateRange } from "react-day-picker"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
 
 interface DateRangeFilterProps {
@@ -33,6 +40,10 @@ const DATE_PRESETS = [
 export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRangeFilterProps) {
   const [customRangeOpen, setCustomRangeOpen] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState("all-time")
+  const [range, setRange] = useState<DateRange | undefined>(() => ({
+    from: dateFrom ? new Date(dateFrom) : undefined,
+    to: dateTo ? new Date(dateTo) : undefined,
+  }))
 
   const getSchoolYearDates = (isCurrentYear = true) => {
     const today = new Date()
@@ -120,6 +131,10 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
         onDateRangeChange(undefined, undefined)
         break
       case "custom":
+        setRange({
+          from: dateFrom ? new Date(dateFrom) : undefined,
+          to: dateTo ? new Date(dateTo) : undefined,
+        })
         setCustomRangeOpen(true)
         break
     }
@@ -141,13 +156,13 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 w-full">
       <CalendarIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <Select value={selectedPreset} onValueChange={handlePresetChange}>
-        <SelectTrigger className="w-full min-w-[160px] h-12">
+        <SelectTrigger className="h-12 w-full min-w-[160px] flex-1">
           <SelectValue>{getDisplayValue()}</SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-none">
           {DATE_PRESETS.map((preset) => (
             <SelectItem key={preset.value} value={preset.value}>
               {preset.label}
@@ -156,51 +171,42 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
         </SelectContent>
       </Select>
 
-      {/* Custom Range Popover */}
-      <Popover open={customRangeOpen} onOpenChange={setCustomRangeOpen}>
-        <PopoverTrigger asChild>
-          <div />
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <div className="p-4 space-y-4">
-            <div className="text-sm font-medium">Rango personalizado</div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-muted-foreground">Desde</label>
-                <Calendar
-                  mode="single"
-                  selected={dateFrom ? new Date(dateFrom) : undefined}
-                  onSelect={(date) => {
-                    if (date) {
-                      onDateRangeChange(format(date, "yyyy-MM-dd"), dateTo)
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Hasta</label>
-                <Calendar
-                  mode="single"
-                  selected={dateTo ? new Date(dateTo) : undefined}
-                  onSelect={(date) => {
-                    if (date) {
-                      onDateRangeChange(dateFrom, format(date, "yyyy-MM-dd"))
-                    }
-                  }}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
+      {/* Custom Range Dialog */}
+      <Dialog open={customRangeOpen} onOpenChange={setCustomRangeOpen}>
+        <DialogContent className="p-0 w-[90vw] max-w-md">
+          <div className="flex flex-col items-center gap-4 p-4">
+            <div className="self-start text-sm font-medium">Rango personalizado</div>
+            <Calendar
+              mode="range"
+              defaultMonth={range?.from}
+              selected={range}
+              onSelect={setRange}
+              locale={es}
+              className="mx-auto rounded-lg border shadow-sm"
+            />
+            <p className="text-center text-[0.6rem] text-muted-foreground">
+              Haz click primero en la fecha de inicio y después en la de fin. Para volver a empezar, dos clicks seguidos en una fecha
+            </p>
+            <div className="flex w-full justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setCustomRangeOpen(false)}>
                 Cancelar
               </Button>
-              <Button size="sm" onClick={() => setCustomRangeOpen(false)}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  onDateRangeChange(
+                    range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
+                    range?.to ? format(range.to, "yyyy-MM-dd") : undefined,
+                  )
+                  setCustomRangeOpen(false)
+                }}
+              >
                 Aplicar
               </Button>
             </div>
           </div>
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

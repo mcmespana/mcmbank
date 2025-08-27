@@ -2,9 +2,9 @@
 
 import type React from "react"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { format } from "date-fns"
-import { CalendarIcon, AlertTriangle, Building2, Wallet, Check, Loader2, Upload } from "lucide-react"
+import { CalendarIcon, AlertTriangle, Building2, Wallet, Check, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,13 +17,9 @@ import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CategorySelector } from "./category-selector"
 import { BankAvatar } from "@/components/bank-avatar"
-import { FileAttachmentDropzone } from "@/components/ui/file-attachment-dropzone"
-import { FileList } from "./file-list"
 import { TabWithCounter } from "./tab-with-counter"
-import { AddFileButton } from "./add-file-button"
 import { formatCurrency } from "@/lib/utils/format"
-import { useMovimientoArchivos } from "@/hooks/use-movimiento-archivos"
-import { supabase } from "@/lib/supabase/client"
+import { TransactionFiles } from "./transaction-files"
 import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionDetailProps {
@@ -50,59 +46,11 @@ export function TransactionDetail({
   const [isAmountEditing, setIsAmountEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [uploadingFile, setUploadingFile] = useState(false)
   const [activeTab, setActiveTab] = useState<"datos" | "archivos">("datos")
+  const [fileCount, setFileCount] = useState(0)
 
-  // Hook para gestionar archivos del movimiento
   const account = accounts.find((acc) => acc.id === movement?.cuenta_id)
   const selectedCategory = categories.find((cat) => cat.id === formData.categoria_id)
-
-  // Estado para el código de delegación
-  const [delegacionCodigo, setDelegacionCodigo] = useState<string | null>(null)
-
-  // Obtener código de delegación cuando cambie la cuenta
-  useEffect(() => {
-    const getDelegacionCodigo = async () => {
-      if (!account?.delegacion_id) {
-        setDelegacionCodigo(null)
-        return
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from("delegacion")
-          .select("codigo")
-          .eq("id", account.delegacion_id)
-          .single()
-
-        if (error || !data?.codigo) {
-          console.error("Error getting delegation code:", error)
-          setDelegacionCodigo("SIN-CODIGO")
-          return
-        }
-
-        setDelegacionCodigo(data.codigo)
-      } catch (error) {
-        console.error("Error getting delegation code:", error)
-        setDelegacionCodigo("SIN-CODIGO")
-      }
-    }
-
-    getDelegacionCodigo()
-  }, [account?.delegacion_id])
-
-  const {
-    archivos,
-    facturas,
-    otrosDocumentos,
-    loading: archivosLoading,
-    uploading: archivosUploading,
-    error: archivosError,
-    uploadFile,
-    deleteFile,
-    updateFileDescription,
-    refetch: refetchArchivos
-  } = useMovimientoArchivos(movement?.id || null, delegacionCodigo || undefined)
 
   const hasChanges =
     JSON.stringify(formData) !==
@@ -171,18 +119,6 @@ export function TransactionDetail({
     setShowAmountConfirm(false)
     setPendingAmount("")
     setIsAmountEditing(false)
-  }
-
-  // Funciones para manejo de archivos
-  const handleFileUpload = async (file: File, bucketType: 'facturas' | 'documentos') => {
-    setUploadingFile(true)
-    try {
-      await uploadFile(file, bucketType)
-    } catch (error) {
-      console.error("Error uploading file:", error)
-    } finally {
-      setUploadingFile(false)
-    }
   }
 
   return (
@@ -281,7 +217,7 @@ export function TransactionDetail({
               />
               <TabWithCounter
                 label="Archivos"
-                count={archivos.length}
+                count={fileCount}
                 isActive={activeTab === "archivos"}
                 onClick={() => setActiveTab("archivos")}
                 className="flex-1"
@@ -397,100 +333,11 @@ export function TransactionDetail({
             </TabsContent>
 
             <TabsContent value="archivos" className="space-y-6 mt-6">
-              {archivosError && (
-                <Alert className="border-red-200 bg-red-50">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-800">
-                    {archivosError}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-6">
-                {/* Sección de Facturas */}
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">FACTURA</h3>
-                  
-                  {/* Si no hay facturas, mostrar dropzone normal */}
-                  {facturas.length === 0 ? (
-                    <FileAttachmentDropzone
-                      onFileSelect={(file) => handleFileUpload(file, 'facturas')}
-                      bucketType="facturas"
-                      title="Arrastra la factura aquí"
-                      disabled={uploadingFile || archivosUploading}
-                      className="mb-4"
-                    />
-                  ) : (
-                    /* Si ya hay facturas, mostrar botón para añadir más */
-                    <div className="space-y-3">
-                      <AddFileButton
-                        onFileSelect={(file) => handleFileUpload(file, 'facturas')}
-                        bucketType="facturas"
-                        title="Arrastra otra factura aquí"
-                        disabled={uploadingFile || archivosUploading}
-                      />
-                    </div>
-                  )}
-
-                  {/* Lista de facturas */}
-                  {facturas.length > 0 && (
-                    <FileList
-                      archivos={facturas}
-                      onDelete={deleteFile}
-                      onUpdateDescription={updateFileDescription}
-                      title="Facturas subidas"
-                      emptyMessage="No hay facturas adjuntas"
-                      loading={archivosLoading}
-                    />
-                  )}
-                </div>
-
-                {/* Sección de Otros Documentos */}
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">OTROS ARCHIVOS</h3>
-                  
-                  {/* Si no hay otros documentos, mostrar dropzone normal */}
-                  {otrosDocumentos.length === 0 ? (
-                    <FileAttachmentDropzone
-                      onFileSelect={(file) => handleFileUpload(file, 'documentos')}
-                      bucketType="documentos"
-                      title="Arrastra el archivo aquí"
-                      disabled={uploadingFile || archivosUploading}
-                      className="mb-4"
-                    />
-                  ) : (
-                    /* Si ya hay documentos, mostrar botón para añadir más */
-                    <div className="space-y-3">
-                      <AddFileButton
-                        onFileSelect={(file) => handleFileUpload(file, 'documentos')}
-                        bucketType="documentos"
-                        title="Arrastra otro archivo aquí"
-                        disabled={uploadingFile || archivosUploading}
-                      />
-                    </div>
-                  )}
-
-                  {/* Lista de otros documentos */}
-                  {otrosDocumentos.length > 0 && (
-                    <FileList
-                      archivos={otrosDocumentos}
-                      onDelete={deleteFile}
-                      onUpdateDescription={updateFileDescription}
-                      title="Otros documentos"
-                      emptyMessage="No hay otros archivos adjuntos"
-                      loading={archivosLoading}
-                    />
-                  )}
-                </div>
-
-                {/* Indicador de carga global */}
-                {(uploadingFile || archivosUploading) && (
-                  <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 rounded-lg p-3">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Subiendo archivo...</span>
-                  </div>
-                )}
-              </div>
+              <TransactionFiles
+                movementId={movement?.id || null}
+                delegacionId={account?.delegacion_id}
+                onCountChange={setFileCount}
+              />
             </TabsContent>
           </Tabs>
         </div>

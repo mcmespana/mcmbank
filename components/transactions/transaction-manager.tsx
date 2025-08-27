@@ -72,6 +72,8 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     loading,
     error,
     updateCategoria,
+    updateMovimiento,
+    createMovimiento,
     refetch,
     loadMore,
     hasMore,
@@ -111,10 +113,17 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     setDetailOpen(true)
   }
 
-  const handleMovementUpdate = async (movementId: string, patch: Partial<MovimientoConRelaciones>) => {
+  const handleMovementUpdate = async (
+    movementId: string,
+    patch: Partial<MovimientoConRelaciones>,
+  ) => {
     try {
       if (patch.categoria_id !== undefined) {
         await updateCategoria(movementId, patch.categoria_id)
+      }
+      const { categoria_id, ...rest } = patch
+      if (Object.keys(rest).length > 0) {
+        await updateMovimiento(movementId, rest)
       }
 
       // Update selected movement if it's the one being edited
@@ -127,15 +136,22 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     }
   }
 
-  const handleCreateMovement = async (data: Partial<MovimientoConRelaciones>) => {
+  const handleCreateMovement = async (
+    data: Partial<MovimientoConRelaciones>,
+  ) => {
     try {
-      // Aquí implementarías la lógica para crear un nuevo movimiento
-      console.log("Creating new movement:", data)
-      // Por ahora solo cerramos el formulario
+      if (!selectedDelegation) {
+        throw new Error("Delegación no seleccionada")
+      }
+      await createMovimiento({
+        ...data,
+        delegacion_id: selectedDelegation,
+      } as any)
+      await refetch()
       setCreateFormOpen(false)
-      // TODO: Implementar createMovement en useMovimientos
     } catch (error) {
       console.error("Error creating movement:", error)
+      toast.error("Error al crear la transacción")
       throw error
     }
   }

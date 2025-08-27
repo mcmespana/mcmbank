@@ -123,8 +123,8 @@ export const TransactionListRow = memo(function TransactionListRow({
                     </div>
                   ) : (
                     <CategoryChip
-                      category={category as unknown as Categoria}
-                      categories={categories as unknown as Categoria[]}
+                      category={category}
+                      categories={categories}
                       onCategoryChange={(categoryId) => handleCategoryChange(categoryId)}
                     />
                   )}

@@ -40,6 +40,13 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       enabled: true,
     },
     {
+      name: "Dashboards",
+      href: "/dashboards",
+      icon: BarChart3,
+      count: null,
+      enabled: true,
+    },
+    {
       name: "Transacciones",
       href: "/transacciones",
       icon: ArrowLeftRight,

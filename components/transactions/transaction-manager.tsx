@@ -147,6 +147,8 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
       }
       await createMovimiento({
         ...data,
+        // Normalize optional UUIDs to null instead of empty string
+        categoria_id: (data as any)?.categoria_id || null,
         delegacion_id: accountDelegationId,
       } as any)
       await refetch()

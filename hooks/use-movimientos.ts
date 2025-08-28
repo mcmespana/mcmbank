@@ -161,9 +161,24 @@ export function useMovimientos(
     data: Partial<MovimientoConRelaciones>,
   ) => {
     try {
+      // Ensure we have an authenticated user for creado_por
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+      if (authError) throw authError
+      if (!user) throw new Error("Usuario no autenticado")
+
+      // Normalize payload: optional UUIDs must be null, not empty string
+      const payload: any = {
+        ...data,
+        categoria_id: (data as any)?.categoria_id || null,
+        creado_por: user.id,
+      }
+
       const { data: created, error } = await supabase
         .from("movimiento")
-        .insert(data as any)
+        .insert(payload)
         .select(
           `*,
           cuenta:cuenta_id (*),

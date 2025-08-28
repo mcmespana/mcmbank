@@ -66,6 +66,8 @@ export function TransactionCreatePanel({
     try {
       await onCreate({
         ...formData,
+        // Ensure nullable UUIDs are not sent as empty strings
+        categoria_id: formData.categoria_id || null,
         concepto: formData.concepto?.trim(),
         descripcion: formData.descripcion?.trim() || "",
         contraparte: formData.contraparte?.trim() || "",

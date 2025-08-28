@@ -256,7 +256,25 @@ export function CategoryList() {
           }
         }
         await updateCategoria(cat.id, patch)
-      }
+      await Promise.all(
+        sourceGroup.map((cat, index) =>
+          updateCategoria(cat.id, { orden: index + 1 })
+        )
+      )
+      const parent = destParentId ? categories.find((c) => c.id === destParentId) : null
+      await Promise.all(
+        destGroup.map((cat, index) => {
+          const patch: Partial<Categoria> = { orden: index + 1 }
+          if (cat.id === draggableId) {
+            patch.categoria_padre_id = destParentId
+            if (parent) {
+              patch.color = parent.color
+              patch.tipo = parent.tipo
+            }
+          }
+          return updateCategoria(cat.id, patch)
+        })
+      )
     } catch (error) {
       console.error("Error reordering categories:", error)
     }

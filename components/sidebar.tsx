@@ -40,6 +40,13 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       enabled: true,
     },
     {
+      name: "Espacios chulos",
+      href: "/dashboards",
+      icon: BarChart3,
+      count: null,
+      enabled: true,
+    },
+    {
       name: "Movimientos",
       href: "/transacciones",
       icon: ArrowLeftRight,
@@ -72,20 +79,6 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       href: "/informes",
       icon: BarChart3,
       count: 0,
-      enabled: false,
-    },
-    {
-      name: "Alertas",
-      href: "/alertas",
-      icon: Bell,
-      count: 0,
-      enabled: false,
-    },
-    {
-      name: "Integraciones",
-      href: "/integraciones",
-      icon: Zap,
-      count: 1,
       enabled: false,
     },
     {

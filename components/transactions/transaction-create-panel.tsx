@@ -226,7 +226,7 @@ export function TransactionCreatePanel({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div
-                      className="rounded-full p-2"
+                      className="rounded-full p-0.5"
                       style={{ backgroundColor: selectedAccount.color || "#4ECDC4" }}
                     >
                       <BankAvatar account={selectedAccount} />
@@ -248,7 +248,7 @@ export function TransactionCreatePanel({
                 </div>
               ) : (
                 <Select value={formData.cuenta_id || ""} onValueChange={(value) => setFormData({ ...formData, cuenta_id: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-muted/30">
                     <SelectValue placeholder="Seleccionar cuenta" />
                   </SelectTrigger>
                   <SelectContent>

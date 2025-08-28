@@ -458,6 +458,8 @@ export function TransactionImportPanel({
     setDuplicateCount(0)
 
     try {
+      const accountDelegationId =
+        accounts.find((a) => a.id === accountId)?.delegacion_id || delegacionId || null
       let rows: any[][]
       
       // Manejar archivos CSV de manera diferente
@@ -523,6 +525,7 @@ export function TransactionImportPanel({
         const trx = parsed[i]
         const insertData: any = {
           cuenta_id: accountId,
+          delegacion_id: accountDelegationId,
           fecha: trx.fecha,
           concepto: trx.concepto,
           descripcion: trx.descripcion,
@@ -653,9 +656,13 @@ export function TransactionImportPanel({
     try {
       // Agregar un timestamp único a la descripción para evitar el conflicto de duplicados
       const uniqueDescription = `${transaction.descripcion || ''}\n[Posible duplicado - Importación forzada el ${new Date().toISOString()}]`
-      
+
+      const accountDelegationId =
+        accounts.find((a) => a.id === accountId)?.delegacion_id || delegacionId || null
+
       const insertData: any = {
         cuenta_id: accountId,
+        delegacion_id: accountDelegationId,
         fecha: transaction.fecha,
         concepto: transaction.concepto,
         descripcion: uniqueDescription,

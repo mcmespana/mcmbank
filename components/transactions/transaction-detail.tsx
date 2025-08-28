@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
-import { CalendarIcon, AlertTriangle, Building2, Wallet, Check, Loader2 } from "lucide-react"
+import { CalendarIcon, AlertTriangle, Check, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,6 +48,7 @@ export function TransactionDetail({
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [activeTab, setActiveTab] = useState<"datos" | "archivos">("datos")
   const [fileCount, setFileCount] = useState(0)
+  const [showSaved, setShowSaved] = useState(false)
 
   const account = accounts.find((acc) => acc.id === movement?.cuenta_id)
   const selectedCategory = categories.find((cat) => cat.id === formData.categoria_id)
@@ -94,6 +95,14 @@ export function TransactionDetail({
     }
   }, [formData, movement, hasChanges, onUpdate])
 
+  useEffect(() => {
+    if (!isSaving && lastSaved) {
+      setShowSaved(true)
+      const timer = setTimeout(() => setShowSaved(false), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [isSaving, lastSaved])
+
   const handleAmountClick = () => {
     setIsAmountEditing(true)
     setPendingAmount(formData.importe?.toString() || "")
@@ -123,43 +132,26 @@ export function TransactionDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto p-0">
+      <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto p-0 relative">
         <div className="p-4 sm:p-6">
           <SheetHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="text-xl font-semibold text-left">Transacción</SheetTitle>
-              <div className="flex items-center gap-2 text-xs">
-                {isSaving ? (
-                  <div className="flex items-center gap-1 text-blue-600">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Guardando...</span>
-                  </div>
-                ) : lastSaved ? (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <Check className="h-3 w-3" />
-                    <span>Guardado</span>
-                  </div>
-                ) : null}
-              </div>
-            </div>
+            <SheetTitle className="text-xl font-semibold text-left">Transacción</SheetTitle>
 
-            <div className="bg-muted/30 rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  {account && (
-                    <>
-                      <BankAvatar bankName={account.banco_nombre || undefined} accountColor={account.color || undefined} size="sm" />
-                      <div className="flex items-center gap-2">
-                        {account.tipo === "banco" ? <Building2 className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
-                        <div>
-                          <p className="font-medium text-sm">{account.nombre}</p>
-                          <p className="text-xs text-muted-foreground">{account.banco_nombre}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
+            <div className="bg-muted/30 rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 mt-4">
+              {account && (
+                <div className="flex items-center gap-3">
+                  <div
+                    className="rounded-full p-0.5"
+                    style={{ backgroundColor: account.color || "#4ECDC4" }}
+                  >
+                    <BankAvatar account={account} size="sm" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{account.nombre}</p>
+                    <p className="text-xs text-muted-foreground">{account.banco_nombre}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="text-center space-y-1">
                 {isAmountEditing ? (
@@ -247,13 +239,11 @@ export function TransactionDetail({
                   <Label htmlFor="concepto" className="text-sm font-medium">
                     Concepto
                   </Label>
-                  <Textarea
+                  <Input
                     id="concepto"
                     value={formData.concepto || ""}
                     onChange={(e) => setFormData((prev) => ({ ...prev, concepto: e.target.value }))}
                     placeholder="Concepto de la transacción"
-                    rows={2}
-                    className="resize-none"
                   />
                 </div>
 
@@ -341,6 +331,23 @@ export function TransactionDetail({
             </TabsContent>
           </Tabs>
         </div>
+        {(isSaving || showSaved) && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md shadow">
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Guardando...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-600">Guardado</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   )

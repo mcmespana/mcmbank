@@ -49,6 +49,7 @@ export interface Categoria {
 export interface Movimiento {
   id: UUID
   cuenta_id: UUID
+  delegacion_id: UUID
   fecha: string // 'YYYY-MM-DD'
   concepto: string
   descripcion: string | null

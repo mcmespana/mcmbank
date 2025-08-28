@@ -140,12 +140,14 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     data: Partial<MovimientoConRelaciones>,
   ) => {
     try {
-      if (!selectedDelegation) {
+      const accountDelegationId =
+        accounts.find((a) => a.id === data.cuenta_id)?.delegacion_id || selectedDelegation
+      if (!accountDelegationId) {
         throw new Error("Delegación no seleccionada")
       }
       await createMovimiento({
         ...data,
-        delegacion_id: selectedDelegation,
+        delegacion_id: accountDelegationId,
       } as any)
       await refetch()
       setCreateFormOpen(false)

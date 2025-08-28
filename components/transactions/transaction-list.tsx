@@ -114,7 +114,7 @@ export function TransactionList({
           key={movement.id}
           movement={movement}
           account={accountsById[movement.cuenta_id]}
-          category={categoriesById[movement.categoria_id]}
+          category={movement.categoria_id ? categoriesById[movement.categoria_id] : undefined}
           categories={categories}
           onMovementUpdate={onMovementUpdate}
           onClick={onMovementClick}

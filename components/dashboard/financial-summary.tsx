@@ -1,43 +1,52 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, Wallet, Target } from "lucide-react"
+import { TrendingUp, TrendingDown, Wallet, Target, Tag } from "lucide-react"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useMemo } from "react"
 
-export function FinancialSummary() {
+interface Props {
+  from: string
+  to: string
+}
+
+export function FinancialSummary({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  
+
   const { movimientos } = useMovimientos(selectedDelegation, {
-    fechaDesde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    fechaHasta: new Date().toISOString().split('T')[0],
+    fechaDesde: from,
+    fechaHasta: to,
   })
 
   const summary = useMemo(() => {
-    if (!movimientos.length) return { ingresos: 0, gastos: 0, balance: 0, count: 0 }
+    if (!movimientos.length)
+      return { ingresos: 0, gastos: 0, balance: 0, count: 0, uncategorized: 0 }
 
     const ingresos = movimientos
-      .filter(m => m.importe > 0)
+      .filter((m) => m.importe > 0)
       .reduce((sum, m) => sum + m.importe, 0)
-    
+
     const gastos = movimientos
-      .filter(m => m.importe < 0)
+      .filter((m) => m.importe < 0)
       .reduce((sum, m) => sum + Math.abs(m.importe), 0)
-    
+
+    const uncategorized = movimientos.filter((m) => !m.categoria_id).length
+
     const balance = ingresos - gastos
 
     return {
       ingresos,
       gastos,
       balance,
-      count: movimientos.length
+      count: movimientos.length,
+      uncategorized,
     }
   }, [movimientos])
 
   const metrics = [
     {
-      title: "Ingresos del mes",
+      title: "Ingresos",
       value: `€${summary.ingresos.toFixed(2)}`,
       description: "Total de entradas",
       icon: TrendingUp,
@@ -45,7 +54,7 @@ export function FinancialSummary() {
       bgColor: "bg-green-50",
     },
     {
-      title: "Gastos del mes",
+      title: "Gastos",
       value: `€${summary.gastos.toFixed(2)}`,
       description: "Total de salidas",
       icon: TrendingDown,
@@ -63,15 +72,23 @@ export function FinancialSummary() {
     {
       title: "Transacciones",
       value: summary.count.toString(),
-      description: "Este mes",
+      description: "En el periodo",
       icon: Target,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
+    {
+      title: "Sin categorizar",
+      value: summary.uncategorized.toString(),
+      description: "Transacciones",
+      icon: Tag,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
+    },
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {metrics.map((metric) => (
         <Card key={metric.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

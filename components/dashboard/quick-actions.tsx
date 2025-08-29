@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Upload, Download, TrendingUp, TrendingDown, Wallet, PieChart } from "lucide-react"
+import { Plus, Upload, List, Tag } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export function QuickActions() {
@@ -10,31 +10,31 @@ export function QuickActions() {
 
   const actions = [
     {
-      title: "Nueva Transacción",
-      description: "Registrar ingreso o gasto",
-      icon: Plus,
+      title: "Ver movimientos",
+      description: "Listado completo",
+      icon: List,
       action: () => router.push("/transacciones"),
       variant: "default" as const,
     },
     {
-      title: "Importar Movimientos",
+      title: "Crear movimiento",
+      description: "Registrar ingreso o gasto",
+      icon: Plus,
+      action: () => router.push("/transacciones?new=1"),
+      variant: "outline" as const,
+    },
+    {
+      title: "Importar movimientos",
       description: "CSV, Excel o conexión bancaria",
       icon: Upload,
-      action: () => router.push("/transacciones"),
+      action: () => router.push("/transacciones?import=1"),
       variant: "outline" as const,
     },
     {
-      title: "Ver Informes",
-      description: "Análisis y estadísticas",
-      icon: PieChart,
-      action: () => router.push("/informes"),
-      variant: "outline" as const,
-    },
-    {
-      title: "Gestionar Categorías",
+      title: "Crear categoría",
       description: "Organizar y personalizar",
-      icon: TrendingUp,
-      action: () => router.push("/categorias"),
+      icon: Tag,
+      action: () => router.push("/categorias?new=1"),
       variant: "outline" as const,
     },
   ]

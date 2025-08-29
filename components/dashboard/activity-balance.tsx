@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { DateRangeFilter } from "@/components/transactions/date-range-filter"
-import { CategorySelector } from "@/components/transactions/category-selector"
 import { Button } from "@/components/ui/button"
+import { TimeframeFilter, Timeframe, getTimeframeRange } from "./timeframe-filter"
+import { CategorySelector } from "@/components/transactions/category-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
@@ -12,8 +12,6 @@ import { TrendingUp, TrendingDown, Wallet } from "lucide-react"
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -27,21 +25,17 @@ import {
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
-interface Filters {
-  dateFrom?: string
-  dateTo?: string
-  categoryIds?: string[]
-}
-
-export function ExampleDashboard() {
+export function ActivityBalanceDashboard() {
   const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
-  const [filters, setFilters] = useState<Filters>({})
+  const [timeframe, setTimeframe] = useState<Timeframe>("month")
+  const [categoryIds, setCategoryIds] = useState<string[]>([])
 
   const { categorias } = useCategorias(getCurrentDelegation()?.organizacion_id)
+  const { from, to } = getTimeframeRange(timeframe)
   const { movimientos } = useMovimientos(selectedDelegation, {
-    fechaDesde: filters.dateFrom,
-    fechaHasta: filters.dateTo,
-    categoriaIds: filters.categoryIds,
+    fechaDesde: from,
+    fechaHasta: to,
+    categoriaIds: categoryIds.length ? categoryIds : undefined,
   })
 
   const summary = useMemo(() => {
@@ -57,11 +51,11 @@ export function ExampleDashboard() {
   const chartData = useMemo(() => {
     const map = new Map<string, { date: string; ingresos: number; gastos: number }>()
     movimientos.forEach((m) => {
-      const month = m.fecha.slice(0, 7)
-      const entry = map.get(month) || { date: month, ingresos: 0, gastos: 0 }
+      const date = m.fecha
+      const entry = map.get(date) || { date, ingresos: 0, gastos: 0 }
       if (m.importe > 0) entry.ingresos += m.importe
       else entry.gastos += Math.abs(m.importe)
-      map.set(month, entry)
+      map.set(date, entry)
     })
     return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date))
   }, [movimientos])
@@ -71,24 +65,22 @@ export function ExampleDashboard() {
     gastos: { label: "Gastos", color: "hsl(var(--chart-2))" },
   } satisfies ChartConfig
 
-  const updateFilter = (patch: Partial<Filters>) => setFilters((prev) => ({ ...prev, ...patch }))
-  const clearFilters = () => setFilters({})
+  const clearFilters = () => {
+    setTimeframe("month")
+    setCategoryIds([])
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row">
-        <DateRangeFilter
-          dateFrom={filters.dateFrom}
-          dateTo={filters.dateTo}
-          onDateRangeChange={(from, to) => updateFilter({ dateFrom: from, dateTo: to })}
-        />
+        <TimeframeFilter value={timeframe} onChange={setTimeframe} />
         <div className="md:flex-1">
           <CategorySelector
             categories={categorias}
-            selectedCategories={filters.categoryIds || []}
-            onSelectionChange={(ids) => updateFilter({ categoryIds: ids.length ? ids : undefined })}
+            selectedCategories={categoryIds}
+            onSelectionChange={setCategoryIds}
             allowMultiple
-            placeholder="Filtrar por categoría..."
+            placeholder="Filtrar categorías..."
           />
         </div>
         <Button variant="outline" onClick={clearFilters} className="md:self-start">
@@ -115,7 +107,7 @@ export function ExampleDashboard() {
             <div className="text-2xl font-bold">€{summary.gastos.toFixed(2)}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="md:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Balance</CardTitle>
             <Wallet
@@ -123,69 +115,33 @@ export function ExampleDashboard() {
             />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{summary.balance.toFixed(2)}</div>
+            <div className="text-3xl font-bold">€{summary.balance.toFixed(2)}</div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Evolución mensual</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(value) =>
-                    format(new Date(value + "-01"), "MMM yy", { locale: es })
-                  }
-                />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="ingresos" fill="var(--color-ingresos)" />
-                <Bar dataKey="gastos" fill="var(--color-gastos)" />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Tendencia</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(value) =>
-                    format(new Date(value + "-01"), "MMM yy", { locale: es })
-                  }
-                />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line
-                  type="monotone"
-                  dataKey="ingresos"
-                  stroke="var(--color-ingresos)"
-                  strokeWidth={2}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="gastos"
-                  stroke="var(--color-gastos)"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Ingresos vs Gastos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px]">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(value) =>
+                  format(new Date(value), "d MMM", { locale: es })
+                }
+              />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="ingresos" fill="var(--color-ingresos)" />
+              <Bar dataKey="gastos" fill="var(--color-gastos)" />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     </div>
   )
 }
-

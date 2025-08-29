@@ -1,7 +1,8 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -140,6 +141,7 @@ export function CategoryList() {
 
   const { categorias: categories, loading, error, updateCategoria, fetchCategorias } = useCategorias(organizacionId)
   const { movimientos } = useMovimientos(selectedDelegation || null)
+  const searchParams = useSearchParams()
 
   const getCategoryBalance = (categoryId: string) => {
     let filteredMovements = movimientos.filter((mov) => mov.categoria_id === categoryId)
@@ -271,6 +273,13 @@ export function CategoryList() {
   )
 
   const sortedCategories = [...filteredCategories].sort((a, b) => a.orden - b.orden)
+
+  useEffect(() => {
+    if (searchParams.get("panel") === "create") {
+      setEditingCategory(null)
+      setCreateSheetOpen(true)
+    }
+  }, [searchParams])
 
   return (
     <div className="space-y-4 sm:space-y-6">

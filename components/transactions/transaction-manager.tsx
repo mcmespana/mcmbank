@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
@@ -61,6 +62,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const [createFormOpen, setCreateFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle")
+  const searchParams = useSearchParams()
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
@@ -179,6 +181,19 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
       onTransactionCountChange(movements.length)
     }
   }, [movements.length, onTransactionCountChange])
+
+  useEffect(() => {
+    const panel = searchParams.get("panel")
+    if (panel === "create") {
+      setCreateFormOpen(true)
+    }
+    if (panel === "import") {
+      setImportOpen(true)
+    }
+    if (searchParams.get("uncategorized") === "1") {
+      setFilters((prev) => ({ ...prev, uncategorized: true }))
+    }
+  }, [searchParams])
 
   if (delegationsLoading) {
     return (

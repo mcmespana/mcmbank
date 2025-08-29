@@ -73,6 +73,7 @@ export function AppLayout({ children, transactionCount }: AppLayoutProps) {
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         transactionCount={transactionCount} // Pass transaction count to sidebar
+        showMobileTrigger={false}
       />
 
       {/* Main Content */}

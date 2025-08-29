@@ -88,19 +88,27 @@ export function CategoryAnalysisDashboard() {
     setCategoryIds([])
   }
 
-  const pieTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+  const PieTooltip = (
+    { active, payload, total }: TooltipProps<number, string> & { total: number }
+  ) => {
     if (!active || !payload?.length) return null
     const d = payload[0].payload as { name: string; value: number; id: string }
+    const pct = total > 0 ? Math.round((d.value / total) * 100) : 0
     return (
       <div className="grid gap-2 rounded-md border bg-background p-2 text-xs shadow-md">
         <div className="font-medium">{d.name}</div>
-        <div>{formatCurrency(d.value)}</div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: `var(--color-${d.id})` }} />
+          {formatCurrency(d.value)}
+          <span className="ml-1">({pct}%)</span>
+        </div>
       </div>
     )
   }
 
   const renderPie = (data: { id: string; name: string; value: number }[], title: string) => {
     const config = buildConfig(data)
+    const total = data.reduce((sum, d) => sum + d.value, 0)
     return (
       <Card>
         <CardHeader>
@@ -114,7 +122,7 @@ export function CategoryAnalysisDashboard() {
                   <Cell key={d.id} fill={`var(--color-${d.id})`} />
                 ))}
               </Pie>
-              <ChartTooltip content={pieTooltip} />
+              <ChartTooltip content={<PieTooltip total={total} />} />
             </PieChart>
           </ChartContainer>
         </CardContent>

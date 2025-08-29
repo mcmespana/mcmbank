@@ -11,9 +11,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
       {/* Mobile menu button */}
-      <div className="lg:hidden">
-        <Sidebar />
-      </div>
+      <Sidebar showDesktop={false} />
 
       {/* Delegation selector */}
       <div className="flex items-center gap-4">

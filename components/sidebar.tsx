@@ -40,13 +40,6 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       enabled: true,
     },
     {
-      name: "Espacios chulos",
-      href: "/dashboards",
-      icon: BarChart3,
-      count: null,
-      enabled: true,
-    },
-    {
       name: "Movimientos",
       href: "/transacciones",
       icon: ArrowLeftRight,
@@ -169,45 +162,57 @@ interface SidebarProps {
   collapsed?: boolean
   onToggleCollapse?: () => void
   transactionCount?: number // Added transaction count prop
+  showDesktop?: boolean
+  showMobileTrigger?: boolean
 }
 
-export function Sidebar({ collapsed = false, onToggleCollapse, transactionCount }: SidebarProps) {
+export function Sidebar({
+  collapsed = false,
+  onToggleCollapse,
+  transactionCount,
+  showDesktop = true,
+  showMobileTrigger = true,
+}: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div
-        className={cn(
-          "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300",
-          collapsed ? "lg:w-16" : "lg:w-72",
-        )}
-      >
-        <SidebarContent collapsed={collapsed} transactionCount={transactionCount} />
+      {showDesktop && (
+        <div
+          className={cn(
+            "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300",
+            collapsed ? "lg:w-16" : "lg:w-72",
+          )}
+        >
+          <SidebarContent collapsed={collapsed} transactionCount={transactionCount} />
 
-        {/* Collapse Toggle Button */}
-        <div className="absolute -right-3 top-8">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-6 w-6 rounded-full bg-background border-2 shadow-md"
-            onClick={onToggleCollapse}
-          >
-            {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
-          </Button>
+          {/* Collapse Toggle Button */}
+          <div className="absolute -right-3 top-8">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-6 w-6 rounded-full bg-background border-2 shadow-md"
+              onClick={onToggleCollapse}
+            >
+              {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Mobile Sidebar */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="lg:hidden">
-            <Menu className="h-6 w-6" />
-            <span className="sr-only">Abrir menú</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0">
-          <SidebarContent transactionCount={transactionCount} />
-        </SheetContent>
-      </Sheet>
+      {showMobileTrigger && (
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden">
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Abrir menú</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0">
+            <SidebarContent transactionCount={transactionCount} />
+          </SheetContent>
+        </Sheet>
+      )}
     </>
   )
 }

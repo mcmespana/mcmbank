@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SearchX } from "lucide-react"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { formatCurrency, formatDate, getAmountColorClass } from "@/lib/utils/format"
 import { getAccountDisplayName, getAccountIcon } from "@/lib/utils/movement-utils"
@@ -62,9 +64,11 @@ export function TransactionTable({
 
   if (movements.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">No se encontraron transacciones</p>
-      </div>
+      <EmptyState
+        title="No se encontraron transacciones"
+        description="Prueba ajustando los filtros o agrega una nueva transacción para comenzar."
+        icon={<SearchX className="h-6 w-6" />}
+      />
     )
   }
 

@@ -14,6 +14,7 @@ import {
   Eye
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Input } from "@/components/ui/input"
 import { 
   Dialog, 
@@ -119,9 +120,13 @@ export function FileList({
 
   if (archivos.length === 0) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
-        <div className="text-sm text-muted-foreground">{emptyMessage}</div>
+        <EmptyState
+          title="Sin archivos adjuntos"
+          description={emptyMessage}
+          icon={<FileIcon className="h-6 w-6" />}
+        />
       </div>
     )
   }

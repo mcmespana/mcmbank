@@ -3,12 +3,14 @@
 import { useState, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SearchX } from "lucide-react"
 import { TimeframeFilter, Timeframe, getTimeframeRange } from "./timeframe-filter"
 import { CategorySelector } from "@/components/transactions/category-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
-import { PieChart, Pie, Cell, TooltipProps } from "recharts"
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, TooltipProps } from "recharts"
 import {
   ChartContainer,
   ChartTooltip,
@@ -122,7 +124,7 @@ export function CategoryAnalysisDashboard() {
                   <Cell key={d.id} fill={`var(--color-${d.id})`} />
                 ))}
               </Pie>
-              <ChartTooltip content={<PieTooltip total={total} />} />
+              <RechartsTooltip content={<PieTooltip total={total} />} />
             </PieChart>
           </ChartContainer>
         </CardContent>
@@ -148,41 +150,53 @@ export function CategoryAnalysisDashboard() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {aggregate.ingresos.length > 0 && renderPie(aggregate.ingresos, "Ingresos por categoría")}
-        {aggregate.gastos.length > 0 && renderPie(aggregate.gastos, "Gastos por categoría")}
-      </div>
+      {movimientos.length === 0 ? (
+        <EmptyState
+          title="No se han encontrado movimientos"
+          description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."
+          icon={<SearchX className="h-6 w-6" />}
+        >
+          <Button variant="outline" onClick={clearFilters}>Borrar filtros</Button>
+        </EmptyState>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {aggregate.ingresos.length > 0 && renderPie(aggregate.ingresos, "Ingresos por categoría")}
+            {aggregate.gastos.length > 0 && renderPie(aggregate.gastos, "Gastos por categoría")}
+          </div>
 
-      {summary.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumen por categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead className="text-right">Ingresos</TableHead>
-                  <TableHead className="text-right">Gastos</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summary.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>{s.name}</TableCell>
-                    <TableCell className="text-right">
-                      {s.income ? formatCurrency(s.income) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {s.expense ? formatCurrency(s.expense) : "-"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+          {summary.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Resumen por categoría</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead className="text-right">Ingresos</TableHead>
+                      <TableHead className="text-right">Gastos</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {summary.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>{s.name}</TableCell>
+                        <TableCell className="text-right">
+                          {s.income ? formatCurrency(s.income) : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {s.expense ? formatCurrency(s.expense) : "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   )

@@ -4,6 +4,8 @@ import { useEffect, useRef, useMemo } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { TransactionListRow } from "./transaction-list-row"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SearchX } from "lucide-react"
 import type {
   Movimiento,
   Cuenta,
@@ -89,17 +91,11 @@ export function TransactionList({
 
   if (movements.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4">
-        <div className="text-center space-y-3">
-          <div className="w-16 h-16 mx-auto bg-muted/50 rounded-full flex items-center justify-center">
-            <span className="text-2xl text-muted-foreground">📊</span>
-          </div>
-          <h3 className="text-lg font-medium text-foreground">No se encontraron transacciones</h3>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Prueba ajustando los filtros o agrega una nueva transacción para comenzar.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        title="No se encontraron transacciones"
+        description="Prueba ajustando los filtros o agrega una nueva transacción para comenzar."
+        icon={<SearchX className="h-6 w-6" />}
+      />
     )
   }
 

@@ -9,19 +9,15 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { TrendingUp, TrendingDown, Wallet } from "lucide-react"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SearchX } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -120,28 +116,38 @@ export function ActivityBalanceDashboard() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ingresos vs Gastos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) =>
-                  format(new Date(value), "d MMM", { locale: es })
-                }
-              />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="ingresos" fill="var(--color-ingresos)" />
-              <Bar dataKey="gastos" fill="var(--color-gastos)" />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+      {movimientos.length === 0 ? (
+        <EmptyState
+          title="No se han encontrado movimientos"
+          description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."
+          icon={<SearchX className="h-6 w-6" />}
+        >
+          <Button variant="outline" onClick={clearFilters}>Borrar filtros</Button>
+        </EmptyState>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ingresos vs Gastos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px]">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(value) =>
+                    format(new Date(value), "d MMM", { locale: es })
+                  }
+                />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="ingresos" fill="var(--color-ingresos)" />
+                <Bar dataKey="gastos" fill="var(--color-gastos)" />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

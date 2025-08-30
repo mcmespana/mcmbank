@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { formatCurrency } from "@/lib/utils/format"
 import { FileDropzone } from "@/components/ui/file-dropzone"
 
 interface TransactionImportPanelProps {
@@ -926,7 +927,7 @@ export function TransactionImportPanel({
                           <span className="font-medium">Fecha:</span> {dup.fecha}
                         </div>
                         <div>
-                          <span className="font-medium">Importe:</span> €{dup.importe}
+                          <span className="font-medium">Importe:</span> {formatCurrency(dup.importe)}
                         </div>
                         <div className="col-span-2">
                           <span className="font-medium">Concepto:</span> {dup.concepto}
@@ -973,4 +974,3 @@ export function TransactionImportPanel({
     </Sheet>
   )
 }
-

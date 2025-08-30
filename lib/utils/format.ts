@@ -1,10 +1,14 @@
 import { cn } from "../utils"
 
+// Force thousands separator for 4+ digit integers regardless of browser locale quirks.
+// Some environments use minimumGroupingDigits=2 for es-ES, which omits 1,000 grouping.
 export function formatCurrency(amount: number, currency = "€"): string {
-  const formatted = new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(amount))
+  const abs = Math.abs(amount)
+
+  // Build "es"-style string manually to ensure 3-digit grouping always applies
+  const [intPart, fracPart] = abs.toFixed(2).split(".")
+  const intWithGrouping = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+  const formatted = `${intWithGrouping},${fracPart}`
 
   return `${amount < 0 ? "-" : ""}${formatted} ${currency}`
 }

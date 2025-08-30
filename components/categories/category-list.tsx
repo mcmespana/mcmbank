@@ -143,6 +143,14 @@ export function CategoryList() {
   const { movimientos } = useMovimientos(selectedDelegation || null)
   const searchParams = useSearchParams()
 
+  // Todos los useEffect y useCallback van aquí
+  useEffect(() => {
+    if (searchParams.get("panel") === "create") {
+      setEditingCategory(null)
+      setCreateSheetOpen(true)
+    }
+  }, [searchParams])
+
   const getCategoryBalance = (categoryId: string) => {
     let filteredMovements = movimientos.filter((mov) => mov.categoria_id === categoryId)
     
@@ -241,6 +249,14 @@ export function CategoryList() {
     }
   }
 
+  // Logica de filtrado y ordenación (después de todos los hooks)
+  const filteredCategories = categories.filter((category) =>
+    category.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  const sortedCategories = [...filteredCategories].sort((a, b) => a.orden - b.orden)
+
+  // Renders condicionales al final
   if (!selectedDelegation) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -267,19 +283,6 @@ export function CategoryList() {
       </div>
     )
   }
-
-  const filteredCategories = categories.filter((category) =>
-    category.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  const sortedCategories = [...filteredCategories].sort((a, b) => a.orden - b.orden)
-
-  useEffect(() => {
-    if (searchParams.get("panel") === "create") {
-      setEditingCategory(null)
-      setCreateSheetOpen(true)
-    }
-  }, [searchParams])
 
   return (
     <div className="space-y-4 sm:space-y-6">

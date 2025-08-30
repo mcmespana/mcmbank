@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Euro, X } from "lucide-react"
+import { formatCurrency } from "@/lib/utils/format"
 
 interface AmountRangeFilterProps {
   amountFrom?: number
@@ -43,13 +44,13 @@ export function AmountRangeFilter({ amountFrom, amountTo, onAmountRangeChange }:
 
   const getDisplayText = () => {
     if (amountFrom !== undefined && amountTo !== undefined) {
-      return `${amountFrom}€ - ${amountTo}€`
+      return `${formatCurrency(amountFrom)} - ${formatCurrency(amountTo)}`
     }
     if (amountFrom !== undefined) {
-      return `Desde ${amountFrom}€`
+      return `Desde ${formatCurrency(amountFrom)}`
     }
     if (amountTo !== undefined) {
-      return `Hasta ${amountTo}€`
+      return `Hasta ${formatCurrency(amountTo)}`
     }
     return "Rango de importe"
   }

@@ -10,6 +10,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { signIn } from "@/lib/actions/auth"
+import { createClient } from "@/lib/supabase/client"
+import { useSearchParams } from "next/navigation"
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -35,7 +37,13 @@ function SubmitButton() {
 
 export default function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const oauthError =
+    searchParams.get("error") === "unauthorized"
+      ? "Tu correo no está autorizado. Contacta con un administrador."
+      : null
   const [state, formAction] = useActionState(signIn, null)
+  const supabase = createClient()
 
   // Handle successful login by redirecting
   useEffect(() => {
@@ -43,6 +51,18 @@ export default function LoginForm() {
       router.push("/")
     }
   }, [state, router])
+
+  async function handleGoogleLogin() {
+    console.log("Inicio OAuth con Google")
+    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    })
+    if (error) {
+      console.error("Error en OAuth de Google", error)
+    }
+  }
 
   return (
     <div className="relative z-10 w-full max-w-md">
@@ -71,9 +91,9 @@ export default function LoginForm() {
         </CardHeader>
         <CardContent className="space-y-6">
           <form action={formAction} className="space-y-4">
-            {state?.error && (
+            {(state?.error || oauthError) && (
               <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded-lg animate-in slide-in-from-top-2 duration-300">
-                {state.error}
+                {state?.error || oauthError}
               </div>
             )}
 
@@ -105,6 +125,33 @@ export default function LoginForm() {
             </div>
 
             <SubmitButton />
+
+            <Button
+              type="button"
+              onClick={handleGoogleLogin}
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 bg-white text-foreground hover:bg-muted transition-all duration-300"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="#EA4335"
+                  d="M5.266 9.765C6.199 6.939 8.854 4.909 12 4.909c1.691 0 3.218.6 4.418 1.582L19.909 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M16.041 18.013c-1.09.703-2.475 1.078-4.041 1.078-3.133 0-5.78-2.014-6.722-4.823L1.237 17.335C3.193 21.294 7.265 24 12 24c2.933 0 5.735-.863 7.834-2.821l-3.793-3.166Z"
+                />
+                <path
+                  fill="#4A90E2"
+                  d="M19.834 20.999C22.029 18.952 23.455 15.904 23.455 12c0-.709-.109-1.473-.273-2.182H12v4.636h6.436c-.317 1.559-1.17 2.766-2.396 3.559l3.793 3.166Z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.277 14.268a7.545 7.545 0 0 1 0-4.503L1.24 6.65C.437 8.26 0 10.075 0 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067Z"
+                />
+              </svg>
+              Entrar con Google
+            </Button>
 
             <div className="text-center text-sm text-muted-foreground">
               ¿No tienes cuenta? Solicítala a tu responsable{" "}

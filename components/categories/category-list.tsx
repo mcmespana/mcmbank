@@ -237,8 +237,11 @@ export function CategoryList() {
     const [moved] = items.splice(result.source.index, 1)
     items.splice(result.destination.index, 0, moved)
 
-    const prev = items[result.destination.index - 1]
-    const newParentId = prev ? (prev.categoria_padre_id ? prev.categoria_padre_id : prev.id) : null
+    const newParentId = prev
+      ? (prev.categoria_padre_id === null
+          ? prev.id
+          : prev.categoria_padre_id)
+      : null
     const parentColor = newParentId ? items.find((c) => c.id === newParentId)?.color || moved.color : moved.color
 
     try {

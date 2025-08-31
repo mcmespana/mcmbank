@@ -242,16 +242,27 @@ export function CategoryList() {
     const parentColor = newParentId ? items.find((c) => c.id === newParentId)?.color || moved.color : moved.color
 
     try {
-      await Promise.all(
-        items.map((item, index) => {
-          const patch: Partial<Categoria> = { orden: index + 1 }
-          if (item.id === moved.id) {
-            patch.categoria_padre_id = newParentId
-            patch.color = parentColor
-          }
-          return updateCategoria(item.id, patch)
-        }),
-      )
+      // Only update items whose orden has changed, and for the moved item, also update parent/color
+      const updates = items.map((item, index) => {
+        const original = sortedCategories.find((c) => c.id === item.id)
+        const newOrden = index + 1
+        const isMoved = item.id === moved.id
+        const ordenChanged = original ? original.orden !== newOrden : true
+        if (isMoved) {
+          // Always update moved item with new orden, parent, and color
+          return updateCategoria(item.id, {
+            orden: newOrden,
+            categoria_padre_id: newParentId,
+            color: parentColor,
+          })
+        } else if (ordenChanged) {
+          // Only update orden if it changed
+          return updateCategoria(item.id, { orden: newOrden })
+        } else {
+          return null
+        }
+      }).filter(Boolean)
+      await Promise.all(updates)
     } catch (error) {
       console.error("Error reordering categories:", error)
     }

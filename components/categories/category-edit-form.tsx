@@ -15,22 +15,16 @@ interface CategoryEditFormProps {
   category: Categoria
   onSave: (patch: Partial<Categoria>) => Promise<void>
   onCancel: () => void
+  parentCategory?: Categoria | null
 }
 
-// Colores predefinidos para categorías
-const DEFAULT_COLORS = [
-  "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7",
-  "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
-  "#F8C471", "#82E0AA", "#F1948A", "#D7BDE2", "#FAD7A0",
-  "#A9DFBF", "#F9E79F", "#D5A6BD", "#A3E4D7", "#FFB6C1"
-]
-
-export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFormProps) {
+export function CategoryEditForm({ category, onSave, onCancel, parentCategory }: CategoryEditFormProps) {
+  const isSubcategory = !!category.categoria_padre_id
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: category.emoji || "📁",
     tipo: category.tipo,
-    color: category.color || "#4ECDC4",
+    color: parentCategory?.color || category.color || "#4ECDC4",
   })
   const [loading, setLoading] = useState(false)
 
@@ -62,10 +56,15 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pt-6">
       {/* Category Icon and Color Preview */}
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center justify-center gap-2">
+        {isSubcategory && parentCategory && (
+          <p className="text-sm text-muted-foreground">
+            Subcategoría de <span className="font-semibold">{parentCategory.nombre}</span>
+          </p>
+        )}
         <Card className="relative">
           <CardContent className="p-6">
-            <div 
+            <div
               className="flex h-16 w-16 items-center justify-center rounded-lg text-2xl"
               style={{ backgroundColor: formData.color }}
             >
@@ -85,14 +84,18 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
             className="w-full justify-start"
           />
         </div>
-        
+
         <div className="space-y-2">
           <Label>Color</Label>
-          <ColorPicker
-            value={formData.color}
-            onChange={(color) => setFormData({ ...formData, color })}
-            className="w-full"
-          />
+          {isSubcategory ? (
+            <div className="flex h-10 w-full items-center rounded border px-3 opacity-60 cursor-not-allowed" style={{ backgroundColor: formData.color }} />
+          ) : (
+            <ColorPicker
+              value={formData.color}
+              onChange={(color) => setFormData({ ...formData, color })}
+              className="w-full"
+            />
+          )}
         </div>
       </div>
 

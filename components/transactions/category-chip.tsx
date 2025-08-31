@@ -17,17 +17,17 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
   const [open, setOpen] = useState(false)
 
   const getCategoryColor = (category: Categoria) => {
-    if (category.color) {
-      return category.color
-    }
-    // Colores por defecto basados en el tipo
+    const color = category.categoria_padre_id
+      ? categories.find((c) => c.id === category.categoria_padre_id)?.color
+      : category.color
+    if (color) return color
     switch (category.tipo) {
       case "ingreso":
-        return "#10b981" // green-500
+        return "#10b981"
       case "gasto":
-        return "#ef4444" // red-500
+        return "#ef4444"
       default:
-        return "#6366f1" // indigo-500
+        return "#6366f1"
     }
   }
 

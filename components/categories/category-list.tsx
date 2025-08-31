@@ -42,15 +42,20 @@ interface CategoryCardProps {
 }
 
 function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: CategoryCardProps) {
+  const isSub = !!category.categoria_padre_id
   return (
     <Draggable draggableId={category.id} index={index}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={cn("transition-shadow hover:shadow-md", snapshot.isDragging && "shadow-lg rotate-2")}
+          className={cn(
+            "transition-shadow hover:shadow-md",
+            snapshot.isDragging && "shadow-lg rotate-2",
+            isSub && "ml-6"
+          )}
         >
-          <CardContent className="p-3 sm:p-4 lg:p-6">
+          <CardContent className={cn("p-3 sm:p-4 lg:p-6", isSub && "py-2")}> 
             <div className="flex items-center gap-3 sm:gap-4">
               {/* Drag Handle */}
               <div
@@ -62,7 +67,12 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
 
               {/* Category Icon */}
               <div
-                className="flex h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 items-center justify-center rounded-xl text-xl sm:text-2xl shadow-sm flex-shrink-0"
+                className={cn(
+                  "flex items-center justify-center rounded-xl shadow-sm flex-shrink-0",
+                  isSub
+                    ? "h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 text-lg"
+                    : "h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 text-xl sm:text-2xl"
+                )}
                 style={{ backgroundColor: category.color || "#e5e7eb" }}
               >
                 {category.emoji || "📁"}
@@ -72,18 +82,11 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
               <div className="flex-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-base sm:text-lg truncate">{category.nombre}</h3>
+                    <h3 className={cn("font-semibold truncate", isSub ? "text-sm" : "text-base sm:text-lg")}>{category.nombre}</h3>
                     <div className="flex items-center gap-2 mt-1 sm:mt-0">
-                      
-                      
-                      
-                    <AmountDisplay amount={balance} size="sm" />
-
-
+                      <AmountDisplay amount={balance} size="sm" />
                     </div>
                   </div>
-                  
-             
                 </div>
               </div>
 
@@ -205,6 +208,12 @@ export function CategoryList() {
     try {
       if (editingCategory) {
         await updateCategoria(editingCategory.id, patch)
+        if (!editingCategory.categoria_padre_id && patch.color) {
+          const children = categories.filter((c) => c.categoria_padre_id === editingCategory.id)
+          for (const child of children) {
+            await updateCategoria(child.id, { color: patch.color })
+          }
+        }
       } else if (organizacionId) {
         const maxOrder = Math.max(...categories.map((c) => c.orden), 0)
         await DatabaseService.createCategoria({
@@ -236,14 +245,28 @@ export function CategoryList() {
     items.splice(result.destination.index, 0, reorderedItem)
 
     try {
-      const updates = items.map((item, index) => ({
-        id: item.id,
-        orden: index + 1,
-      }))
+      const updates = items.map((item, index) => {
+        const prev = items[index - 1]
+        const newParentId = prev && !prev.categoria_padre_id ? prev.id : null
+        const parentColor = newParentId
+          ? items.find((c) => c.id === newParentId)?.color || item.color
+          : item.color
+        return {
+          id: item.id,
+          orden: index + 1,
+          categoria_padre_id: newParentId,
+          color: parentColor,
+        }
+      })
 
       for (const update of updates) {
-        await updateCategoria(update.id, { orden: update.orden })
+        await updateCategoria(update.id, {
+          orden: update.orden,
+          categoria_padre_id: update.categoria_padre_id,
+          color: update.color,
+        })
       }
+      await fetchCategorias()
     } catch (error) {
       console.error("Error reordering categories:", error)
     }
@@ -414,6 +437,7 @@ export function CategoryList() {
           {editingCategory && (
             <CategoryEditForm
               category={editingCategory}
+              parentCategory={categories.find((c) => c.id === editingCategory.categoria_padre_id) || null}
               onSave={handleSaveCategory}
               onCancel={() => setEditSheetOpen(false)}
             />

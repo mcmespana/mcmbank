@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Categoria } from "@/lib/types/database"
+import { cn } from "@/lib/utils"
 
 interface CategorySelectorProps {
   categories: Categoria[]
@@ -42,6 +43,20 @@ export function CategorySelector({
     )
   }, [categories, searchValue])
 
+  const structuredCategories = useMemo(() => {
+    if (searchValue) return filteredCategories
+    const roots = categories.filter((c) => !c.categoria_padre_id).sort((a, b) => a.orden - b.orden)
+    const result: Categoria[] = []
+    roots.forEach((root) => {
+      result.push(root)
+      categories
+        .filter((c) => c.categoria_padre_id === root.id)
+        .sort((a, b) => a.orden - b.orden)
+        .forEach((sub) => result.push(sub))
+    })
+    return result
+  }, [categories, filteredCategories, searchValue])
+
   const selectedCategoryObjects = useMemo(() => {
     return categories.filter((cat) => selectedCategories.includes(cat.id))
   }, [categories, selectedCategories])
@@ -73,17 +88,17 @@ export function CategorySelector({
   }
 
   const getCategoryColor = (category: Categoria) => {
-    if (category.color) {
-      return category.color
-    }
-    // Colores por defecto basados en el tipo
+    const color = category.categoria_padre_id
+      ? categories.find((c) => c.id === category.categoria_padre_id)?.color
+      : category.color
+    if (color) return color
     switch (category.tipo) {
       case "ingreso":
-        return "#10b981" // green-500
+        return "#10b981"
       case "gasto":
-        return "#ef4444" // red-500
+        return "#ef4444"
       default:
-        return "#6366f1" // indigo-500
+        return "#6366f1"
     }
   }
 
@@ -121,16 +136,19 @@ export function CategorySelector({
           </div>
           <ScrollArea className="h-[280px]">
             <div className="p-2">
-              {filteredCategories.length === 0 ? (
+              {structuredCategories.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <p className="text-sm">No se encontraron categorías</p>
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {filteredCategories.map((category) => (
+                  {structuredCategories.map((category) => (
                     <div
                       key={category.id}
-                      className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                      className={cn(
+                        "flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer",
+                        category.categoria_padre_id && "pl-6"
+                      )}
                       onClick={() => handleSelect(category.id)}
                     >
                       <Badge

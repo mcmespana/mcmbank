@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Building2, TrendingUp, Cpu } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect } from "react"
 import { signIn } from "@/lib/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -35,7 +36,22 @@ function SubmitButton() {
 
 export default function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [state, formAction] = useActionState(signIn, null)
+
+  const supabase = createClient()
+
+  async function handleGoogleLogin() {
+    console.log("OAuth start", { provider: "google" })
+    const redirectTo =
+      process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+      `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    })
+    if (error) console.error("OAuth error", error)
+  }
 
   // Handle successful login by redirecting
   useEffect(() => {
@@ -70,12 +86,54 @@ export default function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {(state?.error || searchParams.get("error")) && (
+            <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded-lg animate-in slide-in-from-top-2 duration-300">
+              {state?.error || searchParams.get("error")}
+            </div>
+          )}
+
+          <Button
+            type="button"
+            onClick={handleGoogleLogin}
+            variant="outline"
+            className="w-full group relative overflow-hidden transition-all duration-300 hover:scale-[1.02]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+            <svg
+              className="mr-2 h-4 w-4"
+              viewBox="0 0 488 512"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill="#EA4335"
+                d="M488 261.8c0-17.2-1.5-34-4.3-50.2H249v95.1h134.4a115 115 0 0 1-50 75.6l81.1 62.9c47.3-43.6 74.5-108 74.5-183.4z"
+              />
+              <path
+                fill="#34A853"
+                d="M249 492c67.6 0 124-22.4 165.3-60.9l-81.1-62.9c-22.4 15-51 23.8-84.2 23.8-64.7 0-119.6-43.7-139.2-102.6l-84.9 65.5C56 424.8 146.5 492 249 492z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M109.8 289.4c-4.8-14.3-7.5-29.6-7.5-45.4s2.7-31.1 7.5-45.4l-84.9-65.5C9.2 165.3 0 206 0 252s9.2 86.7 24.9 123.7l84.9-65.5z"
+              />
+              <path
+                fill="#4285F4"
+                d="M249 97.3c35.3 0 67 12.1 91.9 35.9l68.9-68.9C373 26 318.5 0 249 0 146.5 0 56 67.2 24.9 168.3l84.9 65.5C129.4 141 184.3 97.3 249 97.3z"
+              />
+            </svg>
+            Entrar con Google
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border/30"></span>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">o</span>
+            </div>
+          </div>
+
           <form action={formAction} className="space-y-4">
-            {state?.error && (
-              <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded-lg animate-in slide-in-from-top-2 duration-300">
-                {state.error}
-              </div>
-            )}
 
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium text-foreground/80">

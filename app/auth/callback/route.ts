@@ -11,11 +11,23 @@ export async function GET(request: Request) {
     const supabase = createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      console.log("OAuth con Google exitoso para usuario", user?.id)
       const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
       return NextResponse.redirect(`${redirectUrl}${next}`)
     }
+    console.warn("OAuth con Google no autorizado", error.message)
+    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+    const loginUrl = new URL("/auth/login", redirectUrl)
+    loginUrl.searchParams.set(
+      "error",
+      "Tu correo no está autorizado. Contacta con un administrador.",
+    )
+    return NextResponse.redirect(loginUrl.toString())
   }
 
-  // return the user to an error page with instructions
+  console.error("OAuth callback sin código")
   return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }

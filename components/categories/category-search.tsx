@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { cn } from "@/lib/utils"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -26,13 +27,21 @@ export function CategorySearch({
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
 
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.orden - b.orden),
+    [categories],
+  )
+
   const filteredCategories = useMemo(() => {
-    if (!searchValue) return categories
-    return categories.filter(category =>
-      category.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
-      (category.emoji && category.emoji.includes(searchValue))
-    )
-  }, [categories, searchValue])
+    const list = searchValue
+      ? sortedCategories.filter(
+          (category) =>
+            category.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
+            (category.emoji && category.emoji.includes(searchValue)),
+        )
+      : sortedCategories
+    return list
+  }, [sortedCategories, searchValue])
 
   const selectedCategoryObjects = useMemo(() => {
     return categories.filter(cat => selectedCategories.includes(cat.id))
@@ -94,6 +103,7 @@ export function CategorySearch({
                     key={category.id}
                     value={category.id}
                     onSelect={() => handleSelect(category.id)}
+                    className={cn(category.categoria_padre_id && "pl-6")}
                   >
                     <Check
                       className={`mr-2 h-4 w-4 ${

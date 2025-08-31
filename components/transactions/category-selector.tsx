@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useMemo } from "react"
+import { cn } from "@/lib/utils"
 import { Check, ChevronsUpDown, X, Search, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,14 +34,21 @@ export function CategorySelector({
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
 
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.orden - b.orden),
+    [categories],
+  )
+
   const filteredCategories = useMemo(() => {
-    if (!searchValue) return categories
-    return categories.filter(
+    const list = searchValue
+      ? sortedCategories.filter(
       (category) =>
         category.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
         (category.emoji && category.emoji.includes(searchValue)),
-    )
-  }, [categories, searchValue])
+      )
+      : sortedCategories
+    return list
+  }, [sortedCategories, searchValue])
 
   const selectedCategoryObjects = useMemo(() => {
     return categories.filter((cat) => selectedCategories.includes(cat.id))
@@ -130,7 +138,10 @@ export function CategorySelector({
                   {filteredCategories.map((category) => (
                     <div
                       key={category.id}
-                      className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                      className={cn(
+                        "flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer",
+                        category.categoria_padre_id && "pl-4",
+                      )}
                       onClick={() => handleSelect(category.id)}
                     >
                       <Badge

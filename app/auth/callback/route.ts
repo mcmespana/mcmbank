@@ -11,8 +11,29 @@ export async function GET(request: Request) {
     const supabase = createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
-      return NextResponse.redirect(`${redirectUrl}${next}`)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from("perfil")
+          .select("usuario_id")
+          .eq("usuario_id", user.id)
+          .single()
+        const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+        if (!profile) {
+          console.warn("OAuth unauthorized", { userId: user.id })
+          await supabase.auth.signOut()
+          const message = encodeURIComponent(
+            "Tu correo no está autorizado. Contacta con un administrador.",
+          )
+          return NextResponse.redirect(
+            `${redirectUrl}/auth/login?error=${message}`,
+          )
+        }
+        console.log("OAuth success", { userId: user.id })
+        return NextResponse.redirect(`${redirectUrl}${next}`)
+      }
     }
   }
 

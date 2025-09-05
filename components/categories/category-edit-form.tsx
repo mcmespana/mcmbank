@@ -13,24 +13,18 @@ import type { Categoria } from "@/lib/types/database"
 
 interface CategoryEditFormProps {
   category: Categoria
+  parentCategory?: Categoria
   onSave: (patch: Partial<Categoria>) => Promise<void>
   onCancel: () => void
 }
 
-// Colores predefinidos para categorías
-const DEFAULT_COLORS = [
-  "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7",
-  "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
-  "#F8C471", "#82E0AA", "#F1948A", "#D7BDE2", "#FAD7A0",
-  "#A9DFBF", "#F9E79F", "#D5A6BD", "#A3E4D7", "#FFB6C1"
-]
 
-export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFormProps) {
+export function CategoryEditForm({ category, parentCategory, onSave, onCancel }: CategoryEditFormProps) {
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: category.emoji || "📁",
     tipo: category.tipo,
-    color: category.color || "#4ECDC4",
+    color: parentCategory?.color || category.color || "#4ECDC4",
   })
   const [loading, setLoading] = useState(false)
 
@@ -49,7 +43,7 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
         nombre: formData.nombre.trim(),
         emoji: formData.emoji,
         tipo: formData.tipo,
-        color: formData.color,
+        ...(parentCategory ? {} : { color: formData.color }),
       })
     } catch (error) {
       console.error("Error saving category:", error)
@@ -85,16 +79,36 @@ export function CategoryEditForm({ category, onSave, onCancel }: CategoryEditFor
             className="w-full justify-start"
           />
         </div>
-        
+
+        {!parentCategory ? (
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <ColorPicker
+              value={formData.color}
+              onChange={(color) => setFormData({ ...formData, color })}
+              className="w-full"
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <div
+              className="h-10 w-full rounded border"
+              style={{ backgroundColor: parentCategory.color }}
+            />
+          </div>
+        )}
+      </div>
+
+      {parentCategory && (
         <div className="space-y-2">
-          <Label>Color</Label>
-          <ColorPicker
-            value={formData.color}
-            onChange={(color) => setFormData({ ...formData, color })}
-            className="w-full"
+          <Label>Subcategoría de</Label>
+          <Input
+            value={`${parentCategory.emoji || ""} ${parentCategory.nombre}`}
+            disabled
           />
         </div>
-      </div>
+      )}
 
       {/* Category Name */}
       <div className="space-y-2">

@@ -17,6 +17,7 @@ import { DatabaseService } from "@/lib/services/database"
 import { GripVertical, Search, Edit, Trash2, Plus, Building2, Wallet, X } from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
+import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import type { Categoria } from "@/lib/types/database"
 
 
@@ -129,6 +130,7 @@ export function CategoryList() {
   const [deletingCategory, setDeletingCategory] = useState<Categoria | null>(null)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
+  const [viewingCategory, setViewingCategory] = useState<Categoria | null>(null)
   const [dateFrom, setDateFrom] = useState<string | undefined>()
   const [dateTo, setDateTo] = useState<string | undefined>()
 
@@ -176,7 +178,7 @@ export function CategoryList() {
   }
 
   const handleSearch = (category: Categoria) => {
-    window.location.href = `/transacciones?categoria=${category.id}`
+    setViewingCategory(category)
   }
 
   const handleDeleteRequest = (category: Categoria) => {
@@ -468,6 +470,14 @@ export function CategoryList() {
           />
         </SheetContent>
       </Sheet>
+
+      <RelatedMovementsSheet
+        category={viewingCategory}
+        open={!!viewingCategory}
+        onOpenChange={(open) => {
+          if (!open) setViewingCategory(null)
+        }}
+      />
     </div>
   )
 }

@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CuentaEditForm } from "./cuenta-edit-form"
 import { DeleteAccountDialog } from "./delete-account-dialog"
+import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import type { Cuenta } from "@/lib/types/database"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { useDelegationContext } from "@/contexts/delegation-context"
@@ -40,6 +41,7 @@ export function CuentasManager() {
   const [copiedIban, setCopiedIban] = useState<string | null>(null)
   const [balances, setBalances] = useState<Record<string, number>>({})
   const [operationStates, setOperationStates] = useState<Record<string, 'creating' | 'updating' | 'deleting'>>({})
+  const [viewingAccount, setViewingAccount] = useState<Cuenta | null>(null)
 
   // Función para actualizar el estado de una operación
   const setOperationState = useCallback((cuentaId: string, state: 'creating' | 'updating' | 'deleting' | null) => {
@@ -612,6 +614,16 @@ export function CuentasManager() {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => setViewingAccount(cuenta)}
+                              disabled={isCreating || isUpdating || isDeleting}
+                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Ver movimientos"
+                            >
+                              <Search className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => setEditingCuenta(cuenta)}
                               disabled={isCreating || isUpdating || isDeleting}
                               className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -690,6 +702,14 @@ export function CuentasManager() {
           onCancel={() => setDeletingCuenta(null)}
         />
       )}
+
+      <RelatedMovementsSheet
+        account={viewingAccount}
+        open={!!viewingAccount}
+        onOpenChange={(open) => {
+          if (!open) setViewingAccount(null)
+        }}
+      />
     </div>
   )
 }

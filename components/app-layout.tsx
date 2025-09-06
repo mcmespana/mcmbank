@@ -12,9 +12,10 @@ import { cn } from "@/lib/utils"
 interface AppLayoutProps {
   children: React.ReactNode
   transactionCount?: number // Added prop for transaction count
+  showDelegationSelector?: boolean
 }
 
-export function AppLayout({ children, transactionCount }: AppLayoutProps) {
+export function AppLayout({ children, transactionCount, showDelegationSelector = true }: AppLayoutProps) {
   const { selectedDelegation, setSelectedDelegation } = useDelegationContext()
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -79,7 +80,11 @@ export function AppLayout({ children, transactionCount }: AppLayoutProps) {
       {/* Main Content */}
       <div className={cn("transition-all duration-300", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
         {/* Topbar */}
-        <Topbar selectedDelegation={selectedDelegation} onDelegationChange={setSelectedDelegation} />
+        <Topbar
+          selectedDelegation={selectedDelegation}
+          onDelegationChange={setSelectedDelegation}
+          showDelegationSelector={showDelegationSelector}
+        />
 
         {/* Page Content */}
         <main className="flex-1 p-4 lg:p-6">{children}</main>

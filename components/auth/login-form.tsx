@@ -45,7 +45,7 @@ export default function LoginForm() {
     console.log("OAuth start", { provider: "google" })
     const redirectTo =
       process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-      `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+      `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback`
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },

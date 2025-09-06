@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TimeframeFilter, Timeframe, getTimeframeRange } from "@/components/dashboard/timeframe-filter"
 import { ActivityBalanceDashboard } from "@/components/dashboard/activity-balance"
 import { CategoryAnalysisDashboard } from "@/components/dashboard/category-analysis"
+import { CashFlowTrend } from "@/components/dashboard/cash-flow-trend"
 
 export default function HomePage() {
   const [timeframe, setTimeframe] = useState<Timeframe>("school-year")
@@ -32,6 +33,8 @@ export default function HomePage() {
           </div>
 
           <FinancialSummary from={from} to={to} />
+
+          <CashFlowTrend from={from} to={to} />
 
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Acciones Rápidas</h2>

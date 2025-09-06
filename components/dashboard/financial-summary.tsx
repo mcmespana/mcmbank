@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, Wallet, Target, Tag } from "lucide-react"
+import { TrendingUp, TrendingDown, Wallet, Target, Tag, Calculator } from "lucide-react"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useMemo } from "react"
@@ -23,7 +23,7 @@ export function FinancialSummary({ from, to }: Props) {
 
   const summary = useMemo(() => {
     if (!movimientos.length)
-      return { ingresos: 0, gastos: 0, balance: 0, count: 0, uncategorized: 0 }
+      return { ingresos: 0, gastos: 0, balance: 0, count: 0, uncategorized: 0, average: 0 }
 
     const ingresos = movimientos
       .filter((m) => m.importe > 0)
@@ -36,6 +36,8 @@ export function FinancialSummary({ from, to }: Props) {
     const uncategorized = movimientos.filter((m) => !m.categoria_id).length
 
     const balance = ingresos - gastos
+    const totalAbs = ingresos + gastos
+    const average = movimientos.length ? totalAbs / movimientos.length : 0
 
     return {
       ingresos,
@@ -43,6 +45,7 @@ export function FinancialSummary({ from, to }: Props) {
       balance,
       count: movimientos.length,
       uncategorized,
+      average,
     }
   }, [movimientos])
 
@@ -89,10 +92,18 @@ export function FinancialSummary({ from, to }: Props) {
       bgColor: "bg-orange-50",
       action: () => router.push("/transacciones?uncategorized=1"),
     },
+    {
+      title: "Ticket medio",
+      value: `€${summary.average.toFixed(2)}`,
+      description: "Importe medio",
+      icon: Calculator,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+    },
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
       {metrics.map((metric) => (
         <Card
           key={metric.title}

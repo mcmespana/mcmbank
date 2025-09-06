@@ -4,6 +4,7 @@ import { useState } from "react"
 import { AppLayout } from "@/components/app-layout"
 import { FinancialSummary } from "@/components/dashboard/financial-summary"
 import { QuickActions } from "@/components/dashboard/quick-actions"
+import { RecentTransactions } from "@/components/dashboard/recent-transactions"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TimeframeFilter, Timeframe, getTimeframeRange } from "@/components/dashboard/timeframe-filter"
 import { ActivityBalanceDashboard } from "@/components/dashboard/activity-balance"
@@ -36,6 +37,11 @@ export default function HomePage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Acciones Rápidas</h2>
             <QuickActions />
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Últimas transacciones</h2>
+            <RecentTransactions />
           </div>
         </TabsContent>
 

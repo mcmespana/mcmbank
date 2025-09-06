@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TimeframeFilter, Timeframe, getTimeframeRange } from "@/components/dashboard/timeframe-filter"
 import { ActivityBalanceDashboard } from "@/components/dashboard/activity-balance"
 import { CategoryAnalysisDashboard } from "@/components/dashboard/category-analysis"
+import { CommandCenterDashboard } from "@/components/dashboard/command-center"
 
 export default function HomePage() {
   const [timeframe, setTimeframe] = useState<Timeframe>("school-year")
@@ -20,6 +21,7 @@ export default function HomePage() {
           <TabsTrigger value="inicio">Inicio</TabsTrigger>
           <TabsTrigger value="actividad">Balance de actividad</TabsTrigger>
           <TabsTrigger value="categorias">Análisis categorías</TabsTrigger>
+          <TabsTrigger value="comando">Centro de mando</TabsTrigger>
         </TabsList>
 
         <TabsContent value="inicio" className="space-y-8">
@@ -45,6 +47,10 @@ export default function HomePage() {
 
         <TabsContent value="categorias" className="space-y-8">
           <CategoryAnalysisDashboard />
+        </TabsContent>
+
+        <TabsContent value="comando" className="space-y-8">
+          <CommandCenterDashboard />
         </TabsContent>
       </Tabs>
     </AppLayout>

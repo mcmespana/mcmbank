@@ -11,12 +11,10 @@ export function useCategorias(organizacionId?: string) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const TIMEOUT_MS = 12000
 
   const fetchCategorias = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort()
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     const ac = new AbortController()
     abortRef.current = ac
@@ -50,10 +48,7 @@ export function useCategorias(organizacionId?: string) {
       }
     } finally {
       setLoading(false)
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
+      // runQuery handles timeout internally
     }
   }, [organizacionId])
 
@@ -61,7 +56,6 @@ export function useCategorias(organizacionId?: string) {
     fetchCategorias()
     return () => {
       if (abortRef.current) abortRef.current.abort()
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [fetchCategorias])
 

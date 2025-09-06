@@ -15,7 +15,6 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const { user } = useAuth()
 
   const abortControllerRef = useRef<AbortController | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchDelegations = useCallback(async () => {
     if (!user) {
@@ -26,7 +25,6 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
 
     // Cancel previous pending request (if any)
     if (abortControllerRef.current) abortControllerRef.current.abort()
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     const abortController = new AbortController()
     abortControllerRef.current = abortController
@@ -80,10 +78,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     } finally {
       // Always clear loading state; a new fetch will set it to true again
       setLoading(false)
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
+      // runQuery handles its own timeout
     }
   }, [user, timeout])
 
@@ -91,7 +86,6 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     fetchDelegations()
     return () => {
       if (abortControllerRef.current) abortControllerRef.current.abort()
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [fetchDelegations])
 

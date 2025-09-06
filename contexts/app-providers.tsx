@@ -5,6 +5,7 @@ import { AuthProvider } from "./auth-context"
 import { DelegationProvider } from "./delegation-context"
 import { ConnectionMonitor } from "@/components/connection-monitor"
 import { Toaster } from "sonner"
+import "@/lib/debug"
 
 interface AppProvidersProps {
   children: React.ReactNode

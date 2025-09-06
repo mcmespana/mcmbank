@@ -21,7 +21,6 @@ export function useCuentas(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const forceRefreshRef = useRef<number>(0) // Para forzar refrescos
   
   // DEBUG: Track excessive calls  
@@ -53,10 +52,6 @@ export function useCuentas(
     // Cancel previous request if still pending
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
-    }
-    
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
     }
 
     // Create new abort controller for this request
@@ -99,11 +94,7 @@ export function useCuentas(
             .abortSignal(signal)
       })
 
-      // Clear timeout if query completed successfully
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
+      // runQuery handles timeout internally
 
       if (abortController.signal.aborted) {
         return // Request was cancelled
@@ -133,11 +124,6 @@ export function useCuentas(
     } finally {
       // Always clear loading to avoid spinner lock; next fetch will set true
       setLoading(false)
-      // Cleanup
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
     }
   }, [memoizedDelegacionId, timeout, cuentas.length])
 
@@ -157,9 +143,6 @@ export function useCuentas(
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
       }
     }
   }, [memoizedDelegacionId, fetchCuentas, cuentas.length])

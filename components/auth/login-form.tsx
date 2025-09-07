@@ -103,7 +103,9 @@ export default function LoginForm() {
               className="mr-2 h-4 w-4"
               viewBox="0 0 488 512"
               xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
             >
+              <title>Google logo</title>
               <path
                 fill="#EA4335"
                 d="M488 261.8c0-17.2-1.5-34-4.3-50.2H249v95.1h134.4a115 115 0 0 1-50 75.6l81.1 62.9c47.3-43.6 74.5-108 74.5-183.4z"
@@ -137,7 +139,7 @@ export default function LoginForm() {
 
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium text-foreground/80">
-                Mail MCM Local para el acceso
+                Email
               </label>
               <Input
                 id="email"
@@ -151,7 +153,7 @@ export default function LoginForm() {
 
             <div className="space-y-2">
               <label htmlFor="password" className="block text-sm font-medium text-foreground/80">
-                Código de acceso
+                Contraseña
               </label>
               <Input
                 id="password"
@@ -165,12 +167,12 @@ export default function LoginForm() {
             <SubmitButton />
 
             <div className="text-center text-sm text-muted-foreground">
-              ¿No tienes cuenta? Solicítala a tu responsable{" "}
+              ¿No tienes cuenta?{" "}
               <Link
                 href="/auth/sign-up"
                 className="text-primary hover:underline transition-all duration-200 hover:text-primary/80"
               >
-                desde aquí
+                Regístrate desde aquí
               </Link>
             </div>
           </form>

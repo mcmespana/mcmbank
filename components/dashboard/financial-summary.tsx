@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Wallet, Target, Tag } from "lucide-react"
 import { useDelegationContext } from "@/contexts/delegation-context"
+import { FinancialSummarySkeleton } from "./financial-summary-skeleton"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useMemo } from "react"
 import { useRouter } from "next/navigation"
@@ -16,7 +17,7 @@ export function FinancialSummary({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
   const router = useRouter()
 
-  const { movimientos } = useMovimientos(selectedDelegation, {
+  const { movimientos, loading } = useMovimientos(selectedDelegation, {
     fechaDesde: from,
     fechaHasta: to,
   })
@@ -90,6 +91,10 @@ export function FinancialSummary({ from, to }: Props) {
       action: () => router.push("/transacciones?uncategorized=1"),
     },
   ]
+
+  if (loading) {
+    return <FinancialSummarySkeleton />
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

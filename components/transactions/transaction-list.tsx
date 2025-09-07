@@ -3,6 +3,7 @@
 import { useEffect, useRef, useMemo } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
+import { TransactionListSkeleton } from "./transaction-list-skeleton"
 import { TransactionListRow } from "./transaction-list-row"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SearchX } from "lucide-react"
@@ -78,11 +79,7 @@ export function TransactionList({
   }, [categories])
 
   if (loading && movements.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
+    return <TransactionListSkeleton />
   }
 
   if (error) {

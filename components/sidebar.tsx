@@ -65,7 +65,7 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       href: "/facturas",
       icon: FileText,
       count: 0,
-      enabled: false,
+      enabled: true,
     },
     {
       name: "Informes",
@@ -143,12 +143,16 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
             </div>
           )
 
-          if (isDisabled) {
-            return <div key={item.name}>{linkContent}</div>
-          }
-
           return (
-            <Link key={item.name} href={item.href}>
+            <Link
+              key={item.name}
+              href={isDisabled ? "#" : item.href}
+              aria-disabled={isDisabled}
+              tabIndex={isDisabled ? -1 : undefined}
+              onClick={(e) => {
+                if (isDisabled) e.preventDefault()
+              }}
+            >
               {linkContent}
             </Link>
           )
@@ -192,6 +196,7 @@ export function Sidebar({
               size="icon"
               className="h-6 w-6 rounded-full bg-background border-2 shadow-md"
               onClick={onToggleCollapse}
+              aria-label={collapsed ? "Expandir sidebar" : "Contraer sidebar"}
             >
               {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
             </Button>

@@ -79,7 +79,7 @@ export function AppLayout({ children, transactionCount }: AppLayoutProps) {
       {/* Main Content */}
       <div className={cn("transition-all duration-300", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
         {/* Topbar */}
-        <Topbar selectedDelegation={selectedDelegation} onDelegationChange={setSelectedDelegation} />
+        <Topbar selectedDelegation={selectedDelegation} onDelegationChange={(id) => setSelectedDelegation(id)} />
 
         {/* Page Content */}
         <main className="flex-1 p-4 lg:p-6">{children}</main>

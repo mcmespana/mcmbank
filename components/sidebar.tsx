@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import useIsAdmin from "@/hooks/use-is-admin"
 
 interface SidebarContentProps {
   className?: string
@@ -30,6 +31,7 @@ interface SidebarContentProps {
 
 function SidebarContent({ className, collapsed = false, transactionCount }: SidebarContentProps) {
   const pathname = usePathname()
+  const isAdmin = useIsAdmin()
 
   const navigation = [
     {
@@ -81,13 +83,17 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       count: 14,
       enabled: false,
     },
-    {
-      name: "Configuración",
-      href: "/configuracion",
-      icon: Settings,
-      count: null,
-      enabled: false,
-    },
+    ...(isAdmin
+      ? [
+          {
+            name: "Configuración",
+            href: "/configuracion",
+            icon: Settings,
+            count: null,
+            enabled: true,
+          },
+        ]
+      : []),
     {
       name: "Diagnóstico",
       href: "/diagnostico",

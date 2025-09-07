@@ -11,6 +11,9 @@ export async function PUT(
 
     // Optional: update password
     if (password) {
+      if (typeof password !== 'string' || password.length < 6) {
+        return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 })
+      }
       const { error: passError } = await supabase.auth.admin.updateUserById(params.id, { password })
       if (passError) return NextResponse.json({ error: passError.message }, { status: 400 })
     }

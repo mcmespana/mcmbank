@@ -31,6 +31,13 @@ export async function POST(req: Request) {
     if (!email || !password) {
       return NextResponse.json({ error: "Email y contraseña son obligatorios" }, { status: 400 })
     }
+    if (typeof password !== 'string' || password.length < 6) {
+      return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 })
+    }
+    const emailRegex = /.+@.+\..+/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "Email no válido" }, { status: 400 })
+    }
 
     // Create auth user
     const { data: created, error: createError } = await supabase.auth.admin.createUser({
@@ -39,7 +46,8 @@ export async function POST(req: Request) {
       email_confirm: true,
     })
     if (createError || !created?.user) {
-      return NextResponse.json({ error: createError?.message || "No se pudo crear el usuario" }, { status: 400 })
+      console.error('admin.createUser error:', createError)
+      return NextResponse.json({ error: createError?.message || "No se pudo crear el usuario", status: (createError as any)?.status }, { status: 400 })
     }
 
     const userId = created.user.id

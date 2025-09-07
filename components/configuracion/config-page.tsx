@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { supabase } from "@/lib/supabase/client"
+import { toast } from "sonner"
 import type { Delegacion } from "@/lib/types/database"
 import { useIsAdmin } from "@/hooks/use-is-admin"
 
@@ -296,8 +297,8 @@ export function ConfigPage() {
           {editingUser && (
             <form
               className="space-y-4 py-4"
-              onSubmit={async (e) => {
-                e.preventDefault()
+            onSubmit={async (e) => {
+              e.preventDefault()
                 await fetch(`/api/admin/users/${editingUser.id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
@@ -307,8 +308,18 @@ export function ConfigPage() {
                     memberships: userForm.memberships,
                   }),
                 })
-                await loadUsers()
-                setEditingUser(null)
+                .then(async (res) => {
+                  const text = await res.text()
+                  const json = text ? JSON.parse(text) : {}
+                  if (!res.ok) {
+                    console.error('PUT /api/admin/users/:id error:', json?.error || text)
+                    toast.error(json?.error || 'No se pudo guardar el usuario')
+                    return
+                  }
+                  toast.success('Usuario actualizado')
+                  await loadUsers()
+                  setEditingUser(null)
+                })
               }}
             >
               <div className="space-y-2">
@@ -408,9 +419,19 @@ export function ConfigPage() {
                   memberships: userForm.memberships,
                 }),
               })
-              await loadUsers()
-              setCreatingUserOpen(false)
-              setUserForm({ email: "", name: "", password: "", memberships: [] })
+                .then(async (res) => {
+                  const text = await res.text()
+                  const json = text ? JSON.parse(text) : {}
+                  if (!res.ok) {
+                    console.error('POST /api/admin/users error:', json?.error || text)
+                    toast.error(json?.error || 'No se pudo crear el usuario')
+                    return
+                  }
+                  toast.success('Usuario creado')
+                  await loadUsers()
+                  setCreatingUserOpen(false)
+                  setUserForm({ email: "", name: "", password: "", memberships: [] })
+                })
             }}
           >
             <div className="space-y-2">

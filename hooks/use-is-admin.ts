@@ -20,7 +20,7 @@ export function useIsAdmin() {
           .from("membresia")
           .select("rol")
           .eq("usuario_id", user.id)
-          .eq("rol", "admin")
+          .eq("rol", "gestor_central")
           .limit(1)
         if (!mounted) return
         if (error) {

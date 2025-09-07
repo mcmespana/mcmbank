@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -33,36 +33,63 @@ export function ConfigPage() {
   const [users, setUsers] = useState<UserData[]>([])
   const [editingDelegacion, setEditingDelegacion] = useState<DelegacionWithCount | null>(null)
   const [editingUser, setEditingUser] = useState<UserData | null>(null)
-  const [userForm, setUserForm] = useState({ role: "", password: "", delegaciones: [] as string[] })
+  const [creatingUserOpen, setCreatingUserOpen] = useState(false)
+  const [creatingDelegacionOpen, setCreatingDelegacionOpen] = useState(false)
+  const [userForm, setUserForm] = useState({
+    email: "",
+    name: "",
+    password: "",
+    memberships: [] as { delegacion_id: string; rol: string }[],
+  })
 
-  useEffect(() => {
-    setSelectedDelegation(null)
-  }, [setSelectedDelegation])
+  // La pantalla de configuración no depende de la delegación seleccionada.
+  // Evitamos forzar un cambio aquí para no crear bucles con el proveedor.
 
-  useEffect(() => {
-    const fetchDelegaciones = async () => {
-      const { data } = await supabase.from("delegacion").select("id,codigo,nombre")
-      const withCounts: DelegacionWithCount[] = await Promise.all(
-        (data || []).map(async (d) => {
-          const { count } = await supabase
-            .from("movimiento")
-            .select("id", { count: "exact", head: true })
-            .eq("delegacion_id", d.id)
-          return { ...d, movimientos: count || 0 }
-        })
-      )
-      setDelegaciones(withCounts)
-    }
-    const fetchUsers = async () => {
+  // Helpers to load data
+  const loadDelegaciones = async () => {
+    const { data } = await supabase.from("delegacion").select("id,codigo,nombre,organizacion_id")
+    const withCounts: DelegacionWithCount[] = await Promise.all(
+      (data || []).map(async (d) => {
+        const { count } = await supabase
+          .from("movimiento")
+          .select("id", { count: "exact", head: true })
+          .eq("delegacion_id", d.id)
+        return { ...(d as Delegacion), movimientos: count || 0 }
+      })
+    )
+    setDelegaciones(withCounts)
+  }
+
+  const loadUsers = async () => {
+    try {
       const res = await fetch("/api/admin/users")
-      const json = await res.json()
+      const text = await res.text()
+      // Try to parse JSON if content looks like JSON
+      const json = text ? JSON.parse(text) : { users: [] }
+      if (!res.ok) {
+        console.error("/api/admin/users error:", json?.error || text)
+        setUsers([])
+        return
+      }
       setUsers(json.users || [])
+    } catch (err) {
+      console.error("Error cargando usuarios:", err)
+      setUsers([])
     }
+  }
+
+  useEffect(() => {
     if (isAdmin) {
-      fetchDelegaciones()
-      fetchUsers()
+      loadDelegaciones()
+      loadUsers()
     }
   }, [isAdmin])
+
+  const roles = useMemo(() => [
+    { value: "gestor_central", label: "Gestor Central" },
+    { value: "tesorero", label: "Tesorero" },
+    { value: "solo_lectura", label: "Solo Lectura" },
+  ], [])
 
   if (!isAdmin) {
     return <p className="text-center text-muted-foreground">Acceso restringido</p>
@@ -72,7 +99,10 @@ export function ConfigPage() {
     <div className="space-y-10">
       {/* Delegaciones Section */}
       <section>
-        <h2 className="text-xl font-semibold mb-4">Delegaciones</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Delegaciones</h2>
+          <Button size="sm" onClick={() => setCreatingDelegacionOpen(true)}>Nueva delegación</Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -103,7 +133,15 @@ export function ConfigPage() {
 
       {/* Usuarios Section */}
       <section>
-        <h2 className="text-xl font-semibold mb-4">Usuarios</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Usuarios</h2>
+          <Button size="sm" onClick={() => {
+            setCreatingUserOpen(true)
+            setUserForm({ email: "", name: "", password: "", memberships: [] })
+          }}>
+            Nuevo usuario
+          </Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -115,7 +153,8 @@ export function ConfigPage() {
           </TableHeader>
           <TableBody>
             {users.map((u) => {
-              const role = u.membresias[0]?.rol || "-"
+              const uniqueRoles = new Set(u.membresias.map((m) => m.rol))
+              const role = uniqueRoles.size === 1 ? (u.membresias[0]?.rol || "-") : "múltiples"
               const delegs = u.membresias.map((m) => m.delegacion?.nombre).filter(Boolean).join(", ")
               return (
                 <TableRow key={u.id}>
@@ -129,9 +168,12 @@ export function ConfigPage() {
                       onClick={() => {
                         setEditingUser(u)
                         setUserForm({
-                          role: role,
+                          email: u.email || "",
+                          name: "",
                           password: "",
-                          delegaciones: u.membresias.map((m) => m.delegacion?.id || ""),
+                          memberships: u.membresias
+                            .filter((m) => !!m.delegacion?.id)
+                            .map((m) => ({ delegacion_id: m.delegacion!.id, rol: m.rol })),
                         })
                       }}
                     >
@@ -201,6 +243,50 @@ export function ConfigPage() {
         </SheetContent>
       </Sheet>
 
+      {/* Delegacion Create Sheet */}
+      <Sheet open={creatingDelegacionOpen} onOpenChange={setCreatingDelegacionOpen}>
+        <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Nueva delegación</SheetTitle>
+          </SheetHeader>
+          <form
+            className="space-y-4 py-4"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              const nombre = formData.get("nombre") as string
+              const codigo = (formData.get("codigo") as string) || null
+              const orgId = delegaciones[0]?.organizacion_id
+              if (!orgId) {
+                alert("No se puede crear: falta organizacion_id")
+                return
+              }
+              const { error } = await supabase
+                .from("delegacion")
+                .insert({ nombre, codigo, organizacion_id: orgId } as any)
+              if (error) {
+                alert(error.message)
+                return
+              }
+              await loadDelegaciones()
+              setCreatingDelegacionOpen(false)
+            }}
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nombre</label>
+              <Input name="nombre" required />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Código</label>
+              <Input name="codigo" />
+            </div>
+            <div className="pt-4 flex justify-end">
+              <Button type="submit">Crear</Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+
       {/* User Edit Sheet */}
       <Sheet open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
         <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto">
@@ -215,22 +301,13 @@ export function ConfigPage() {
                 await fetch(`/api/admin/users/${editingUser.id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(userForm),
+                  body: JSON.stringify({
+                    password: userForm.password || undefined,
+                    name: userForm.name || undefined,
+                    memberships: userForm.memberships,
+                  }),
                 })
-                setUsers((prev) =>
-                  prev.map((u) =>
-                    u.id === editingUser.id
-                      ? {
-                          ...u,
-                          membresias: userForm.delegaciones.map((d) => ({
-                            usuario_id: editingUser.id,
-                            rol: userForm.role,
-                            delegacion: delegaciones.find((del) => del.id === d) || null,
-                          })),
-                        }
-                      : u
-                  )
-                )
+                await loadUsers()
                 setEditingUser(null)
               }}
             >
@@ -239,12 +316,11 @@ export function ConfigPage() {
                 <Input value={editingUser.email} disabled />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Rol</label>
+                <label className="text-sm font-medium">Nombre</label>
                 <Input
-                  value={userForm.role}
-                  onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))}
-                  placeholder="admin | usuario"
-                  required
+                  value={userForm.name}
+                  onChange={(e) => setUserForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Nombre completo"
                 />
               </div>
               <div className="space-y-2">
@@ -257,24 +333,50 @@ export function ConfigPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Delegaciones</label>
-                <div className="max-h-40 overflow-y-auto space-y-1 p-2 border rounded-md">
-                  {delegaciones.map((d) => (
-                    <label key={d.id} className="flex items-center space-x-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={userForm.delegaciones.includes(d.id)}
-                        onChange={(e) => {
-                          setUserForm((f) => {
-                            const set = new Set(f.delegaciones)
-                            if (e.target.checked) set.add(d.id)
-                            else set.delete(d.id)
-                            return { ...f, delegaciones: Array.from(set) }
-                          })
-                        }}
-                      />
-                      <span>{d.nombre}</span>
-                    </label>
-                  ))}
+                <div className="max-h-64 overflow-y-auto space-y-3 p-3 border rounded-md">
+                  {delegaciones.map((d) => {
+                    const current = userForm.memberships.find((m) => m.delegacion_id === d.id)
+                    const checked = !!current
+                    return (
+                      <div key={d.id} className="flex items-center justify-between gap-2">
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              setUserForm((f) => {
+                                const exists = f.memberships.find((m) => m.delegacion_id === d.id)
+                                if (e.target.checked) {
+                                  if (!exists) return { ...f, memberships: [...f.memberships, { delegacion_id: d.id, rol: "solo_lectura" }] }
+                                  return f
+                                } else {
+                                  return { ...f, memberships: f.memberships.filter((m) => m.delegacion_id !== d.id) }
+                                }
+                              })
+                            }}
+                          />
+                          <span>{d.nombre}</span>
+                        </label>
+                        {checked && (
+                          <select
+                            className="border rounded px-2 py-1 text-sm"
+                            value={current?.rol || "solo_lectura"}
+                            onChange={(e) => {
+                              const value = e.target.value
+                              setUserForm((f) => ({
+                                ...f,
+                                memberships: f.memberships.map((m) => (m.delegacion_id === d.id ? { ...m, rol: value } : m)),
+                              }))
+                            }}
+                          >
+                            {roles.map((r) => (
+                              <option key={r.value} value={r.value}>{r.label}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
               <div className="pt-4 flex justify-end">
@@ -282,6 +384,113 @@ export function ConfigPage() {
               </div>
             </form>
           )}
+        </SheetContent>
+      </Sheet>
+
+      {/* User Create Sheet */}
+      <Sheet open={creatingUserOpen} onOpenChange={setCreatingUserOpen}>
+        <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Nuevo usuario</SheetTitle>
+          </SheetHeader>
+          <form
+            className="space-y-4 py-4"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              if (!userForm.email || !userForm.password) return
+              await fetch(`/api/admin/users`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: userForm.email,
+                  password: userForm.password,
+                  name: userForm.name || undefined,
+                  memberships: userForm.memberships,
+                }),
+              })
+              await loadUsers()
+              setCreatingUserOpen(false)
+              setUserForm({ email: "", name: "", password: "", memberships: [] })
+            }}
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                value={userForm.email}
+                onChange={(e) => setUserForm((f) => ({ ...f, email: e.target.value }))}
+                type="email"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nombre</label>
+              <Input
+                value={userForm.name}
+                onChange={(e) => setUserForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Nombre completo"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Contraseña</label>
+              <Input
+                type="password"
+                value={userForm.password}
+                onChange={(e) => setUserForm((f) => ({ ...f, password: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Delegaciones</label>
+              <div className="max-h-64 overflow-y-auto space-y-3 p-3 border rounded-md">
+                {delegaciones.map((d) => {
+                  const current = userForm.memberships.find((m) => m.delegacion_id === d.id)
+                  const checked = !!current
+                  return (
+                    <div key={d.id} className="flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            setUserForm((f) => {
+                              const exists = f.memberships.find((m) => m.delegacion_id === d.id)
+                              if (e.target.checked) {
+                                if (!exists) return { ...f, memberships: [...f.memberships, { delegacion_id: d.id, rol: "solo_lectura" }] }
+                                return f
+                              } else {
+                                return { ...f, memberships: f.memberships.filter((m) => m.delegacion_id !== d.id) }
+                              }
+                            })
+                          }}
+                        />
+                        <span>{d.nombre}</span>
+                      </label>
+                      {checked && (
+                        <select
+                          className="border rounded px-2 py-1 text-sm"
+                          value={current?.rol || "solo_lectura"}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setUserForm((f) => ({
+                              ...f,
+                              memberships: f.memberships.map((m) => (m.delegacion_id === d.id ? { ...m, rol: value } : m)),
+                            }))
+                          }}
+                        >
+                          {roles.map((r) => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="pt-4 flex justify-end">
+              <Button type="submit">Crear</Button>
+            </div>
+          </form>
         </SheetContent>
       </Sheet>
     </div>

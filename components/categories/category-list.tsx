@@ -88,7 +88,7 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 sm:h-9 sm:w-9 text-blue-600 hover:bg-blue-50"
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-primary hover:bg-muted"
                   onClick={() => onSearch(category)}
                   title="Buscar transacciones"
                 >
@@ -97,7 +97,7 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 sm:h-9 sm:w-9 text-gray-600 hover:bg-gray-50"
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:bg-muted"
                   onClick={() => onEdit(category)}
                   title="Editar categoría"
                 >
@@ -106,7 +106,7 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 sm:h-9 sm:w-9 text-red-600 hover:bg-red-50"
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-destructive hover:bg-destructive/10"
                   onClick={() => onDelete(category)}
                   title="Eliminar categoría"
                 >

@@ -1,20 +1,21 @@
 import type React from "react"
+import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AppProviders } from "@/contexts/app-providers"
 import "./globals.css"
 
-const geist = Geist({
+const fontSans = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-geist",
+  variable: "--font-sans",
 })
 
-const geistMono = Geist_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
 })
 
 export const metadata: Metadata = {
@@ -29,8 +30,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${geist.variable} ${geistMono.variable} antialiased`}>
-      <body suppressHydrationWarning>
+    <html
+      lang="es"
+      className={`${fontSans.variable} ${fontMono.variable} antialiased`}
+      suppressHydrationWarning
+    >
+      <body>
         <AppProviders>{children}</AppProviders>
         <Analytics />
       </body>

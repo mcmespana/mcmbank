@@ -286,21 +286,19 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
                 variant={hasActiveFilters ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFiltersOpen(!filtersOpen)}
-                className={`lg:hidden flex-shrink-0 relative ${
-                  hasActiveFilters ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
-                }`}
+                className="lg:hidden flex-shrink-0 relative"
                 title="Filtros"
               >
                 <Filter className="h-4 w-4" />
                 <span className="hidden sm:ml-2 sm:inline">Filtros</span>
                 {hasActiveFilters && (
-                  <div className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+                  <div className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full border-2 border-background bg-primary" />
                 )}
               </Button>
 
               {/* Add Button - Always show text on sm+ screens */}
               <Button
-                variant="outline"
+                variant="shine"
                 size="sm"
                 onClick={() => setCreateFormOpen(true)}
                 className="flex-shrink-0"
@@ -314,7 +312,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-shrink-0 bg-transparent"
+                className="flex-shrink-0"
                 title="Importar transacciones"
                 onClick={() => setImportOpen(true)}
               >
@@ -328,9 +326,10 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
                 size="sm"
                 onClick={handleDownload}
                 disabled={downloadState === "downloading"}
-                className={`flex-shrink-0 bg-transparent ${
-                  downloadState === "success" ? "bg-green-500 hover:bg-green-600 text-white" : ""
-                }`}
+                className={cn(
+                  "flex-shrink-0",
+                  downloadState === "success" && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20",
+                )}
                 title="Descargar transacciones"
               >
                 {downloadState === "downloading" ? (

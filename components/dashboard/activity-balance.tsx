@@ -88,7 +88,7 @@ export function ActivityBalanceDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">€{summary.ingresos.toFixed(2)}</div>
@@ -97,7 +97,7 @@ export function ActivityBalanceDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Gastos</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <TrendingDown className="h-4 w-4 text-rose-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">€{summary.gastos.toFixed(2)}</div>
@@ -107,7 +107,7 @@ export function ActivityBalanceDashboard() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Balance</CardTitle>
             <Wallet
-              className={`h-4 w-4 ${summary.balance >= 0 ? "text-green-600" : "text-red-600"}`}
+              className={`h-4 w-4 ${summary.balance >= 0 ? "text-emerald-500" : "text-rose-500"}`}
             />
           </CardHeader>
           <CardContent>
@@ -132,17 +132,22 @@ export function ActivityBalanceDashboard() {
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px]">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
                   tickFormatter={(value) =>
                     format(new Date(value), "d MMM", { locale: es })
                   }
                 />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="ingresos" fill="var(--color-ingresos)" />
-                <Bar dataKey="gastos" fill="var(--color-gastos)" />
+                <YAxis tickLine={false} axisLine={false} />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="dot" />}
+                />
+                <Bar dataKey="ingresos" fill="var(--color-ingresos)" radius={4} />
+                <Bar dataKey="gastos" fill="var(--color-gastos)" radius={4} />
               </BarChart>
             </ChartContainer>
           </CardContent>

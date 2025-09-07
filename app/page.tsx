@@ -15,38 +15,43 @@ export default function HomePage() {
 
   return (
     <AppLayout>
-      <Tabs defaultValue="inicio" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="inicio">Inicio</TabsTrigger>
-          <TabsTrigger value="actividad">Balance de actividad</TabsTrigger>
-          <TabsTrigger value="categorias">Análisis categorías</TabsTrigger>
-        </TabsList>
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight">Bienvenido de nuevo</h1>
+            <p className="text-muted-foreground">Aquí tienes un resumen de la actividad financiera.</p>
+          </div>
+          <TimeframeFilter value={timeframe} onChange={setTimeframe} />
+        </div>
 
-        <TabsContent value="inicio" className="space-y-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-muted-foreground">Panel de control financiero de MCM Bank</p>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-1 sm:w-auto sm:inline-flex">
+            <TabsTrigger value="overview">Resumen</TabsTrigger>
+            <TabsTrigger value="activity">Balance de Actividad</TabsTrigger>
+            <TabsTrigger value="categories">Análisis de Categorías</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-8">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              <div className="lg:col-span-3">
+                <FinancialSummary from={from} to={to} />
+              </div>
+              <div className="lg:col-span-3">
+                <h2 className="mb-4 text-2xl font-semibold">Acciones Rápidas</h2>
+                <QuickActions />
+              </div>
             </div>
-            <TimeframeFilter value={timeframe} onChange={setTimeframe} />
-          </div>
+          </TabsContent>
 
-          <FinancialSummary from={from} to={to} />
+          <TabsContent value="activity">
+            <ActivityBalanceDashboard />
+          </TabsContent>
 
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Acciones Rápidas</h2>
-            <QuickActions />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="actividad" className="space-y-8">
-          <ActivityBalanceDashboard />
-        </TabsContent>
-
-        <TabsContent value="categorias" className="space-y-8">
-          <CategoryAnalysisDashboard />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="categories">
+            <CategoryAnalysisDashboard />
+          </TabsContent>
+        </Tabs>
+      </div>
     </AppLayout>
   )
 }

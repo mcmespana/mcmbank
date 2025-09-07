@@ -1,11 +1,12 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Wallet, Target, Tag } from "lucide-react"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 interface Props {
   from: string
@@ -52,32 +53,32 @@ export function FinancialSummary({ from, to }: Props) {
       value: `€${summary.ingresos.toFixed(2)}`,
       description: "Total de entradas",
       icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      color: "text-emerald-500",
+      bgColor: "bg-emerald-500/10",
     },
     {
       title: "Gastos",
       value: `€${summary.gastos.toFixed(2)}`,
       description: "Total de salidas",
       icon: TrendingDown,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
+      color: "text-rose-500",
+      bgColor: "bg-rose-500/10",
     },
     {
       title: "Balance",
       value: `€${summary.balance.toFixed(2)}`,
       description: "Ingresos - Gastos",
       icon: Wallet,
-      color: summary.balance >= 0 ? "text-green-600" : "text-red-600",
-      bgColor: summary.balance >= 0 ? "bg-green-50" : "bg-red-50",
+      color: summary.balance >= 0 ? "text-emerald-500" : "text-rose-500",
+      bgColor: summary.balance >= 0 ? "bg-emerald-500/10" : "bg-rose-500/10",
     },
     {
       title: "Transacciones",
       value: summary.count.toString(),
       description: "En el periodo",
       icon: Target,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10",
       action: () => router.push("/transacciones"),
     },
     {
@@ -85,28 +86,31 @@ export function FinancialSummary({ from, to }: Props) {
       value: summary.uncategorized.toString(),
       description: "Transacciones",
       icon: Tag,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      color: "text-amber-500",
+      bgColor: "bg-amber-500/10",
       action: () => router.push("/transacciones?uncategorized=1"),
     },
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
       {metrics.map((metric) => (
         <Card
           key={metric.title}
-          className={metric.action ? "cursor-pointer hover:shadow-md" : undefined}
+          className={cn(
+            "transition-all duration-200",
+            metric.action && "cursor-pointer hover:border-primary/50 hover:shadow-lg",
+          )}
           onClick={metric.action}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
-            <div className={`p-2 rounded-lg ${metric.bgColor}`}>
-              <metric.icon className={`h-4 w-4 ${metric.color}`} />
+            <CardTitle className="text-sm font-medium text-muted-foreground">{metric.title}</CardTitle>
+            <div className={cn("rounded-md p-2", metric.bgColor)}>
+              <metric.icon className={cn("h-5 w-5", metric.color)} />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metric.value}</div>
+            <div className="text-3xl font-bold">{metric.value}</div>
             <p className="text-xs text-muted-foreground">{metric.description}</p>
           </CardContent>
         </Card>

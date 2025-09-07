@@ -21,6 +21,35 @@ export const metadata: Metadata = {
   title: "MCM Bank - Gestión Financiera",
   description: "Sistema de gestión financiera para delegaciones",
   generator: "v0.app",
+  appleWebApp: {
+    title: "MCM Bank",
+    statusBarStyle: "default",
+    capable: true,
+  },
+  manifest: "/site.webmanifest",
+  icons: [
+    {
+      rel: "icon",
+      url: "/favicon.ico",
+      sizes: "any",
+    },
+    {
+      rel: "icon",
+      url: "/favicon.svg",
+      type: "image/svg+xml",
+    },
+    {
+      rel: "apple-touch-icon",
+      url: "/apple-touch-icon.png",
+      sizes: "180x180",
+    },
+    {
+      rel: "icon",
+      url: "/favicon-96x96.png",
+      sizes: "96x96",
+      type: "image/png",
+    },
+  ],
 }
 
 export default function RootLayout({
@@ -30,6 +59,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${geist.variable} ${geistMono.variable} antialiased`}>
+      <head>
+        <meta name="apple-mobile-web-app-title" content="MCM Bank" />
+        <meta name="application-name" content="MCM Bank" />
+        <meta name="theme-color" content="#0b42db" />
+        <meta name="msapplication-TileColor" content="#0b42db" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body suppressHydrationWarning>
         <AppProviders>{children}</AppProviders>
         <Analytics />

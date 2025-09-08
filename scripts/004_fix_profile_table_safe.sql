@@ -14,7 +14,7 @@ ALTER TABLE public.perfil ENABLE ROW LEVEL SECURITY;
 -- Drop existing policies if they exist, then recreate them
 DROP POLICY IF EXISTS "Users can view own profile" ON public.perfil;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.perfil;
-DROP POLICY IF EXISTS "Users can insert own profile" ON public.perfil;
+DROP POLICY< IF EXISTS "Users can insert own profile" ON public.perfil;
 
 -- Create policies
 CREATE POLICY "Users can view own profile" ON public.perfil

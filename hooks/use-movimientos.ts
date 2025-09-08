@@ -17,13 +17,13 @@ interface MovimientosFilters {
   uncategorized?: boolean
 }
 
-const PAGE_SIZE = 100
+const DEFAULT_PAGE_SIZE = 100
 
 export function useMovimientos(
   delegacionId: string | null,
   filters?: MovimientosFilters,
-  options: { timeoutMs?: number } = {}
-) {
+    options: { timeoutMs?: number; pageSize?: number } = {}
+  ) {
   const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,6 +34,7 @@ export function useMovimientos(
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const timeoutMs = options.timeoutMs ?? 15000
+  const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
 
   const fetchMovimientos = useCallback(
     async (pageToLoad = 0, append = false) => {
@@ -56,8 +57,8 @@ export function useMovimientos(
         setLoading(true)
         setError(null)
 
-        const from = pageToLoad * PAGE_SIZE
-        const to = from + PAGE_SIZE - 1
+        const from = pageToLoad * pageSize
+        const to = from + pageSize - 1
 
         const build = async (signal: AbortSignal) => {
           let query = supabase
@@ -114,7 +115,7 @@ export function useMovimientos(
         if (error) throw error
 
         setMovimientos(prev => (append ? [...prev, ...(data || [])] : (data || [])))
-        if ((data || []).length < PAGE_SIZE) {
+        if ((data || []).length < pageSize) {
           setHasMore(false)
         }
       } catch (err) {
@@ -131,7 +132,7 @@ export function useMovimientos(
         }
       }
     },
-    [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized, timeoutMs]
+      [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized, timeoutMs, pageSize]
   )
 
   useEffect(() => {
@@ -146,7 +147,7 @@ export function useMovimientos(
       if (abortRef.current) abortRef.current.abort()
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized, fetchMovimientos])
+    }, [delegacionId, filters?.fechaDesde, filters?.fechaHasta, (filters?.categoriaIds || []).join(","), filters?.cuentaId, filters?.busqueda, filters?.amountFrom, filters?.amountTo, filters?.uncategorized, fetchMovimientos, pageSize])
 
   useRevalidateOnFocusJitter(() => fetchMovimientos(0, false), { minMs: 90, maxMs: 220 })
 

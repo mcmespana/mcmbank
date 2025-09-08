@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
-import { CalendarIcon, AlertTriangle, Check, Loader2 } from "lucide-react"
+import { CalendarIcon, AlertTriangle, Check, Loader2, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +29,7 @@ interface TransactionDetailProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
+  onBack?: () => void
 }
 
 export function TransactionDetail({
@@ -38,6 +39,7 @@ export function TransactionDetail({
   open,
   onOpenChange,
   onUpdate,
+  onBack,
 }: TransactionDetailProps) {
   const [formData, setFormData] = useState<Partial<Movimiento>>({})
   const [dateOpen, setDateOpen] = useState(false)
@@ -132,10 +134,17 @@ export function TransactionDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto p-0 relative">
+      <SheetContent className="w-full sm:w-[560px] sm:max-w-[640px] overflow-y-auto p-0 relative z-[60]">
         <div className="p-4 sm:p-6">
           <SheetHeader className="pb-4">
-            <SheetTitle className="text-xl font-semibold text-left">Transacción</SheetTitle>
+            <div className="flex items-center gap-2">
+              {onBack && (
+                <Button variant="ghost" size="icon" className="-ml-2" onClick={onBack}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <SheetTitle className="text-xl font-semibold text-left">Transacción</SheetTitle>
+            </div>
 
             <div className="bg-muted/30 rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 mt-4">
               {account && (

@@ -11,8 +11,7 @@ import { useMovimientos } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { formatDate } from "@/lib/utils/format"
-import { TransactionDetail } from "./transaction-detail"
-import type { Cuenta, Categoria, MovimientoConRelaciones, Movimiento } from "@/lib/types/database"
+import type { Cuenta, Categoria, MovimientoConRelaciones } from "@/lib/types/database"
 
 interface RelatedMovementsSheetProps {
   account?: Cuenta | null
@@ -26,7 +25,7 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
   const { categorias: categories } = useCategorias(getCurrentDelegation()?.organizacion_id)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
 
-  const { movimientos, loading, error, loadMore, hasMore, updateMovimiento } = useMovimientos(
+  const { movimientos, loading, error, loadMore, hasMore } = useMovimientos(
     selectedDelegation,
     {
       cuentaId: account?.id,
@@ -35,8 +34,6 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
     { pageSize: 50 },
   )
 
-  const [selectedMovement, setSelectedMovement] = useState<MovimientoConRelaciones | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -58,7 +55,7 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:w-[540px] overflow-y-auto">
+        <SheetContent side="right" className="w-full sm:w-[640px] sm:max-w-[720px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
           </SheetHeader>
@@ -74,13 +71,9 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
             ) : (
               <div className="divide-y">
                 {movimientos.map((mov) => (
-                  <button
+                  <div
                     key={mov.id}
-                    onClick={() => {
-                      setSelectedMovement(mov)
-                      setDetailOpen(true)
-                    }}
-                    className="w-full text-left p-4 hover:bg-muted flex items-center justify-between gap-4"
+                    className="w-full p-4 flex items-center justify-between gap-4"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-medium truncate">{mov.concepto}</p>
@@ -104,7 +97,7 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
                       </div>
                     </div>
                     <AmountDisplay amount={mov.importe} size="sm" />
-                  </button>
+                  </div>
                 ))}
                 {hasMore && (
                   <div ref={loadMoreRef} className="py-4 flex justify-center">
@@ -116,23 +109,6 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
           </div>
         </SheetContent>
       </Sheet>
-      <TransactionDetail
-        movement={selectedMovement as unknown as Movimiento}
-        accounts={accounts as unknown as Cuenta[]}
-        categories={categories as unknown as Categoria[]}
-        open={detailOpen}
-        onOpenChange={(open) => {
-          setDetailOpen(open)
-          if (!open) setSelectedMovement(null)
-        }}
-        onUpdate={async (id, patch) => {
-          await updateMovimiento(id, patch)
-        }}
-        onBack={() => {
-          setDetailOpen(false)
-          setSelectedMovement(null)
-        }}
-      />
     </>
   )
 }

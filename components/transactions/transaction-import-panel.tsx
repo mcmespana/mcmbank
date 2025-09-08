@@ -160,7 +160,7 @@ export function TransactionImportPanel({
     if (typeof value === 'number') return value
     
     // Limpiar el valor: quitar espacios, símbolos de euro, paréntesis, etc.
-    let cleanValue = String(value).trim()
+    const cleanValue = String(value).trim()
       .replace(/\s/g, '')                    // Quitar espacios
       .replace(/€/g, '')                     // Quitar símbolo de euro
       .replace(/[\(\)]/g, '')                // Quitar paréntesis (para números negativos)
@@ -335,7 +335,7 @@ export function TransactionImportPanel({
     const result: ParsedTransaction[] = []
     const skippedRows: number[] = []
     let categoriesFound = 0
-    let categoriesNotFound: string[] = []
+    const categoriesNotFound: string[] = []
     
     // Saltar la primera fila que contiene los headers
     for (let i = 1; i < rows.length; i++) {

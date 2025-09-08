@@ -28,7 +28,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
-import { DebugDelegationInfo } from "@/components/debug/debug-delegation-info"
 
 export interface TransactionFilters {
   dateFrom?: string
@@ -113,6 +112,11 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const handleMovementClick = (movement: MovimientoConRelaciones) => {
     setSelectedMovement(movement)
     setDetailOpen(true)
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set("mov", movement.id)
+      window.history.replaceState(null, "", url.toString())
+    } catch {}
   }
 
   const handleMovementUpdate = async (
@@ -193,7 +197,16 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     if (searchParams.get("uncategorized") === "1") {
       setFilters((prev) => ({ ...prev, uncategorized: true }))
     }
-  }, [searchParams])
+
+    const movId = searchParams.get("mov")
+    if (movId) {
+      const found = movements.find((m) => m.id === movId)
+      if (found) {
+        setSelectedMovement(found)
+        setDetailOpen(true)
+      }
+    }
+  }, [searchParams, movements])
 
   if (delegationsLoading) {
     return (
@@ -382,10 +395,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
 
         {/* Transaction List */}
         <div className="flex-1 overflow-auto">
-          {/* Debug info - solo en desarrollo */}
-          <div className="p-4 pb-0">
-            <DebugDelegationInfo movements={movements} accounts={accounts} />
-          </div>
+          {/* Debug info removed */}
           
           <TransactionList
             movements={movements}
@@ -410,7 +420,16 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
         accounts={accounts as unknown as Cuenta[]}
         categories={categories as unknown as Categoria[]}
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open)
+          if (!open) {
+            try {
+              const url = new URL(window.location.href)
+              url.searchParams.delete("mov")
+              window.history.replaceState(null, "", url.toString())
+            } catch {}
+          }
+        }}
         onUpdate={async (movementId, patch) => {
           const fullPatch: Partial<MovimientoConRelaciones> = patch
           await handleMovementUpdate(movementId, fullPatch)

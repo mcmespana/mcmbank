@@ -22,7 +22,7 @@ export function createClient() {
         try {
           const store = await cookies()
           for (const { name, value, options } of cookiesToSet) {
-            // @ts-ignore - the runtime provides the correct options type
+            // @ts-expect-error - the runtime provides the correct options type
             await store.set(name, value, options)
           }
         } catch {

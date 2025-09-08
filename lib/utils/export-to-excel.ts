@@ -7,7 +7,7 @@ export async function exportMovementsToExcel(
   categories: Categoria[],
 ) {
   try {
-    // @ts-ignore - optional dependency
+    // @ts-expect-error - optional dependency
     const XLSX = await import("xlsx")
 
     const data = movements.map((m) => ({

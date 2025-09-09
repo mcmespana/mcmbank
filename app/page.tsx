@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TimeframeFilter, Timeframe, getTimeframeRange } from "@/components/dashboard/timeframe-filter"
 import { ActivityBalanceDashboard } from "@/components/dashboard/activity-balance"
 import { CategoryAnalysisDashboard } from "@/components/dashboard/category-analysis"
+import { AnimatedText } from "@/components/ui/animated-text"
 
 export default function HomePage() {
   const [timeframe, setTimeframe] = useState<Timeframe>("school-year")
@@ -26,7 +27,9 @@ export default function HomePage() {
         <TabsContent value="inicio" className="space-y-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+              <AnimatedText className="text-3xl font-bold tracking-tight">
+                Dashboard
+              </AnimatedText>
               <p className="text-muted-foreground">Panel de control financiero de MCM Bank</p>
             </div>
             <TimeframeFilter value={timeframe} onChange={setTimeframe} />

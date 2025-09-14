@@ -76,12 +76,15 @@ export function TransactionDetail({
         categoria_id: movement.categoria_id,
         contraparte: movement.contraparte || "",
       })
+      setLastSaved(null)
+      setShowSaved(false)
     }
   }, [movement])
 
   useEffect(() => {
     if (movement && hasChanges) {
       setIsSaving(true)
+      setShowSaved(false)
       const timeoutId = setTimeout(async () => {
         try {
           await onUpdate(movement.id, formData)
@@ -91,7 +94,7 @@ export function TransactionDetail({
         } finally {
           setIsSaving(false)
         }
-      }, 1000)
+      }, 2000)
 
       return () => clearTimeout(timeoutId)
     }
@@ -134,7 +137,7 @@ export function TransactionDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:w-[560px] sm:max-w-[640px] overflow-y-auto p-0 relative z-[60]">
+      <SheetContent side="right" className="w-full sm:w-[560px] sm:max-w-[640px] overflow-y-auto p-0 relative z-[60]">
         <div className="p-4 sm:p-6">
           <SheetHeader className="pb-4">
             <div className="flex items-center gap-2">

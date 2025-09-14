@@ -409,8 +409,11 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
         movement={selectedMovement}
         accounts={accounts as unknown as Cuenta[]}
         categories={categories as unknown as Categoria[]}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
+        open={detailOpen && !!selectedMovement}
+        onOpenChange={(open) => {
+          setDetailOpen(open)
+          if (!open) setSelectedMovement(null)
+        }}
         onUpdate={async (movementId, patch) => {
           const fullPatch: Partial<MovimientoConRelaciones> = patch
           await handleMovementUpdate(movementId, fullPatch)

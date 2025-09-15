@@ -137,7 +137,7 @@ export function TransactionDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:w-[560px] sm:max-w-[640px] overflow-y-auto p-0 relative z-[60]">
+      <SheetContent side="right" className="z-[60] w-full overflow-y-auto p-0 sm:w-[560px] sm:max-w-[640px]">
         <div className="p-4 sm:p-6">
           <SheetHeader className="pb-4">
             <div className="flex items-center gap-2">

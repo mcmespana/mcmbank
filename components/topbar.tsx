@@ -5,15 +5,18 @@ import { Sidebar } from "./sidebar"
 import { useAuth } from "@/contexts/auth-context"
 import { usePerfil } from "@/hooks/use-perfil"
 import { useTheme } from "next-themes"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { 
-  User, 
-  LogOut, 
-  Moon, 
-  Sun, 
-  BookOpen
-} from "lucide-react"
+import { User, LogOut, Moon, Sun, BookOpen, Monitor } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface TopbarProps {
@@ -24,7 +27,7 @@ interface TopbarProps {
 export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) {
   const { user, signOut } = useAuth()
   const { perfil, loading } = usePerfil()
-  const { resolvedTheme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme, theme } = useTheme()
   
   // Handle hydration mismatch for theme
   const [mounted, setMounted] = useState(false)
@@ -82,10 +85,18 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
     }
   }
 
-  const handleThemeToggle = () => {
-    if (!mounted) return
-    setTheme(resolvedTheme === "light" ? "dark" : "light")
+  const themePreference = theme ?? "system"
+  const isSystemPreference = themePreference === "system"
+  const activeTheme = resolvedTheme ?? "light"
+  const themeLabels: Record<string, string> = {
+    light: "Claro",
+    dark: "Oscuro",
+    system: "Según dispositivo",
   }
+
+  const themeButtonTitle = isSystemPreference
+    ? `Tema: ${themeLabels[activeTheme]} (según dispositivo)`
+    : `Tema: ${themeLabels[themePreference]}`
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
@@ -115,16 +126,44 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
 
         {/* Theme toggle */}
         {mounted && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleThemeToggle}
-            className="w-9 h-9 p-0"
-          >
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Cambiar tema</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative w-9 h-9 p-0"
+                title={themeButtonTitle}
+              >
+                <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                {isSystemPreference && (
+                  <Monitor className="absolute -bottom-1 -right-1 h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                <span className="sr-only">Cambiar tema</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Modo de apariencia</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup
+                value={themePreference}
+                onValueChange={(value) => setTheme(value)}
+              >
+                <DropdownMenuRadioItem value="light" className="flex items-center gap-2">
+                  <Sun className="h-4 w-4" />
+                  <span>Claro</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark" className="flex items-center gap-2">
+                  <Moon className="h-4 w-4" />
+                  <span>Oscuro</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system" className="flex items-center gap-2">
+                  <Monitor className="h-4 w-4" />
+                  <span>Según dispositivo</span>
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {/* User info and logout */}

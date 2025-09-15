@@ -4,6 +4,7 @@ import type React from "react"
 import { AuthProvider } from "./auth-context"
 import { DelegationProvider } from "./delegation-context"
 import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeStateWatcher } from "@/components/theme-state-watcher"
 import { ConnectionMonitor } from "@/components/connection-monitor"
 import { Toaster } from "sonner"
 
@@ -19,6 +20,7 @@ export function AppProviders({ children }: AppProvidersProps) {
       enableSystem
       disableTransitionOnChange
     >
+      <ThemeStateWatcher />
       <AuthProvider>
         <DelegationProvider>
           <ConnectionMonitor />

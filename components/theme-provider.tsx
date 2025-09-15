@@ -6,7 +6,7 @@ import {
   type ThemeProviderProps,
 } from 'next-themes'
 
-export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+export function ThemeProvider({ children, storageKey = 'mcmbank-theme', ...props }: ThemeProviderProps) {
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -24,6 +24,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      storageKey={storageKey}
       {...props}
     >
       {children}

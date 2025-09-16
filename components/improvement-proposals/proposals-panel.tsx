@@ -40,13 +40,13 @@ export function ImprovementProposalsPanel() {
     return { total, celebrating, active, fresh }
   }, [proposals])
 
-  const handleCreateProposal = async (values: { title: string; description: string; impact?: string | null }) => {
+  const handleCreateProposal = async (values: { title: string; description: string}) => {
     try {
       await createProposal(values)
       toast.success("¡Gracias por compartir tu idea! ✨")
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "No pudimos guardar tu propuesta. Intenta de nuevo más tarde."
+        err instanceof Error ? err.message : "No pudimos guardar tu propuesta. Quizá es una buena propuesta que este sitema funcione, pero mira, no se puede tener todo."
       toast.error(message)
       throw err
     }
@@ -59,7 +59,7 @@ export function ImprovementProposalsPanel() {
       toast.success(`Estado actualizado a ${statusLabels[status]}`)
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "No pudimos actualizar el estado de la idea. Intenta más tarde."
+        err instanceof Error ? err.message : "No pudimos actualizar el estado de la idea. ¿Nos proponemos mejorarlo?"
       toast.error(message)
       throw err
     } finally {
@@ -74,7 +74,7 @@ export function ImprovementProposalsPanel() {
       toast.success("Ideas actualizadas")
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "No pudimos actualizar la lista de ideas. Vuelve a intentarlo."
+        err instanceof Error ? err.message : "No pudimos actualizar la lista de ideas. Un fallito tontorrón..."
       toast.error(message)
     } finally {
       setManualRefresh(false)
@@ -96,11 +96,8 @@ export function ImprovementProposalsPanel() {
             </div>
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold leading-tight md:text-4xl">
-                Impulsemos juntos el futuro de MCM Bank
+                ¿Por qué no mejoramos esto?
               </h1>
-              <p className="text-base text-white/80 md:max-w-xl">
-                Comparte ideas, inspírate con otras personas y sigue cómo evolucionan las mejoras que marcarán la diferencia.
-              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -126,11 +123,11 @@ export function ImprovementProposalsPanel() {
                 >
                   {showCompleted ? (
                     <>
-                      <EyeOff className="mr-2 h-5 w-5" /> Ocultar Hechísimo
+                      <EyeOff className="mr-2 h-5 w-5" /> Ocultar Desarrollos Hechísimos
                     </>
                   ) : (
                     <>
-                      <Eye className="mr-2 h-5 w-5" /> Mostrar Hechísimo
+                      <Eye className="mr-2 h-5 w-5" /> Mostrar Desarrollos Hechísimos
                     </>
                   )}
                 </Button>
@@ -150,39 +147,11 @@ export function ImprovementProposalsPanel() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
-              <Badge className="bg-white/20 text-white hover:bg-white/30">Todos ven todo</Badge>
-              <Badge className="bg-white/20 text-white hover:bg-white/30">Sin moderación previa</Badge>
               {isAdmin && <Badge className="bg-white text-indigo-700 hover:bg-white">Control gestor central</Badge>}
             </div>
           </div>
 
-          <div className="relative rounded-3xl border border-white/30 bg-white/10 p-6 text-white shadow-inner backdrop-blur">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-white/70">Panorama actual</h2>
-            <div className="mt-4 space-y-4">
-              <div>
-                <p className="text-4xl font-semibold">{stats.total}</p>
-                <p className="text-sm text-white/70">ideas activas en el panel</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-2xl font-semibold">{stats.fresh}</p>
-                  <p className="text-xs text-white/70">recién llegadas</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold">{stats.active}</p>
-                  <p className="text-xs text-white/70">en movimiento</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold">{stats.celebrating}</p>
-                  <p className="text-xs text-white/70">celebradas</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold">{showCompleted ? stats.celebrating : stats.active}</p>
-                  <p className="text-xs text-white/70">{showCompleted ? "visibles" : "a la vista"}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
       </section>
 

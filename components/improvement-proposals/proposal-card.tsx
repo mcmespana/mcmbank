@@ -125,17 +125,6 @@ export function ProposalCard({
           {proposal.descripcion}
         </p>
 
-        {proposal.impacto && (
-          <div className="rounded-2xl border border-amber-200/60 bg-amber-50/80 px-4 py-3 text-sm text-amber-700 shadow-inner dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-            <div className="flex items-center gap-2 font-medium">
-              <Sparkles className="h-4 w-4" /> Impacto esperado
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-amber-800/80 dark:text-amber-100/90">
-              {proposal.impacto}
-            </p>
-          </div>
-        )}
-
         <div className="flex flex-col gap-4 border-t border-dashed border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">

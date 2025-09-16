@@ -62,7 +62,7 @@ export function ProposalsBoard({
     return (
       <EmptyState
         title="Aún no hay propuestas de mejora"
-        description="Sé la primera persona en compartir una idea para potenciar MCM Bank. ¡Queremos escucharte!"
+        description="¡Danos ideas porfi!"
         icon={<Lightbulb className="h-6 w-6" />}
       />
     )

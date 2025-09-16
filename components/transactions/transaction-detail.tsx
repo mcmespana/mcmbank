@@ -16,7 +16,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CategorySelector } from "./category-selector"
+import { CategoryChip } from "./category-chip"
 import { BankAvatar } from "@/components/bank-avatar"
 import { TabWithCounter } from "./tab-with-counter"
 import { formatCurrency } from "@/lib/utils/format"
@@ -379,21 +379,17 @@ export function TransactionDetail({
                     </Popover>
                   </div>
 
-                  {selectedCategory && (
-                    <div className="flex justify-center">
-                      <div
-                        className="px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2"
-                        style={{
-                          backgroundColor: selectedCategory.color + "20",
-                          color: selectedCategory.color,
-                          border: `1px solid ${selectedCategory.color}40`,
-                        }}
-                      >
-                        <span>{selectedCategory.emoji}</span>
-                        <span>{selectedCategory.nombre}</span>
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex justify-center">
+                    <CategoryChip
+                      category={selectedCategory}
+                      categories={categories}
+                      movement={movement}
+                      account={account}
+                      onCategoryChange={(categoryId) =>
+                        setFormData((prev) => ({ ...prev, categoria_id: categoryId }))
+                      }
+                    />
+                  </div>
                 </div>
               </SheetHeader>
 
@@ -488,21 +484,6 @@ export function TransactionDetail({
                         </PopoverContent>
                       </Popover>
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="categoria" className="text-sm font-medium">
-                      Categoría
-                    </Label>
-                    <CategorySelector
-                      categories={categories}
-                      selectedCategories={formData.categoria_id ? [formData.categoria_id] : []}
-                      onSelectionChange={(categoryIds) =>
-                        setFormData((prev) => ({ ...prev, categoria_id: categoryIds.length > 0 ? categoryIds[0] : null }))
-                      }
-                      allowMultiple={false}
-                      placeholder="Sin categoría"
-                    />
                   </div>
 
                   <div className="space-y-2">

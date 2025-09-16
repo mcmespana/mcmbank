@@ -33,8 +33,34 @@ export function useMovimientos(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
 
-  // Memoize filters to avoid infinite re-renders
-  const memoizedFilters = useMemo(() => filters, [filters])
+  const serializedFilters = useMemo(() => {
+    if (!filters) return "__no_filters__"
+
+    const normalized = {
+      ...filters,
+      categoriaIds: filters.categoriaIds ? [...filters.categoriaIds].sort() : undefined,
+    }
+
+    try {
+      return JSON.stringify(normalized)
+    } catch (error) {
+      console.warn("No se pudieron serializar los filtros de movimientos", error)
+      return Math.random().toString(36)
+    }
+  }, [filters])
+
+  // Memoize filters using their serialized representation to avoid effect churn
+  const memoizedFilters = useMemo(() => {
+    if (!filters) return undefined
+
+    return {
+      ...filters,
+      categoriaIds: filters.categoriaIds ? [...filters.categoriaIds] : undefined,
+    }
+  }, [serializedFilters])
+
+  const lastResetKey = useRef<string | null>(null)
+  const resetKey = useMemo(() => `${delegacionId ?? "__no_delegacion__"}|${serializedFilters}|${pageSize}`, [delegacionId, serializedFilters, pageSize])
 
   const fetchMovimientos = useCallback(
     async (pageIndex: number = 0, append: boolean = true) => {
@@ -71,31 +97,66 @@ export function useMovimientos(
             id,
             delegacion_id,
             cuenta_id,
-            importe,
             fecha,
+            concepto,
             descripcion,
+            texto_extra_1,
+            texto_extra_2,
+            contraparte,
+            importe,
+            metodo,
+            notas,
+            ignorado,
             categoria_id,
+            adjunto_principal_url,
+            creado_por,
             creado_en,
-            modificado_en,
-            es_conciliado,
+            concepto_hash,
             cuenta:cuenta_id (
               id,
+              delegacion_id,
               nombre,
               tipo,
               origen,
               banco_nombre,
-              color
+              color,
+              delegacion:delegacion_id (
+                id,
+                organizacion_id,
+                codigo,
+                nombre,
+                creado_en
+              )
             ),
             categoria:categoria_id (
               id,
               nombre,
               color,
-              tipo
+              tipo,
+              emoji,
+              orden,
+              categoria_padre_id,
+              creado_en
+            ),
+            archivos:movimiento_archivo!movimiento_id (
+              id,
+              nombre_original,
+              nombre_archivo,
+              tipo_mime,
+              tamaño_bytes,
+              bucket,
+              path_storage,
+              url_publica,
+              es_factura,
+              descripcion,
+              subido_por,
+              subido_en
             )
           `,
             { count: "exact" }
           )
           .eq("delegacion_id", delegacionId)
+          .eq("ignorado", false)
           .order("fecha", { ascending: false })
           .order("creado_en", { ascending: false })
 
@@ -114,7 +175,10 @@ export function useMovimientos(
             query = query.eq("cuenta_id", memoizedFilters.cuentaId)
           }
           if (memoizedFilters.busqueda) {
-            query = query.ilike("descripcion", `%${memoizedFilters.busqueda}%`)
+            const term = memoizedFilters.busqueda
+              .replace(/%/g, "\\%")
+              .replace(/,/g, "\\,")
+            query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%`)
           }
           if (memoizedFilters.amountFrom !== undefined) {
             query = query.gte("importe", memoizedFilters.amountFrom)
@@ -180,6 +244,12 @@ export function useMovimientos(
   )
 
   useEffect(() => {
+    if (lastResetKey.current === resetKey) {
+      return
+    }
+
+    lastResetKey.current = resetKey
+
     // Cleanup any in-flight when dependencies change
     if (abortRef.current) abortRef.current.abort()
 
@@ -191,8 +261,9 @@ export function useMovimientos(
     return () => {
       if (abortRef.current) abortRef.current.abort()
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      lastResetKey.current = null
     }
-  }, [delegacionId, memoizedFilters, pageSize, fetchMovimientos])
+  }, [resetKey, fetchMovimientos])
 
   useRevalidateOnFocusJitter(() => fetchMovimientos(0, false), { minMs: 90, maxMs: 220 })
 
@@ -226,8 +297,41 @@ export function useMovimientos(
         .from("movimiento")
         .insert(payload)
         .select(
-          `*,
-          cuenta:cuenta_id (*),
+          `
+          id,
+          delegacion_id,
+          cuenta_id,
+          fecha,
+          concepto,
+          descripcion,
+          texto_extra_1,
+          texto_extra_2,
+          contraparte,
+          importe,
+          metodo,
+          notas,
+          ignorado,
+          categoria_id,
+          adjunto_principal_url,
+          creado_por,
+          creado_en,
+          concepto_hash,
+          cuenta:cuenta_id (
+            id,
+            delegacion_id,
+            nombre,
+            tipo,
+            origen,
+            banco_nombre,
+            color,
+            delegacion:delegacion_id (
+              id,
+              organizacion_id,
+              codigo,
+              nombre,
+              creado_en
+            )
+          ),
           categoria:categoria_id (
             id,
             organizacion_id,
@@ -241,8 +345,16 @@ export function useMovimientos(
           archivos:movimiento_archivo!movimiento_id (
             id,
             nombre_original,
+            nombre_archivo,
+            tipo_mime,
+            tamaño_bytes,
+            bucket,
+            path_storage,
+            url_publica,
             es_factura,
-            bucket
+            descripcion,
+            subido_por,
+            subido_en
           )
         `)
         .single()

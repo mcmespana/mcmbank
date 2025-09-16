@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useMemo, type CSSProperties } from "react"
+import { useState, useMemo, useEffect, useRef, type CSSProperties } from "react"
 import { Check, ChevronsUpDown, X, Search, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +19,10 @@ interface CategorySelectorProps {
   allowMultiple?: boolean
   placeholder?: string
   onCategoryRemove?: (categoryId: string) => void
-  showRemoveButton?: boolean
+  open?: boolean
+  defaultOpen?: boolean
+  onOpenChange?: (isOpen: boolean) => void
+  focusSearchOnOpen?: boolean
 }
 
 export function CategorySelector({
@@ -29,10 +32,41 @@ export function CategorySelector({
   allowMultiple = false,
   placeholder = "Seleccionar categoría...",
   onCategoryRemove,
-  showRemoveButton = false,
+  open: openProp,
+  defaultOpen = false,
+  onOpenChange,
+  focusSearchOnOpen = false,
 }: CategorySelectorProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(defaultOpen)
   const [searchValue, setSearchValue] = useState("")
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : internalOpen
+  const setOpenState = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(nextOpen)
+    }
+    onOpenChange?.(nextOpen)
+  }
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    setSearchValue("")
+
+    if (!focusSearchOnOpen) {
+      return
+    }
+
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [open, focusSearchOnOpen])
 
   const filteredCategories = useMemo(() => {
     if (!searchValue) return categories
@@ -55,7 +89,7 @@ export function CategorySelector({
       onSelectionChange(newSelection)
     } else {
       onSelectionChange([categoryId])
-      setOpen(false)
+      setOpenState(false)
     }
   }
 
@@ -75,12 +109,14 @@ export function CategorySelector({
 
   return (
     <div className="space-y-3">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpenState}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             aria-expanded={open}
+            type="button"
+            onClick={() => setOpenState(!open)}
             className="w-full justify-between bg-background border-border hover:bg-muted/50 h-9"
           >
             <span className="truncate text-sm">
@@ -101,7 +137,17 @@ export function CategorySelector({
                 placeholder="Buscar categorías..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault()
+                    const firstCategory = filteredCategories[0]
+                    if (firstCategory) {
+                      handleSelect(firstCategory.id)
+                    }
+                  }
+                }}
                 className="pl-9 bg-background h-8"
+                ref={searchInputRef}
               />
             </div>
           </div>
@@ -150,7 +196,7 @@ export function CategorySelector({
             </div>
           </ScrollArea>
           <div className="p-3 border-t">
-            <Button variant="outline" size="sm" className="w-full bg-transparent h-8">
+            <Button variant="outline" size="sm" className="w-full bg-transparent h-8" type="button">
               <Plus className="h-4 w-4 mr-2" />
               Crear nueva categoría
             </Button>
@@ -168,6 +214,7 @@ export function CategorySelector({
             <Button
               variant="ghost"
               size="sm"
+              type="button"
               onClick={clearAll}
               className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
             >
@@ -199,6 +246,7 @@ export function CategorySelector({
                   <Button
                     variant="ghost"
                     size="sm"
+                    type="button"
                     onClick={(e) => removeCategory(category.id, e)}
                     className="h-auto p-0 ml-1 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-100/60 dark:hover:bg-red-950/20"
                   >

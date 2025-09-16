@@ -49,6 +49,14 @@ export function BankAvatar({ bankName, accountColor, account, size = "md" }: Ban
 
   const isCash = finalBankName.toLowerCase().includes("caja") || finalBankName.toLowerCase().includes("efectivo")
 
+  // Check if it's a specific bank with dedicated logo
+  const isCaixabank = finalBankName.toLowerCase().includes("caixabank") || 
+                     finalBankName.toLowerCase().includes("caixa") ||
+                     finalBankName.toLowerCase().includes("la caixa")
+  const isSabadell = finalBankName.toLowerCase().includes("sabadell") || 
+                     finalBankName.toLowerCase().includes("banco sabadell") ||
+                     finalBankName.toLowerCase().includes("banc sabadell")
+
   // Get bank color
   const bankColor = Object.keys(BANK_COLORS).find((bank) => finalBankName.toLowerCase().includes(bank.toLowerCase()))
   const colorClass = bankColor ? BANK_COLORS[bankColor as keyof typeof BANK_COLORS] : BANK_COLORS.default
@@ -61,35 +69,52 @@ export function BankAvatar({ bankName, accountColor, account, size = "md" }: Ban
     .substring(0, 2)
     .toUpperCase()
 
-  // Try .png first, then .jpg, then placeholder
-  const [logoSrc, setLogoSrc] = useState<string>(`/bank-logos/${assetBase}.png`)
+  // Determine logo source based on bank type
+  const [logoSrc, setLogoSrc] = useState<string>(() => {
+    if (isCaixabank) return "/bank-logos/caixabank.png"
+    if (isSabadell) return "/bank-logos/sabadell.png"
+    return `/bank-logos/${assetBase}.png`
+  })
+
   const handleImageError = () => {
-    if (logoSrc.endsWith(".png")) {
-      setLogoSrc(`/bank-logos/${assetBase}.jpg`)
-    } else if (logoSrc.endsWith(`/${assetBase}.jpg`)) {
-      setLogoSrc("/placeholder-logo.png")
+    if (isCaixabank) {
+      if (logoSrc.endsWith(".png")) {
+        setLogoSrc("/bank-logos/caixabank.jpg")
+      } else {
+        setLogoSrc("/placeholder-logo.png")
+      }
+    } else if (isSabadell) {
+      if (logoSrc.endsWith(".png")) {
+        setLogoSrc("/bank-logos/sabadell.jpg")
+      } else {
+        setLogoSrc("/placeholder-logo.png")
+      }
+    } else {
+      if (logoSrc.endsWith(".png")) {
+        setLogoSrc(`/bank-logos/${assetBase}.jpg`)
+      } else if (logoSrc.endsWith(`/${assetBase}.jpg`)) {
+        setLogoSrc("/placeholder-logo.png")
+      }
     }
   }
 
   return (
-    <div className="relative">
-      <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
-        {!isCash && <AvatarImage src={logoSrc || "/placeholder.svg"} onError={handleImageError} alt={finalBankName} />}
-        <AvatarFallback
-          className="text-white font-semibold"
-          style={{
-            backgroundColor:
-              finalAccountColor ||
-              (bankColor ? BANK_COLORS[bankColor as keyof typeof BANK_COLORS].replace("bg-", "#") : "#64748b"),
-          }}
-        >
-          {isCash ? (
-            <Banknote className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
-          ) : (
-            <span className={size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm"}>{initials}</span>
-          )}
-        </AvatarFallback>
-      </Avatar>
-    </div>
+    <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
+      {!isCash && <AvatarImage src={logoSrc || "/placeholder.svg"} onError={handleImageError} alt={finalBankName} />}
+      <AvatarFallback
+        className="text-white font-semibold"
+        style={{
+          backgroundColor:
+            finalAccountColor ||
+            (bankColor ? BANK_COLORS[bankColor as keyof typeof BANK_COLORS].replace("bg-", "#") : "#64748b"),
+        }}
+      >
+        {isCash ? (
+          <Banknote className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
+        ) : (
+          <span className={size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm"}>{initials}</span>
+        )}
+      </AvatarFallback>
+    </Avatar>
   )
 }

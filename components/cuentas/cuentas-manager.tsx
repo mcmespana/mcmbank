@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check, User } from "lucide-react"
+import { BankAvatar } from "@/components/bank-avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,6 +16,7 @@ import type { Cuenta } from "@/lib/types/database"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { supabase } from "@/lib/supabase/client"
+import { formatCurrency } from "@/lib/utils/format"
 
 export function CuentasManager() {
   const { selectedDelegation } = useDelegationContext()
@@ -351,28 +353,46 @@ export function CuentasManager() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4">
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-2 sm:p-3 lg:p-4 rounded-lg border">
-            <div className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300">Total Cuentas</div>
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-900 dark:text-blue-100">{cuentas.length}</div>
-          </div>
-          <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-blue-900 p-2 sm:p-3 lg:p-4 rounded-lg border">
-            <div className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300">Saldo Total</div>
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-900 dark:text-green-100">
-              {Object.values(balances)
-                .reduce((sum, balance) => sum + balance, 0)
-                .toFixed(2)}{" "}
-              €
-            </div>
-          </div>
-          {bancosCount > 1 && (
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-2 sm:p-3 lg:p-4 rounded-lg border col-span-2">
-              <div className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300">Bancos</div>
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-900 dark:text-purple-100">
-                {bancosCount}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Total Cuentas</div>
+                <div className="text-2xl sm:text-3xl font-bold text-blue-900 dark:text-blue-100">{cuentas.length}</div>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-          )}
+          </div>
+          
+          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 p-4 rounded-xl border border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-green-700 dark:text-green-300 mb-1">Saldo Total</div>
+                <div className="text-2xl sm:text-3xl font-bold text-green-900 dark:text-green-100">
+                  {formatCurrency(Object.values(balances).reduce((sum, balance) => sum + balance, 0))}
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                <PiggyBank className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-4 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Bancos</div>
+                <div className="text-2xl sm:text-3xl font-bold text-purple-900 dark:text-purple-100">
+                  {bancosCount}
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -419,14 +439,18 @@ export function CuentasManager() {
                         {/* Account Icon */}
                         <div className="relative flex-shrink-0">
                           <div
-                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 ${
+                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 overflow-hidden ${
                               isCreating ? 'animate-pulse' :
                               isUpdating ? 'animate-pulse' :
                               isDeleting ? 'animate-pulse' : ''
                             }`}
                             style={{ backgroundColor: bankColor }}
                           >
-                            {getBankIcon(cuenta)}
+                            <BankAvatar 
+                              account={cuenta} 
+                              size="lg" 
+                              accountColor={bankColor}
+                            />
                           </div>
 
                           {/* Connection Status Badge */}
@@ -518,7 +542,7 @@ export function CuentasManager() {
                                       }`}
                                     >
                                       {balance >= 0 ? "+" : ""}
-                                      {balance.toFixed(2)} €
+                                      {formatCurrency(balance).replace("€", "").trim()}
                                     </Badge>
                                   </Button>
                                 </PopoverTrigger>

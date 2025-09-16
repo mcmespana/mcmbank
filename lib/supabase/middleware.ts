@@ -52,7 +52,6 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/auth")
-  const isHomePage = request.nextUrl.pathname === "/"
 
   // Only protect specific routes, not everything
   const protectedRoutes = ["/transacciones", "/categorias", "/cuentas", "/delegaciones", "/movimientos"]

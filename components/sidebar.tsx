@@ -19,6 +19,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { DialogTitle } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import useIsAdmin from "@/hooks/use-is-admin"
 
 interface SidebarContentProps {
@@ -224,6 +226,9 @@ export function Sidebar({
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
+            <VisuallyHidden>
+              <DialogTitle>Menú de navegación</DialogTitle>
+            </VisuallyHidden>
             <SidebarContent transactionCount={transactionCount} />
           </SheetContent>
         </Sheet>

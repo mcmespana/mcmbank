@@ -133,6 +133,8 @@ export const TransactionListRow = memo(function TransactionListRow({
                     <CategoryChip
                       category={category}
                       categories={categories}
+                      movement={movement}
+                      account={account}
                       onCategoryChange={(categoryId) => handleCategoryChange(categoryId)}
                     />
                   )}
@@ -168,4 +170,3 @@ export const TransactionListRow = memo(function TransactionListRow({
     </div>
   )
 })
-

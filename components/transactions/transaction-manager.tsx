@@ -29,6 +29,7 @@ import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
 import { DebugDelegationInfo } from "@/components/debug/debug-delegation-info"
+import { isDebugEnabled } from "@/lib/utils/debug"
 
 export interface TransactionFilters {
   dateFrom?: string
@@ -382,10 +383,12 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
 
         {/* Transaction List */}
         <div className="flex-1 overflow-auto">
-          {/* Debug info - solo en desarrollo */}
-          <div className="p-4 pb-0">
-            <DebugDelegationInfo movements={movements} accounts={accounts} />
-          </div>
+          {/* Debug info - condicionado */}
+          {isDebugEnabled && (
+            <div className="p-4 pb-0">
+              <DebugDelegationInfo movements={movements} accounts={accounts} />
+            </div>
+          )}
           
           <TransactionList
             movements={movements}

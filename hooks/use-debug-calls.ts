@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { isDebugEnabled } from "@/lib/utils/debug"
 
 interface CallTracker {
   [hookName: string]: number
@@ -34,6 +35,8 @@ export function useDebugCalls(hookName: string, dependencies?: any[]) {
   }
 
   useEffect(() => {
+    if (!isDebugEnabled) return
+
     console.log(`🔄 ${hookName} - Render #${renderCountRef.current}`)
     
     if (dependencies) {

@@ -267,6 +267,44 @@ export type Database = {
           subido_en?: string
         }
       }
+      propuesta_mejora: {
+        Row: {
+          id: string
+          titulo: string
+          descripcion: string
+          impacto: string | null
+          estado: "nueva_idea" | "en_estudio" | "lo_haremos" | "en_desarrollo" | "hechisimo"
+          creado_por: string
+          creado_por_nombre: string | null
+          creado_por_email: string | null
+          creado_en: string
+          actualizado_en: string | null
+        }
+        Insert: {
+          id?: string
+          titulo: string
+          descripcion: string
+          impacto?: string | null
+          estado?: "nueva_idea" | "en_estudio" | "lo_haremos" | "en_desarrollo" | "hechisimo"
+          creado_por: string
+          creado_por_nombre?: string | null
+          creado_por_email?: string | null
+          creado_en?: string
+          actualizado_en?: string | null
+        }
+        Update: {
+          id?: string
+          titulo?: string
+          descripcion?: string
+          impacto?: string | null
+          estado?: "nueva_idea" | "en_estudio" | "lo_haremos" | "en_desarrollo" | "hechisimo"
+          creado_por?: string
+          creado_por_nombre?: string | null
+          creado_por_email?: string | null
+          creado_en?: string
+          actualizado_en?: string | null
+        }
+      }
     }
   }
 }
@@ -279,6 +317,7 @@ export type Categoria = Database["public"]["Tables"]["categoria"]["Row"]
 export type Membresia = Database["public"]["Tables"]["membresia"]["Row"]
 export type Perfil = Database["public"]["Tables"]["perfil"]["Row"]
 export type MovimientoArchivo = Database["public"]["Tables"]["movimiento_archivo"]["Row"]
+export type PropuestaMejora = Database["public"]["Tables"]["propuesta_mejora"]["Row"]
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {

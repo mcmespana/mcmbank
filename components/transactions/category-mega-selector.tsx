@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect, useRef, type CSSProperties } from "react"
-import { X, Search, Plus } from "lucide-react"
+import { X, Search, Plus, Tags } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,7 @@ interface CategoryMegaSelectorProps {
   movement?: Movimiento | null
   account?: Cuenta | null
   onCreateCategory?: () => void
+  selectionSummary?: string
 }
 
 interface CategoryGroup {
@@ -34,6 +35,7 @@ export function CategoryMegaSelector({
   movement,
   account,
   onCreateCategory,
+  selectionSummary,
 }: CategoryMegaSelectorProps) {
   const [searchValue, setSearchValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
@@ -108,7 +110,7 @@ export function CategoryMegaSelector({
     <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-full sm:h-auto max-h-screen sm:max-h-[calc(100vh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
       <div className="border-b bg-muted/40 p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-          {movement && (
+          {movement ? (
             <div className="flex flex-1 items-start gap-3 sm:items-center">
               <div className="flex-shrink-0 rounded-full p-0.5 border border-border/40 shadow-sm">
                 <BankAvatar account={account || undefined} size="sm" />
@@ -125,7 +127,22 @@ export function CategoryMegaSelector({
                 )}
               </div>
             </div>
-          )}
+          ) : selectionSummary ? (
+            <div className="flex flex-1 items-start gap-3 sm:items-center">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Tags className="h-5 w-5" />
+              </div>
+              <div className="space-y-1 min-w-0">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Selección múltiple</p>
+                <h2 className="text-base font-semibold leading-tight line-clamp-2 sm:line-clamp-1">
+                  {selectionSummary}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Elige una categoría para aplicarla a todas las transacciones seleccionadas.
+                </p>
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex items-start justify-between gap-2 sm:flex-col sm:items-end sm:justify-start">
             {movement && (

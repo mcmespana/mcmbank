@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Pencil } from "lucide-react"
+import { Pencil, Check } from "lucide-react"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListRowProps {
@@ -22,6 +22,9 @@ interface TransactionListRowProps {
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onClick: (movement: MovimientoConRelaciones, e: React.MouseEvent) => void
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
+  isSelected?: boolean
+  selectionActive?: boolean
+  onToggleSelection?: (movementId: string, nextSelected: boolean) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -32,6 +35,9 @@ export const TransactionListRow = memo(function TransactionListRow({
   onMovementUpdate,
   onClick,
   onOpenFiles,
+  isSelected = false,
+  selectionActive = false,
+  onToggleSelection,
 }: TransactionListRowProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -69,12 +75,19 @@ export const TransactionListRow = memo(function TransactionListRow({
     setEditing(false)
   }
 
+  const handleSelectionToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    onToggleSelection?.(movement.id, !isSelected)
+  }
+
   return (
     <div className="relative" data-testid="transaction-row">
       <div
         className={cn(
           "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md",
-          !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10"
+          !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10",
+          isSelected && "border-primary/60 bg-primary/10 shadow-md hover:border-primary/60 hover:bg-primary/10",
+          selectionActive && !isSelected && "border-primary/30"
         )}
         onClick={(e) => onClick(movement, e)}
         data-account-id={movement.cuenta_id}
@@ -82,13 +95,45 @@ export const TransactionListRow = memo(function TransactionListRow({
       >
         <div className="flex items-start gap-3">
           <AccountTooltip account={account}>
-            <div
-              className="rounded-full p-0.5 cursor-pointer hover:scale-105 transition-transform flex-shrink-0 shadow-sm"
-              style={{ backgroundColor: account?.color || "#4ECDC4" }}
-              data-testid="account-info"
-              title={`Cuenta: ${account?.nombre || 'Sin nombre'} - Delegación ID: ${account?.delegacion_id || 'Sin delegación'}`}
-            >
-              <BankAvatar account={account} />
+            <div className="relative flex-shrink-0" data-testid="account-info">
+              <div
+                className="group/account relative h-10 w-10"
+                title={`Cuenta: ${account?.nombre || "Sin nombre"} - Delegación ID: ${account?.delegacion_id || "Sin delegación"}`}
+              >
+                <button
+                  type="button"
+                  onClick={handleSelectionToggle}
+                  aria-pressed={isSelected}
+                  aria-label={isSelected ? "Quitar de la selección" : "Seleccionar transacción"}
+                  className={`absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full border border-primary/40 bg-background/90 text-primary shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                    isSelected
+                      ? "opacity-100 scale-100 pointer-events-auto bg-primary text-primary-foreground border-primary"
+                      : selectionActive
+                        ? "opacity-100 scale-100 pointer-events-auto"
+                        : "opacity-0 scale-95 pointer-events-none group-hover/account:opacity-100 group-hover/account:scale-100 group-hover/account:pointer-events-auto"
+                  }`}
+                >
+                  {isSelected ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <span className="h-2.5 w-2.5 rounded-full border border-primary/50" />
+                  )}
+                </button>
+
+                <div
+                  className={cn(
+                    "relative h-10 w-10 rounded-full p-0.5 shadow-sm transition-all duration-200",
+                    isSelected
+                      ? "opacity-0 scale-90"
+                      : selectionActive
+                        ? "opacity-0 scale-95"
+                        : "opacity-100 scale-100 group-hover/account:opacity-0 group-hover/account:scale-95",
+                  )}
+                  style={{ backgroundColor: account?.color || "#4ECDC4" }}
+                >
+                  <BankAvatar account={account} />
+                </div>
+              </div>
             </div>
           </AccountTooltip>
 

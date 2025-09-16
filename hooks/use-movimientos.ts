@@ -380,8 +380,28 @@ export function useMovimientos(
         .update(patch as any)
         .eq("id", movimientoId)
       if (error) throw error
-      setMovimientos(prev =>
-        prev.map(mov => (mov.id === movimientoId ? { ...mov, ...patch } : mov)),
+      setMovimientos((prev) =>
+        prev.map((mov) => (mov.id === movimientoId ? { ...mov, ...patch } : mov)),
+      )
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const bulkUpdateMovimientos = async (
+    movimientoIds: string[],
+    patch: Partial<MovimientoConRelaciones>,
+  ) => {
+    if (movimientoIds.length === 0) return
+    const idSet = new Set(movimientoIds)
+    try {
+      const { error } = await supabase
+        .from("movimiento")
+        .update(patch as any)
+        .in("id", movimientoIds)
+      if (error) throw error
+      setMovimientos((prev) =>
+        prev.map((mov) => (idSet.has(mov.id) ? { ...mov, ...patch } : mov)),
       )
     } catch (err) {
       throw err
@@ -390,9 +410,58 @@ export function useMovimientos(
 
   const updateCategoria = async (movimientoId: string, categoriaId: string | null) => {
     try {
-      const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
+      const { error } = await supabase
+        .from("movimiento")
+        .update({ categoria_id: categoriaId })
+        .eq("id", movimientoId)
       if (error) throw error
-      setMovimientos(prev => prev.map(mov => (mov.id === movimientoId ? { ...mov, categoria_id: categoriaId } : mov)))
+      setMovimientos((prev) =>
+        prev.map((mov) => (mov.id === movimientoId ? { ...mov, categoria_id: categoriaId } : mov)),
+      )
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const deleteMovimientos = async (movimientoIds: string[]) => {
+    if (movimientoIds.length === 0) return
+    const idSet = new Set(movimientoIds)
+    try {
+      const { error } = await supabase.from("movimiento").delete().in("id", movimientoIds)
+      if (error) throw error
+      setMovimientos((prev) => prev.filter((mov) => !idSet.has(mov.id)))
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const appendDescripcion = async (movimientoIds: string[], text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed || movimientoIds.length === 0) return
+
+    const idSet = new Set(movimientoIds)
+    const updates = movimientos
+      .filter((mov) => idSet.has(mov.id))
+      .map((mov) => {
+        const base = mov.descripcion ? mov.descripcion.trimEnd() : ""
+        const descripcion = base ? `${base}\n${trimmed}` : trimmed
+        return { id: mov.id, descripcion }
+      })
+
+    if (updates.length === 0) return
+
+    try {
+      await Promise.all(
+        updates.map(({ id, descripcion }) =>
+          supabase.from("movimiento").update({ descripcion }).eq("id", id),
+        ),
+      )
+      const updateMap = new Map(updates.map((item) => [item.id, item.descripcion]))
+      setMovimientos((prev) =>
+        prev.map((mov) =>
+          updateMap.has(mov.id) ? { ...mov, descripcion: updateMap.get(mov.id) ?? mov.descripcion } : mov,
+        ),
+      )
     } catch (err) {
       throw err
     }
@@ -412,6 +481,9 @@ export function useMovimientos(
     refetch,
     updateCategoria,
     updateMovimiento,
+    bulkUpdateMovimientos,
+    deleteMovimientos,
+    appendDescripcion,
     createMovimiento,
     loadMore,
     hasMore,

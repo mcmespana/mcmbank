@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
@@ -14,6 +14,16 @@ import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
   ChevronRight,
   ChevronLeft,
   Plus,
@@ -22,13 +32,21 @@ import {
   Filter,
   ChevronUp,
   Check,
+  Minus,
+  Square,
+  Tags,
+  Trash2,
+  TextCursorInput,
+  NotebookPen,
+  X,
+  AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
-import { isDebugEnabled } from "@/lib/utils/debug"
+import { CategoryMegaSelector } from "./category-mega-selector"
 
 export interface TransactionFilters {
   dateFrom?: string
@@ -59,6 +77,15 @@ export function TransactionManager() {
   const [createFormOpen, setCreateFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle")
+  const [selectedMovementIds, setSelectedMovementIds] = useState<string[]>([])
+  const [categorySelectorOpen, setCategorySelectorOpen] = useState(false)
+  const [conceptDialogOpen, setConceptDialogOpen] = useState(false)
+  const [descriptionDialogOpen, setDescriptionDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false)
+  const [bulkConceptValue, setBulkConceptValue] = useState("")
+  const [bulkDescriptionValue, setBulkDescriptionValue] = useState("")
   const searchParams = useSearchParams()
 
   const currentDelegation = getCurrentDelegation()
@@ -70,6 +97,9 @@ export function TransactionManager() {
     error,
     updateCategoria,
     updateMovimiento,
+    bulkUpdateMovimientos,
+    deleteMovimientos,
+    appendDescripcion,
     createMovimiento,
     refetch,
     loadMore,
@@ -85,8 +115,85 @@ export function TransactionManager() {
     uncategorized: filters.uncategorized,
   })
 
+  const selectedIdsSet = useMemo(() => new Set(selectedMovementIds), [selectedMovementIds])
+  const visibleMovementIds = useMemo(() => movements.map((movement) => movement.id), [movements])
+  const selectionCount = selectedMovementIds.length
+  const selectionActive = selectionCount > 0
+  const allVisibleSelected =
+    visibleMovementIds.length > 0 && visibleMovementIds.every((id) => selectedIdsSet.has(id))
+  const partiallySelected = selectionActive && !allVisibleSelected
+  const selectedMovements = useMemo(
+    () => movements.filter((movement) => selectedIdsSet.has(movement.id)),
+    [movements, selectedIdsSet],
+  )
+  const sharedCategoryId = useMemo(() => {
+    if (!selectionActive || selectedMovements.length === 0) return undefined
+    const first = selectedMovements[0].categoria_id ?? null
+    const allSame = selectedMovements.every((movement) => (movement.categoria_id ?? null) === first)
+    if (!allSame) {
+      return undefined
+    }
+    return first ?? undefined
+  }, [selectionActive, selectedMovements])
+  const sharedConcept = useMemo(() => {
+    if (!selectionActive || selectedMovements.length === 0) return ""
+    const first = selectedMovements[0].concepto ?? ""
+    const allSame = selectedMovements.every((movement) => (movement.concepto ?? "") === first)
+    return allSame ? first : ""
+  }, [selectionActive, selectedMovements])
+
+  useEffect(() => {
+    if (!selectionActive) return
+
+    setSelectedMovementIds((prev) => {
+      if (prev.length === 0) return prev
+      const visibleSet = new Set(visibleMovementIds)
+      const filtered = prev.filter((id) => visibleSet.has(id))
+      return filtered.length === prev.length ? prev : filtered
+    })
+  }, [visibleMovementIds, selectionActive])
+
+  useEffect(() => {
+    if (conceptDialogOpen) {
+      setBulkConceptValue(sharedConcept)
+    }
+  }, [conceptDialogOpen, sharedConcept])
+
+  const selectionSummaryText =
+    selectionCount > 0
+      ? `${selectionCount} transacción${selectionCount !== 1 ? "es" : ""} seleccionada${selectionCount !== 1 ? "s" : ""}`
+      : ""
+  const selectionHelperText = allVisibleSelected
+    ? "Todas las transacciones visibles están seleccionadas"
+    : partiallySelected
+      ? "Selecciona todas las visibles con un clic"
+      : "Selecciona varias para aplicar acciones en lote"
+  const actionsDisabled = isBulkUpdating || isDeleteLoading
+
   const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
+
+  const toggleMovementSelection = useCallback((movementId: string, nextSelected: boolean) => {
+    setSelectedMovementIds((prev) => {
+      if (nextSelected) {
+        if (prev.includes(movementId)) return prev
+        return [...prev, movementId]
+      }
+      return prev.filter((id) => id !== movementId)
+    })
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedMovementIds([])
+  }, [])
+
+  const handleToggleSelectAllVisible = useCallback(() => {
+    if (allVisibleSelected) {
+      setSelectedMovementIds([])
+    } else {
+      setSelectedMovementIds([...visibleMovementIds])
+    }
+  }, [allVisibleSelected, visibleMovementIds])
 
   const handleDownload = async () => {
     setDownloadState("downloading")
@@ -149,6 +256,112 @@ export function TransactionManager() {
     } catch (error) {
       console.error("Error updating movement:", error)
       throw error
+    }
+  }
+
+  const handleBulkCategorySelect = async (categoryId: string) => {
+    const ids = [...selectedMovementIds]
+    if (ids.length === 0) return
+
+    setIsBulkUpdating(true)
+    try {
+      await bulkUpdateMovimientos(ids, { categoria_id: categoryId })
+      if (selectedMovementId && ids.includes(selectedMovementId)) {
+        setSelectedMovementSnapshot((prev) =>
+          prev ? { ...prev, categoria_id: categoryId } : prev,
+        )
+      }
+      toast.success(
+        `Categoría actualizada en ${ids.length} transacción${ids.length !== 1 ? "es" : ""}`,
+      )
+      clearSelection()
+      setCategorySelectorOpen(false)
+    } catch (error) {
+      console.error("Error updating categories:", error)
+      toast.error("No se pudieron actualizar las categorías")
+    } finally {
+      setIsBulkUpdating(false)
+    }
+  }
+
+  const handleBulkConceptSubmit = async () => {
+    const trimmed = bulkConceptValue.trim()
+    const ids = [...selectedMovementIds]
+    if (!trimmed || ids.length === 0) return
+
+    setIsBulkUpdating(true)
+    try {
+      await bulkUpdateMovimientos(ids, { concepto: trimmed })
+      if (selectedMovementId && ids.includes(selectedMovementId)) {
+        setSelectedMovementSnapshot((prev) =>
+          prev ? { ...prev, concepto: trimmed } : prev,
+        )
+      }
+      toast.success(
+        `Concepto actualizado en ${ids.length} transacción${ids.length !== 1 ? "es" : ""}`,
+      )
+      setConceptDialogOpen(false)
+      setBulkConceptValue("")
+      clearSelection()
+    } catch (error) {
+      console.error("Error updating concept:", error)
+      toast.error("No se pudo actualizar el concepto")
+    } finally {
+      setIsBulkUpdating(false)
+    }
+  }
+
+  const handleBulkDescriptionSubmit = async () => {
+    const trimmed = bulkDescriptionValue.trim()
+    const ids = [...selectedMovementIds]
+    if (!trimmed || ids.length === 0) return
+
+    setIsBulkUpdating(true)
+    try {
+      await appendDescripcion(ids, trimmed)
+      if (selectedMovementId && ids.includes(selectedMovementId)) {
+        setSelectedMovementSnapshot((prev) => {
+          if (!prev) return prev
+          const base = prev.descripcion ? prev.descripcion.trimEnd() : ""
+          const descripcion = base ? `${base}\n${trimmed}` : trimmed
+          return { ...prev, descripcion }
+        })
+      }
+      toast.success(
+        `Descripción actualizada en ${ids.length} transacción${ids.length !== 1 ? "es" : ""}`,
+      )
+      setDescriptionDialogOpen(false)
+      setBulkDescriptionValue("")
+      clearSelection()
+    } catch (error) {
+      console.error("Error updating description:", error)
+      toast.error("No se pudo actualizar la descripción")
+    } finally {
+      setIsBulkUpdating(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedMovementIds]
+    if (ids.length === 0) return
+
+    setIsDeleteLoading(true)
+    try {
+      await deleteMovimientos(ids)
+      if (selectedMovementId && ids.includes(selectedMovementId)) {
+        setSelectedMovementId(null)
+        setSelectedMovementSnapshot(null)
+      }
+      toast.success(
+        `${ids.length} transacción${ids.length !== 1 ? "es" : ""} eliminada${ids.length !== 1 ? "s" : ""}`,
+      )
+      clearSelection()
+      setDeleteDialogOpen(false)
+    } catch (error) {
+      console.error("Error deleting movements:", error)
+      toast.error("No se pudieron eliminar las transacciones seleccionadas")
+    } finally {
+      setIsDeleteLoading(false)
     }
   }
 
@@ -386,6 +599,107 @@ export function TransactionManager() {
             </div>
           </div>
 
+          {selectionActive && (
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 px-3 py-3 sm:px-4 sm:py-3 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-1 items-center gap-3 min-w-0">
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={allVisibleSelected ? true : partiallySelected ? "mixed" : false}
+                    onClick={handleToggleSelectAllVisible}
+                    disabled={actionsDisabled}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm shadow-sm transition hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                      allVisibleSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : partiallySelected
+                          ? "bg-primary/10 border-primary/60 text-primary"
+                          : "bg-background/80 border-primary/40 text-primary"
+                    }`}
+                    aria-label={
+                      allVisibleSelected
+                        ? "Deseleccionar transacciones visibles"
+                        : "Seleccionar todas las transacciones visibles"
+                    }
+                  >
+                    {allVisibleSelected ? (
+                      <Check className="h-4 w-4" />
+                    ) : partiallySelected ? (
+                      <Minus className="h-4 w-4" />
+                    ) : (
+                      <Square className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-sm font-semibold text-primary">{selectionSummaryText}</p>
+                    {isBulkUpdating ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <LoadingSpinner size="sm" />
+                        <span className="truncate">Aplicando cambios...</span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground truncate">{selectionHelperText}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCategorySelectorOpen(true)}
+                    className="flex items-center gap-2"
+                    disabled={actionsDisabled}
+                  >
+                    <Tags className="h-4 w-4" />
+                    <span className="text-xs font-medium">Editar categoría</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConceptDialogOpen(true)}
+                    className="flex items-center gap-2"
+                    disabled={actionsDisabled}
+                  >
+                    <TextCursorInput className="h-4 w-4" />
+                    <span className="text-xs font-medium">Cambiar concepto</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDescriptionDialogOpen(true)}
+                    className="flex items-center gap-2"
+                    disabled={actionsDisabled}
+                  >
+                    <NotebookPen className="h-4 w-4" />
+                    <span className="text-xs font-medium">Añadir nota</span>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="flex items-center gap-2"
+                    disabled={isDeleteLoading || isBulkUpdating}
+                  >
+                    {isDeleteLoading ? <LoadingSpinner size="sm" /> : <Trash2 className="h-4 w-4" />}
+                    <span className="text-xs font-medium">Eliminar</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    className="h-8 px-3"
+                    disabled={actionsDisabled}
+                  >
+                    <X className="h-4 w-4 mr-1.5" />
+                    <span className="text-xs font-medium">Limpiar</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {filtersOpen && (
             <Card className="lg:hidden p-4 border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
               <div className="flex items-center justify-between mb-4">
@@ -433,6 +747,9 @@ export function TransactionManager() {
             onLoadMore={loadMore}
             hasMore={hasMore}
             onOpenFiles={(movement) => handleOpenFiles(movement as unknown as MovimientoConRelaciones)}
+            selectedMovementIds={selectedMovementIds}
+            selectionActive={selectionActive}
+            onToggleMovementSelection={toggleMovementSelection}
           />
         </div>
       </div>
@@ -479,6 +796,166 @@ export function TransactionManager() {
           }, 1000)
         }}
       />
+
+      {categorySelectorOpen && (
+        <div
+          className="fixed inset-0 z-[95] flex items-end justify-center bg-black/60 backdrop-blur-sm p-3 sm:items-center sm:p-6"
+          onClick={() => {
+            if (isBulkUpdating) return
+            setCategorySelectorOpen(false)
+          }}
+        >
+          <div
+            className="w-full max-w-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <CategoryMegaSelector
+              categories={categories as unknown as Categoria[]}
+              selectedCategoryId={typeof sharedCategoryId === "string" ? sharedCategoryId : undefined}
+              onSelect={handleBulkCategorySelect}
+              onClose={() => {
+                if (isBulkUpdating) return
+                setCategorySelectorOpen(false)
+              }}
+              selectionSummary={selectionSummaryText}
+            />
+          </div>
+        </div>
+      )}
+
+      <Dialog
+        open={conceptDialogOpen}
+        onOpenChange={(open) => {
+          if (isBulkUpdating) return
+          setConceptDialogOpen(open)
+          if (!open) {
+            setBulkConceptValue("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cambiar concepto</DialogTitle>
+            <DialogDescription>
+              {selectionSummaryText || "Selecciona transacciones para aplicar cambios."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={bulkConceptValue}
+              onChange={(event) => setBulkConceptValue(event.target.value)}
+              placeholder="Nuevo concepto"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              El concepto reemplazará al actual en todas las transacciones seleccionadas.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConceptDialogOpen(false)} disabled={isBulkUpdating}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleBulkConceptSubmit}
+              disabled={isBulkUpdating || !bulkConceptValue.trim()}
+            >
+              {isBulkUpdating ? <LoadingSpinner size="sm" /> : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={descriptionDialogOpen}
+        onOpenChange={(open) => {
+          if (isBulkUpdating) return
+          setDescriptionDialogOpen(open)
+          if (!open) {
+            setBulkDescriptionValue("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Añadir nota a la descripción</DialogTitle>
+            <DialogDescription>
+              {selectionSummaryText || "Selecciona transacciones para añadir notas."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              value={bulkDescriptionValue}
+              onChange={(event) => setBulkDescriptionValue(event.target.value)}
+              placeholder="Texto a añadir al final de la descripción"
+              rows={4}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              El texto se añadirá al final de la descripción existente, sin eliminar lo anterior.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDescriptionDialogOpen(false)} disabled={isBulkUpdating}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleBulkDescriptionSubmit}
+              disabled={isBulkUpdating || !bulkDescriptionValue.trim()}
+            >
+              {isBulkUpdating ? <LoadingSpinner size="sm" /> : "Aplicar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (isDeleteLoading) return
+          setDeleteDialogOpen(open)
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Eliminar transacciones</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán permanentemente las transacciones seleccionadas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-5 text-center space-y-3">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20 text-red-600 dramatic-wiggle">
+              <AlertTriangle className="h-8 w-8" />
+            </div>
+            <p className="text-sm font-semibold text-red-600 uppercase tracking-wide">
+              ¿Estás absolutamente seguro de que quieres eliminar las {selectionCount} transacciones seleccionadas?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Esta acción no se puede deshacer. Respira hondo y confirma solo si estás totalmente seguro.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleteLoading}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={isDeleteLoading || selectionCount === 0}
+            >
+              {isDeleteLoading ? <LoadingSpinner size="sm" /> : "Eliminar definitivamente"}
+            </Button>
+          </DialogFooter>
+          <style>{`
+            @keyframes dramatic-wiggle {
+              0%, 100% { transform: rotate(-8deg); }
+              50% { transform: rotate(8deg); }
+            }
+            .dramatic-wiggle {
+              animation: dramatic-wiggle 1.2s ease-in-out infinite;
+            }
+          `}</style>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

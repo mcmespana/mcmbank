@@ -25,6 +25,9 @@ interface TransactionListProps {
   onLoadMore?: () => void
   hasMore?: boolean
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
+  selectedMovementIds?: string[]
+  selectionActive?: boolean
+  onToggleMovementSelection?: (movementId: string, nextSelected: boolean) => void
 }
 
 export function TransactionList({
@@ -39,6 +42,9 @@ export function TransactionList({
   onLoadMore,
   hasMore,
   onOpenFiles,
+  selectedMovementIds,
+  selectionActive,
+  onToggleMovementSelection,
 }: TransactionListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
@@ -101,6 +107,8 @@ export function TransactionList({
     )
   }
 
+  const selectionActiveState = selectionActive ?? Boolean(selectedMovementIds && selectedMovementIds.length > 0)
+
   return (
     <div className="space-y-1 p-2 sm:p-4">
       <div className="flex items-center justify-between mb-3 px-1 sm:px-0">
@@ -117,6 +125,9 @@ export function TransactionList({
           onMovementUpdate={onMovementUpdate}
           onClick={onMovementClick}
           onOpenFiles={onOpenFiles}
+          isSelected={selectedMovementIds?.includes(movement.id) ?? false}
+          selectionActive={selectionActiveState}
+          onToggleSelection={onToggleMovementSelection}
         />
       ))}
       {hasMore && (

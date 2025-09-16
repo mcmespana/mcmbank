@@ -11,7 +11,7 @@ import {
   IMPROVEMENT_PROPOSAL_STATUSES,
 } from "@/lib/types/improvement-proposals"
 import type { ImprovementProposalStatusVisualConfig } from "./status-config"
-import { Clock, Sparkles } from "lucide-react"
+import { Clock } from "lucide-react"
 import { useMemo } from "react"
 
 interface ProposalCardProps {

@@ -28,7 +28,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
-import { isDebugEnabled } from "@/lib/utils/debug"
 
 export interface TransactionFilters {
   dateFrom?: string

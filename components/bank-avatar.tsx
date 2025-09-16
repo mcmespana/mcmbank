@@ -59,7 +59,6 @@ export function BankAvatar({ bankName, accountColor, account, size = "md" }: Ban
 
   // Get bank color
   const bankColor = Object.keys(BANK_COLORS).find((bank) => finalBankName.toLowerCase().includes(bank.toLowerCase()))
-  const colorClass = bankColor ? BANK_COLORS[bankColor as keyof typeof BANK_COLORS] : BANK_COLORS.default
 
   // Generate initials
   const initials = finalBankName

@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useMemo } from "react"
 import { format } from "date-fns"
+import { es } from "date-fns/locale"
 import { CalendarIcon, AlertTriangle, Check, Loader2, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -31,6 +32,7 @@ interface TransactionDetailProps {
   onOpenChange: (open: boolean) => void
   onUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onBack?: () => void
+  initialTab?: "datos" | "archivos"
 }
 
 type HistoryChange = "date" | "amount"
@@ -43,6 +45,7 @@ export function TransactionDetail({
   onOpenChange,
   onUpdate,
   onBack,
+  initialTab = "datos",
 }: TransactionDetailProps) {
   const [formData, setFormData] = useState<Partial<Movimiento>>({})
   const [formMovementId, setFormMovementId] = useState<string | null>(movement?.id ?? null)
@@ -53,7 +56,7 @@ export function TransactionDetail({
   const [showAmountConfirm, setShowAmountConfirm] = useState(false)
   const [pendingAmount, setPendingAmount] = useState<string>("")
   const [isAmountEditing, setIsAmountEditing] = useState(false)
-  const [activeTab, setActiveTab] = useState<"datos" | "archivos">("datos")
+  const [activeTab, setActiveTab] = useState<"datos" | "archivos">(initialTab)
   const [fileCount, setFileCount] = useState(0)
 
   const baselineData = useMemo(() => {
@@ -100,7 +103,7 @@ export function TransactionDetail({
 
     setFormData({ ...baselineData })
     setFormMovementId(movement.id)
-    setActiveTab("datos")
+    setActiveTab(initialTab)
     setFileCount(0)
     setIsAmountEditing(false)
     setShowAmountConfirm(false)
@@ -109,7 +112,7 @@ export function TransactionDetail({
     setIsHeaderDateOpen(false)
     setIsFormDateOpen(false)
     setIsInitialized(true)
-  }, [movement, baselineData])
+  }, [movement, baselineData, initialTab])
 
   useEffect(() => {
     if (!movement || !baselineData || !isInitialized || movement.id !== formMovementId) {
@@ -364,11 +367,12 @@ export function TransactionDetail({
                           {formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : "Sin fecha"}
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="center" sideOffset={12}>
+                      <PopoverContent className="w-auto p-0 z-[80]" align="center" sideOffset={12}>
                         <Calendar
                           mode="single"
                           selected={formData.fecha ? new Date(formData.fecha) : undefined}
                           onSelect={(date) => handleDateSelection(date, () => setIsHeaderDateOpen(false))}
+                          locale={es}
                           initialFocus
                         />
                       </PopoverContent>
@@ -468,17 +472,17 @@ export function TransactionDetail({
                               !formData.fecha && "text-muted-foreground",
                             )}
                             type="button"
-                            onClick={() => setIsFormDateOpen((prev) => !prev)}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : "Fecha"}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 z-[80]" align="start">
                           <Calendar
                             mode="single"
                             selected={formData.fecha ? new Date(formData.fecha) : undefined}
                             onSelect={(date) => handleDateSelection(date, () => setIsFormDateOpen(false))}
+                            locale={es}
                             initialFocus
                           />
                         </PopoverContent>
@@ -528,7 +532,7 @@ export function TransactionDetail({
                     />
                   </div>
                 </TabsContent>
-                <TabsContent value="archivos" className="space-y-6 mt-6">
+                <TabsContent value="archivos" className="space-y-6 mt-6" forceMount>
                   <TransactionFiles
                     movementId={movement?.id || null}
                     delegacionId={account?.delegacion_id}

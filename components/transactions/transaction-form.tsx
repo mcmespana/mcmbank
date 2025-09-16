@@ -150,6 +150,7 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
                         setDateOpen(false)
                       }
                     }}
+                    locale={es}
                     initialFocus
                   />
                 </PopoverContent>

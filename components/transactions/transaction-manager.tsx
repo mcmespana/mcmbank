@@ -49,7 +49,6 @@ interface TransactionManagerProps {
 export function TransactionManager({ onTransactionCountChange }: TransactionManagerProps) {
   const {
     selectedDelegation,
-    setSelectedDelegation,
     delegations,
     loading: delegationsLoading,
     getCurrentDelegation,
@@ -59,6 +58,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
   const [selectedMovementSnapshot, setSelectedMovementSnapshot] =
     useState<MovimientoConRelaciones | null>(null)
+  const [detailInitialTab, setDetailInitialTab] = useState<"datos" | "archivos">("datos")
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [createFormOpen, setCreateFormOpen] = useState(false)
@@ -106,7 +106,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
       )
       setDownloadState("success")
       setTimeout(() => setDownloadState("idle"), 2000)
-    } catch (error) {
+    } catch {
       toast.error("No se pudo generar el archivo")
       setDownloadState("idle")
     }
@@ -115,6 +115,13 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const handleMovementClick = (movement: MovimientoConRelaciones) => {
     setSelectedMovementId(movement.id)
     setSelectedMovementSnapshot(movement)
+    setDetailInitialTab("datos")
+  }
+
+  const handleOpenFiles = (movement: MovimientoConRelaciones) => {
+    setSelectedMovementId(movement.id)
+    setSelectedMovementSnapshot(movement)
+    setDetailInitialTab("archivos")
   }
 
   const handleMovementUpdate = async (
@@ -164,9 +171,9 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
       await createMovimiento({
         ...data,
         // Normalize optional UUIDs to null instead of empty string
-        categoria_id: (data as any)?.categoria_id || null,
+        categoria_id: (data as { categoria_id?: string | null })?.categoria_id || null,
         delegacion_id: accountDelegationId,
-      } as any)
+      })
       await refetch()
       setCreateFormOpen(false)
     } catch (error) {
@@ -229,8 +236,9 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     if (movId) {
       const found = movements.find((m) => m.id === movId)
       if (found) {
-        setSelectedMovement(found)
-        setDetailOpen(true)
+        setSelectedMovementId(found.id)
+        setSelectedMovementSnapshot(found)
+        setDetailInitialTab("datos")
       }
     }
   }, [searchParams, movements])
@@ -443,6 +451,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
             }}
             onLoadMore={loadMore}
             hasMore={hasMore}
+            onOpenFiles={(movement) => handleOpenFiles(movement as unknown as MovimientoConRelaciones)}
           />
         </div>
       </div>
@@ -462,6 +471,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
           const fullPatch: Partial<MovimientoConRelaciones> = patch
           await handleMovementUpdate(movementId, fullPatch)
         }}
+        initialTab={detailInitialTab}
       />
 
       {/* Create Transaction Panel */}

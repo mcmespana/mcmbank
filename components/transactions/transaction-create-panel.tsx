@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { CalendarIcon, Building2, Check, X, Save } from "lucide-react"
+import { CalendarIcon, Building2, X, Save } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +17,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CategorySelector } from "./category-selector"
 import { BankAvatar } from "@/components/bank-avatar"
-import { formatCurrency } from "@/lib/utils/format"
 import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionCreatePanelProps {

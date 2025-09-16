@@ -24,6 +24,7 @@ interface TransactionListProps {
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onLoadMore?: () => void
   hasMore?: boolean
+  onOpenFiles?: (movement: MovimientoConRelaciones) => void
 }
 
 export function TransactionList({
@@ -37,6 +38,7 @@ export function TransactionList({
   onMovementUpdate,
   onLoadMore,
   hasMore,
+  onOpenFiles,
 }: TransactionListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
@@ -114,6 +116,7 @@ export function TransactionList({
           categories={categories}
           onMovementUpdate={onMovementUpdate}
           onClick={onMovementClick}
+          onOpenFiles={onOpenFiles}
         />
       ))}
       {hasMore && (

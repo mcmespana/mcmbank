@@ -11,12 +11,14 @@ interface TransactionRowIndicatorsProps {
   description?: string | null
   fileCount?: number
   className?: string
+  onOpenFiles?: () => void
 }
 
 export function TransactionRowIndicators({ 
   description,
   fileCount = 0,
-  className 
+  className,
+  onOpenFiles,
 }: TransactionRowIndicatorsProps) {
   const trimmedDescription = description?.trim() ?? ""
   const hasDescription = !!trimmedDescription
@@ -50,7 +52,7 @@ export function TransactionRowIndicators({
                   <MessageSquare className="h-4 w-4 text-gray-600" />
                   Descripción
                 </h4>
-                <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                <div className="text-sm text-muted-foreground whitespace-pre-wrap select-text">
                   {trimmedDescription}
                 </div>
               </div>
@@ -59,39 +61,66 @@ export function TransactionRowIndicators({
         </div>
       )}
 
-      {/* Indicador de descripción: escritorio (tooltip al hover) */}
+      {/* Indicador de descripción: escritorio (hover rápido + click inmediato) */}
       {hasDescription && (
         <div className="hidden sm:inline-flex">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className="h-auto p-0 hover:bg-transparent"
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label="Descripción"
-                >
-                  <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <MessageSquare className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-                  </div>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" align="start" className="max-w-xs whitespace-pre-wrap">
-                {trimmedDescription}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Popover>
+            <PopoverTrigger asChild>
+              <div>
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        className="h-auto p-0 hover:bg-transparent"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // El Popover se abrirá inmediatamente por ser el trigger
+                        }}
+                        aria-label="Descripción"
+                      >
+                        <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                          <MessageSquare className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                        </div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="start" className="w-96 max-w-[32rem] p-3 whitespace-pre-wrap">
+                      {trimmedDescription}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-96 max-w-[32rem] p-3" align="start">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-gray-600" />
+                  Descripción
+                </h4>
+                <div className="text-sm text-muted-foreground whitespace-pre-wrap select-text">
+                  {trimmedDescription}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
 
       {/* Indicador de archivos */}
       {hasFiles && (
-        <div 
-          className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center"
-          onClick={(e) => e.stopPropagation()}
+        <Button
+          variant="ghost"
+          className="h-auto p-0 hover:bg-transparent"
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpenFiles?.()
+          }}
+          aria-label="Archivos adjuntos"
         >
-          <FileText className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-        </div>
+          <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <FileText className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+          </div>
+        </Button>
       )}
     </div>
   )

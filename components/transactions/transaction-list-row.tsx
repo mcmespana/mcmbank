@@ -21,6 +21,7 @@ interface TransactionListRowProps {
   categories: Categoria[]
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onClick: (movement: MovimientoConRelaciones, e: React.MouseEvent) => void
+  onOpenFiles?: (movement: MovimientoConRelaciones) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -30,6 +31,7 @@ export const TransactionListRow = memo(function TransactionListRow({
   categories,
   onMovementUpdate,
   onClick,
+  onOpenFiles,
 }: TransactionListRowProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -113,7 +115,11 @@ export const TransactionListRow = memo(function TransactionListRow({
                     >
                       {movement.concepto}
                     </h3>
-                    <TransactionRowIndicators description={movement.descripcion} fileCount={movement.archivos?.length || 0} />
+                    <TransactionRowIndicators 
+                      description={movement.descripcion} 
+                      fileCount={movement.archivos?.length || 0}
+                      onOpenFiles={() => onOpenFiles?.(movement)}
+                    />
                   </div>
                 )}
 

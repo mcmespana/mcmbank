@@ -250,13 +250,6 @@ export function CuentasManager() {
     }
   }
 
-  const getBankIcon = (cuenta: Cuenta) => {
-    if (cuenta.tipo === "caja") {
-      return <PiggyBank className="h-6 w-6 text-white" />
-    }
-    return <Building2 className="h-6 w-6 text-white" />
-  }
-
   const getBankColor = (cuenta: Cuenta) => {
     // Usar el color de la base de datos o un color por defecto
     return cuenta.color || "#4ECDC4"

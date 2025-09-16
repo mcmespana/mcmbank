@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/table"
 
 export function CategoryAnalysisDashboard() {
-  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
+  const { selectedDelegation } = useDelegationContext()
   const [timeframe, setTimeframe] = useState<Timeframe>("month")
   const [categoryIds, setCategoryIds] = useState<string[]>([])
 

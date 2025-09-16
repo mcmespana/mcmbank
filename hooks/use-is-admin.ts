@@ -29,8 +29,11 @@ export function useIsAdmin() {
         } else {
           setIsAdmin(data?.length > 0)
         }
-      } catch (err) {
-        if (mounted) setIsAdmin(false)
+      } catch (error) {
+        if (mounted) {
+          console.error("Unexpected error checking admin role", error)
+          setIsAdmin(false)
+        }
       }
     }
     checkRole()

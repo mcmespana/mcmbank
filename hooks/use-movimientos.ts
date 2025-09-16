@@ -33,12 +33,24 @@ export function useMovimientos(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
 
+  // Memoize filters to provide stable references when their values don't change
+  const memoizedFilters = useMemo(() => {
+    if (!filters) return undefined
+
+    return {
+      ...filters,
+      categoriaIds: filters.categoriaIds ? [...filters.categoriaIds] : undefined,
+    }
+  }, [filters])
+
   const serializedFilters = useMemo(() => {
-    if (!filters) return "__no_filters__"
+    if (!memoizedFilters) return "__no_filters__"
 
     const normalized = {
-      ...filters,
-      categoriaIds: filters.categoriaIds ? [...filters.categoriaIds].sort() : undefined,
+      ...memoizedFilters,
+      categoriaIds: memoizedFilters.categoriaIds
+        ? [...memoizedFilters.categoriaIds].sort()
+        : undefined,
     }
 
     try {
@@ -47,17 +59,7 @@ export function useMovimientos(
       console.warn("No se pudieron serializar los filtros de movimientos", error)
       return Math.random().toString(36)
     }
-  }, [filters])
-
-  // Memoize filters using their serialized representation to avoid effect churn
-  const memoizedFilters = useMemo(() => {
-    if (!filters) return undefined
-
-    return {
-      ...filters,
-      categoriaIds: filters.categoriaIds ? [...filters.categoriaIds] : undefined,
-    }
-  }, [serializedFilters])
+  }, [memoizedFilters])
 
   const lastResetKey = useRef<string | null>(null)
   const resetKey = useMemo(() => `${delegacionId ?? "__no_delegacion__"}|${serializedFilters}|${pageSize}`, [delegacionId, serializedFilters, pageSize])

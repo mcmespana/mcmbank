@@ -64,18 +64,19 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
 
     try {
       await attempt()
-    } catch (err) {
+    } catch (error) {
       if (abortController.signal.aborted) {
         // Mark as not loading to avoid spinners stuck on abort/timeout
         setLoading(false)
         return
       }
+      console.error("Error fetching delegaciones on first attempt", error)
       // Retry once after refreshing session in case token expired in background
       try {
         await supabase.auth.refreshSession()
         await attempt()
-      } catch (e2) {
-        setError(e2 instanceof Error ? e2.message : "Error cargando delegaciones")
+      } catch (retryError) {
+        setError(retryError instanceof Error ? retryError.message : "Error cargando delegaciones")
       }
     } finally {
       // Always clear loading state; a new fetch will set it to true again

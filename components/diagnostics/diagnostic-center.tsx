@@ -116,13 +116,14 @@ export function DiagnosticCenter() {
             .limit(5)
           const { error: complexError } = await Promise.race([complexPromise, timeoutPromise])
           newStatus.db += ` | JOINs: ${complexError ? '❌ Error' : '✅ OK'}`
-        } catch (err) {
-          newStatus.db += ` | JOINs: ❌ Timeout/Error`
+        } catch (error) {
+          const details = error instanceof Error ? `: ${error.message}` : ""
+          newStatus.db += ` | JOINs: ❌ Timeout/Error${details}`
         }
       }
 
-    } catch (err) {
-      newStatus.db = `❌ Error general: ${err instanceof Error ? err.message : 'Error desconocido'}`
+    } catch (error) {
+      newStatus.db = `❌ Error general: ${error instanceof Error ? error.message : 'Error desconocido'}`
     } finally {
       setStatus(newStatus)
       setChecking(false)

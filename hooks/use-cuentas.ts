@@ -68,7 +68,7 @@ export function useCuentas(
       setError(null)
 
       // Set timeout
-      const { data, error } = await runQuery<any[]>({
+      const { data, error } = await runQuery<unknown[]>({
         label: 'fetch-cuentas',
         table: 'cuenta',
         timeoutMs: timeout,
@@ -117,7 +117,7 @@ export function useCuentas(
       const transformedData = (data || []).map((item: any) => ({
         ...item,
         delegacion: Array.isArray(item.delegacion) ? item.delegacion[0] : item.delegacion
-      }))
+      })) as CuentaConDelegacion[]
 
       setCuentas(transformedData)
       lastFetchAtRef.current = Date.now()
@@ -139,7 +139,7 @@ export function useCuentas(
         timeoutRef.current = null
       }
     }
-  }, [memoizedDelegacionId, timeout, cuentas.length])
+  }, [memoizedDelegacionId, timeout, cuentas.length, delegacionId, ttlMs])
 
   // Función para forzar un refresh completo
   const forceRefresh = useCallback(() => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 
 // This is a simple event emitter for cross-hook communication.
 // It allows data hooks to subscribe to focus events without creating complex dependencies.

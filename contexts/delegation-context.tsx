@@ -38,10 +38,10 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
     }
   }, [delegations, selectedDelegation, setSelectedDelegation])
 
-  const getCurrentDelegation = () => {
+  const getCurrentDelegation = useCallback(() => {
     if (!selectedDelegation) return null
     return delegations.find((d) => d.id === selectedDelegation) || null
-  }
+  }, [delegations, selectedDelegation])
 
   const value = useMemo<DelegationContextType>(() => ({
     selectedDelegation,
@@ -50,7 +50,7 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
     loading,
     error,
     getCurrentDelegation,
-  }), [selectedDelegation, setSelectedDelegation, delegations, loading, error])
+  }), [selectedDelegation, setSelectedDelegation, delegations, loading, error, getCurrentDelegation])
 
   return (
     <DelegationContext.Provider value={value}>

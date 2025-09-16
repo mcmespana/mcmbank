@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,7 +14,7 @@ import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { DatabaseService } from "@/lib/services/database"
-import { GripVertical, Search, Edit, Trash2, Plus, Building2, Wallet, X } from "lucide-react"
+import { GripVertical, Search, Edit, Trash2, Plus, X } from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
@@ -232,7 +232,7 @@ export function CategoryList() {
     }
   }
 
-  const handleDragEnd = async (result: any) => {
+  const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) return
 
     const items = Array.from(sortedCategories)

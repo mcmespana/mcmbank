@@ -6,7 +6,6 @@ import { es } from "date-fns/locale"
 import { 
   Download, 
   Trash2, 
-  ExternalLink, 
   Edit3, 
   Save, 
   X,
@@ -22,8 +21,7 @@ import {
   DialogDescription, 
   DialogFooter, 
   DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+  DialogTitle
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { FileService } from "@/lib/services/file-service"
@@ -262,7 +260,7 @@ export function FileList({
           <DialogHeader>
             <DialogTitle>¿Eliminar archivo?</DialogTitle>
             <DialogDescription>
-              Esta acción eliminará permanentemente el archivo "{fileToDelete?.nombre_original}". 
+              Esta acción eliminará permanentemente el archivo &quot;{fileToDelete?.nombre_original}&quot;. 
               Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>

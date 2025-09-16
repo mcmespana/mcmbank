@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { useAuth } from "@/contexts/auth-context"
 import type { Delegacion } from "@/lib/types/database"
@@ -11,7 +11,7 @@ export function useUserDelegaciones() {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
-  const fetchDelegaciones = async () => {
+  const fetchDelegaciones = useCallback(async () => {
     if (!user) {
       setDelegaciones([])
       setLoading(false)
@@ -23,33 +23,33 @@ export function useUserDelegaciones() {
       setError(null)
 
       const { data, error } = await supabase
-        .from("membresia")
-        .select(`
-          delegacion_id,
-          delegacion:delegacion_id (
-            id,
-            organizacion_id,
-            codigo,
-            nombre,
-            creado_en
-          )
-        `)
-        .eq("usuario_id", user.id)
+        .from("delegacion")
+        .select(
+          `
+          id,
+          organizacion_id,
+          codigo,
+          nombre,
+          creado_en
+        `,
+        )
+        .in("id", (user as any).delegaciones.map((d: { delegacion_id: any }) => d.delegacion_id))
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
 
-      const userDelegaciones = (data?.map((item) => item.delegacion).filter(Boolean) || []) as unknown as Delegacion[]
-      setDelegaciones(userDelegaciones)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido")
+      setDelegaciones(data || [])
+    } catch (err: any) {
+      setError(err.message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
   useEffect(() => {
     fetchDelegaciones()
-  }, [user])
+  }, [user, fetchDelegaciones])
 
   return { delegaciones, loading, error, refetch: fetchDelegaciones }
 }

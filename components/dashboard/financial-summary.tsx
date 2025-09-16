@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Wallet, Target, Tag } from "lucide-react"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"

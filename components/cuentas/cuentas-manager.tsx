@@ -23,7 +23,6 @@ export function CuentasManager() {
     cuentas: cuentasWithDelegacion,
     loading,
     error,
-    refetch,
     forceRefresh,
     addCuenta,
     updateCuenta,
@@ -31,7 +30,11 @@ export function CuentasManager() {
   } = useCuentas(selectedDelegation)
   console.log("CuentasManager: cuentas after useCuentas", cuentasWithDelegacion)
   const cuentas = useMemo(
-    () => cuentasWithDelegacion.map(({ delegacion, ...cuenta }) => cuenta),
+    () => cuentasWithDelegacion.map((item) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { delegacion, ...cuenta } = item
+      return cuenta
+    }),
     [cuentasWithDelegacion],
   )
   const [searchTerm, setSearchTerm] = useState("")

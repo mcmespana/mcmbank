@@ -13,7 +13,6 @@ import { useMovimientos } from "@/hooks/use-movimientos"
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, TooltipProps } from "recharts"
 import {
   ChartContainer,
-  ChartTooltip,
   type ChartConfig,
 } from "@/components/ui/chart"
 import { formatCurrency } from "@/lib/utils/format"

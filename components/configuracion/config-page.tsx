@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useDelegationContext } from "@/contexts/delegation-context"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +27,6 @@ interface UserData {
 }
 
 export function ConfigPage() {
-  const { setSelectedDelegation } = useDelegationContext()
   const isAdmin = useIsAdmin()
   const [delegaciones, setDelegaciones] = useState<DelegacionWithCount[]>([])
   const [users, setUsers] = useState<UserData[]>([])

@@ -23,7 +23,7 @@ export function useCategorias(organizacionId?: string) {
     try {
       setLoading(true)
 
-      const { data, error } = await runQuery<any[]>({
+      const { data, error } = await runQuery<Categoria[]>({
         label: 'fetch-categorias',
         table: 'categoria',
         timeoutMs: TIMEOUT_MS,

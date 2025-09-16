@@ -33,6 +33,20 @@ const BANK_COLORS = {
 }
 
 export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
+  const bankName = account?.banco_nombre || account?.nombre || "Caja"
+  const isCash = bankName.toLowerCase().includes("caja") || bankName.toLowerCase().includes("efectivo")
+
+  const assetBase = useMemo(() => {
+    if (!account) return ""
+    return bankName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "")
+  }, [account, bankName])
+
+  const [logoSrc, setLogoSrc] = useState<string>(`/bank-logos/${assetBase}.png`)
+
   if (!account) {
     return (
       <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
@@ -42,10 +56,6 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
       </Avatar>
     )
   }
-
-  // Extract bank name from account name or use tipo
-  const bankName = account.banco_nombre || account.nombre || "Caja"
-  const isCash = bankName.toLowerCase().includes("caja") || bankName.toLowerCase().includes("efectivo")
 
   // Get bank color
   const bankColor = Object.keys(BANK_COLORS).find((bank) => bankName.toLowerCase().includes(bank.toLowerCase()))
@@ -59,17 +69,6 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
     .substring(0, 2)
     .toUpperCase()
 
-  // Build asset base name: lowercase, remove diacritics and non-alphanumeric, remove spaces
-  const assetBase = useMemo(() => {
-    return bankName
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]/g, "")
-  }, [bankName])
-
-  // Try .png first, then .jpg, then placeholder
-  const [logoSrc, setLogoSrc] = useState<string>(`/bank-logos/${assetBase}.png`)
   const handleImageError = () => {
     if (logoSrc.endsWith(".png")) {
       setLogoSrc(`/bank-logos/${assetBase}.jpg`)

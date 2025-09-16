@@ -8,7 +8,6 @@ import { useTheme } from "next-themes"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { 
-  User, 
   LogOut, 
   Moon, 
   Sun, 

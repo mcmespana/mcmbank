@@ -11,10 +11,9 @@ import { cn } from "@/lib/utils"
 
 interface AppLayoutProps {
   children: React.ReactNode
-  transactionCount?: number // Added prop for transaction count
 }
 
-export function AppLayout({ children, transactionCount }: AppLayoutProps) {
+export function AppLayout({ children }: AppLayoutProps) {
   const { selectedDelegation, setSelectedDelegation } = useDelegationContext()
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -72,7 +71,6 @@ export function AppLayout({ children, transactionCount }: AppLayoutProps) {
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        transactionCount={transactionCount} // Pass transaction count to sidebar
         showMobileTrigger={false}
       />
 

@@ -42,11 +42,7 @@ export interface TransactionFilters {
   uncategorized?: boolean
 }
 
-interface TransactionManagerProps {
-  onTransactionCountChange?: (count: number) => void
-}
-
-export function TransactionManager({ onTransactionCountChange }: TransactionManagerProps) {
+export function TransactionManager() {
   const {
     selectedDelegation,
     setSelectedDelegation,
@@ -189,12 +185,6 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     }
     return value !== undefined && value !== "" && value !== false
   })
-
-  useEffect(() => {
-    if (onTransactionCountChange) {
-      onTransactionCountChange(movements.length)
-    }
-  }, [movements.length, onTransactionCountChange])
 
   useEffect(() => {
     if (!selectedMovementId) {

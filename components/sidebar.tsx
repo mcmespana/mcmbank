@@ -9,11 +9,9 @@ import {
   Building2,
   FileText,
   BarChart3,
-  Bell,
   Banknote,
   Settings,
   Users,
-  Zap,
   Activity,
   Menu,
   ChevronLeft,
@@ -22,16 +20,23 @@ import {
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import useIsAdmin from "@/hooks/use-is-admin"
+import { useDelegationContext } from "@/contexts/delegation-context"
+import { useEntityCounts } from "@/hooks/use-entity-counts"
 
 interface SidebarContentProps {
   className?: string
   collapsed?: boolean
-  transactionCount?: number // Added transaction count prop
 }
 
-function SidebarContent({ className, collapsed = false, transactionCount }: SidebarContentProps) {
+function SidebarContent({ className, collapsed = false }: SidebarContentProps) {
   const pathname = usePathname()
   const isAdmin = useIsAdmin()
+  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
+  const currentDelegation = getCurrentDelegation()
+  const { counts } = useEntityCounts({
+    delegacionId: selectedDelegation,
+    organizacionId: currentDelegation?.organizacion_id ?? null,
+  })
 
   const navigation = [
     {
@@ -45,42 +50,42 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       name: "Movimientos",
       href: "/transacciones",
       icon: ArrowLeftRight,
-      count: transactionCount || 6, // Use dynamic transaction count
+      count: counts.movimientos,
       enabled: true,
     },
     {
       name: "Categorías",
       href: "/categorias",
       icon: Tag,
-      count: 7,
+      count: counts.categorias,
       enabled: true,
     },
     {
       name: "Cuentas",
       href: "/cuentas",
       icon: Banknote,
-      count: 3,
+      count: counts.cuentas,
       enabled: true,
     },
     {
       name: "Facturas",
       href: "/facturas",
       icon: FileText,
-      count: 0,
+      count: null,
       enabled: false,
     },
     {
       name: "Informes",
       href: "/informes",
       icon: BarChart3,
-      count: 0,
+      count: null,
       enabled: false,
     },
     {
       name: "Contactos",
       href: "/contactos",
       icon: Users,
-      count: 14,
+      count: null,
       enabled: false,
     },
     ...(isAdmin
@@ -178,7 +183,6 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
 interface SidebarProps {
   collapsed?: boolean
   onToggleCollapse?: () => void
-  transactionCount?: number // Added transaction count prop
   showDesktop?: boolean
   showMobileTrigger?: boolean
 }
@@ -186,7 +190,6 @@ interface SidebarProps {
 export function Sidebar({
   collapsed = false,
   onToggleCollapse,
-  transactionCount,
   showDesktop = true,
   showMobileTrigger = true,
 }: SidebarProps) {
@@ -200,7 +203,7 @@ export function Sidebar({
             collapsed ? "lg:w-16" : "lg:w-72",
           )}
         >
-          <SidebarContent collapsed={collapsed} transactionCount={transactionCount} />
+          <SidebarContent collapsed={collapsed} />
 
           {/* Collapse Toggle Button */}
           <div className="absolute -right-3 top-8">
@@ -226,7 +229,7 @@ export function Sidebar({
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
-            <SidebarContent transactionCount={transactionCount} />
+            <SidebarContent />
           </SheetContent>
         </Sheet>
       )}

@@ -2,13 +2,14 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, type CSSProperties } from "react"
 import { Check, ChevronsUpDown, X, Search, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { getCategoryColorTokens } from "@/lib/utils/category-colors"
 import type { Categoria } from "@/lib/types/database"
 
 interface CategorySelectorProps {
@@ -72,21 +73,6 @@ export function CategorySelector({
     onSelectionChange([])
   }
 
-  const getCategoryColor = (category: Categoria) => {
-    if (category.color) {
-      return category.color
-    }
-    // Colores por defecto basados en el tipo
-    switch (category.tipo) {
-      case "ingreso":
-        return "#10b981" // green-500
-      case "gasto":
-        return "#ef4444" // red-500
-      default:
-        return "#6366f1" // indigo-500
-    }
-  }
-
   return (
     <div className="space-y-3">
       <Popover open={open} onOpenChange={setOpen}>
@@ -127,24 +113,38 @@ export function CategorySelector({
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {filteredCategories.map((category) => (
-                    <div
-                      key={category.id}
-                      className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
-                      onClick={() => handleSelect(category.id)}
-                    >
-                      <Badge
-                        className="text-white font-medium rounded-full px-2 py-1 text-xs flex items-center gap-1"
-                        style={{ backgroundColor: getCategoryColor(category) }}
+                  {filteredCategories.map((category) => {
+                    const { color, textColor, rgbValue } = getCategoryColorTokens(category)
+                    const badgeStyles: CSSProperties = {
+                      ["--category-color" as string]: color,
+                      ["--category-text-color" as string]: textColor,
+                      ["--category-color-rgb" as string]: rgbValue,
+                    }
+
+                    return (
+                      <div
+                        key={category.id}
+                        className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                        onClick={() => handleSelect(category.id)}
                       >
-                        {category.emoji && <span>{category.emoji}</span>}
-                        <span>{category.nombre}</span>
-                      </Badge>
-                      <div className="ml-auto">
-                        {selectedCategories.includes(category.id) && <Check className="h-4 w-4 text-primary" />}
+                        <Badge
+                          variant="outline"
+                          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium border border-transparent shadow-sm bg-[var(--category-color)] text-[var(--category-text-color)] transition-all duration-200 dark:bg-transparent dark:text-foreground dark:border-[var(--category-color)] dark:shadow-none"
+                          style={badgeStyles}
+                        >
+                          <span
+                            aria-hidden
+                            className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--category-color)] dark:inline-flex"
+                          />
+                          {category.emoji && <span className="text-xs">{category.emoji}</span>}
+                          <span className="text-xs font-medium leading-none">{category.nombre}</span>
+                        </Badge>
+                        <div className="ml-auto">
+                          {selectedCategories.includes(category.id) && <Check className="h-4 w-4 text-primary" />}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -175,24 +175,38 @@ export function CategorySelector({
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {selectedCategoryObjects.map((category) => (
-              <Badge
-                key={category.id}
-                className="flex items-center gap-2 pr-1 text-white font-medium rounded-full"
-                style={{ backgroundColor: getCategoryColor(category) }}
-              >
-                {category.emoji && <span>{category.emoji}</span>}
-                <span>{category.nombre}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => removeCategory(category.id, e)}
-                  className="h-auto p-0 ml-1 hover:bg-white/20 text-white/80 hover:text-white"
+            {selectedCategoryObjects.map((category) => {
+              const { color, textColor, rgbValue } = getCategoryColorTokens(category)
+              const badgeStyles: CSSProperties = {
+                ["--category-color" as string]: color,
+                ["--category-text-color" as string]: textColor,
+                ["--category-color-rgb" as string]: rgbValue,
+              }
+
+              return (
+                <Badge
+                  key={category.id}
+                  variant="outline"
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium border border-transparent shadow-sm bg-[var(--category-color)] text-[var(--category-text-color)] dark:bg-transparent dark:text-foreground dark:border-[var(--category-color)] dark:shadow-none"
+                  style={badgeStyles}
                 >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
+                  <span
+                    aria-hidden
+                    className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--category-color)] dark:inline-flex"
+                  />
+                  {category.emoji && <span className="text-xs">{category.emoji}</span>}
+                  <span className="text-xs font-medium leading-none">{category.nombre}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => removeCategory(category.id, e)}
+                    className="h-auto p-0 ml-1 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-100/60 dark:hover:bg-red-950/20"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )
+            })}
           </div>
         </div>
       )}

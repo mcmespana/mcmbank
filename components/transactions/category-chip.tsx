@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type CSSProperties } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Plus, X } from "lucide-react"
 import { CategorySelector } from "./category-selector"
+import { getCategoryColorTokens } from "@/lib/utils/category-colors"
 import type { Categoria } from "@/lib/types/database"
 
 interface CategoryChipProps {
@@ -16,35 +17,32 @@ interface CategoryChipProps {
 export function CategoryChip({ category, categories, onCategoryChange }: CategoryChipProps) {
   const [open, setOpen] = useState(false)
 
-  const getCategoryColor = (category: Categoria) => {
-    if (category.color) {
-      return category.color
-    }
-    // Colores por defecto basados en el tipo
-    switch (category.tipo) {
-      case "ingreso":
-        return "#10b981" // green-500
-      case "gasto":
-        return "#ef4444" // red-500
-      default:
-        return "#6366f1" // indigo-500
-    }
-  }
-
-  const handleCategoryRemove = (categoryId: string) => {
+  const handleCategoryRemove = () => {
     onCategoryChange(null)
   }
 
   if (category) {
+    const { color, textColor, rgbValue } = getCategoryColorTokens(category)
+    const badgeStyles: CSSProperties = {
+      ["--category-color" as string]: color,
+      ["--category-text-color" as string]: textColor,
+      ["--category-color-rgb" as string]: rgbValue,
+    }
+
     return (
       <div className="flex items-center gap-2">
         <Badge
-          className="cursor-pointer hover:opacity-80 transition-all duration-200 rounded-full px-3 py-1.5 text-white font-medium flex items-center gap-1.5 text-xs shadow-sm hover:shadow-md transform hover:scale-105"
-          style={{ backgroundColor: getCategoryColor(category) }}
+          variant="outline"
+          className="group cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium inline-flex items-center gap-2 transition-all duration-200 border border-transparent shadow-sm hover:shadow-md hover:scale-105 bg-[var(--category-color)] text-[var(--category-text-color)] dark:bg-transparent dark:text-foreground dark:border-[var(--category-color)] dark:shadow-none dark:hover:bg-[rgba(var(--category-color-rgb),0.18)]"
+          style={badgeStyles}
           onClick={() => setOpen(true)}
         >
+          <span
+            aria-hidden
+            className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--category-color)] dark:inline-flex"
+          />
           {category.emoji && <span className="text-xs">{category.emoji}</span>}
-          <span className="text-xs font-medium">{category.nombre}</span>
+          <span className="text-xs font-medium leading-none">{category.nombre}</span>
         </Badge>
 
         <Button
@@ -52,7 +50,7 @@ export function CategoryChip({ category, categories, onCategoryChange }: Categor
           size="sm"
           onClick={(e) => {
             e.stopPropagation()
-            handleCategoryRemove(category.id)
+            handleCategoryRemove()
           }}
           className="h-5 w-5 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
           title="Quitar categoría"

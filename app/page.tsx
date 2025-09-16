@@ -20,14 +20,14 @@ export default function HomePage() {
         <TabsList>
           <TabsTrigger value="inicio">Inicio</TabsTrigger>
           <TabsTrigger value="actividad">Balance de actividad</TabsTrigger>
-          <TabsTrigger value="categorias">Análisis categorías</TabsTrigger>
+          <TabsTrigger value="categorias">Analizar una categoría</TabsTrigger>
         </TabsList>
 
         <TabsContent value="inicio" className="space-y-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-muted-foreground">Panel de control financiero de MCM Bank</p>
+              <p className="text-muted-foreground">Panel de control y revisión de la tesorería</p>
             </div>
             <TimeframeFilter value={timeframe} onChange={setTimeframe} />
           </div>

@@ -37,6 +37,7 @@ export interface Cuenta {
 export interface Categoria {
   id: UUID
   organizacion_id: UUID
+  delegacion_id: UUID | null
   nombre: string
   tipo: TipoCategoria
   emoji: string | null
@@ -44,6 +45,7 @@ export interface Categoria {
   orden: number
   categoria_padre_id: UUID | null
   creado_en: string
+  es_global: boolean
 }
 
 export interface Movimiento {

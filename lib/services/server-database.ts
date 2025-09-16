@@ -101,12 +101,15 @@ export class ServerDatabaseService {
         categoria:categoria_id (
           id,
           organizacion_id,
+          delegacion_id,
           nombre,
           tipo,
           emoji,
+          color,
           orden,
           categoria_padre_id,
-          creado_en
+          creado_en,
+          es_global
         )
       `)
       .eq("cuenta.delegacion_id", delegacionId)
@@ -135,12 +138,19 @@ export class ServerDatabaseService {
   }
 
   // Categoria operations (server-side)
-  static async getCategoriasByOrganizacion(organizacionId: string): Promise<Categoria[]> {
+  static async getCategoriasByDelegacion(
+    delegacionId: string,
+    options: { includeGlobal?: boolean } = {},
+  ): Promise<Categoria[]> {
     const supabase = this.getServerClient()
     const { data, error } = await supabase
       .from("categoria")
       .select("*")
-      .eq("organizacion_id", organizacionId)
+      .or(
+        options.includeGlobal !== false
+          ? `delegacion_id.eq.${delegacionId},es_global.is.true`
+          : `delegacion_id.eq.${delegacionId}`,
+      )
       .order("orden", { ascending: true })
 
     if (error) throw error

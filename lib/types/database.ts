@@ -152,32 +152,38 @@ export type Database = {
           color: string
           id: string
           organizacion_id: string
+          delegacion_id: string | null
           nombre: string
           tipo: string
           emoji: string | null
           orden: number
           categoria_padre_id: string | null
           creado_en: string
+          es_global: boolean
         }
         Insert: {
           id?: string
           organizacion_id: string
+          delegacion_id?: string | null
           nombre: string
           tipo: string
           emoji?: string | null
           orden?: number
           categoria_padre_id?: string | null
           creado_en?: string
+          es_global?: boolean
         }
         Update: {
           id?: string
           organizacion_id?: string
+          delegacion_id?: string | null
           nombre?: string
           tipo?: string
           emoji?: string | null
           orden?: number
           categoria_padre_id?: string | null
           creado_en?: string
+          es_global?: boolean
         }
       }
       membresia: {

@@ -69,12 +69,15 @@ export function useMovimientos(
               categoria:categoria_id (
                 id,
                 organizacion_id,
+                delegacion_id,
                 nombre,
                 tipo,
                 emoji,
+                color,
                 orden,
                 categoria_padre_id,
-                creado_en
+                creado_en,
+                es_global
               ),
               archivos:movimiento_archivo!movimiento_id (
                 id,
@@ -186,12 +189,15 @@ export function useMovimientos(
           categoria:categoria_id (
             id,
             organizacion_id,
+            delegacion_id,
             nombre,
             tipo,
             emoji,
+            color,
             orden,
             categoria_padre_id,
-            creado_en
+            creado_en,
+            es_global
           ),
           archivos:movimiento_archivo!movimiento_id (
             id,

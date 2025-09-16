@@ -6,13 +6,17 @@ import type { Categoria } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { runQuery } from "@/lib/db/query"
 
-export function useCategorias(organizacionId?: string) {
+export function useCategorias(
+  delegacionId?: string | null,
+  options?: { includeGlobal?: boolean },
+) {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const TIMEOUT_MS = 12000
+  const includeGlobal = options?.includeGlobal ?? true
 
   const fetchCategorias = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort()
@@ -21,6 +25,12 @@ export function useCategorias(organizacionId?: string) {
     const ac = new AbortController()
     abortRef.current = ac
     try {
+      if (!delegacionId && !includeGlobal) {
+        setCategorias([])
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
 
       const { data, error } = await runQuery<any[]>({
@@ -33,7 +43,13 @@ export function useCategorias(organizacionId?: string) {
             .select("*")
             .order("orden", { ascending: true })
             .order("nombre", { ascending: true })
-          if (organizacionId) query = query.eq("organizacion_id", organizacionId)
+          if (delegacionId) {
+            query = includeGlobal
+              ? query.or(`delegacion_id.eq.${delegacionId},es_global.is.true`)
+              : query.eq("delegacion_id", delegacionId)
+          } else if (includeGlobal) {
+            query = query.eq("es_global", true)
+          }
           return await query.abortSignal(signal)
         }
       })
@@ -43,7 +59,14 @@ export function useCategorias(organizacionId?: string) {
         return
       }
 
-      setCategorias(data || [])
+      setCategorias(
+        (data || []).sort((a, b) => {
+          if (a.es_global !== b.es_global) {
+            return a.es_global ? -1 : 1
+          }
+          return a.orden - b.orden
+        }),
+      )
     } catch (err) {
       if (!ac.signal.aborted) {
         setError(err instanceof Error ? err.message : "Error desconocido")
@@ -55,7 +78,7 @@ export function useCategorias(organizacionId?: string) {
         timeoutRef.current = null
       }
     }
-  }, [organizacionId])
+  }, [delegacionId, includeGlobal])
 
   useEffect(() => {
     fetchCategorias()

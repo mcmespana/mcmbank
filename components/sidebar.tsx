@@ -18,6 +18,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  Lightbulb,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -94,6 +95,13 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
           },
         ]
       : []),
+    {
+      name: "Propuestas",
+      href: "/propuestas",
+      icon: Lightbulb,
+      count: null,
+      enabled: true,
+    },
     {
       name: "Diagnóstico",
       href: "/diagnostico",

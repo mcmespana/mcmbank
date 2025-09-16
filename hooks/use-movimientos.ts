@@ -57,7 +57,7 @@ export function useMovimientos(
       ...filters,
       categoriaIds: filters.categoriaIds ? [...filters.categoriaIds] : undefined,
     }
-  }, [serializedFilters])
+  }, [filters])
 
   const lastResetKey = useRef<string | null>(null)
   const resetKey = useMemo(() => `${delegacionId ?? "__no_delegacion__"}|${serializedFilters}|${pageSize}`, [delegacionId, serializedFilters, pageSize])

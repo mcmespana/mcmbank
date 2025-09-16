@@ -70,6 +70,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
         setLoading(false)
         return
       }
+      console.error("Error inicial obteniendo delegaciones", err)
       // Retry once after refreshing session in case token expired in background
       try {
         await supabase.auth.refreshSession()

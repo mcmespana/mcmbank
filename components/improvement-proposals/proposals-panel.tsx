@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { Sparkles, PartyPopper, EyeOff, Eye, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,15 +30,6 @@ export function ImprovementProposalsPanel() {
   const [showCompleted, setShowCompleted] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [manualRefresh, setManualRefresh] = useState(false)
-
-  const stats = useMemo(() => {
-    const total = proposals.length
-    const celebrating = proposals.filter((proposal) => proposal.estado === "hechisimo").length
-    const active = proposals.filter((proposal) => proposal.estado !== "hechisimo").length
-    const fresh = proposals.filter((proposal) => proposal.estado === "nueva_idea").length
-
-    return { total, celebrating, active, fresh }
-  }, [proposals])
 
   const handleCreateProposal = async (values: { title: string; description: string}) => {
     try {

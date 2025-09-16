@@ -43,13 +43,6 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       enabled: true,
     },
     {
-      name: "Propuestas",
-      href: "/propuestas",
-      icon: Sparkles,
-      count: null,
-      enabled: true,
-    },
-    {
       name: "Movimientos",
       href: "/transacciones",
       icon: ArrowLeftRight,
@@ -106,6 +99,13 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       name: "Diagnóstico",
       href: "/diagnostico",
       icon: Activity,
+      count: null,
+      enabled: true,
+    },
+    {
+      name: "Propuestas",
+      href: "/propuestas",
+      icon: Sparkles,
       count: null,
       enabled: true,
     },

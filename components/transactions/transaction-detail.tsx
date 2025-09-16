@@ -33,6 +33,8 @@ interface TransactionDetailProps {
   onBack?: () => void
 }
 
+type HistoryChange = "date" | "amount"
+
 export function TransactionDetail({
   movement,
   accounts,
@@ -153,23 +155,36 @@ export function TransactionDetail({
     return () => clearTimeout(timer)
   }, [saveStatus])
 
-  const appendHistoryNote = (prev: Partial<Movimiento>) => {
+  const appendHistoryNote = (prev: Partial<Movimiento>, change: HistoryChange | HistoryChange[]) => {
     const descriptionBase = (prev.descripcion ?? "").trimEnd()
 
-    let previousDateLabel = "Sin fecha"
-    if (prev.fecha) {
-      const parsedDate = new Date(prev.fecha)
-      previousDateLabel = Number.isNaN(parsedDate.getTime())
-        ? prev.fecha
-        : format(parsedDate, "dd/MM/yyyy")
+    const changes = Array.isArray(change) ? change : [change]
+    const entries: string[] = []
+
+    if (changes.includes("date")) {
+      let previousDateLabel = "Sin fecha"
+      if (prev.fecha) {
+        const parsedDate = new Date(prev.fecha)
+        previousDateLabel = Number.isNaN(parsedDate.getTime())
+          ? prev.fecha
+          : format(parsedDate, "dd/MM/yyyy")
+      }
+      entries.push(`Fecha anterior a la modificación: ${previousDateLabel}`)
     }
 
-    const previousAmountLabel =
-      typeof prev.importe === "number"
-        ? formatCurrency(prev.importe)
-        : "Sin cantidad"
+    if (changes.includes("amount")) {
+      const previousAmountLabel =
+        typeof prev.importe === "number"
+          ? formatCurrency(prev.importe)
+          : "Sin cantidad"
+      entries.push(`Cantidad anterior a la modificación: ${previousAmountLabel}`)
+    }
 
-    const logEntry = `Fecha anterior a la modificación: ${previousDateLabel}\nCantidad anterior a la modificación: ${previousAmountLabel}`
+    if (entries.length === 0) {
+      return descriptionBase
+    }
+
+    const logEntry = entries.join("\n")
 
     return descriptionBase ? `${descriptionBase}\n\n${logEntry}` : logEntry
   }
@@ -228,7 +243,7 @@ export function TransactionDetail({
       return {
         ...prev,
         importe: parsedAmount,
-        descripcion: appendHistoryNote(prev),
+        descripcion: appendHistoryNote(prev, "amount"),
       }
     })
 
@@ -270,7 +285,7 @@ export function TransactionDetail({
       return {
         ...prev,
         fecha: formattedDate,
-        descripcion: appendHistoryNote(prev),
+        descripcion: appendHistoryNote(prev, "date"),
       }
     })
 
@@ -452,6 +467,8 @@ export function TransactionDetail({
                               "w-full justify-start text-left font-normal h-9",
                               !formData.fecha && "text-muted-foreground",
                             )}
+                            type="button"
+                            onClick={() => setIsFormDateOpen((prev) => !prev)}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : "Fecha"}
@@ -511,7 +528,6 @@ export function TransactionDetail({
                     />
                   </div>
                 </TabsContent>
-
                 <TabsContent value="archivos" className="space-y-6 mt-6">
                   <TransactionFiles
                     movementId={movement?.id || null}

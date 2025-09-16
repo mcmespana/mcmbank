@@ -107,10 +107,21 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
     <div className={cn("flex h-full flex-col bg-sidebar", className)}>
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              window.location.assign("/")
+            } catch {
+              // no-op
+            }
+          }}
+          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+          title="Ir al inicio"
+        >
           <Building2 className="h-8 w-8 text-sidebar-primary" />
           {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">MCM Bank</span>}
-        </div>
+        </button>
       </div>
 
       {/* Navigation */}

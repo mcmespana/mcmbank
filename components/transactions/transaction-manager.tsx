@@ -62,8 +62,6 @@ export function TransactionManager() {
   const searchParams = useSearchParams()
 
   const currentDelegation = getCurrentDelegation()
-  const organizacionId = currentDelegation?.organizacion_id
-
   console.log(`🏢 TransactionManager: selectedDelegation = ${selectedDelegation}, currentDelegation = ${currentDelegation?.nombre}`)
 
   const {
@@ -87,7 +85,7 @@ export function TransactionManager() {
     uncategorized: filters.uncategorized,
   })
 
-  const { categorias: categories } = useCategorias(organizacionId)
+  const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
 
   const handleDownload = async () => {

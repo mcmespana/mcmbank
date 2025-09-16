@@ -83,7 +83,9 @@ export function useTransacciones({
             nombre,
             tipo,
             emoji,
-            color
+            color,
+            delegacion_id,
+            es_global
           )
         `)
         .eq("ignorado", false)

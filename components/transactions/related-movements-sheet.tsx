@@ -22,7 +22,7 @@ interface RelatedMovementsSheetProps {
 
 export function RelatedMovementsSheet({ account, category, open, onOpenChange }: RelatedMovementsSheetProps) {
   const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
-  const { categorias: categories } = useCategorias(getCurrentDelegation()?.organizacion_id)
+  const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
 
   const { movimientos, loading, error, loadMore, hasMore } = useMovimientos(

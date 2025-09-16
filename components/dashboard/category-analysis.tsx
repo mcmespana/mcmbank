@@ -30,7 +30,7 @@ export function CategoryAnalysisDashboard() {
   const [timeframe, setTimeframe] = useState<Timeframe>("month")
   const [categoryIds, setCategoryIds] = useState<string[]>([])
 
-  const { categorias } = useCategorias(getCurrentDelegation()?.organizacion_id)
+  const { categorias } = useCategorias(selectedDelegation)
   const { from, to } = getTimeframeRange(timeframe)
   const { movimientos } = useMovimientos(selectedDelegation, {
     fechaDesde: from,

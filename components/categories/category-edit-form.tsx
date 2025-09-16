@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,17 +16,28 @@ interface CategoryEditFormProps {
   parentCategory?: Categoria
   onSave: (patch: Partial<Categoria>) => Promise<void>
   onCancel: () => void
+  canManageGlobal: boolean
 }
 
+type ScopeOption = "delegacion" | "global"
 
-export function CategoryEditForm({ category, parentCategory, onSave, onCancel }: CategoryEditFormProps) {
+export function CategoryEditForm({ category, parentCategory, onSave, onCancel, canManageGlobal }: CategoryEditFormProps) {
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: category.emoji || "📁",
     tipo: category.tipo,
     color: parentCategory?.color || category.color || "#4ECDC4",
+    scope: (category.es_global ? "global" : "delegacion") as ScopeOption,
   })
   const [loading, setLoading] = useState(false)
+
+  const canToggleGlobal = canManageGlobal && (!parentCategory || parentCategory.es_global)
+
+  useEffect(() => {
+    if (!canToggleGlobal) {
+      setFormData((prev) => (prev.scope === "global" ? { ...prev, scope: "delegacion" } : prev))
+    }
+  }, [canToggleGlobal])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,6 +55,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel }:
         emoji: formData.emoji,
         tipo: formData.tipo,
         ...(parentCategory ? {} : { color: formData.color }),
+        es_global: formData.scope === "global",
       })
     } catch (error) {
       console.error("Error saving category:", error)
@@ -107,6 +119,32 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel }:
             value={`${parentCategory.emoji || ""} ${parentCategory.nombre}`}
             disabled
           />
+        </div>
+      )}
+
+      {canManageGlobal && (
+        <div className="space-y-2">
+          <Label>Ámbito *</Label>
+          <Select
+            value={formData.scope}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, scope: value as ScopeOption }))
+            }
+            disabled={!canToggleGlobal}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="delegacion">Delegación actual</SelectItem>
+              <SelectItem value="global">Global (todas las delegaciones)</SelectItem>
+            </SelectContent>
+          </Select>
+          {!canToggleGlobal && (
+            <p className="text-xs text-muted-foreground">
+              Solo puedes marcar una subcategoría como global si su categoría superior también es global.
+            </p>
+          )}
         </div>
       )}
 

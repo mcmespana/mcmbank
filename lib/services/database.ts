@@ -15,19 +15,28 @@ export class DatabaseService {
   }
 
   // Categoria operations (client-side only)
-  static async getCategoriasByOrganizacion(organizacionId: string): Promise<Categoria[]> {
+  static async getCategoriasByDelegacion(
+    delegacionId: string,
+    options: { includeGlobal?: boolean } = {},
+  ): Promise<Categoria[]> {
     const supabase = this.getClient()
     const { data, error } = await supabase
       .from("categoria")
       .select("*")
-      .eq("organizacion_id", organizacionId)
+      .or(
+        options.includeGlobal !== false
+          ? `delegacion_id.eq.${delegacionId},es_global.is.true`
+          : `delegacion_id.eq.${delegacionId}`,
+      )
       .order("orden", { ascending: true })
 
     if (error) throw error
     return data || []
   }
 
-  static async createCategoria(categoria: Omit<Categoria, "id" | "creado_en">): Promise<Categoria> {
+  static async createCategoria(
+    categoria: Omit<Categoria, "id" | "creado_en">,
+  ): Promise<Categoria> {
     const supabase = this.getClient()
     const { data, error } = await supabase.from("categoria").insert(categoria).select().single()
 

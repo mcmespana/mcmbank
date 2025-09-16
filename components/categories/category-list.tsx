@@ -8,13 +8,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Badge } from "@/components/ui/badge"
 import { CategoryEditForm } from "./category-edit-form"
 import { DateRangeFilter } from "@/components/transactions/date-range-filter"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
+import useIsAdmin from "@/hooks/use-is-admin"
 import { DatabaseService } from "@/lib/services/database"
-import { GripVertical, Search, Edit, Trash2, Plus, X } from "lucide-react"
+import { GripVertical, Search, Edit, Trash2, Plus, X, Globe2 } from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
@@ -28,12 +30,27 @@ interface CategoryCardProps {
   onEdit: (category: Categoria) => void
   onSearch: (category: Categoria) => void
   onDelete: (category: Categoria) => void
+  canEdit: boolean
+  canDelete: boolean
+  isDragDisabled: boolean
+  isGlobal: boolean
 }
 
-function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: CategoryCardProps) {
+function CategoryCard({
+  category,
+  index,
+  balance,
+  onEdit,
+  onSearch,
+  onDelete,
+  canEdit,
+  canDelete,
+  isDragDisabled,
+  isGlobal,
+}: CategoryCardProps) {
   const isSub = !!category.categoria_padre_id
   return (
-    <Draggable draggableId={category.id} index={index}>
+    <Draggable draggableId={category.id} index={index} isDragDisabled={isDragDisabled}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
@@ -42,14 +59,23 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
             "transition-shadow hover:shadow-md",
             snapshot.isDragging && "shadow-lg rotate-2",
             isSub && "ml-6",
+            isDragDisabled && "opacity-95",
           )}
         >
           <CardContent className="p-3 sm:p-4 lg:p-6">
             <div className="flex items-center gap-3 sm:gap-4">
               {/* Drag Handle */}
               <div
-                {...provided.dragHandleProps}
-                className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-muted cursor-grab active:cursor-grabbing flex-shrink-0"
+                {...(provided.dragHandleProps ?? {})}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-muted flex-shrink-0",
+                  isDragDisabled ? "cursor-default opacity-40" : "cursor-grab active:cursor-grabbing",
+                )}
+                title={
+                  isDragDisabled
+                    ? "Solo el gestor central puede reorganizar categorías globales"
+                    : undefined
+                }
               >
                 <GripVertical className="h-4 w-4" />
               </div>
@@ -69,18 +95,22 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
               <div className="flex-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className={cn("font-semibold text-base sm:text-lg truncate", isSub && "font-medium")}>{category.nombre}</h3>
-                    <div className="flex items-center gap-2 mt-1 sm:mt-0">
-                      
-                      
-                      
-                    <AmountDisplay amount={balance} size="sm" />
-
-
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className={cn("font-semibold text-base sm:text-lg truncate", isSub && "font-medium")}>{category.nombre}</h3>
+                      {isGlobal && (
+                        <Badge
+                          variant="outline"
+                          className="flex items-center gap-1 border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-200"
+                        >
+                          <Globe2 className="h-3 w-3" />
+                          <span className="text-[10px] uppercase tracking-wide">Global</span>
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      <AmountDisplay amount={balance} size="sm" />
                     </div>
                   </div>
-                  
-             
                 </div>
               </div>
 
@@ -100,7 +130,8 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
                   size="icon"
                   className="h-8 w-8 sm:h-9 sm:w-9 text-gray-600 hover:bg-gray-50"
                   onClick={() => onEdit(category)}
-                  title="Editar categoría"
+                  title={canEdit ? "Editar categoría" : "Solo el gestor central puede editar categorías globales"}
+                  disabled={!canEdit}
                 >
                   <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
@@ -109,7 +140,8 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
                   size="icon"
                   className="h-8 w-8 sm:h-9 sm:w-9 text-red-600 hover:bg-red-50"
                   onClick={() => onDelete(category)}
-                  title="Eliminar categoría"
+                  title={canDelete ? "Eliminar categoría" : "Solo el gestor central puede eliminar categorías globales"}
+                  disabled={!canDelete}
                 >
                   <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
@@ -124,6 +156,7 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
 
 export function CategoryList() {
   const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
+  const isCentralManager = useIsAdmin()
   const [searchTerm, setSearchTerm] = useState("")
   const [searchOpen, setSearchOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Categoria | null>(null)
@@ -137,7 +170,7 @@ export function CategoryList() {
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
 
-  const { categorias: categories, loading, error, updateCategoria, fetchCategorias } = useCategorias(organizacionId)
+  const { categorias: categories, loading, error, updateCategoria, fetchCategorias } = useCategorias(selectedDelegation)
   const { movimientos } = useMovimientos(selectedDelegation || null)
   const searchParams = useSearchParams()
 
@@ -167,7 +200,12 @@ export function CategoryList() {
     setDateTo(newDateTo)
   }
 
+  const canEditCategory = (category: Categoria) => !category.es_global || isCentralManager
+  const canDeleteCategory = (category: Categoria) => !category.es_global || isCentralManager
+  const canReorderCategory = (category: Categoria) => !category.es_global || isCentralManager
+
   const handleEdit = (category: Categoria) => {
+    if (!canEditCategory(category)) return
     setEditingCategory(category)
     setEditSheetOpen(true)
   }
@@ -182,6 +220,7 @@ export function CategoryList() {
   }
 
   const handleDeleteRequest = (category: Categoria) => {
+    if (!canDeleteCategory(category)) return
     setDeletingCategory(category)
   }
 
@@ -202,27 +241,69 @@ export function CategoryList() {
   const handleSaveCategory = async (patch: Partial<Categoria>) => {
     try {
       if (editingCategory) {
-        await updateCategoria(editingCategory.id, patch)
+        const updates: Partial<Categoria> = {
+          nombre: patch.nombre,
+          emoji: patch.emoji,
+          tipo: patch.tipo,
+        }
+
         if (patch.color && editingCategory.categoria_padre_id === null) {
-          const children = categories.filter((c) => c.categoria_padre_id === editingCategory.id)
-          for (const child of children) {
-            await updateCategoria(child.id, { color: patch.color })
+          updates.color = patch.color
+        }
+
+        if (patch.es_global !== undefined) {
+          updates.es_global = patch.es_global
+          updates.delegacion_id = patch.es_global ? null : selectedDelegation || editingCategory.delegacion_id
+
+          if (
+            patch.es_global &&
+            editingCategory.categoria_padre_id &&
+            !categories.find((c) => c.id === editingCategory.categoria_padre_id)?.es_global
+          ) {
+            updates.categoria_padre_id = null
           }
         }
-      } else if (organizacionId) {
-        const maxOrder = Math.max(...categories.map((c) => c.orden), 0)
+
+        await updateCategoria(editingCategory.id, updates)
+
+        if (updates.color && editingCategory.categoria_padre_id === null) {
+          const children = categories.filter((c) => c.categoria_padre_id === editingCategory.id)
+          for (const child of children) {
+            await updateCategoria(child.id, { color: updates.color })
+          }
+        }
+      } else {
+        if (!organizacionId) {
+          throw new Error("No se ha podido determinar la organización")
+        }
+
+        const isGlobal = !!patch.es_global
+
+        if (!isGlobal && !selectedDelegation) {
+          alert("Selecciona una delegación para crear categorías locales")
+          return
+        }
+
+        const relevantCategories = categories.filter((category) =>
+          isGlobal ? category.es_global : !category.es_global && category.delegacion_id === selectedDelegation,
+        )
+        const maxOrder =
+          relevantCategories.length > 0 ? Math.max(...relevantCategories.map((c) => c.orden)) : 0
+
         await DatabaseService.createCategoria({
           organizacion_id: organizacionId,
+          delegacion_id: isGlobal ? null : selectedDelegation!,
           nombre: patch.nombre!,
           tipo: patch.tipo!,
           emoji: patch.emoji || "📁",
           color: patch.color || "#4ECDC4",
           orden: maxOrder + 1,
-          categoria_padre_id: null,
+          categoria_padre_id: patch.categoria_padre_id ?? null,
+          es_global: isGlobal,
         })
-        await fetchCategorias()
       }
 
+      await fetchCategorias()
       setEditSheetOpen(false)
       setCreateSheetOpen(false)
       setEditingCategory(null)
@@ -239,35 +320,54 @@ export function CategoryList() {
     const [moved] = items.splice(result.source.index, 1)
     items.splice(result.destination.index, 0, moved)
 
-    const newParentId = prev
-      ? (prev.categoria_padre_id === null
-          ? prev.id
-          : prev.categoria_padre_id)
-      : null
+    if (!canReorderCategory(moved)) return
+
+    const prev = items[result.destination.index - 1] ?? null
+    let newParentId: string | null = null
+
+    if (prev) {
+      newParentId = prev.categoria_padre_id === null ? prev.id : prev.categoria_padre_id
+    }
+
+    if (newParentId) {
+      const parent = items.find((c) => c.id === newParentId)
+      if (parent) {
+        if (moved.es_global && !parent.es_global) {
+          newParentId = null
+        } else if (!moved.es_global && parent.delegacion_id && parent.delegacion_id !== (moved.delegacion_id || selectedDelegation)) {
+          newParentId = parent.es_global ? parent.id : null
+        }
+      }
+    }
+
     const parentColor = newParentId ? items.find((c) => c.id === newParentId)?.color || moved.color : moved.color
 
     try {
-      // Only update items whose orden has changed, and for the moved item, also update parent/color
-      const updates = items.map((item, index) => {
-        const original = sortedCategories.find((c) => c.id === item.id)
-        const newOrden = index + 1
-        const isMoved = item.id === moved.id
-        const ordenChanged = original ? original.orden !== newOrden : true
-        if (isMoved) {
-          // Always update moved item with new orden, parent, and color
-          return updateCategoria(item.id, {
-            orden: newOrden,
-            categoria_padre_id: newParentId,
-            color: parentColor,
-          })
-        } else if (ordenChanged) {
-          // Only update orden if it changed
-          return updateCategoria(item.id, { orden: newOrden })
-        } else {
+      const updates = items
+        .map((item, index) => {
+          const original = sortedCategories.find((c) => c.id === item.id)
+          const newOrden = index + 1
+          const isMoved = item.id === moved.id
+          const ordenChanged = original ? original.orden !== newOrden : true
+
+          if (isMoved) {
+            const payload: Partial<Categoria> = {
+              orden: newOrden,
+              categoria_padre_id: newParentId,
+              color: parentColor,
+            }
+
+            return updateCategoria(item.id, payload)
+          } else if (ordenChanged) {
+            return updateCategoria(item.id, { orden: newOrden })
+          }
+
           return null
-        }
-      }).filter(Boolean)
+        })
+        .filter(Boolean) as Promise<void>[]
+
       await Promise.all(updates)
+      await fetchCategorias()
     } catch (error) {
       console.error("Error reordering categories:", error)
     }
@@ -278,7 +378,15 @@ export function CategoryList() {
     category.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const sortedCategories = [...filteredCategories].sort((a, b) => a.orden - b.orden)
+  const sortedCategories = [...filteredCategories].sort((a, b) => {
+    if (a.es_global !== b.es_global) {
+      return a.es_global ? -1 : 1
+    }
+    return a.orden - b.orden
+  })
+
+  const globalCount = categories.filter((category) => category.es_global).length
+  const localCount = categories.length - globalCount
 
   // Renders condicionales al final
   if (!selectedDelegation) {
@@ -312,16 +420,21 @@ export function CategoryList() {
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold">Categorías</h2>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            {categories.length} categorías • Arrastra para reordenar
-          </p>
-        </div>
-        <Button onClick={handleCreate} size="default" className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Añadir categoría
-        </Button>
+      <div>
+        <h2 className="text-2xl sm:text-3xl font-bold">Categorías</h2>
+        <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+          {localCount} locales • {globalCount} globales • Arrastra para reordenar
+        </p>
+      </div>
+      <Button
+        onClick={handleCreate}
+        size="default"
+        className="w-full sm:w-auto"
+        disabled={!organizacionId}
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Añadir categoría
+      </Button>
       </div>
 
       {/* Filters */}
@@ -412,6 +525,10 @@ export function CategoryList() {
                     onEdit={handleEdit}
                     onSearch={handleSearch}
                     onDelete={handleDeleteRequest}
+                    canEdit={canEditCategory(category)}
+                    canDelete={canDeleteCategory(category)}
+                    isDragDisabled={!canReorderCategory(category)}
+                    isGlobal={category.es_global}
                   />
                 ))}
                 {provided.placeholder}
@@ -443,6 +560,7 @@ export function CategoryList() {
               parentCategory={categories.find((c) => c.id === editingCategory.categoria_padre_id)}
               onSave={handleSaveCategory}
               onCancel={() => setEditSheetOpen(false)}
+              canManageGlobal={isCentralManager}
             />
           )}
         </SheetContent>
@@ -457,6 +575,7 @@ export function CategoryList() {
             category={{
               id: "",
               organizacion_id: organizacionId || "",
+              delegacion_id: selectedDelegation || null,
               nombre: "",
               tipo: "gasto",
               emoji: "📁",
@@ -464,9 +583,11 @@ export function CategoryList() {
               orden: 0,
               categoria_padre_id: null,
               creado_en: "",
+              es_global: false,
             }}
             onSave={handleSaveCategory}
             onCancel={() => setCreateSheetOpen(false)}
+            canManageGlobal={isCentralManager}
           />
         </SheetContent>
       </Sheet>

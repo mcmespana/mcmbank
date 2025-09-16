@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
 import { TransactionCreatePanel } from "./transaction-create-panel"
 import { DateRangeFilter } from "./date-range-filter"
+import { CategoryMegaSelector } from "./category-mega-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
@@ -22,13 +23,28 @@ import {
   Filter,
   ChevronUp,
   Check,
+  Tag,
+  Trash2,
+  Type,
+  FilePlus,
+  AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
-import { isDebugEnabled } from "@/lib/utils/debug"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 export interface TransactionFilters {
   dateFrom?: string
@@ -59,6 +75,17 @@ export function TransactionManager() {
   const [createFormOpen, setCreateFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle")
+  const [selectedMovementIds, setSelectedMovementIds] = useState<string[]>([])
+  const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkConceptOpen, setBulkConceptOpen] = useState(false)
+  const [bulkDescriptionOpen, setBulkDescriptionOpen] = useState(false)
+  const [bulkConceptValue, setBulkConceptValue] = useState("")
+  const [bulkDescriptionValue, setBulkDescriptionValue] = useState("")
+  const [bulkCategoryLoading, setBulkCategoryLoading] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkConceptLoading, setBulkConceptLoading] = useState(false)
+  const [bulkDescriptionLoading, setBulkDescriptionLoading] = useState(false)
   const searchParams = useSearchParams()
 
   const currentDelegation = getCurrentDelegation()
@@ -71,6 +98,7 @@ export function TransactionManager() {
     updateCategoria,
     updateMovimiento,
     createMovimiento,
+    deleteMovimientos,
     refetch,
     loadMore,
     hasMore,
@@ -87,6 +115,63 @@ export function TransactionManager() {
 
   const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
+
+  useEffect(() => {
+    if (movements.length === 0) {
+      setSelectedMovementIds((prev) => (prev.length === 0 ? prev : []))
+      return
+    }
+
+    const availableIds = new Set(movements.map((movement) => movement.id))
+    setSelectedMovementIds((prev) => {
+      const filtered = prev.filter((id) => availableIds.has(id))
+      return filtered.length === prev.length ? prev : filtered
+    })
+  }, [movements])
+
+  const selectedMovements = useMemo(
+    () => movements.filter((movement) => selectedMovementIds.includes(movement.id)),
+    [movements, selectedMovementIds],
+  )
+
+  const allVisibleMovementIds = useMemo(
+    () => movements.map((movement) => movement.id),
+    [movements],
+  )
+
+  const selectionCount = selectedMovementIds.length
+  const allVisibleSelected =
+    selectionCount > 0 && selectionCount === allVisibleMovementIds.length && allVisibleMovementIds.length > 0
+
+  const masterSelectionState: boolean | "indeterminate" = selectionCount
+    ? allVisibleSelected
+      ? true
+      : "indeterminate"
+    : false
+
+  const selectionActive = selectionCount > 0
+
+  const clearSelection = () => setSelectedMovementIds([])
+
+  const handleMovementSelectionChange = (movementId: string, selected: boolean) => {
+    setSelectedMovementIds((prev) => {
+      if (selected) {
+        if (prev.includes(movementId)) {
+          return prev
+        }
+        return [...prev, movementId]
+      }
+      return prev.filter((id) => id !== movementId)
+    })
+  }
+
+  const handleToggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      clearSelection()
+    } else {
+      setSelectedMovementIds(allVisibleMovementIds)
+    }
+  }
 
   const handleDownload = async () => {
     setDownloadState("downloading")
@@ -109,6 +194,108 @@ export function TransactionManager() {
     setSelectedMovementId(movement.id)
     setSelectedMovementSnapshot(movement)
     setDetailInitialTab("datos")
+  }
+
+  const handleBulkCategorySelect = async (categoryId: string) => {
+    if (!selectionCount) {
+      return
+    }
+
+    setBulkCategoryLoading(true)
+    try {
+      await Promise.all(
+        selectedMovementIds.map((movementId) =>
+          handleMovementUpdate(movementId, { categoria_id: categoryId } as Partial<MovimientoConRelaciones>),
+        ),
+      )
+      toast.success(`Categoría actualizada en ${selectionCount} transacciones`)
+      setBulkCategoryOpen(false)
+      clearSelection()
+    } catch (error) {
+      console.error("Error updating categories in bulk", error)
+      toast.error("No se pudieron actualizar las categorías seleccionadas")
+    } finally {
+      setBulkCategoryLoading(false)
+    }
+  }
+
+  const handleBulkConceptSubmit = async () => {
+    const nextConcept = bulkConceptValue.trim()
+    if (!nextConcept) {
+      toast.error("Escribe un concepto para actualizar")
+      return
+    }
+
+    setBulkConceptLoading(true)
+    try {
+      await Promise.all(
+        selectedMovementIds.map((movementId) =>
+          handleMovementUpdate(movementId, { concepto: nextConcept }),
+        ),
+      )
+      toast.success(`Concepto actualizado en ${selectionCount} transacciones`)
+      setBulkConceptOpen(false)
+      setBulkConceptValue("")
+      clearSelection()
+    } catch (error) {
+      console.error("Error updating concept in bulk", error)
+      toast.error("No se pudieron actualizar los conceptos seleccionados")
+    } finally {
+      setBulkConceptLoading(false)
+    }
+  }
+
+  const handleBulkDescriptionSubmit = async () => {
+    const appendText = bulkDescriptionValue.trim()
+    if (!appendText) {
+      toast.error("Escribe un texto para añadir a la descripción")
+      return
+    }
+
+    setBulkDescriptionLoading(true)
+    try {
+      await Promise.all(
+        selectedMovements.map((movement) => {
+          const currentDescription = (movement.descripcion || "").trimEnd()
+          const newDescription = currentDescription
+            ? `${currentDescription}\n${appendText}`
+            : appendText
+          return handleMovementUpdate(movement.id, { descripcion: newDescription })
+        }),
+      )
+      toast.success(`Descripción ampliada en ${selectionCount} transacciones`)
+      setBulkDescriptionOpen(false)
+      setBulkDescriptionValue("")
+      clearSelection()
+    } catch (error) {
+      console.error("Error appending description in bulk", error)
+      toast.error("No se pudieron actualizar las descripciones seleccionadas")
+    } finally {
+      setBulkDescriptionLoading(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (!selectionCount) {
+      return
+    }
+
+    setBulkDeleting(true)
+    try {
+      await deleteMovimientos(selectedMovementIds)
+      if (selectedMovementId && selectedMovementIds.includes(selectedMovementId)) {
+        setSelectedMovementId(null)
+        setSelectedMovementSnapshot(null)
+      }
+      toast.success(`Has eliminado ${selectionCount} transacciones. ¡Adiós!`)
+      clearSelection()
+      setBulkDeleteOpen(false)
+    } catch (error) {
+      console.error("Error deleting movements in bulk", error)
+      toast.error("No se pudieron eliminar las transacciones seleccionadas")
+    } finally {
+      setBulkDeleting(false)
+    }
   }
 
   const handleOpenFiles = (movement: MovimientoConRelaciones) => {
@@ -386,6 +573,68 @@ export function TransactionManager() {
             </div>
           </div>
 
+          {selectionActive && (
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 sm:p-4 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-1 items-start gap-3">
+                  <Checkbox
+                    checked={masterSelectionState}
+                    onCheckedChange={handleToggleSelectAllVisible}
+                    className="mt-1 h-5 w-5 border-2"
+                    aria-label="Seleccionar todo lo visible"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold tracking-tight">
+                      {selectionCount} transacciones seleccionadas
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Estas acciones aplican a las transacciones visibles, sin importar la cuenta de origen.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setBulkCategoryOpen(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Tag className="h-4 w-4" />
+                    <span>Editar categoría</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBulkConceptOpen(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Type className="h-4 w-4" />
+                    <span>Unificar concepto</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBulkDescriptionOpen(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <FilePlus className="h-4 w-4" />
+                    <span>Añadir nota</span>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setBulkDeleteOpen(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Eliminar</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {filtersOpen && (
             <Card className="lg:hidden p-4 border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
               <div className="flex items-center justify-between mb-4">
@@ -433,6 +682,8 @@ export function TransactionManager() {
             onLoadMore={loadMore}
             hasMore={hasMore}
             onOpenFiles={(movement) => handleOpenFiles(movement as unknown as MovimientoConRelaciones)}
+            selectedMovementIds={selectedMovementIds}
+            onMovementSelectionChange={handleMovementSelectionChange}
           />
         </div>
       </div>
@@ -479,6 +730,175 @@ export function TransactionManager() {
           }, 1000)
         }}
       />
+
+      <Dialog
+        open={bulkCategoryOpen}
+        onOpenChange={(open) => {
+          if (!bulkCategoryLoading) {
+            setBulkCategoryOpen(open)
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl w-full p-0 overflow-hidden">
+          <CategoryMegaSelector
+            categories={categories as unknown as Categoria[]}
+            selectedCategoryId={undefined}
+            onSelect={handleBulkCategorySelect}
+            onClose={() => setBulkCategoryOpen(false)}
+            bulkSelectionLabel={`${selectionCount} transacciones seleccionadas`}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkConceptOpen}
+        onOpenChange={(open) => {
+          if (!bulkConceptLoading) {
+            setBulkConceptOpen(open)
+            if (!open) {
+              setBulkConceptValue("")
+            }
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unificar concepto</DialogTitle>
+            <DialogDescription>
+              El nuevo concepto se aplicará a las {selectionCount} transacciones seleccionadas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={bulkConceptValue}
+              onChange={(event) => setBulkConceptValue(event.target.value)}
+              placeholder="Introduce el concepto que compartirán todas"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              Usa un nombre claro y con cariño. Si te arrepientes siempre puedes volver a editarlo individualmente.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                if (!bulkConceptLoading) {
+                  setBulkConceptOpen(false)
+                  setBulkConceptValue("")
+                }
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleBulkConceptSubmit} disabled={bulkConceptLoading}>
+              {bulkConceptLoading ? <LoadingSpinner size="sm" /> : "Aplicar concepto"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDescriptionOpen}
+        onOpenChange={(open) => {
+          if (!bulkDescriptionLoading) {
+            setBulkDescriptionOpen(open)
+            if (!open) {
+              setBulkDescriptionValue("")
+            }
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Añadir nota a la descripción</DialogTitle>
+            <DialogDescription>
+              El texto que escribas se colocará al final de la descripción existente de cada transacción seleccionada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              value={bulkDescriptionValue}
+              onChange={(event) => setBulkDescriptionValue(event.target.value)}
+              rows={4}
+              placeholder="Escribe la nota extra que quieres añadir"
+            />
+            <p className="text-xs text-muted-foreground">
+              Añadiremos la nota con un salto de línea. Perfecto para matices, chistes internos o recordatorios del futuro.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                if (!bulkDescriptionLoading) {
+                  setBulkDescriptionOpen(false)
+                  setBulkDescriptionValue("")
+                }
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleBulkDescriptionSubmit} disabled={bulkDescriptionLoading}>
+              {bulkDescriptionLoading ? <LoadingSpinner size="sm" /> : "Añadir a todas"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!bulkDeleting) {
+            setBulkDeleteOpen(open)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5 animate-bounce" />
+              ¡Alerta roja!
+            </DialogTitle>
+            <DialogDescription>
+              Esta operación eliminará para siempre las {selectionCount} transacciones seleccionadas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-destructive animate-pulse">
+              ¿ESTÁS ABSOLUTAMENTE SEGURO DE QUE QUIERES ELIMINARLAS?
+            </p>
+            <div className="flex items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+              <span className="text-3xl animate-bounce">🤯</span>
+              <div className="text-sm text-destructive">
+                Respira hondo, revisa la selección y confirma solo si no hay vuelta atrás.
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Esta acción no se puede deshacer. Si mañana te arrepientes prometemos enviarte un gif de ánimo, pero los datos no
+              volverán.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                if (!bulkDeleting) {
+                  setBulkDeleteOpen(false)
+                }
+              }}
+            >
+              Mejor no
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting}>
+              {bulkDeleting ? <LoadingSpinner size="sm" /> : "Eliminar para siempre"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

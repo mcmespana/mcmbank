@@ -19,6 +19,7 @@ interface CategoryMegaSelectorProps {
   movement?: Movimiento | null
   account?: Cuenta | null
   onCreateCategory?: () => void
+  bulkSelectionLabel?: string
 }
 
 interface CategoryGroup {
@@ -34,6 +35,7 @@ export function CategoryMegaSelector({
   movement,
   account,
   onCreateCategory,
+  bulkSelectionLabel,
 }: CategoryMegaSelectorProps) {
   const [searchValue, setSearchValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
@@ -108,24 +110,39 @@ export function CategoryMegaSelector({
     <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-full sm:h-auto max-h-screen sm:max-h-[calc(100vh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
       <div className="border-b bg-muted/40 p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-          {movement && (
-            <div className="flex flex-1 items-start gap-3 sm:items-center">
-              <div className="flex-shrink-0 rounded-full p-0.5 border border-border/40 shadow-sm">
-                <BankAvatar account={account || undefined} size="sm" />
-              </div>
-              <div className="space-y-1 min-w-0">
-                <p className="text-[11px] tracking-wide text-muted-foreground uppercase">
-                  {account?.nombre || account?.banco_nombre || "Cuenta sin nombre"}
-                </p>
-                <h2 className="text-base font-semibold leading-tight line-clamp-2 sm:line-clamp-1">{movement.concepto}</h2>
-                {(movement.contraparte || movement.descripcion) && (
-                  <p className="text-sm text-muted-foreground line-clamp-1">
-                    {movement.contraparte || movement.descripcion}
+          <div className="flex flex-1 items-start gap-3 sm:items-center">
+            {movement ? (
+              <>
+                <div className="flex-shrink-0 rounded-full p-0.5 border border-border/40 shadow-sm">
+                  <BankAvatar account={account || undefined} size="sm" />
+                </div>
+                <div className="space-y-1 min-w-0">
+                  <p className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                    {account?.nombre || account?.banco_nombre || "Cuenta sin nombre"}
                   </p>
-                )}
+                  <h2 className="text-base font-semibold leading-tight line-clamp-2 sm:line-clamp-1">{movement.concepto}</h2>
+                  {(movement.contraparte || movement.descripcion) && (
+                    <p className="text-sm text-muted-foreground line-clamp-1">
+                      {movement.contraparte || movement.descripcion}
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : bulkSelectionLabel ? (
+              <div className="flex items-start gap-3">
+                <div className="hidden h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-xl text-primary sm:flex">
+                  ✨
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Selección múltiple</p>
+                  <h2 className="text-base font-semibold leading-tight sm:text-lg">{bulkSelectionLabel}</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Todas recibirán la misma categoría en un abrir y cerrar de ojos.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            ) : null}
+          </div>
 
           <div className="flex items-start justify-between gap-2 sm:flex-col sm:items-end sm:justify-start">
             {movement && (

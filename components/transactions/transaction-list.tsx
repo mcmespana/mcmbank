@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useMemo } from "react"
+import type React from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { TransactionListRow } from "./transaction-list-row"
@@ -20,11 +21,13 @@ interface TransactionListProps {
   loading: boolean
   error: string | null
   total: number
-  onMovementClick: (movement: MovimientoConRelaciones) => void
+  onMovementClick: (movement: MovimientoConRelaciones, event?: React.MouseEvent) => void
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onLoadMore?: () => void
   hasMore?: boolean
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
+  selectedMovementIds: string[]
+  onMovementSelectionChange: (movementId: string, selected: boolean) => void
 }
 
 export function TransactionList({
@@ -39,6 +42,8 @@ export function TransactionList({
   onLoadMore,
   hasMore,
   onOpenFiles,
+  selectedMovementIds,
+  onMovementSelectionChange,
 }: TransactionListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
@@ -115,8 +120,11 @@ export function TransactionList({
           category={movement.categoria_id ? categoriesById[movement.categoria_id] : undefined}
           categories={categories}
           onMovementUpdate={onMovementUpdate}
-          onClick={onMovementClick}
+          onClick={(item, event) => onMovementClick(item, event)}
           onOpenFiles={onOpenFiles}
+          isSelected={selectedMovementIds.includes(movement.id)}
+          selectionActive={selectedMovementIds.length > 0}
+          onSelectionChange={(selected) => onMovementSelectionChange(movement.id, selected)}
         />
       ))}
       {hasMore && (

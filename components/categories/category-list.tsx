@@ -3,18 +3,20 @@
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { CategoryEditForm } from "./category-edit-form"
 import { DateRangeFilter } from "@/components/transactions/date-range-filter"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
+import useIsAdmin from "@/hooks/use-is-admin"
 import { DatabaseService } from "@/lib/services/database"
-import { GripVertical, Search, Edit, Trash2, Plus, Building2, Wallet, X } from "lucide-react"
+import { GripVertical, Search, Edit, Trash2, Plus, X } from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
@@ -28,12 +30,15 @@ interface CategoryCardProps {
   onEdit: (category: Categoria) => void
   onSearch: (category: Categoria) => void
   onDelete: (category: Categoria) => void
+  canManageGlobal: boolean
 }
 
-function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: CategoryCardProps) {
+function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete, canManageGlobal }: CategoryCardProps) {
   const isSub = !!category.categoria_padre_id
+  const isGlobal = category.es_global
+  const dragDisabled = isGlobal && !canManageGlobal
   return (
-    <Draggable draggableId={category.id} index={index}>
+    <Draggable draggableId={category.id} index={index} isDragDisabled={dragDisabled}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
@@ -49,7 +54,12 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
               {/* Drag Handle */}
               <div
                 {...provided.dragHandleProps}
-                className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-muted cursor-grab active:cursor-grabbing flex-shrink-0"
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded text-muted-foreground flex-shrink-0",
+                  dragDisabled
+                    ? "cursor-not-allowed bg-muted"
+                    : "hover:bg-muted cursor-grab active:cursor-grabbing",
+                )}
               >
                 <GripVertical className="h-4 w-4" />
               </div>
@@ -70,17 +80,13 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className={cn("font-semibold text-base sm:text-lg truncate", isSub && "font-medium")}>{category.nombre}</h3>
-                    <div className="flex items-center gap-2 mt-1 sm:mt-0">
-                      
-                      
-                      
-                    <AmountDisplay amount={balance} size="sm" />
-
-
+                    <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0 text-sm text-muted-foreground">
+                      <AmountDisplay amount={balance} size="sm" />
+                      {isGlobal && <Badge variant="outline">Global</Badge>}
                     </div>
                   </div>
-                  
-             
+
+
                 </div>
               </div>
 
@@ -100,6 +106,7 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
                   size="icon"
                   className="h-8 w-8 sm:h-9 sm:w-9 text-gray-600 hover:bg-gray-50"
                   onClick={() => onEdit(category)}
+                  disabled={isGlobal && !canManageGlobal}
                   title="Editar categoría"
                 >
                   <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -109,6 +116,7 @@ function CategoryCard({ category, index, balance, onEdit, onSearch, onDelete }: 
                   size="icon"
                   className="h-8 w-8 sm:h-9 sm:w-9 text-red-600 hover:bg-red-50"
                   onClick={() => onDelete(category)}
+                  disabled={isGlobal && !canManageGlobal}
                   title="Eliminar categoría"
                 >
                   <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -134,11 +142,13 @@ export function CategoryList() {
   const [dateFrom, setDateFrom] = useState<string | undefined>()
   const [dateTo, setDateTo] = useState<string | undefined>()
 
+  const isGestorCentral = useIsAdmin()
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
+  const delegacionId = selectedDelegation || null
 
-  const { categorias: categories, loading, error, updateCategoria, fetchCategorias } = useCategorias(organizacionId)
-  const { movimientos } = useMovimientos(selectedDelegation || null)
+  const { categorias: categories, loading, error, updateCategoria, fetchCategorias } = useCategorias(delegacionId || undefined)
+  const { movimientos } = useMovimientos(delegacionId)
   const searchParams = useSearchParams()
 
   // Todos los useEffect y useCallback van aquí
@@ -168,6 +178,10 @@ export function CategoryList() {
   }
 
   const handleEdit = (category: Categoria) => {
+    if (category.es_global && !isGestorCentral) {
+      alert("Solo un gestor central puede editar las categorías globales")
+      return
+    }
     setEditingCategory(category)
     setEditSheetOpen(true)
   }
@@ -182,6 +196,10 @@ export function CategoryList() {
   }
 
   const handleDeleteRequest = (category: Categoria) => {
+    if (category.es_global && !isGestorCentral) {
+      alert("Solo un gestor central puede eliminar categorías globales")
+      return
+    }
     setDeletingCategory(category)
   }
 
@@ -202,7 +220,23 @@ export function CategoryList() {
   const handleSaveCategory = async (patch: Partial<Categoria>) => {
     try {
       if (editingCategory) {
-        await updateCategoria(editingCategory.id, patch)
+        if (editingCategory.es_global && !isGestorCentral) {
+          alert("No tienes permisos para editar una categoría global")
+          return
+        }
+
+        if (patch.es_global === false && !delegacionId) {
+          alert("Selecciona una delegación para convertir la categoría en local")
+          return
+        }
+
+        const updates: Partial<Categoria> = { ...patch }
+        if (patch.es_global !== undefined) {
+          updates.es_global = patch.es_global
+          updates.delegacion_id = patch.es_global ? null : delegacionId
+        }
+
+        await updateCategoria(editingCategory.id, updates)
         if (patch.color && editingCategory.categoria_padre_id === null) {
           const children = categories.filter((c) => c.categoria_padre_id === editingCategory.id)
           for (const child of children) {
@@ -210,15 +244,23 @@ export function CategoryList() {
           }
         }
       } else if (organizacionId) {
+        const esGlobal = !!patch.es_global
+        if (!esGlobal && !delegacionId) {
+          alert("Selecciona una delegación antes de crear una categoría local")
+          return
+        }
+
         const maxOrder = Math.max(...categories.map((c) => c.orden), 0)
         await DatabaseService.createCategoria({
           organizacion_id: organizacionId,
+          delegacion_id: esGlobal ? null : delegacionId!,
           nombre: patch.nombre!,
           tipo: patch.tipo!,
           emoji: patch.emoji || "📁",
           color: patch.color || "#4ECDC4",
           orden: maxOrder + 1,
-          categoria_padre_id: null,
+          categoria_padre_id: patch.categoria_padre_id ?? null,
+          es_global: esGlobal,
         })
         await fetchCategorias()
       }
@@ -232,12 +274,29 @@ export function CategoryList() {
     }
   }
 
-  const handleDragEnd = async (result: any) => {
+  const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) return
 
     const items = Array.from(sortedCategories)
     const [moved] = items.splice(result.source.index, 1)
     items.splice(result.destination.index, 0, moved)
+
+    if (!isGestorCentral && moved.es_global) {
+      return
+    }
+
+    if (!isGestorCentral) {
+      const globalMoved = items.some((item, index) => {
+        if (!item.es_global) return false
+        const originalIndex = sortedCategories.findIndex((c) => c.id === item.id)
+        return originalIndex !== index
+      })
+      if (globalMoved) {
+        return
+      }
+    }
+
+    const prev = items[result.destination.index - 1] || null
 
     const newParentId = prev
       ? (prev.categoria_padre_id === null
@@ -412,6 +471,7 @@ export function CategoryList() {
                     onEdit={handleEdit}
                     onSearch={handleSearch}
                     onDelete={handleDeleteRequest}
+                    canManageGlobal={isGestorCentral}
                   />
                 ))}
                 {provided.placeholder}
@@ -443,6 +503,7 @@ export function CategoryList() {
               parentCategory={categories.find((c) => c.id === editingCategory.categoria_padre_id)}
               onSave={handleSaveCategory}
               onCancel={() => setEditSheetOpen(false)}
+              canEditGlobal={isGestorCentral}
             />
           )}
         </SheetContent>
@@ -457,16 +518,19 @@ export function CategoryList() {
             category={{
               id: "",
               organizacion_id: organizacionId || "",
+              delegacion_id: delegacionId,
               nombre: "",
               tipo: "gasto",
               emoji: "📁",
               color: "#4ECDC4",
               orden: 0,
               categoria_padre_id: null,
+              es_global: false,
               creado_en: "",
             }}
             onSave={handleSaveCategory}
             onCancel={() => setCreateSheetOpen(false)}
+            canEditGlobal={isGestorCentral}
           />
         </SheetContent>
       </Sheet>

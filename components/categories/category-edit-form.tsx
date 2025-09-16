@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,23 +16,43 @@ interface CategoryEditFormProps {
   parentCategory?: Categoria
   onSave: (patch: Partial<Categoria>) => Promise<void>
   onCancel: () => void
+  canEditGlobal: boolean
 }
 
 
-export function CategoryEditForm({ category, parentCategory, onSave, onCancel }: CategoryEditFormProps) {
+export function CategoryEditForm({ category, parentCategory, onSave, onCancel, canEditGlobal }: CategoryEditFormProps) {
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: category.emoji || "📁",
     tipo: category.tipo,
     color: parentCategory?.color || category.color || "#4ECDC4",
+    es_global: parentCategory && !parentCategory.es_global ? false : category.es_global || false,
   })
   const [loading, setLoading] = useState(false)
+
+  const canToggleGlobal = canEditGlobal && (!parentCategory || parentCategory.es_global)
+
+  // Reset form when editing a different category
+  useEffect(() => {
+    setFormData({
+      nombre: category.nombre,
+      emoji: category.emoji || "📁",
+      tipo: category.tipo,
+      color: parentCategory?.color || category.color || "#4ECDC4",
+      es_global: parentCategory && !parentCategory.es_global ? false : category.es_global || false,
+    })
+  }, [category, parentCategory])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.nombre.trim()) {
       alert("El nombre de la categoría es obligatorio")
+      return
+    }
+
+    if (formData.es_global && parentCategory && !parentCategory.es_global) {
+      alert("Solo puedes marcar como global una subcategoría si su categoría padre también es global")
       return
     }
 
@@ -43,6 +63,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel }:
         nombre: formData.nombre.trim(),
         emoji: formData.emoji,
         tipo: formData.tipo,
+        es_global: formData.es_global,
         ...(parentCategory ? {} : { color: formData.color }),
       })
     } catch (error) {
@@ -99,6 +120,39 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel }:
           </div>
         )}
       </div>
+
+      {canEditGlobal ? (
+        <div className="space-y-2">
+          <Label>Ámbito</Label>
+          <Select
+            value={formData.es_global ? "global" : "local"}
+            onValueChange={(value) =>
+              setFormData({ ...formData, es_global: value === "global" })
+            }
+            disabled={!canToggleGlobal}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="local">Categoría de delegación</SelectItem>
+              <SelectItem value="global">Categoría global</SelectItem>
+            </SelectContent>
+          </Select>
+          {!canToggleGlobal && parentCategory && !parentCategory.es_global && (
+            <p className="text-xs text-muted-foreground">
+              Marca primero la categoría padre como global para poder globalizar esta subcategoría.
+            </p>
+          )}
+        </div>
+      ) : (
+        formData.es_global && (
+          <div className="space-y-2">
+            <Label>Ámbito</Label>
+            <Input value="Categoría global" disabled readOnly />
+          </div>
+        )
+      )}
 
       {parentCategory && (
         <div className="space-y-2">

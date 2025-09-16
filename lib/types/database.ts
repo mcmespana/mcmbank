@@ -152,31 +152,37 @@ export type Database = {
           color: string
           id: string
           organizacion_id: string
+          delegacion_id: string | null
           nombre: string
           tipo: string
           emoji: string | null
           orden: number
           categoria_padre_id: string | null
+          es_global: boolean
           creado_en: string
         }
         Insert: {
           id?: string
           organizacion_id: string
+          delegacion_id?: string | null
           nombre: string
           tipo: string
           emoji?: string | null
           orden?: number
           categoria_padre_id?: string | null
+          es_global?: boolean
           creado_en?: string
         }
         Update: {
           id?: string
           organizacion_id?: string
+          delegacion_id?: string | null
           nombre?: string
           tipo?: string
           emoji?: string | null
           orden?: number
           categoria_padre_id?: string | null
+          es_global?: boolean
           creado_en?: string
         }
       }

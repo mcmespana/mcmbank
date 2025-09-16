@@ -67,7 +67,6 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   const searchParams = useSearchParams()
 
   const currentDelegation = getCurrentDelegation()
-  const organizacionId = currentDelegation?.organizacion_id
 
   console.log(`🏢 TransactionManager: selectedDelegation = ${selectedDelegation}, currentDelegation = ${currentDelegation?.nombre}`)
 
@@ -92,7 +91,7 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     uncategorized: filters.uncategorized,
   })
 
-  const { categorias: categories } = useCategorias(organizacionId)
+  const { categorias: categories } = useCategorias(selectedDelegation || undefined)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
 
   const handleDownload = async () => {

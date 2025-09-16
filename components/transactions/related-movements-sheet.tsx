@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
@@ -8,10 +8,8 @@ import { AmountDisplay } from "@/components/ui/amount-display"
 import { BankAvatar } from "./bank-avatar"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
-import { useCategorias } from "@/hooks/use-categorias"
-import { useCuentas } from "@/hooks/use-cuentas"
 import { formatDate } from "@/lib/utils/format"
-import type { Cuenta, Categoria, MovimientoConRelaciones } from "@/lib/types/database"
+import type { Cuenta, Categoria } from "@/lib/types/database"
 
 interface RelatedMovementsSheetProps {
   account?: Cuenta | null
@@ -21,10 +19,7 @@ interface RelatedMovementsSheetProps {
 }
 
 export function RelatedMovementsSheet({ account, category, open, onOpenChange }: RelatedMovementsSheetProps) {
-  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
-  const { categorias: categories } = useCategorias(getCurrentDelegation()?.organizacion_id)
-  const { cuentas: accounts } = useCuentas(selectedDelegation)
-
+  const { selectedDelegation } = useDelegationContext()
   const { movimientos, loading, error, loadMore, hasMore } = useMovimientos(
     selectedDelegation,
     {

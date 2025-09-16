@@ -22,11 +22,11 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
 export function ActivityBalanceDashboard() {
-  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
+  const { selectedDelegation } = useDelegationContext()
   const [timeframe, setTimeframe] = useState<Timeframe>("month")
   const [categoryIds, setCategoryIds] = useState<string[]>([])
 
-  const { categorias } = useCategorias(getCurrentDelegation()?.organizacion_id)
+  const { categorias } = useCategorias(selectedDelegation || undefined)
   const { from, to } = getTimeframeRange(timeframe)
   const { movimientos } = useMovimientos(selectedDelegation, {
     fechaDesde: from,

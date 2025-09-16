@@ -6,7 +6,7 @@ import type { Categoria } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { runQuery } from "@/lib/db/query"
 
-export function useCategorias(organizacionId?: string) {
+export function useCategorias(delegacionId?: string) {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -18,23 +18,30 @@ export function useCategorias(organizacionId?: string) {
     if (abortRef.current) abortRef.current.abort()
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
+    if (!delegacionId) {
+      setCategorias([])
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     const ac = new AbortController()
     abortRef.current = ac
     try {
       setLoading(true)
 
-      const { data, error } = await runQuery<any[]>({
+      const { data, error } = await runQuery<Categoria[]>({
         label: 'fetch-categorias',
         table: 'categoria',
         timeoutMs: TIMEOUT_MS,
         build: async (signal) => {
-          let query = supabase
+          return await supabase
             .from("categoria")
             .select("*")
+            .in("delegacion_id", [delegacionId, null])
             .order("orden", { ascending: true })
             .order("nombre", { ascending: true })
-          if (organizacionId) query = query.eq("organizacion_id", organizacionId)
-          return await query.abortSignal(signal)
+            .abortSignal(signal)
         }
       })
 
@@ -43,7 +50,11 @@ export function useCategorias(organizacionId?: string) {
         return
       }
 
-      setCategorias(data || [])
+      const filtered = (data || []).filter(
+        (cat) => cat.es_global || cat.delegacion_id === delegacionId,
+      )
+
+      setCategorias(filtered)
     } catch (err) {
       if (!ac.signal.aborted) {
         setError(err instanceof Error ? err.message : "Error desconocido")
@@ -55,7 +66,7 @@ export function useCategorias(organizacionId?: string) {
         timeoutRef.current = null
       }
     }
-  }, [organizacionId])
+  }, [delegacionId])
 
   useEffect(() => {
     fetchCategorias()
@@ -74,7 +85,11 @@ export function useCategorias(organizacionId?: string) {
 
       if (error) throw error
 
-      setCategorias((prev) => prev.map((cat) => (cat.id === id ? { ...cat, ...updates } : cat)))
+      setCategorias((prev) =>
+        prev
+          .map((cat) => (cat.id === id ? { ...cat, ...updates } : cat))
+          .filter((cat) => cat.es_global || cat.delegacion_id === delegacionId),
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al actualizar categoría")
     }

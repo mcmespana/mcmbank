@@ -37,12 +37,14 @@ export interface Cuenta {
 export interface Categoria {
   id: UUID
   organizacion_id: UUID
+  delegacion_id: UUID | null
   nombre: string
   tipo: TipoCategoria
   emoji: string | null
   color: string | null
   orden: number
   categoria_padre_id: UUID | null
+  es_global: boolean
   creado_en: string
 }
 

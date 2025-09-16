@@ -18,6 +18,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -38,6 +39,13 @@ function SidebarContent({ className, collapsed = false, transactionCount }: Side
       name: "Dashboard",
       href: "/",
       icon: LayoutDashboard,
+      count: null,
+      enabled: true,
+    },
+    {
+      name: "Propuestas",
+      href: "/propuestas",
+      icon: Sparkles,
       count: null,
       enabled: true,
     },

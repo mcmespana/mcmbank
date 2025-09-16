@@ -1,0 +1,244 @@
+"use client"
+
+import { useState, useCallback, useEffect, useRef } from "react"
+import { supabase } from "@/lib/supabase/client"
+import { runQuery } from "@/lib/db/query"
+import type {
+  ImprovementProposal,
+  ImprovementProposalInsert,
+  ImprovementProposalStatus,
+  ImprovementProposalWithAuthor,
+} from "@/lib/types/improvement-proposals"
+import { IMPROVEMENT_PROPOSAL_STATUS_LABELS } from "@/lib/types/improvement-proposals"
+
+interface CreateImprovementProposalInput {
+  title: string
+  description: string
+  impact?: string | null
+}
+
+export function useImprovementProposals() {
+  const [proposals, setProposals] = useState<ImprovementProposalWithAuthor[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const hasFetchedRef = useRef(false)
+
+  const enrichWithAuthor = useCallback(async (rows: ImprovementProposal[]) => {
+    if (rows.length === 0) return [] as ImprovementProposalWithAuthor[]
+
+    const userIds = Array.from(
+      new Set(rows.map((row) => row.creado_por).filter(Boolean)),
+    ) as string[]
+
+    let profilesMap: Record<string, string> = {}
+
+    if (userIds.length > 0) {
+      try {
+        const { data: profiles, error: profilesError } = await supabase
+          .from("perfil")
+          .select("usuario_id, nombre_completo")
+          .in("usuario_id", userIds)
+
+        if (profilesError) {
+          console.error("Error fetching profiles for proposals", profilesError)
+        } else if (profiles) {
+          profilesMap = profiles.reduce<Record<string, string>>((acc, perfil) => {
+            if (perfil.nombre_completo && perfil.nombre_completo.trim()) {
+              acc[perfil.usuario_id] = perfil.nombre_completo
+            }
+            return acc
+          }, {})
+        }
+      } catch (profilesErr) {
+        console.error("Unexpected error loading proposal profiles", profilesErr)
+      }
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      authorName:
+        row.creado_por_nombre?.trim() ||
+        profilesMap[row.creado_por] ||
+        row.creado_por_email?.split("@")[0]?.replace(/\./g, " ")?.replace(/\b\w/g, (match) => match.toUpperCase()) ||
+        "Usuario anónimo",
+    }))
+  }, [])
+
+  const fetchProposals = useCallback(async () => {
+    if (!hasFetchedRef.current) {
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
+
+    try {
+      setError(null)
+      const { data, error: fetchError } = await runQuery<ImprovementProposal[]>({
+        label: "fetch-improvement-proposals",
+        table: "propuesta_mejora",
+        build: async (signal) =>
+          await supabase
+            .from("propuesta_mejora")
+            .select("*")
+            .order("estado", { ascending: true })
+            .order("creado_en", { ascending: false })
+            .abortSignal(signal),
+      })
+
+      if (fetchError) {
+        console.error("Error fetching improvement proposals", fetchError)
+        setError(
+          fetchError?.message ||
+            "No pudimos cargar las propuestas de mejora. Intenta de nuevo más tarde.",
+        )
+        return
+      }
+
+      const enriched = await enrichWithAuthor(data ?? [])
+      setProposals(enriched)
+    } catch (err) {
+      console.error("Unexpected error loading improvement proposals", err)
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ha ocurrido un error al cargar las propuestas.",
+      )
+    } finally {
+      hasFetchedRef.current = true
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [enrichWithAuthor])
+
+  const createProposal = useCallback(
+    async ({ title, description, impact }: CreateImprovementProposalInput) => {
+      const trimmedTitle = title.trim()
+      const trimmedDescription = description.trim()
+      const trimmedImpact = impact?.trim()
+
+      if (!trimmedTitle) throw new Error("El título es obligatorio")
+      if (!trimmedDescription) throw new Error("Cuéntanos un poco sobre tu idea")
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+
+      if (authError) throw authError
+      if (!user) throw new Error("Necesitas iniciar sesión para proponer una mejora")
+
+      let authorName = user.email?.split("@")[0] || "Usuario"
+
+      try {
+        const { data: perfil } = await supabase
+          .from("perfil")
+          .select("nombre_completo")
+          .eq("usuario_id", user.id)
+          .maybeSingle()
+        if (perfil?.nombre_completo && perfil.nombre_completo.trim()) {
+          authorName = perfil.nombre_completo
+        } else if (user.user_metadata?.full_name) {
+          authorName = user.user_metadata.full_name
+        }
+      } catch (profileError) {
+        console.warn("No pudimos obtener el perfil del usuario", profileError)
+      }
+
+      const payload: ImprovementProposalInsert = {
+        titulo: trimmedTitle,
+        descripcion: trimmedDescription,
+        impacto: trimmedImpact || null,
+        estado: "nueva_idea",
+        creado_por: user.id,
+        creado_por_nombre: authorName,
+        creado_por_email: user.email ?? null,
+      }
+
+      const { data, error: insertError } = await supabase
+        .from("propuesta_mejora")
+        .insert(payload)
+        .select("*")
+        .single()
+
+      if (insertError) {
+        console.error("Error creating improvement proposal", insertError)
+        throw insertError
+      }
+
+      const newProposal: ImprovementProposalWithAuthor = {
+        ...(data as ImprovementProposal),
+        authorName,
+      }
+
+      setProposals((prev) => [newProposal, ...prev])
+      return newProposal
+    },
+    [],
+  )
+
+  const updateProposalStatus = useCallback(
+    async (id: string, status: ImprovementProposalStatus) => {
+      if (!id) throw new Error("Identificador de propuesta no válido")
+
+      const { data, error: updateError } = await supabase
+        .from("propuesta_mejora")
+        .update({
+          estado: status,
+          actualizado_en: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select("*")
+        .single()
+
+      if (updateError) {
+        console.error("Error updating proposal status", updateError)
+        throw updateError
+      }
+
+      setProposals((prev) =>
+        prev.map((proposal) =>
+          proposal.id === id
+            ? {
+                ...(data as ImprovementProposal),
+                authorName: proposal.authorName,
+              }
+            : proposal,
+        ),
+      )
+    },
+    [],
+  )
+
+  useEffect(() => {
+    fetchProposals()
+  }, [fetchProposals])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("propuestas-mejora-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "propuesta_mejora" },
+        () => {
+          fetchProposals()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchProposals])
+
+  return {
+    proposals,
+    loading,
+    refreshing,
+    error,
+    createProposal,
+    updateProposalStatus,
+    refetch: fetchProposals,
+    statusLabels: IMPROVEMENT_PROPOSAL_STATUS_LABELS,
+  }
+}

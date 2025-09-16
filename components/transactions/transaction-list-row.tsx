@@ -12,6 +12,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Pencil } from "lucide-react"
+import { SelectionCheckbox } from "@/components/ui/checkbox"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListRowProps {
@@ -22,6 +23,9 @@ interface TransactionListRowProps {
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onClick: (movement: MovimientoConRelaciones, e: React.MouseEvent) => void
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
+  onSelectionChange: (movement: MovimientoConRelaciones, checked: boolean) => void
+  isSelected: boolean
+  selectionMode: boolean
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -32,10 +36,16 @@ export const TransactionListRow = memo(function TransactionListRow({
   onMovementUpdate,
   onClick,
   onOpenFiles,
+  onSelectionChange,
+  isSelected,
+  selectionMode,
 }: TransactionListRowProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
   const [conceptValue, setConceptValue] = useState(movement.concepto)
+  const [accountHovered, setAccountHovered] = useState(false)
+
+  const checkboxVisible = isSelected || selectionMode || accountHovered
 
   const handleCategoryChange = async (categoryId: string | null) => {
     setIsUpdating(true)
@@ -74,7 +84,9 @@ export const TransactionListRow = memo(function TransactionListRow({
       <div
         className={cn(
           "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md",
-          !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10"
+          !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10",
+          isSelected &&
+            "border-primary/40 bg-primary/5 shadow-md ring-1 ring-primary/20 hover:bg-primary/10 hover:border-primary/60"
         )}
         onClick={(e) => onClick(movement, e)}
         data-account-id={movement.cuenta_id}
@@ -83,12 +95,43 @@ export const TransactionListRow = memo(function TransactionListRow({
         <div className="flex items-start gap-3">
           <AccountTooltip account={account}>
             <div
-              className="rounded-full p-0.5 cursor-pointer hover:scale-105 transition-transform flex-shrink-0 shadow-sm"
-              style={{ backgroundColor: account?.color || "#4ECDC4" }}
+              className="relative h-11 w-11 flex-shrink-0"
               data-testid="account-info"
-              title={`Cuenta: ${account?.nombre || 'Sin nombre'} - Delegación ID: ${account?.delegacion_id || 'Sin delegación'}`}
+              title={`Cuenta: ${account?.nombre || "Sin nombre"} - Delegación ID: ${account?.delegacion_id || "Sin delegación"}`}
+              onMouseEnter={() => setAccountHovered(true)}
+              onMouseLeave={() => setAccountHovered(false)}
             >
-              <BankAvatar account={account} />
+              <div
+                className={cn(
+                  "absolute inset-0 rounded-full p-0.5 shadow-sm transition-all duration-200 ease-out",
+                  checkboxVisible ? "opacity-0 scale-75" : "opacity-100",
+                )}
+                style={{ backgroundColor: account?.color || "#4ECDC4" }}
+              >
+                <div className="h-full w-full overflow-hidden rounded-full">
+                  <BankAvatar account={account} />
+                </div>
+              </div>
+
+              <div
+                className={cn(
+                  "absolute inset-0 flex items-center justify-center transition-all duration-200 ease-out",
+                  checkboxVisible
+                    ? "opacity-100 scale-100 pointer-events-auto"
+                    : "opacity-0 scale-75 pointer-events-none"
+                )}
+                data-selection-control
+                onClick={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <SelectionCheckbox
+                  checked={isSelected}
+                  onCheckedChange={(checked) => {
+                    onSelectionChange(movement, checked === true)
+                  }}
+                  className="h-10 w-10 border-2 cursor-pointer"
+                />
+              </div>
             </div>
           </AccountTooltip>
 
@@ -159,6 +202,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                     onClick(movement, e)
                   }}
                   aria-label="Editar transacción"
+                  data-force-detail="true"
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>

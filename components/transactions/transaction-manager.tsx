@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
+import type React from "react"
 import { useSearchParams } from "next/navigation"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
 import { TransactionDetail } from "./transaction-detail"
 import { TransactionCreatePanel } from "./transaction-create-panel"
+import { CategoryMegaSelector } from "./category-mega-selector"
 import { DateRangeFilter } from "./date-range-filter"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
@@ -13,6 +15,16 @@ import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { SelectionCheckbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   ChevronRight,
   ChevronLeft,
@@ -22,13 +34,17 @@ import {
   Filter,
   ChevronUp,
   Check,
+  Tags,
+  Trash2,
+  Type,
+  FileText,
+  Skull,
 } from "lucide-react"
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import { TransactionImportPanel } from "./transaction-import-panel"
-import { isDebugEnabled } from "@/lib/utils/debug"
 
 export interface TransactionFilters {
   dateFrom?: string
@@ -59,6 +75,15 @@ export function TransactionManager() {
   const [createFormOpen, setCreateFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle")
+  const [selectedMovementIds, setSelectedMovementIds] = useState<string[]>([])
+  const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false)
+  const [bulkConceptOpen, setBulkConceptOpen] = useState(false)
+  const [bulkDescriptionOpen, setBulkDescriptionOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  const [bulkCategoryLoading, setBulkCategoryLoading] = useState(false)
+  const [bulkConceptValue, setBulkConceptValue] = useState("")
+  const [bulkAppendValue, setBulkAppendValue] = useState("")
   const searchParams = useSearchParams()
 
   const currentDelegation = getCurrentDelegation()
@@ -70,6 +95,9 @@ export function TransactionManager() {
     error,
     updateCategoria,
     updateMovimiento,
+    updateManyCategorias,
+    updateManyMovimientos,
+    deleteMovimientos,
     createMovimiento,
     refetch,
     loadMore,
@@ -87,6 +115,39 @@ export function TransactionManager() {
 
   const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
+
+  const visibleMovementIds = useMemo(() => movements.map((movement) => movement.id), [movements])
+  const visibleSelectionCount = useMemo(
+    () => selectedMovementIds.filter((id) => visibleMovementIds.includes(id)).length,
+    [selectedMovementIds, visibleMovementIds],
+  )
+  const allVisibleSelected = visibleMovementIds.length > 0 && visibleSelectionCount === visibleMovementIds.length
+  const someVisibleSelected = visibleSelectionCount > 0 && !allVisibleSelected
+  const isSelectionMode = selectedMovementIds.length > 0
+  const selectedMovements = useMemo(
+    () => movements.filter((movement) => selectedMovementIds.includes(movement.id)),
+    [movements, selectedMovementIds],
+  )
+  const hiddenSelectionCount = Math.max(0, selectedMovementIds.length - visibleSelectionCount)
+
+  useEffect(() => {
+    setSelectedMovementIds((prev) => {
+      const filtered = prev.filter((id) => visibleMovementIds.includes(id))
+      if (filtered.length === prev.length) {
+        return prev
+      }
+      return filtered
+    })
+  }, [visibleMovementIds])
+
+  useEffect(() => {
+    if (selectedMovementIds.length === 0) {
+      setBulkCategoryOpen(false)
+      setBulkConceptOpen(false)
+      setBulkDescriptionOpen(false)
+      setBulkDeleteOpen(false)
+    }
+  }, [selectedMovementIds.length])
 
   const handleDownload = async () => {
     setDownloadState("downloading")
@@ -152,6 +213,53 @@ export function TransactionManager() {
     }
   }
 
+  const handleToggleSelection = (movementId: string, checked: boolean) => {
+    setSelectedMovementIds((prev) => {
+      if (checked) {
+        if (prev.includes(movementId)) {
+          return prev
+        }
+        return [...prev, movementId]
+      }
+      return prev.filter((id) => id !== movementId)
+    })
+  }
+
+  const handleToggleAllVisible = () => {
+    setSelectedMovementIds((prev) => {
+      if (allVisibleSelected) {
+        return prev.filter((id) => !visibleMovementIds.includes(id))
+      }
+      const next = new Set(prev)
+      visibleMovementIds.forEach((id) => next.add(id))
+      return Array.from(next)
+    })
+  }
+
+  const handleClearSelection = () => {
+    setSelectedMovementIds([])
+  }
+
+  const handleSelectionChange = (movement: MovimientoConRelaciones, checked: boolean) => {
+    handleToggleSelection(movement.id, checked)
+  }
+
+  const handleRowClick = (movement: MovimientoConRelaciones, event: React.MouseEvent) => {
+    const target = event.currentTarget as HTMLElement | null
+    if (target?.dataset.forceDetail === "true") {
+      handleMovementClick(movement)
+      return
+    }
+
+    if (isSelectionMode) {
+      const isCurrentlySelected = selectedMovementIds.includes(movement.id)
+      handleToggleSelection(movement.id, !isCurrentlySelected)
+      return
+    }
+
+    handleMovementClick(movement)
+  }
+
   const handleCreateMovement = async (
     data: Partial<MovimientoConRelaciones>,
   ) => {
@@ -173,6 +281,115 @@ export function TransactionManager() {
       console.error("Error creating movement:", error)
       toast.error("Error al crear la transacción")
       throw error
+    }
+  }
+
+  const handleBulkCategoryApply = async (categoryId: string) => {
+    if (selectedMovementIds.length === 0) {
+      return
+    }
+
+    setBulkCategoryLoading(true)
+    try {
+      await updateManyCategorias(selectedMovementIds, categoryId)
+      toast.success(
+        `Categoría actualizada en ${selectedMovementIds.length} transacciones`,
+      )
+      setBulkCategoryOpen(false)
+      handleClearSelection()
+    } catch (error) {
+      console.error("Error updating categories in bulk:", error)
+      toast.error("No se pudieron actualizar las categorías seleccionadas")
+    } finally {
+      setBulkCategoryLoading(false)
+    }
+  }
+
+  const handleBulkConceptSubmit = async () => {
+    const newConcept = bulkConceptValue.trim()
+    if (!newConcept) {
+      toast.error("Introduce un concepto para continuar")
+      return
+    }
+
+    setBulkActionLoading(true)
+    try {
+      await updateManyMovimientos(selectedMovementIds, { concepto: newConcept })
+      toast.success(
+        `Concepto actualizado en ${selectedMovementIds.length} transacciones`,
+      )
+      setBulkConceptOpen(false)
+      setBulkConceptValue("")
+      handleClearSelection()
+    } catch (error) {
+      console.error("Error updating concepts in bulk:", error)
+      toast.error("No se pudieron actualizar los conceptos seleccionados")
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
+  const handleBulkDescriptionSubmit = async () => {
+    const textToAppend = bulkAppendValue.trim()
+    if (!textToAppend) {
+      toast.error("Introduce un texto para añadir a la descripción")
+      return
+    }
+
+    setBulkActionLoading(true)
+    try {
+      const updates = selectedMovements
+        .map((movement) => {
+          if (!movement) {
+            return null
+          }
+          const base = movement.descripcion?.trim() ?? ""
+          const separator = base ? " " : ""
+          return {
+            id: movement.id,
+            descripcion: `${base}${separator}${textToAppend}`,
+          }
+        })
+        .filter(Boolean) as { id: string; descripcion: string }[]
+
+      await Promise.all(
+        updates.map(({ id, descripcion }) => updateMovimiento(id, { descripcion })),
+      )
+
+      toast.success(
+        `Descripción actualizada en ${updates.length} transacciones`,
+      )
+      setBulkDescriptionOpen(false)
+      setBulkAppendValue("")
+      handleClearSelection()
+    } catch (error) {
+      console.error("Error appending descriptions in bulk:", error)
+      toast.error("No se pudieron actualizar las descripciones seleccionadas")
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedMovementIds.length === 0) {
+      return
+    }
+
+    setBulkActionLoading(true)
+    try {
+      await deleteMovimientos(selectedMovementIds)
+      toast.success(
+        selectedMovementIds.length === 1
+          ? "Transacción eliminada"
+          : `${selectedMovementIds.length} transacciones eliminadas`,
+      )
+      setBulkDeleteOpen(false)
+      handleClearSelection()
+    } catch (error) {
+      console.error("Error deleting movements in bulk:", error)
+      toast.error("No se pudieron eliminar las transacciones seleccionadas")
+    } finally {
+      setBulkActionLoading(false)
     }
   }
 
@@ -386,6 +603,111 @@ export function TransactionManager() {
             </div>
           </div>
 
+          {isSelectionMode && (
+            <div className="rounded-xl border border-primary/40 bg-primary/5 px-3 py-3 sm:px-4 sm:py-3 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-1 items-center gap-3">
+                  <SelectionCheckbox
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                        ? "indeterminate"
+                        : false
+                    }
+                    onCheckedChange={() => handleToggleAllVisible()}
+                    disabled={bulkCategoryLoading || bulkActionLoading}
+                    className="h-10 w-10"
+                  />
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-sm font-semibold leading-tight">
+                      {selectedMovementIds.length === 1
+                        ? "1 transacción seleccionada"
+                        : `${selectedMovementIds.length} transacciones seleccionadas`}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {hiddenSelectionCount > 0 && (
+                        <span>
+                          {hiddenSelectionCount === 1
+                            ? "1 fuera de la vista"
+                            : `${hiddenSelectionCount} fuera de la vista`}
+                        </span>
+                      )}
+                      {(bulkCategoryLoading || bulkActionLoading) && (
+                        <span className="flex items-center gap-1 font-medium text-primary">
+                          <LoadingSpinner size="sm" className="h-3 w-3 border" /> Procesando...
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hidden sm:inline-flex"
+                    onClick={handleClearSelection}
+                    disabled={bulkCategoryLoading || bulkActionLoading}
+                  >
+                    Limpiar
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBulkCategoryOpen(true)}
+                    disabled={bulkCategoryLoading || bulkActionLoading}
+                  >
+                    <Tags className="h-4 w-4" />
+                    <span className="ml-2">Editar categoría</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setBulkConceptValue(selectedMovements[0]?.concepto ?? "")
+                      setBulkConceptOpen(true)
+                    }}
+                    disabled={bulkCategoryLoading || bulkActionLoading}
+                  >
+                    <Type className="h-4 w-4" />
+                    <span className="ml-2">Cambiar concepto</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setBulkAppendValue("")
+                      setBulkDescriptionOpen(true)
+                    }}
+                    disabled={bulkCategoryLoading || bulkActionLoading}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="ml-2">Añadir descripción</span>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setBulkDeleteOpen(true)}
+                    disabled={bulkCategoryLoading || bulkActionLoading}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="ml-2">Eliminar</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="sm:hidden"
+                    onClick={handleClearSelection}
+                    disabled={bulkCategoryLoading || bulkActionLoading}
+                  >
+                    Limpiar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {filtersOpen && (
             <Card className="lg:hidden p-4 border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
               <div className="flex items-center justify-between mb-4">
@@ -425,7 +747,9 @@ export function TransactionManager() {
             loading={loading}
             error={error}
             total={movements.length}
-            onMovementClick={(movement) => handleMovementClick(movement as unknown as MovimientoConRelaciones)}
+            onMovementClick={(movement, event) =>
+              handleRowClick(movement as unknown as MovimientoConRelaciones, event)
+            }
             onMovementUpdate={async (movementId, patch) => {
               const fullPatch: Partial<MovimientoConRelaciones> = patch
               await handleMovementUpdate(movementId, fullPatch)
@@ -433,9 +757,180 @@ export function TransactionManager() {
             onLoadMore={loadMore}
             hasMore={hasMore}
             onOpenFiles={(movement) => handleOpenFiles(movement as unknown as MovimientoConRelaciones)}
+            selectedMovements={selectedMovementIds}
+            onSelectionChange={(movement, checked) =>
+              handleSelectionChange(movement as unknown as MovimientoConRelaciones, checked)
+            }
+            selectionMode={isSelectionMode}
           />
         </div>
       </div>
+
+      {bulkCategoryOpen && selectedMovementIds.length > 0 && (
+        <div
+          className="fixed inset-0 z-[95] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+          onClick={() => {
+            if (!bulkCategoryLoading) {
+              setBulkCategoryOpen(false)
+            }
+          }}
+        >
+          <div onClick={(event) => event.stopPropagation()}>
+            <CategoryMegaSelector
+              categories={categories}
+              selectedCategoryId={null}
+              onSelect={(categoryId) => handleBulkCategoryApply(categoryId)}
+              onClose={() => {
+                if (!bulkCategoryLoading) {
+                  setBulkCategoryOpen(false)
+                }
+              }}
+              headline={
+                selectedMovementIds.length === 1
+                  ? "1 transacción seleccionada"
+                  : `${selectedMovementIds.length} transacciones seleccionadas`
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      <Dialog
+        open={bulkConceptOpen && selectedMovementIds.length > 0}
+        onOpenChange={(open) => {
+          if (!bulkActionLoading) {
+            setBulkConceptOpen(open)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cambiar concepto</DialogTitle>
+            <DialogDescription>
+              El nuevo concepto se aplicará a {selectedMovementIds.length} transacciones.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={bulkConceptValue}
+              onChange={(event) => setBulkConceptValue(event.target.value)}
+              placeholder="Nuevo concepto"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setBulkConceptOpen(false)}
+                disabled={bulkActionLoading}
+                className="bg-transparent"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleBulkConceptSubmit}
+                disabled={bulkActionLoading || bulkConceptValue.trim() === ""}
+              >
+                {bulkActionLoading ? "Aplicando..." : "Aplicar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDescriptionOpen && selectedMovementIds.length > 0}
+        onOpenChange={(open) => {
+          if (!bulkActionLoading) {
+            setBulkDescriptionOpen(open)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Añadir descripción</DialogTitle>
+            <DialogDescription>
+              El texto se sumará al final de la descripción existente de cada transacción seleccionada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={bulkAppendValue}
+              onChange={(event) => setBulkAppendValue(event.target.value)}
+              placeholder="Texto a añadir"
+              rows={4}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setBulkDescriptionOpen(false)}
+                disabled={bulkActionLoading}
+                className="bg-transparent"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleBulkDescriptionSubmit}
+                disabled={bulkActionLoading || bulkAppendValue.trim() === ""}
+              >
+                {bulkActionLoading ? "Añadiendo..." : "Añadir"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDeleteOpen && selectedMovementIds.length > 0}
+        onOpenChange={(open) => {
+          if (!bulkActionLoading) {
+            setBulkDeleteOpen(open)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              ¿ESTÁS ABSOLUTAMENTE SEGURO DE QUE QUIERES ELIMINAR ESTAS TRANSACCIONES?
+            </DialogTitle>
+            <DialogDescription className="text-destructive">
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="flex items-center gap-3">
+                <Skull className="h-12 w-12 text-destructive animate-bounce" />
+                <span className="text-lg font-semibold text-destructive">
+                  {selectedMovementIds.length === 1
+                    ? "1 transacción será eliminada"
+                    : `${selectedMovementIds.length} transacciones serán eliminadas`}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Respira hondo, tómate un segundo y confirma solo si estás segurísimo.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setBulkDeleteOpen(false)}
+                disabled={bulkActionLoading}
+                className="bg-transparent"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDeleteConfirm}
+                disabled={bulkActionLoading}
+                className="flex-1 sm:flex-none"
+              >
+                {bulkActionLoading ? "Eliminando..." : "Eliminar para siempre"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <TransactionDetail
         movement={selectedMovementSnapshot}

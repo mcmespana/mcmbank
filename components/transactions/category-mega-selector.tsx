@@ -19,6 +19,7 @@ interface CategoryMegaSelectorProps {
   movement?: Movimiento | null
   account?: Cuenta | null
   onCreateCategory?: () => void
+  headline?: string
 }
 
 interface CategoryGroup {
@@ -34,6 +35,7 @@ export function CategoryMegaSelector({
   movement,
   account,
   onCreateCategory,
+  headline,
 }: CategoryMegaSelectorProps) {
   const [searchValue, setSearchValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
@@ -108,22 +110,40 @@ export function CategoryMegaSelector({
     <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-full sm:h-auto max-h-screen sm:max-h-[calc(100vh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
       <div className="border-b bg-muted/40 p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-          {movement && (
+          {(movement || headline) && (
             <div className="flex flex-1 items-start gap-3 sm:items-center">
-              <div className="flex-shrink-0 rounded-full p-0.5 border border-border/40 shadow-sm">
-                <BankAvatar account={account || undefined} size="sm" />
-              </div>
-              <div className="space-y-1 min-w-0">
-                <p className="text-[11px] tracking-wide text-muted-foreground uppercase">
-                  {account?.nombre || account?.banco_nombre || "Cuenta sin nombre"}
-                </p>
-                <h2 className="text-base font-semibold leading-tight line-clamp-2 sm:line-clamp-1">{movement.concepto}</h2>
-                {(movement.contraparte || movement.descripcion) && (
-                  <p className="text-sm text-muted-foreground line-clamp-1">
-                    {movement.contraparte || movement.descripcion}
+              {movement ? (
+                <>
+                  <div className="flex-shrink-0 rounded-full p-0.5 border border-border/40 shadow-sm">
+                    <BankAvatar account={account || undefined} size="sm" />
+                  </div>
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                      {account?.nombre || account?.banco_nombre || "Cuenta sin nombre"}
+                    </p>
+                    <h2 className="text-base font-semibold leading-tight line-clamp-2 sm:line-clamp-1">
+                      {movement.concepto}
+                    </h2>
+                    {(movement.contraparte || movement.descripcion) && (
+                      <p className="text-sm text-muted-foreground line-clamp-1">
+                        {movement.contraparte || movement.descripcion}
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                    Selección múltiple
                   </p>
-                )}
-              </div>
+                  <h2 className="text-base font-semibold leading-tight">
+                    {headline}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Aplica una sola categoría a todas las transacciones seleccionadas.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useMemo } from "react"
+import type React from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { TransactionListRow } from "./transaction-list-row"
@@ -20,11 +21,14 @@ interface TransactionListProps {
   loading: boolean
   error: string | null
   total: number
-  onMovementClick: (movement: MovimientoConRelaciones) => void
+  onMovementClick: (movement: MovimientoConRelaciones, event: React.MouseEvent) => void
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onLoadMore?: () => void
   hasMore?: boolean
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
+  selectedMovements: string[]
+  onSelectionChange: (movement: MovimientoConRelaciones, checked: boolean) => void
+  selectionMode: boolean
 }
 
 export function TransactionList({
@@ -39,6 +43,9 @@ export function TransactionList({
   onLoadMore,
   hasMore,
   onOpenFiles,
+  selectedMovements,
+  onSelectionChange,
+  selectionMode,
 }: TransactionListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
@@ -117,6 +124,9 @@ export function TransactionList({
           onMovementUpdate={onMovementUpdate}
           onClick={onMovementClick}
           onOpenFiles={onOpenFiles}
+          onSelectionChange={onSelectionChange}
+          isSelected={selectedMovements.includes(movement.id)}
+          selectionMode={selectionMode}
         />
       ))}
       {hasMore && (

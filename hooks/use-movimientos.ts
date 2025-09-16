@@ -398,6 +398,75 @@ export function useMovimientos(
     }
   }
 
+  const updateManyMovimientos = async (
+    movimientoIds: string[],
+    patch: Partial<MovimientoConRelaciones>,
+  ) => {
+    if (movimientoIds.length === 0) {
+      return
+    }
+
+    try {
+      const sanitizedPatch = { ...patch }
+      if (Object.keys(sanitizedPatch).length === 0) {
+        return
+      }
+
+      const { error } = await supabase
+        .from("movimiento")
+        .update(sanitizedPatch as any)
+        .in("id", movimientoIds)
+      if (error) throw error
+
+      const idSet = new Set(movimientoIds)
+      setMovimientos((prev) =>
+        prev.map((mov) => (idSet.has(mov.id) ? { ...mov, ...sanitizedPatch } : mov)),
+      )
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const updateManyCategorias = async (
+    movimientoIds: string[],
+    categoriaId: string | null,
+  ) => {
+    if (movimientoIds.length === 0) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from("movimiento")
+        .update({ categoria_id: categoriaId ?? null })
+        .in("id", movimientoIds)
+      if (error) throw error
+
+      const idSet = new Set(movimientoIds)
+      setMovimientos((prev) =>
+        prev.map((mov) => (idSet.has(mov.id) ? { ...mov, categoria_id: categoriaId ?? null } : mov)),
+      )
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const deleteMovimientos = async (movimientoIds: string[]) => {
+    if (movimientoIds.length === 0) {
+      return
+    }
+
+    try {
+      const { error } = await supabase.from("movimiento").delete().in("id", movimientoIds)
+      if (error) throw error
+
+      const idSet = new Set(movimientoIds)
+      setMovimientos((prev) => prev.filter((mov) => !idSet.has(mov.id)))
+    } catch (err) {
+      throw err
+    }
+  }
+
   const refetch = () => {
     setMovimientos([])
     setPage(0)
@@ -412,6 +481,9 @@ export function useMovimientos(
     refetch,
     updateCategoria,
     updateMovimiento,
+    updateManyMovimientos,
+    updateManyCategorias,
+    deleteMovimientos,
     createMovimiento,
     loadMore,
     hasMore,

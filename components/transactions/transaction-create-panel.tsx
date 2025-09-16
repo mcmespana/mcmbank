@@ -326,7 +326,7 @@ export function TransactionCreatePanel({
             <Input
               value={formData.contraparte || ""}
               onChange={(e) => setFormData({ ...formData, contraparte: e.target.value })}
-              placeholder="Quién realizó la transacción"
+              placeholder="Proveedor, cliente u otros (sin uso todavía)"
               className="bg-muted/30"
             />
           </div>

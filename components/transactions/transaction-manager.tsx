@@ -54,8 +54,9 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   } = useDelegationContext()
 
   const [filters, setFilters] = useState<TransactionFilters>({})
-  const [selectedMovement, setSelectedMovement] = useState<MovimientoConRelaciones | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
+  const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
+  const [selectedMovementSnapshot, setSelectedMovementSnapshot] =
+    useState<MovimientoConRelaciones | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [createFormOpen, setCreateFormOpen] = useState(false)
@@ -110,13 +111,8 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
   }
 
   const handleMovementClick = (movement: MovimientoConRelaciones) => {
-    setSelectedMovement(movement)
-    setDetailOpen(true)
-    try {
-      const url = new URL(window.location.href)
-      url.searchParams.set("mov", movement.id)
-      window.history.replaceState(null, "", url.toString())
-    } catch {}
+    setSelectedMovementId(movement.id)
+    setSelectedMovementSnapshot(movement)
   }
 
   const handleMovementUpdate = async (
@@ -124,17 +120,29 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
     patch: Partial<MovimientoConRelaciones>,
   ) => {
     try {
-      if (patch.categoria_id !== undefined) {
-        await updateCategoria(movementId, patch.categoria_id)
-      }
-      const { categoria_id, ...rest } = patch
-      if (Object.keys(rest).length > 0) {
-        await updateMovimiento(movementId, rest)
+      const patchWithCategory = { ...patch }
+      const { categoria_id: categoriaIdForMovement, ...movementPatch } = patchWithCategory
+
+      if (categoriaIdForMovement !== undefined) {
+        await updateCategoria(movementId, categoriaIdForMovement)
       }
 
-      // Update selected movement if it's the one being edited
-      if (selectedMovement?.id === movementId) {
-        setSelectedMovement((prev) => (prev ? { ...prev, ...patch } : null))
+      if (Object.keys(movementPatch).length > 0) {
+        await updateMovimiento(movementId, movementPatch)
+      }
+
+      if (selectedMovementId === movementId) {
+        setSelectedMovementSnapshot((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...movementPatch,
+                ...(categoriaIdForMovement !== undefined
+                  ? { categoria_id: categoriaIdForMovement }
+                  : {}),
+              }
+            : prev,
+        )
       }
     } catch (error) {
       console.error("Error updating movement:", error)
@@ -185,6 +193,23 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
       onTransactionCountChange(movements.length)
     }
   }, [movements.length, onTransactionCountChange])
+
+  useEffect(() => {
+    if (!selectedMovementId) {
+      return
+    }
+
+    const updatedMovement = movements.find((movement) => movement.id === selectedMovementId) || null
+
+    if (updatedMovement) {
+      if (updatedMovement !== selectedMovementSnapshot) {
+        setSelectedMovementSnapshot(updatedMovement)
+      }
+    } else if (!loading) {
+      setSelectedMovementId(null)
+      setSelectedMovementSnapshot(null)
+    }
+  }, [selectedMovementId, movements, loading, selectedMovementSnapshot])
 
   useEffect(() => {
     const panel = searchParams.get("panel")
@@ -416,18 +441,14 @@ export function TransactionManager({ onTransactionCountChange }: TransactionMana
       </div>
 
       <TransactionDetail
-        movement={selectedMovement}
+        movement={selectedMovementSnapshot}
         accounts={accounts as unknown as Cuenta[]}
         categories={categories as unknown as Categoria[]}
-        open={detailOpen}
+        open={selectedMovementId !== null}
         onOpenChange={(open) => {
-          setDetailOpen(open)
           if (!open) {
-            try {
-              const url = new URL(window.location.href)
-              url.searchParams.delete("mov")
-              window.history.replaceState(null, "", url.toString())
-            } catch {}
+            setSelectedMovementId(null)
+            setSelectedMovementSnapshot(null)
           }
         }}
         onUpdate={async (movementId, patch) => {

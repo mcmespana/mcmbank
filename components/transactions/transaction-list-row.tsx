@@ -10,6 +10,8 @@ import { formatDate } from "@/lib/utils/format"
 import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Pencil } from "lucide-react"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListRowProps {
@@ -131,13 +133,27 @@ export const TransactionListRow = memo(function TransactionListRow({
                 </div>
               </div>
 
-              <div className="flex-shrink-0 text-right min-w-0">
-                <div className="mb-0.5">
-                  <AmountDisplay amount={movement.importe} size="sm" />
+              <div className="flex-shrink-0 flex items-start gap-2 min-w-0">
+                <div className="text-right">
+                  <div className="mb-0.5">
+                    <AmountDisplay amount={movement.importe} size="sm" />
+                  </div>
+                  <div className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-md whitespace-nowrap inline-block">
+                    {formatDate(movement.fecha)}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-md whitespace-nowrap inline-block">
-                  {formatDate(movement.fecha)}
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onClick(movement, e)
+                  }}
+                  aria-label="Editar transacción"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>

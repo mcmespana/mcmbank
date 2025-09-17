@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
+
 import { supabase } from "@/lib/supabase/client"
 import { useAuth } from "@/contexts/auth-context"
 import type { Delegacion } from "@/lib/types/database"
@@ -16,6 +17,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hasCachedDelegationsRef = useRef(false)
 
   const fetchDelegations = useCallback(async () => {
     if (!user) {
@@ -24,20 +26,17 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
       return
     }
 
-    // Cancel previous pending request (if any)
     if (abortControllerRef.current) abortControllerRef.current.abort()
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     const abortController = new AbortController()
     abortControllerRef.current = abortController
+    let didTimeout = false
 
-    const attempt = async () => {
-      setLoading(true)
-      setError(null)
-
+    const fetchFromSupabase = async () => {
       const { data, error } = await runQuery<{ delegacion_id: string; delegacion: any }[]>({
-        label: 'fetch-delegaciones',
-        table: 'membresia',
+        label: "fetch-delegaciones",
+        table: "membresia",
         timeoutMs: timeout,
         build: async (signal) =>
           await supabase
@@ -56,29 +55,74 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
             .abortSignal(signal),
       })
 
-      if (error) throw error
+      if (error) {
+        throw error instanceof Error
+          ? error
+          : new Error(typeof error === "string" ? error : "Error cargando delegaciones")
+      }
 
       const userDelegations = (data?.map((item: any) => item.delegacion).filter(Boolean) || []) as Delegacion[]
       setDelegations(userDelegations)
     }
 
     try {
-      await attempt()
+      // Only show the blocking spinner when we have nothing cached
+      if (!hasCachedDelegationsRef.current) {
+        setLoading(true)
+      }
+      setError(null)
+
+      timeoutRef.current = setTimeout(() => {
+        didTimeout = true
+        abortController.abort()
+      }, timeout)
+
+      const response = await fetch("/api/delegaciones", {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: abortController.signal,
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setDelegations([])
+          setError("Sesión no válida. Inicia sesión de nuevo.")
+          return
+        }
+
+        let payload: any = null
+        try {
+          payload = await response.json()
+        } catch {
+          // no-op: keep generic error below
+        }
+
+        throw new Error(payload?.error ?? "Error cargando delegaciones")
+      }
+
+      const payload = (await response.json()) as { delegaciones?: Delegacion[] }
+      const serverDelegations = (payload?.delegaciones ?? []) as Delegacion[]
+      setDelegations(serverDelegations)
     } catch (err) {
       if (abortController.signal.aborted) {
-        // Mark as not loading to avoid spinners stuck on abort/timeout
-        setLoading(false)
+        if (didTimeout) {
+          setError("La solicitud de delegaciones tardó demasiado. Intenta nuevamente.")
+        }
         return
       }
-      // Retry once after refreshing session in case token expired in background
+
+      console.warn("Fallo la API de delegaciones, usando Supabase como respaldo.", err)
+
       try {
-        await supabase.auth.refreshSession()
-        await attempt()
-      } catch (e2) {
-        setError(e2 instanceof Error ? e2.message : "Error cargando delegaciones")
+        await fetchFromSupabase()
+      } catch (fallbackError) {
+        setError(
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : "Error cargando delegaciones",
+        )
       }
     } finally {
-      // Always clear loading state; a new fetch will set it to true again
       setLoading(false)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -86,6 +130,10 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
       }
     }
   }, [user, timeout])
+
+  useEffect(() => {
+    hasCachedDelegationsRef.current = delegations.length > 0
+  }, [delegations.length])
 
   useEffect(() => {
     fetchDelegations()

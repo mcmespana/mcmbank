@@ -313,15 +313,19 @@ export function CuentasManager() {
         cuenta.banco_nombre?.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     .sort((a, b) => {
-      // Primero bancos, luego cajas
-      if (a.tipo !== b.tipo) {
-        return a.tipo === "banco" ? -1 : 1
+      const aIsCaja = a.tipo === "caja"
+      const bIsCaja = b.tipo === "caja"
+
+      if (aIsCaja && !bIsCaja) return 1
+      if (!aIsCaja && bIsCaja) return -1
+
+      const aDate = new Date(a.creado_en).getTime()
+      const bDate = new Date(b.creado_en).getTime()
+
+      if (!Number.isNaN(aDate) && !Number.isNaN(bDate)) {
+        return bDate - aDate
       }
-      // Luego por nombre de banco
-      if (a.banco_nombre && b.banco_nombre) {
-        return a.banco_nombre.localeCompare(b.banco_nombre)
-      }
-      // Finalmente por nombre de cuenta
+
       return a.nombre.localeCompare(b.nombre)
     })
 

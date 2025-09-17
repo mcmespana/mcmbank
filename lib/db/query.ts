@@ -7,11 +7,35 @@ export interface RunQueryOptions<T> {
   timeoutMs?: number
   build: (signal: AbortSignal) => Promise<{ data: T | null; error: any }>
   retryOnAuth?: boolean
+  /** Optional external signal to propagate cancellation/timeouts */
+  externalSignal?: AbortSignal | null
 }
 
-export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retryOnAuth = true }: RunQueryOptions<T>) {
+export async function runQuery<T>({
+  label,
+  table,
+  timeoutMs = 15000,
+  build,
+  retryOnAuth = true,
+  externalSignal,
+}: RunQueryOptions<T>) {
   const started = Date.now()
   const ac = new AbortController()
+  let removeExternalAbortListener: (() => void) | undefined
+
+  if (externalSignal) {
+    const abort = () => {
+      if (!ac.signal.aborted) {
+        ac.abort()
+      }
+    }
+    if (externalSignal.aborted) {
+      abort()
+    } else {
+      externalSignal.addEventListener("abort", abort)
+      removeExternalAbortListener = () => externalSignal.removeEventListener("abort", abort)
+    }
+  }
 
   const timeout = setTimeout(() => ac.abort(), timeoutMs)
   try {
@@ -32,6 +56,9 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
     return { data: null as T | null, error: err }
   } finally {
     clearTimeout(timeout)
+    if (removeExternalAbortListener) {
+      removeExternalAbortListener()
+    }
   }
 }
 

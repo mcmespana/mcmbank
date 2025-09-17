@@ -17,6 +17,18 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  const isAbortError = (err: unknown) => {
+    if (!err) return false
+    if (err instanceof DOMException) {
+      return err.name === "AbortError"
+    }
+    if (typeof err === "object" && "name" in err) {
+      return (err as { name?: unknown }).name === "AbortError"
+    }
+    const message = typeof err === "object" && err && "message" in err ? (err as { message?: unknown }).message : null
+    return typeof message === "string" && /abort(ed)?/i.test(message)
+  }
+
   const fetchDelegations = useCallback(async () => {
     if (!user) {
       setDelegations([])
@@ -31,6 +43,13 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
+    // Fallback timeout in case runQuery doesn't settle (e.g., suspended tab)
+    timeoutRef.current = setTimeout(() => {
+      if (!abortController.signal.aborted) {
+        abortController.abort()
+      }
+    }, timeout + 1000)
+
     const attempt = async () => {
       setLoading(true)
       setError(null)
@@ -39,6 +58,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
         label: 'fetch-delegaciones',
         table: 'membresia',
         timeoutMs: timeout,
+        externalSignal: abortController.signal,
         build: async (signal) =>
           await supabase
             .from("membresia")
@@ -58,6 +78,10 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
 
       if (error) throw error
 
+      if (abortController.signal.aborted) {
+        return
+      }
+
       const userDelegations = (data?.map((item: any) => item.delegacion).filter(Boolean) || []) as Delegacion[]
       setDelegations(userDelegations)
     }
@@ -65,7 +89,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     try {
       await attempt()
     } catch (err) {
-      if (abortController.signal.aborted) {
+      if (abortController.signal.aborted || isAbortError(err)) {
         // Mark as not loading to avoid spinners stuck on abort/timeout
         setLoading(false)
         return

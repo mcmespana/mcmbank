@@ -34,11 +34,16 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
     setError(null)
 
     try {
-      timeoutRef.current = setTimeout(() => ac.abort(), TIMEOUT_MS)
+      timeoutRef.current = setTimeout(() => {
+        if (!ac.signal.aborted) {
+          ac.abort()
+        }
+      }, TIMEOUT_MS + 1000)
       const { data, error } = await runQuery<any[]>({
         label: 'fetch-movimiento-archivos',
         table: 'movimiento_archivo',
         timeoutMs: TIMEOUT_MS,
+        externalSignal: ac.signal,
         build: async (signal) =>
           await supabase
             .from("movimiento_archivo")
@@ -50,9 +55,14 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
 
       if (error) throw error
 
+      if (ac.signal.aborted) {
+        return
+      }
+
       setArchivos(data || [])
     } catch (err) {
-      if (!ac.signal.aborted) {
+      const aborted = ac.signal.aborted || (err instanceof DOMException && err.name === "AbortError")
+      if (!aborted) {
         setError(err instanceof Error ? err.message : "Error al cargar archivos")
       }
     } finally {

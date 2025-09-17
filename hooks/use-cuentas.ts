@@ -62,6 +62,11 @@ export function useCuentas(
     // Create new abort controller for this request
     const abortController = new AbortController()
     abortControllerRef.current = abortController
+    timeoutRef.current = setTimeout(() => {
+      if (!abortController.signal.aborted) {
+        abortController.abort()
+      }
+    }, timeout + 1000)
 
     try {
       setLoading(true)
@@ -72,6 +77,7 @@ export function useCuentas(
         label: 'fetch-cuentas',
         table: 'cuenta',
         timeoutMs: timeout,
+        externalSignal: abortController.signal,
         build: async (signal) =>
           await supabase
             .from("cuenta")
@@ -122,11 +128,11 @@ export function useCuentas(
       setCuentas(transformedData)
       lastFetchAtRef.current = Date.now()
     } catch (err) {
-      if (abortController.signal.aborted) {
-        console.log("Cuentas query was cancelled")
+      const aborted = abortController.signal.aborted || (err instanceof DOMException && err.name === "AbortError")
+      if (aborted) {
         return
       }
-      
+
       const errorMessage = err instanceof Error ? err.message : "Error desconocido"
       console.error("Error fetching cuentas:", errorMessage)
       setError(errorMessage)

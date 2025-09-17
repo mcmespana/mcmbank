@@ -24,6 +24,12 @@ export function useCategorias(
 
     const ac = new AbortController()
     abortRef.current = ac
+    timeoutRef.current = setTimeout(() => {
+      if (!ac.signal.aborted) {
+        ac.abort()
+      }
+    }, TIMEOUT_MS + 1000)
+
     try {
       if (!delegacionId && !includeGlobal) {
         setCategorias([])
@@ -37,6 +43,7 @@ export function useCategorias(
         label: 'fetch-categorias',
         table: 'categoria',
         timeoutMs: TIMEOUT_MS,
+        externalSignal: ac.signal,
         build: async (signal) => {
           let query = supabase
             .from("categoria")
@@ -59,6 +66,10 @@ export function useCategorias(
         return
       }
 
+      if (ac.signal.aborted) {
+        return
+      }
+
       setCategorias(
         (data || []).sort((a, b) => {
           if (a.es_global !== b.es_global) {
@@ -68,7 +79,8 @@ export function useCategorias(
         }),
       )
     } catch (err) {
-      if (!ac.signal.aborted) {
+      const aborted = ac.signal.aborted || (err instanceof DOMException && err.name === "AbortError")
+      if (!aborted) {
         setError(err instanceof Error ? err.message : "Error desconocido")
       }
     } finally {

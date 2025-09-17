@@ -250,13 +250,6 @@ export function CuentasManager() {
     }
   }
 
-  const getBankIcon = (cuenta: Cuenta) => {
-    if (cuenta.tipo === "caja") {
-      return <PiggyBank className="h-6 w-6 text-white" />
-    }
-    return <Building2 className="h-6 w-6 text-white" />
-  }
-
   const getBankColor = (cuenta: Cuenta) => {
     // Usar el color de la base de datos o un color por defecto
     return cuenta.color || "#4ECDC4"
@@ -306,6 +299,12 @@ export function CuentasManager() {
     )
   }
 
+  const getCreatedTimestamp = (date?: string | null) => {
+    if (!date) return 0
+    const time = new Date(date).getTime()
+    return Number.isNaN(time) ? 0 : time
+  }
+
   const filteredCuentas = cuentas
     .filter(
       (cuenta) =>
@@ -313,15 +312,15 @@ export function CuentasManager() {
         cuenta.banco_nombre?.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     .sort((a, b) => {
-      // Primero bancos, luego cajas
-      if (a.tipo !== b.tipo) {
-        return a.tipo === "banco" ? -1 : 1
-      }
-      // Luego por nombre de banco
-      if (a.banco_nombre && b.banco_nombre) {
-        return a.banco_nombre.localeCompare(b.banco_nombre)
-      }
-      // Finalmente por nombre de cuenta
+      const aIsCaja = a.tipo === "caja"
+      const bIsCaja = b.tipo === "caja"
+
+      if (aIsCaja && !bIsCaja) return 1
+      if (!aIsCaja && bIsCaja) return -1
+
+      const createdDiff = getCreatedTimestamp(b.creado_en) - getCreatedTimestamp(a.creado_en)
+      if (createdDiff !== 0) return createdDiff
+
       return a.nombre.localeCompare(b.nombre)
     })
 

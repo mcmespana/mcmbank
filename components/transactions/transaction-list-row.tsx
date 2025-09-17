@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, memo } from "react"
-import { BankAvatar } from "./bank-avatar"
+import { BankAvatar } from "@/components/bank-avatar"
 import { CategoryChip } from "./category-chip"
 import { AmountDisplay } from "@/components/ui/amount-display"
 import { AccountTooltip } from "./account-tooltip"

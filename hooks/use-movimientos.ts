@@ -31,6 +31,9 @@ export function useMovimientos(
 
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isFetchingRef = useRef(false)
+  const hasFetchedRef = useRef(false)
+  const lastResultWasEmptyRef = useRef(false)
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
 
   const serializedFilters = useMemo(() => {
@@ -51,11 +54,17 @@ export function useMovimientos(
 
   // Memoize filters using their serialized representation to avoid effect churn
   const memoizedFilters = useMemo(() => {
-    if (!filters) return undefined
+    if (serializedFilters === "__no_filters__") return undefined
 
-    return {
-      ...filters,
-      categoriaIds: filters.categoriaIds ? [...filters.categoriaIds] : undefined,
+    try {
+      const parsed = JSON.parse(serializedFilters) as MovimientosFilters
+      return {
+        ...parsed,
+        categoriaIds: parsed.categoriaIds ? [...parsed.categoriaIds] : undefined,
+      }
+    } catch (error) {
+      console.warn("No se pudieron deserializar los filtros de movimientos", error)
+      return undefined
     }
   }, [serializedFilters])
 
@@ -83,11 +92,17 @@ export function useMovimientos(
         clearTimeout(timeoutRef.current)
       }
 
+      let wasAborted = false
+
       try {
         if (!append || pageIndex === 0) {
           setLoading(true)
           setError(null)
+          hasFetchedRef.current = false
+          lastResultWasEmptyRef.current = false
         }
+
+        isFetchingRef.current = true
 
         // Build base query
         let query = supabase
@@ -216,6 +231,7 @@ export function useMovimientos(
           setMovimientos((prev) => [...prev, ...movimientosData])
         } else {
           setMovimientos(movimientosData)
+          lastResultWasEmptyRef.current = movimientosData.length === 0
         }
 
         setHasMore(movimientosData.length === pageSize && (pageIndex + 1) * pageSize < totalCount)
@@ -227,6 +243,7 @@ export function useMovimientos(
 
         if (abortController.signal.aborted) {
           console.log("Request was cancelled")
+          wasAborted = true
           return { data: [], totalCount: 0 }
         }
 
@@ -234,6 +251,10 @@ export function useMovimientos(
         return { data: [], totalCount: 0 }
       } finally {
         setLoading(false)
+        isFetchingRef.current = false
+        if (!wasAborted) {
+          hasFetchedRef.current = true
+        }
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
           timeoutRef.current = null
@@ -244,7 +265,7 @@ export function useMovimientos(
   )
 
   useEffect(() => {
-    if (lastResetKey.current === resetKey) {
+    if (lastResetKey.current === resetKey && hasFetchedRef.current) {
       return
     }
 
@@ -257,13 +278,23 @@ export function useMovimientos(
     setPage(0)
     setHasMore(true)
     fetchMovimientos(0, false)
-    
+
     return () => {
       if (abortRef.current) abortRef.current.abort()
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
-      lastResetKey.current = null
     }
   }, [resetKey, fetchMovimientos])
+
+  useEffect(() => {
+    if (!delegacionId) return
+    if (loading) return
+    if (isFetchingRef.current) return
+    if (hasFetchedRef.current) return
+    if (movimientos.length === 0 && lastResultWasEmptyRef.current) return
+    if (movimientos.length > 0) return
+
+    fetchMovimientos(0, false)
+  }, [delegacionId, loading, movimientos.length, fetchMovimientos])
 
   useRevalidateOnFocusJitter(() => fetchMovimientos(0, false), { minMs: 90, maxMs: 220 })
 

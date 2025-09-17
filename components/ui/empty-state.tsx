@@ -31,4 +31,3 @@ export function EmptyState({ title, description, icon, className, children }: Em
       {children && <div className="mt-2">{children}</div>}
     </div>
   )}
-

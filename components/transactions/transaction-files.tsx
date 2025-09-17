@@ -162,4 +162,3 @@ export function TransactionFiles({ movementId, delegacionId, onCountChange }: Tr
     </div>
   )
 }
-

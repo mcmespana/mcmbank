@@ -24,10 +24,18 @@ export default function HomePage() {
         </TabsList>
 
         <TabsContent value="inicio" className="space-y-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-muted-foreground">Panel de control y revisión de la tesorería</p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/70 dark:border-white/10 dark:bg-white/10 dark:text-white/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                Bienvenido de nuevo
+              </span>
+              <h1 className="text-4xl font-semibold tracking-tight text-foreground dark:text-white">
+                Dashboard financiero
+              </h1>
+              <p className="max-w-xl text-sm text-muted-foreground">
+                Visualiza el pulso económico de tu delegación y toma decisiones con confianza.
+              </p>
             </div>
             <TimeframeFilter value={timeframe} onChange={setTimeframe} />
           </div>

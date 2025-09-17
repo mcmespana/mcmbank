@@ -85,32 +85,52 @@ export function ActivityBalanceDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+        <Card className="relative overflow-hidden border border-white/20 bg-white/70 text-foreground dark:border-white/10 dark:bg-white/5">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent dark:from-emerald-500/15" aria-hidden />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-foreground/80 dark:text-white/90">Ingresos</CardTitle>
+            <div className="rounded-xl bg-emerald-500/15 p-2 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
+              <TrendingUp className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-1">
             <div className="text-2xl font-bold">€{summary.ingresos.toFixed(2)}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gastos</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+        <Card className="relative overflow-hidden border border-white/20 bg-white/70 text-foreground dark:border-white/10 dark:bg-white/5">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-rose-500/20 via-rose-500/5 to-transparent dark:from-rose-500/15" aria-hidden />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-foreground/80 dark:text-white/90">Gastos</CardTitle>
+            <div className="rounded-xl bg-rose-500/15 p-2 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
+              <TrendingDown className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-1">
             <div className="text-2xl font-bold">€{summary.gastos.toFixed(2)}</div>
           </CardContent>
         </Card>
-        <Card className="md:col-span-3">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Balance</CardTitle>
-            <Wallet
-              className={`h-4 w-4 ${summary.balance >= 0 ? "text-green-600" : "text-red-600"}`}
-            />
+        <Card className="relative overflow-hidden border border-white/20 bg-white/70 text-foreground shadow-[0_18px_60px_-30px_rgba(37,99,235,0.45)] dark:border-white/10 dark:bg-white/5 md:col-span-3">
+          <div
+            className={`absolute inset-0 -z-10 bg-gradient-to-br ${
+              summary.balance >= 0
+                ? "from-emerald-500/15 via-emerald-500/5 to-transparent"
+                : "from-rose-500/15 via-rose-500/5 to-transparent"
+            }`}
+            aria-hidden
+          />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-foreground/80 dark:text-white/90">Balance</CardTitle>
+            <div
+              className={`rounded-xl p-2 ${
+                summary.balance >= 0
+                  ? "bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
+                  : "bg-rose-500/15 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300"
+              }`}
+            >
+              <Wallet className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-1">
             <div className="text-3xl font-bold">€{summary.balance.toFixed(2)}</div>
           </CardContent>
         </Card>
@@ -125,9 +145,10 @@ export function ActivityBalanceDashboard() {
           <Button variant="outline" onClick={clearFilters}>Borrar filtros</Button>
         </EmptyState>
       ) : (
-        <Card>
+        <Card className="relative overflow-hidden border border-white/20 bg-white/70 text-foreground shadow-[0_18px_60px_-30px_rgba(37,99,235,0.45)] dark:border-white/10 dark:bg-white/5">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent dark:from-primary/10" aria-hidden />
           <CardHeader>
-            <CardTitle>Ingresos vs Gastos</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground/85 dark:text-white">Ingresos vs Gastos</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px]">

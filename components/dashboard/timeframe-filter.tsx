@@ -19,7 +19,7 @@ interface Props {
 export function TimeframeFilter({ value, onChange }: Props) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-auto min-w-[200px]">
+      <SelectTrigger className="w-auto min-w-[200px] rounded-full border border-white/30 bg-white/60 px-4 py-2 text-sm font-semibold text-foreground/80 shadow-sm transition-colors hover:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-white">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

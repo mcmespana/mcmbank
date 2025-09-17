@@ -111,9 +111,10 @@ export function CategoryAnalysisDashboard() {
     const config = buildConfig(data)
     const total = data.reduce((sum, d) => sum + d.value, 0)
     return (
-      <Card>
+      <Card className="relative overflow-hidden border border-white/20 bg-white/70 text-foreground shadow-[0_18px_60px_-30px_rgba(37,99,235,0.45)] dark:border-white/10 dark:bg-white/5">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/12 via-primary/5 to-transparent dark:from-primary/10" aria-hidden />
         <CardHeader>
-          <CardTitle>{title}</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground/85 dark:text-white">{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={config} className="h-[300px]">
@@ -165,9 +166,12 @@ export function CategoryAnalysisDashboard() {
           </div>
 
           {summary.length > 0 && (
-            <Card>
+            <Card className="relative overflow-hidden border border-white/20 bg-white/70 text-foreground shadow-[0_18px_60px_-30px_rgba(37,99,235,0.45)] dark:border-white/10 dark:bg-white/5">
+              <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent dark:from-primary/8" aria-hidden />
               <CardHeader>
-                <CardTitle>Resumen por categoría</CardTitle>
+                <CardTitle className="text-lg font-semibold text-foreground/85 dark:text-white">
+                  Resumen por categoría
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>

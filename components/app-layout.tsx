@@ -66,21 +66,29 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Desktop Sidebar */}
+    <div className="app-shell">
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         showMobileTrigger={false}
       />
 
-      {/* Main Content */}
-      <div className={cn("transition-all duration-300", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
-        {/* Topbar */}
+      <div
+        className={cn(
+          "relative flex min-h-screen flex-col transition-[padding] duration-300",
+          sidebarCollapsed ? "lg:pl-16" : "lg:pl-72",
+        )}
+      >
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute left-[-10%] top-[-18%] h-[420px] w-[420px] rounded-full bg-primary/20 blur-3xl dark:bg-primary/15" />
+          <div className="absolute right-[-15%] bottom-[-20%] h-[520px] w-[520px] rounded-full bg-sky-500/20 blur-[180px] dark:bg-sky-500/15" />
+        </div>
+
         <Topbar selectedDelegation={selectedDelegation} onDelegationChange={(id) => setSelectedDelegation(id)} />
 
-        {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main className="relative z-10 flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-10">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">{children}</div>
+        </main>
       </div>
     </div>
   )

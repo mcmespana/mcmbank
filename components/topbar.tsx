@@ -111,37 +111,41 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
-      {/* Mobile menu button */}
-      <Sidebar showDesktop={false} />
-
-      {/* Delegation selector */}
-      <div className="flex items-center gap-4">
-        <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
+    <header className="relative sticky top-6 z-40 mx-auto flex h-16 w-full max-w-7xl items-center gap-4 rounded-2xl border border-white/30 bg-background/80 px-3 shadow-[0_25px_65px_-35px_rgba(37,99,235,0.65)] backdrop-blur-xl transition-all sm:px-6">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-2xl">
+        <div className="absolute -left-24 top-[-100px] h-56 w-56 rounded-full bg-primary/20 blur-3xl dark:bg-primary/15" />
+        <div className="absolute right-[-40px] top-1/2 h-48 w-48 -translate-y-1/2 rounded-full bg-sky-500/20 blur-[120px] dark:bg-sky-500/15" />
       </div>
 
-      {/* Spacer */}
-      <div className="flex-1" />
+      <Sidebar showDesktop={false} />
 
-      {/* Right side actions */}
+      <div className="flex flex-1 items-center gap-3">
+        <div className="hidden w-full max-w-sm sm:flex">
+          <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
+        </div>
+        <div className="flex w-full sm:hidden">
+          <div className="w-full rounded-full border border-white/30 bg-white/70 px-3 py-1.5 text-sm text-foreground shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white">
+            <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
-        {/* Manual/Documentation button */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleManualClick}
-          className="hidden sm:inline-flex"
+          className="hidden rounded-full border border-transparent bg-white/40 px-4 py-2 text-sm font-medium text-foreground/80 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/60 hover:text-foreground dark:bg-white/10 dark:text-white sm:inline-flex"
         >
-          <BookOpen className="h-4 w-4 mr-2" />
+          <BookOpen className="mr-2 h-4 w-4" />
           Manual
         </Button>
 
-        {/* Theme toggle */}
         {mounted && (
           <Button
             variant="ghost"
-            size="sm"
-            className="w-9 h-9 p-0"
+            size="icon"
+            className="h-10 w-10 rounded-full border border-white/30 bg-white/50 text-foreground/80 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/70 hover:text-foreground dark:border-white/10 dark:bg-white/10 dark:text-white"
             onClick={handleThemeCycle}
             title={`Cambiar tema (actual: ${currentThemeLabel})`}
           >
@@ -150,33 +154,28 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           </Button>
         )}
 
-        {/* User info and logout */}
-        <div className="flex items-center gap-3 pl-2 border-l border-border">
+        <div className="flex items-center gap-3 rounded-full border border-white/30 bg-white/60 px-3 py-2 shadow-sm transition-all duration-200 dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-9 w-9 border border-white/40 bg-white/70 text-foreground dark:border-white/10 dark:bg-white/10">
               <AvatarImage src="" alt={getUserDisplayName()} />
               <AvatarFallback className="text-xs font-medium">
                 {getUserInitials(perfil?.nombre_completo, user?.email)}
               </AvatarFallback>
             </Avatar>
-            <div className="hidden sm:flex flex-col items-start text-sm">
-              <span className="font-medium text-foreground leading-none">
+            <div className="hidden sm:flex flex-col items-start text-sm leading-tight">
+              <span className="font-semibold text-foreground dark:text-white">
                 {getUserDisplayName()}
               </span>
               {user?.email && (
-                <span className="text-xs text-muted-foreground mt-0.5">
-                  {user.email}
-                </span>
+                <span className="text-xs text-muted-foreground">{user.email}</span>
               )}
             </div>
           </div>
-
-          {/* Logout button */}
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={handleSignOut}
-            className="text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 w-9 h-9 p-0"
+            className="h-9 w-9 rounded-full border border-transparent text-muted-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-red-200 hover:bg-red-500/20 hover:text-red-600 dark:hover:border-red-500/40 dark:hover:bg-red-500/20 dark:hover:text-red-300"
             title="Cerrar sesión"
           >
             <LogOut className="h-4 w-4" />

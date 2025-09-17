@@ -20,8 +20,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { DialogTitle } from "@/components/ui/dialog"
-import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { useDelegationCounts } from "@/hooks/use-delegation-counts"
 import type { DelegationCounts } from "@/hooks/use-delegation-counts"
@@ -122,9 +120,20 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
   ]
 
   return (
-    <div className={cn("flex h-full flex-col bg-sidebar", className)}>
+    <div
+      className={cn(
+        "relative flex h-full flex-col overflow-hidden border-r border-sidebar-border/40 bg-sidebar text-sidebar-foreground shadow-[0_25px_55px_-25px_rgba(15,63,118,0.45)] backdrop-blur-xl",
+        "dark:border-white/5",
+        className,
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-70">
+        <div className="absolute -left-24 top-[-140px] h-72 w-72 rounded-full bg-primary/30 blur-3xl dark:bg-primary/20" />
+        <div className="absolute bottom-[-180px] right-[-140px] h-80 w-80 rounded-full bg-sky-500/30 blur-[140px] dark:bg-sky-500/20" />
+      </div>
+
       {/* Logo */}
-      <div className="flex h-16 items-center border-b border-sidebar-border px-6">
+      <div className="relative z-10 flex h-20 items-center border-b border-white/10 px-6">
         <button
           type="button"
           onClick={() => {
@@ -134,16 +143,22 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
               // no-op
             }
           }}
-          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+          className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/60 px-3 py-2 text-left text-sidebar-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-white/10 dark:bg-white/5 dark:text-white"
           title="Ir al inicio"
         >
-          <Building2 className="h-8 w-8 text-sidebar-primary" />
-          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">MCM Bank</span>}
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/90 text-primary-foreground shadow-[0_18px_45px_-18px_rgba(37,99,235,0.7)]">
+            <Building2 className="h-5 w-5" />
+          </div>
+          {!collapsed && (
+            <span className="text-lg font-semibold tracking-tight">
+              MCM Bank
+            </span>
+          )}
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="relative z-10 flex-1 space-y-2 px-4 py-6">
         {navigation.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = !item.enabled
@@ -151,25 +166,33 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
           const linkContent = (
             <div
               className={cn(
-                "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "group relative flex items-center justify-between gap-3 overflow-hidden rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 before:absolute before:inset-0 before:-z-10 before:bg-white/40 before:opacity-0 before:blur-xl before:transition before:duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:before:opacity-100 dark:before:bg-white/10",
                 isDisabled
-                  ? "text-muted-foreground cursor-not-allowed opacity-50"
+                  ? "cursor-not-allowed text-muted-foreground/70 hover:translate-y-0 hover:shadow-none hover:before:opacity-0"
                   : isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    ? "bg-gradient-to-r from-primary via-primary to-sky-500 text-primary-foreground shadow-[0_20px_45px_-20px_rgba(37,99,235,0.75)] before:opacity-100 before:bg-white/20 dark:before:bg-white/5"
+                    : "text-sidebar-foreground/80 hover:text-sidebar-foreground dark:text-sidebar-foreground/80 dark:hover:text-white",
               )}
             >
               <div className="flex items-center gap-3">
-                <item.icon className="h-5 w-5" />
-                {!collapsed && <span>{item.name}</span>}
+                <div
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg border border-white/40 bg-white/70 text-sidebar-foreground/80 shadow-sm transition-all duration-200 dark:border-white/10 dark:bg-white/10 dark:text-sidebar-foreground",
+                    isActive && "border-transparent bg-white/90 text-primary shadow-[0_14px_35px_-18px_rgba(37,99,235,0.6)] dark:bg-white/10 dark:text-primary-foreground",
+                    isDisabled && "opacity-50",
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                </div>
+                {!collapsed && <span className="truncate">{item.name}</span>}
               </div>
               {!collapsed && item.count !== null && (
                 <span
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-xs",
+                    "rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide",
                     isDisabled
                       ? "bg-muted text-muted-foreground"
-                      : "bg-sidebar-primary text-sidebar-primary-foreground",
+                      : "bg-white/70 text-sidebar-foreground shadow-sm dark:bg-white/10 dark:text-white",
                   )}
                 >
                   {item.count}
@@ -179,11 +202,15 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
           )
 
           if (isDisabled) {
-            return <div key={item.name}>{linkContent}</div>
+            return (
+              <div key={item.name} className="opacity-80">
+                {linkContent}
+              </div>
+            )
           }
 
           return (
-            <Link key={item.name} href={item.href}>
+            <Link key={item.name} href={item.href} className="block">
               {linkContent}
             </Link>
           )
@@ -221,11 +248,11 @@ export function Sidebar({
           <SidebarContent collapsed={collapsed} counts={counts} countsLoading={countsLoading} />
 
           {/* Collapse Toggle Button */}
-          <div className="absolute -right-3 top-8">
+          <div className="absolute -right-3 top-10">
             <Button
               variant="outline"
               size="icon"
-              className="h-6 w-6 rounded-full bg-background border-2 shadow-md"
+              className="h-8 w-8 rounded-full border border-white/40 bg-white/70 text-sidebar-foreground shadow-[0_18px_35px_-18px_rgba(37,99,235,0.55)] transition-transform duration-200 hover:scale-105 hover:shadow-[0_24px_55px_-20px_rgba(37,99,235,0.65)] dark:border-white/10 dark:bg-white/10 dark:text-white"
               onClick={onToggleCollapse}
             >
               {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
@@ -243,7 +270,7 @@ export function Sidebar({
               <span className="sr-only">Abrir menú</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0">
+          <SheetContent side="left" className="w-72 border-none bg-transparent p-0 backdrop-blur-2xl">
             <SidebarContent counts={counts} countsLoading={countsLoading} />
           </SheetContent>
         </Sheet>

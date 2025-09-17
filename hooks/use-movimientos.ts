@@ -388,6 +388,21 @@ export function useMovimientos(
     }
   }
 
+  const deleteMovimientos = async (movimientoIds: string[]) => {
+    if (movimientoIds.length === 0) {
+      return
+    }
+
+    try {
+      const { error } = await supabase.from("movimiento").delete().in("id", movimientoIds)
+      if (error) throw error
+      const idsToDelete = new Set(movimientoIds)
+      setMovimientos((prev) => prev.filter((mov) => !idsToDelete.has(mov.id)))
+    } catch (err) {
+      throw err
+    }
+  }
+
   const updateCategoria = async (movimientoId: string, categoriaId: string | null) => {
     try {
       const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
@@ -412,6 +427,7 @@ export function useMovimientos(
     refetch,
     updateCategoria,
     updateMovimiento,
+    deleteMovimientos,
     createMovimiento,
     loadMore,
     hasMore,

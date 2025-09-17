@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Pencil } from "lucide-react"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria } from "@/lib/types/database"
 
@@ -22,6 +23,9 @@ interface TransactionListRowProps {
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onClick: (movement: MovimientoConRelaciones, e: React.MouseEvent) => void
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
+  isSelected: boolean
+  selectionActive: boolean
+  onSelectionChange: (selected: boolean) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -32,6 +36,9 @@ export const TransactionListRow = memo(function TransactionListRow({
   onMovementUpdate,
   onClick,
   onOpenFiles,
+  isSelected,
+  selectionActive,
+  onSelectionChange,
 }: TransactionListRowProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -81,16 +88,51 @@ export const TransactionListRow = memo(function TransactionListRow({
         data-delegation-id={account?.delegacion_id}
       >
         <div className="flex items-start gap-3">
-          <AccountTooltip account={account}>
+          <div className="relative flex-shrink-0 group" data-testid="transaction-selection">
+            <AccountTooltip account={account}>
+              <div
+                className={cn(
+                  "rounded-full p-0.5 cursor-pointer transition-all duration-200 shadow-sm",
+                  isSelected
+                    ? "scale-90 opacity-0"
+                    : selectionActive
+                    ? "scale-95 opacity-0"
+                    : "group-hover:scale-95 group-hover:opacity-0 group-hover:rotate-3",
+                )}
+                style={{ backgroundColor: account?.color || "#4ECDC4" }}
+                data-testid="account-info"
+                title={`Cuenta: ${account?.nombre || 'Sin nombre'} - Delegación ID: ${account?.delegacion_id || 'Sin delegación'}`}
+              >
+                <BankAvatar account={account} />
+              </div>
+            </AccountTooltip>
+
             <div
-              className="rounded-full p-0.5 cursor-pointer hover:scale-105 transition-transform flex-shrink-0 shadow-sm"
-              style={{ backgroundColor: account?.color || "#4ECDC4" }}
-              data-testid="account-info"
-              title={`Cuenta: ${account?.nombre || 'Sin nombre'} - Delegación ID: ${account?.delegacion_id || 'Sin delegación'}`}
+              className={cn(
+                "absolute inset-0 flex items-center justify-center transition-all duration-200",
+                isSelected
+                  ? "opacity-100 scale-100"
+                  : selectionActive
+                  ? "opacity-90 scale-100 pointer-events-auto"
+                  : "pointer-events-none opacity-0 scale-75 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:scale-100",
+              )}
             >
-              <BankAvatar account={account} />
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={(checked) => {
+                  const isChecked = checked === true
+                  onSelectionChange(isChecked)
+                }}
+                className={cn(
+                  "h-6 w-6 border-2 text-base", // enlarge for better hit area
+                  isSelected ? "shadow-lg" : "shadow-sm",
+                )}
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+                aria-label={isSelected ? "Quitar de la selección" : "Añadir a la selección"}
+              />
             </div>
-          </AccountTooltip>
+          </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3">

@@ -1,5 +1,6 @@
 "use client"
 
+import { cn } from "@/lib/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export type Timeframe = "today" | "week" | "month" | "school-year"
@@ -14,17 +15,27 @@ const OPTIONS = [
 interface Props {
   value: Timeframe
   onChange: (value: Timeframe) => void
+  className?: string
 }
 
-export function TimeframeFilter({ value, onChange }: Props) {
+export function TimeframeFilter({ value, onChange, className }: Props) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-auto min-w-[200px]">
-        <SelectValue />
+      <SelectTrigger
+        className={cn(
+          "min-w-[200px] rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-left text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-white/20",
+          className,
+        )}
+      >
+        <SelectValue placeholder="Seleccionar periodo" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="rounded-2xl border border-white/10 bg-slate-950/95 text-slate-100 shadow-xl">
         {OPTIONS.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
+          <SelectItem
+            key={o.value}
+            value={o.value}
+            className="rounded-lg px-3 py-2 text-sm font-medium data-[state=checked]:bg-primary/20 data-[state=checked]:text-white"
+          >
             {o.label}
           </SelectItem>
         ))}

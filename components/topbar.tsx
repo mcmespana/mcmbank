@@ -111,26 +111,29 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
+    <header className="relative sticky top-0 z-40 flex h-20 items-center gap-4 border-b border-white/10 bg-slate-950/50 px-4 shadow-[0_10px_30px_-20px_rgba(16,76,140,0.9)] backdrop-blur-xl transition-colors lg:px-8">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_120%_at_0%_0%,rgba(40,83,195,0.22),transparent_60%)]" />
       {/* Mobile menu button */}
       <Sidebar showDesktop={false} />
 
       {/* Delegation selector */}
       <div className="flex items-center gap-4">
-        <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
+        <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-2 shadow-inner">
+          <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
+        </div>
       </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Right side actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {/* Manual/Documentation button */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleManualClick}
-          className="hidden sm:inline-flex"
+          className="hidden rounded-full border border-white/10 bg-white/5 px-4 text-xs font-medium uppercase tracking-[0.2em] text-slate-200 transition hover:bg-white/10 sm:inline-flex"
         >
           <BookOpen className="h-4 w-4 mr-2" />
           Manual
@@ -141,7 +144,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           <Button
             variant="ghost"
             size="sm"
-            className="w-9 h-9 p-0"
+            className="h-10 w-10 rounded-full border border-white/10 bg-white/5 p-0 text-slate-200 transition hover:bg-white/10"
             onClick={handleThemeCycle}
             title={`Cambiar tema (actual: ${currentThemeLabel})`}
           >
@@ -151,20 +154,20 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         )}
 
         {/* User info and logout */}
-        <div className="flex items-center gap-3 pl-2 border-l border-border">
+        <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
           <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-10 w-10 border border-white/10 bg-slate-900/80 text-slate-100">
               <AvatarImage src="" alt={getUserDisplayName()} />
-              <AvatarFallback className="text-xs font-medium">
+              <AvatarFallback className="text-xs font-medium text-white">
                 {getUserInitials(perfil?.nombre_completo, user?.email)}
               </AvatarFallback>
             </Avatar>
             <div className="hidden sm:flex flex-col items-start text-sm">
-              <span className="font-medium text-foreground leading-none">
+              <span className="font-medium leading-none text-white">
                 {getUserDisplayName()}
               </span>
               {user?.email && (
-                <span className="text-xs text-muted-foreground mt-0.5">
+                <span className="mt-0.5 text-xs text-slate-300/80">
                   {user.email}
                 </span>
               )}
@@ -176,7 +179,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
-            className="text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 w-9 h-9 p-0"
+            className="h-9 w-9 rounded-full border border-white/10 bg-white/5 p-0 text-slate-200 transition hover:bg-red-500/10 hover:text-red-200"
             title="Cerrar sesión"
           >
             <LogOut className="h-4 w-4" />

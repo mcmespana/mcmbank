@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/table"
 
 export function CategoryAnalysisDashboard() {
-  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
+  const { selectedDelegation } = useDelegationContext()
   const [timeframe, setTimeframe] = useState<Timeframe>("month")
   const [categoryIds, setCategoryIds] = useState<string[]>([])
 
@@ -111,9 +111,9 @@ export function CategoryAnalysisDashboard() {
     const config = buildConfig(data)
     const total = data.reduce((sum, d) => sum + d.value, 0)
     return (
-      <Card>
+      <Card className="border border-white/10 bg-slate-900/70 text-slate-200 shadow-[0_30px_60px_-40px_rgba(16,76,140,0.9)]">
         <CardHeader>
-          <CardTitle>{title}</CardTitle>
+          <CardTitle className="text-lg font-semibold text-white">{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={config} className="h-[300px]">
@@ -132,19 +132,31 @@ export function CategoryAnalysisDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row">
-        <TimeframeFilter value={timeframe} onChange={setTimeframe} />
-        <div className="md:flex-1">
-          <CategorySelector
-            categories={categorias}
-            selectedCategories={categoryIds}
-            onSelectionChange={setCategoryIds}
-            allowMultiple
-            placeholder="Filtrar categorías..."
-          />
+    <div className="space-y-10">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)_auto]">
+        <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-5 shadow-inner">
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Periodo</span>
+            <TimeframeFilter value={timeframe} onChange={setTimeframe} className="w-full" />
+          </div>
         </div>
-        <Button variant="outline" onClick={clearFilters} className="md:self-start">
+        <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-5 shadow-inner">
+          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Categorías</span>
+          <div className="mt-3">
+            <CategorySelector
+              categories={categorias}
+              selectedCategories={categoryIds}
+              onSelectionChange={setCategoryIds}
+              allowMultiple
+              placeholder="Filtrar categorías..."
+            />
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          onClick={clearFilters}
+          className="h-full min-h-[60px] rounded-3xl border-white/20 bg-white/5 px-5 font-semibold uppercase tracking-[0.3em] text-slate-200 transition hover:bg-white/10"
+        >
           Borrar filtros
         </Button>
       </div>
@@ -154,8 +166,15 @@ export function CategoryAnalysisDashboard() {
           title="No se han encontrado movimientos"
           description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."
           icon={<SearchX className="h-6 w-6" />}
+          className="border-white/10 bg-slate-900/70 text-slate-200"
         >
-          <Button variant="outline" onClick={clearFilters}>Borrar filtros</Button>
+          <Button
+            variant="outline"
+            onClick={clearFilters}
+            className="rounded-xl border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 hover:bg-white/10"
+          >
+            Borrar filtros
+          </Button>
         </EmptyState>
       ) : (
         <>
@@ -165,27 +184,27 @@ export function CategoryAnalysisDashboard() {
           </div>
 
           {summary.length > 0 && (
-            <Card>
+            <Card className="border border-white/10 bg-slate-900/70 text-slate-200 shadow-[0_30px_60px_-40px_rgba(16,76,140,0.9)]">
               <CardHeader>
-                <CardTitle>Resumen por categoría</CardTitle>
+                <CardTitle className="text-lg font-semibold text-white">Resumen por categoría</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead className="text-right">Ingresos</TableHead>
-                      <TableHead className="text-right">Gastos</TableHead>
+                      <TableHead className="text-slate-300">Categoría</TableHead>
+                      <TableHead className="text-right text-slate-300">Ingresos</TableHead>
+                      <TableHead className="text-right text-slate-300">Gastos</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {summary.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell>{s.name}</TableCell>
-                        <TableCell className="text-right">
+                      <TableRow key={s.id} className="border-white/5 hover:bg-white/5">
+                        <TableCell className="font-medium text-white">{s.name}</TableCell>
+                        <TableCell className="text-right text-emerald-200">
                           {s.income ? formatCurrency(s.income) : "-"}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right text-rose-200">
                           {s.expense ? formatCurrency(s.expense) : "-"}
                         </TableCell>
                       </TableRow>

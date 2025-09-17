@@ -20,8 +20,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { DialogTitle } from "@/components/ui/dialog"
-import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { useDelegationCounts } from "@/hooks/use-delegation-counts"
 import type { DelegationCounts } from "@/hooks/use-delegation-counts"
@@ -122,9 +120,16 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
   ]
 
   return (
-    <div className={cn("flex h-full flex-col bg-sidebar", className)}>
-      {/* Logo */}
-      <div className="flex h-16 items-center border-b border-sidebar-border px-6">
+    <div
+      className={cn(
+        "relative flex h-full flex-col overflow-hidden border-r border-white/10 bg-sidebar text-sidebar-foreground shadow-[0_20px_45px_-25px_rgba(8,19,40,0.8)]",
+        className,
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_100%_at_0%_0%,rgba(62,114,255,0.25),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-[radial-gradient(80%_120%_at_100%_20%,rgba(12,33,71,0.65),transparent_70%)]" />
+
+      <div className="relative flex h-20 items-center justify-between border-b border-white/10 px-5">
         <button
           type="button"
           onClick={() => {
@@ -134,16 +139,22 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
               // no-op
             }
           }}
-          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+          className="flex items-center gap-3 rounded-xl px-3 py-2 transition-all hover:bg-white/10 hover:text-white"
           title="Ir al inicio"
         >
-          <Building2 className="h-8 w-8 text-sidebar-primary" />
-          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">MCM Bank</span>}
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary/15 text-sidebar-primary">
+            <Building2 className="h-5 w-5" />
+          </div>
+          {!collapsed && (
+            <div className="flex flex-col">
+              <span className="text-lg font-semibold tracking-tight">MCM Bank</span>
+              <span className="text-xs uppercase tracking-[0.3em] text-sidebar-foreground/70">Tesorería viva</span>
+            </div>
+          )}
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="relative flex-1 space-y-1.5 px-3 py-5">
         {navigation.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = !item.enabled
@@ -151,25 +162,31 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
           const linkContent = (
             <div
               className={cn(
-                "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "group flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all",
                 isDisabled
-                  ? "text-muted-foreground cursor-not-allowed opacity-50"
+                  ? "cursor-not-allowed text-sidebar-foreground/40"
                   : isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    ? "bg-white/10 text-white shadow-[0_10px_30px_-15px_rgba(15,72,169,0.8)] backdrop-blur"
+                    : "text-sidebar-foreground/80 hover:bg-white/5 hover:text-white",
               )}
             >
               <div className="flex items-center gap-3">
-                <item.icon className="h-5 w-5" />
+                <item.icon
+                  className={cn(
+                    "h-5 w-5 transition-transform duration-200",
+                    !isDisabled && "group-hover:scale-110",
+                    isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70",
+                  )}
+                />
                 {!collapsed && <span>{item.name}</span>}
               </div>
               {!collapsed && item.count !== null && (
                 <span
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-xs",
+                    "rounded-full border px-2 py-0.5 text-xs",
                     isDisabled
-                      ? "bg-muted text-muted-foreground"
-                      : "bg-sidebar-primary text-sidebar-primary-foreground",
+                      ? "border-white/10 bg-white/5 text-sidebar-foreground/50"
+                      : "border-sidebar-primary/40 bg-sidebar-primary/15 text-sidebar-primary-foreground",
                   )}
                 >
                   {item.count}
@@ -179,11 +196,15 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
           )
 
           if (isDisabled) {
-            return <div key={item.name}>{linkContent}</div>
+            return (
+              <div key={item.name} className="relative">
+                {linkContent}
+              </div>
+            )
           }
 
           return (
-            <Link key={item.name} href={item.href}>
+            <Link key={item.name} href={item.href} className="block">
               {linkContent}
             </Link>
           )
@@ -215,7 +236,7 @@ export function Sidebar({
         <div
           className={cn(
             "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300",
-            collapsed ? "lg:w-16" : "lg:w-72",
+            collapsed ? "lg:w-20" : "lg:w-72",
           )}
         >
           <SidebarContent collapsed={collapsed} counts={counts} countsLoading={countsLoading} />
@@ -225,7 +246,7 @@ export function Sidebar({
             <Button
               variant="outline"
               size="icon"
-              className="h-6 w-6 rounded-full bg-background border-2 shadow-md"
+              className="h-7 w-7 rounded-full border-white/20 bg-slate-900/70 text-white shadow-lg backdrop-blur"
               onClick={onToggleCollapse}
             >
               {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
@@ -243,7 +264,7 @@ export function Sidebar({
               <span className="sr-only">Abrir menú</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0">
+          <SheetContent side="left" className="w-72 border-white/10 bg-sidebar p-0 text-sidebar-foreground">
             <SidebarContent counts={counts} countsLoading={countsLoading} />
           </SheetContent>
         </Sheet>

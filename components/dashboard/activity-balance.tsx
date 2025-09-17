@@ -22,7 +22,7 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
 export function ActivityBalanceDashboard() {
-  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
+  const { selectedDelegation } = useDelegationContext()
   const [timeframe, setTimeframe] = useState<Timeframe>("month")
   const [categoryIds, setCategoryIds] = useState<string[]>([])
 
@@ -67,51 +67,71 @@ export function ActivityBalanceDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row">
-        <TimeframeFilter value={timeframe} onChange={setTimeframe} />
-        <div className="md:flex-1">
-          <CategorySelector
-            categories={categorias}
-            selectedCategories={categoryIds}
-            onSelectionChange={setCategoryIds}
-            allowMultiple
-            placeholder="Filtrar categorías..."
-          />
+    <div className="space-y-10">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)_auto]">
+        <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-5 shadow-inner">
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+              Periodo
+            </span>
+            <TimeframeFilter value={timeframe} onChange={setTimeframe} className="w-full" />
+          </div>
         </div>
-        <Button variant="outline" onClick={clearFilters} className="md:self-start">
+        <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-5 shadow-inner">
+          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Categorías</span>
+          <div className="mt-3">
+            <CategorySelector
+              categories={categorias}
+              selectedCategories={categoryIds}
+              onSelectionChange={setCategoryIds}
+              allowMultiple
+              placeholder="Filtrar categorías..."
+            />
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          onClick={clearFilters}
+          className="h-full min-h-[60px] rounded-3xl border-white/20 bg-white/5 px-5 font-semibold uppercase tracking-[0.3em] text-slate-200 transition hover:bg-white/10"
+        >
           Borrar filtros
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+        <Card className="border border-white/10 bg-slate-900/70 text-slate-200 shadow-[0_20px_45px_-35px_rgba(16,76,140,0.9)]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
+              Ingresos
+            </CardTitle>
+            <TrendingUp className="h-5 w-5 text-emerald-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{summary.ingresos.toFixed(2)}</div>
+            <div className="text-3xl font-semibold text-white">€{summary.ingresos.toFixed(2)}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gastos</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+        <Card className="border border-white/10 bg-slate-900/70 text-slate-200 shadow-[0_20px_45px_-35px_rgba(16,76,140,0.9)]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
+              Gastos
+            </CardTitle>
+            <TrendingDown className="h-5 w-5 text-rose-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{summary.gastos.toFixed(2)}</div>
+            <div className="text-3xl font-semibold text-white">€{summary.gastos.toFixed(2)}</div>
           </CardContent>
         </Card>
-        <Card className="md:col-span-3">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Balance</CardTitle>
+        <Card className="border border-white/10 bg-slate-900/70 text-slate-200 shadow-[0_20px_45px_-35px_rgba(16,76,140,0.9)]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
+              Balance
+            </CardTitle>
             <Wallet
-              className={`h-4 w-4 ${summary.balance >= 0 ? "text-green-600" : "text-red-600"}`}
+              className={`h-5 w-5 ${summary.balance >= 0 ? "text-sky-200" : "text-amber-200"}`}
             />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">€{summary.balance.toFixed(2)}</div>
+            <div className="text-3xl font-semibold text-white">€{summary.balance.toFixed(2)}</div>
           </CardContent>
         </Card>
       </div>
@@ -121,28 +141,36 @@ export function ActivityBalanceDashboard() {
           title="No se han encontrado movimientos"
           description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."
           icon={<SearchX className="h-6 w-6" />}
+          className="border-white/10 bg-slate-900/70 text-slate-200"
         >
-          <Button variant="outline" onClick={clearFilters}>Borrar filtros</Button>
+          <Button
+            variant="outline"
+            onClick={clearFilters}
+            className="rounded-xl border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 hover:bg-white/10"
+          >
+            Borrar filtros
+          </Button>
         </EmptyState>
       ) : (
-        <Card>
+        <Card className="border border-white/10 bg-slate-900/70 text-slate-200 shadow-[0_30px_60px_-40px_rgba(16,76,140,0.9)]">
           <CardHeader>
-            <CardTitle>Ingresos vs Gastos</CardTitle>
+            <CardTitle className="text-lg font-semibold text-white">Ingresos vs Gastos</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
+            <ChartContainer config={chartConfig} className="h-[320px]">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
                 <XAxis
                   dataKey="date"
+                  tick={{ fill: "rgba(226, 232, 240, 0.7)", fontSize: 12 }}
                   tickFormatter={(value) =>
                     format(new Date(value), "d MMM", { locale: es })
                   }
                 />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="ingresos" fill="var(--color-ingresos)" />
-                <Bar dataKey="gastos" fill="var(--color-gastos)" />
+                <YAxis tick={{ fill: "rgba(226, 232, 240, 0.7)", fontSize: 12 }} axisLine={{ stroke: "rgba(148, 163, 184, 0.2)" }} tickLine={{ stroke: "rgba(148, 163, 184, 0.2)" }} />
+                <ChartTooltip content={<ChartTooltipContent />} cursor={{ fill: "rgba(37, 99, 235, 0.08)" }} />
+                <Bar dataKey="ingresos" fill="var(--color-ingresos)" radius={[8, 8, 8, 8]} />
+                <Bar dataKey="gastos" fill="var(--color-gastos)" radius={[8, 8, 8, 8]} />
               </BarChart>
             </ChartContainer>
           </CardContent>

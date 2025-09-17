@@ -27,11 +27,33 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
     emoji: category.emoji || "📁",
     tipo: category.tipo,
     color: parentCategory?.color || category.color || "#4ECDC4",
-    scope: (category.es_global ? "global" : "delegacion") as ScopeOption,
+    scope: (parentCategory
+      ? parentCategory.es_global
+        ? "global"
+        : "delegacion"
+      : category.es_global
+        ? "global"
+        : "delegacion") as ScopeOption,
   })
   const [loading, setLoading] = useState(false)
 
   const canToggleGlobal = canManageGlobal && (!parentCategory || parentCategory.es_global)
+
+  useEffect(() => {
+    setFormData({
+      nombre: category.nombre,
+      emoji: category.emoji || "📁",
+      tipo: category.tipo,
+      color: parentCategory?.color || category.color || "#4ECDC4",
+      scope: (parentCategory
+        ? parentCategory.es_global
+          ? "global"
+          : "delegacion"
+        : category.es_global
+          ? "global"
+          : "delegacion") as ScopeOption,
+    })
+  }, [category, parentCategory])
 
   useEffect(() => {
     if (!canToggleGlobal) {
@@ -50,12 +72,20 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
     setLoading(true)
 
     try {
+      const resolvedScope = parentCategory
+        ? parentCategory.es_global
+          ? "global"
+          : "delegacion"
+        : formData.scope
+
       await onSave({
         nombre: formData.nombre.trim(),
         emoji: formData.emoji,
         tipo: formData.tipo,
-        ...(parentCategory ? {} : { color: formData.color }),
-        es_global: formData.scope === "global",
+        ...(parentCategory
+          ? { categoria_padre_id: parentCategory.id }
+          : { color: formData.color }),
+        es_global: resolvedScope === "global",
       })
     } catch (error) {
       console.error("Error saving category:", error)

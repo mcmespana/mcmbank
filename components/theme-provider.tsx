@@ -21,7 +21,7 @@ export function ThemeProvider({ children, storageKey = 'mcmbank-theme', ...props
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
+      defaultTheme="dark"
       enableSystem
       disableTransitionOnChange
       storageKey={storageKey}

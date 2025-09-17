@@ -1,9 +1,9 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Banknote } from "lucide-react"
+import { Building2, PiggyBank } from "lucide-react"
 import type { Cuenta } from "@/lib/types/database"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 interface BankAvatarProps {
   bankName?: string
@@ -12,108 +12,69 @@ interface BankAvatarProps {
   size?: "sm" | "md" | "lg"
 }
 
-const BANK_COLORS = {
-  BBVA: "bg-blue-600",
-  Santander: "bg-red-600",
-  CaixaBank: "bg-blue-800",
-  Bankia: "bg-orange-600",
-  ING: "bg-orange-500",
-  Openbank: "bg-green-600",
-  Revolut: "bg-purple-600",
-  N26: "bg-cyan-600",
-  Sabadell: "bg-blue-500",
-  "Banco Sabadell": "bg-blue-500",
-  Unicaja: "bg-green-700",
-  Kutxabank: "bg-blue-700",
-  Bankinter: "bg-orange-700",
-  Abanca: "bg-blue-900",
-  Cajamar: "bg-green-800",
-  Liberbank: "bg-purple-700",
-  "Eurocaja Rural": "bg-green-600",
-  Caja: "bg-amber-600",
-  default: "bg-slate-600",
-}
-
 export function BankAvatar({ bankName, accountColor, account, size = "md" }: BankAvatarProps) {
-  const finalBankName = bankName || account?.banco_nombre || account?.nombre || "Caja"
-  const finalAccountColor = accountColor || account?.color
+  const finalBankName = bankName || account?.banco_nombre || account?.nombre || "Cuenta"
+  const normalizedBankName = useMemo(() => finalBankName.toLowerCase(), [finalBankName])
+  const finalAccountColor = accountColor || account?.color || "#4ECDC4"
 
-  // Build asset base name: lowercase, remove diacritics and non-alphanumeric, remove spaces
-  const assetBase = useMemo(() => {
-    return finalBankName
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]/g, "")
-  }, [finalBankName])
+  const specialBank = useMemo(() => {
+    if (normalizedBankName.includes("sabadell")) {
+      return "sabadell"
+    }
+    if (
+      normalizedBankName.includes("caixabank") ||
+      normalizedBankName.includes("caixa") ||
+      normalizedBankName.includes("la caixa")
+    ) {
+      return "caixabank"
+    }
+    return null
+  }, [normalizedBankName])
 
-  const isCash = finalBankName.toLowerCase().includes("caja") || finalBankName.toLowerCase().includes("efectivo")
+  const [logoSrc, setLogoSrc] = useState<string | null>(null)
 
-  // Check if it's a specific bank with dedicated logo
-  const isCaixabank = finalBankName.toLowerCase().includes("caixabank") || 
-                     finalBankName.toLowerCase().includes("caixa") ||
-                     finalBankName.toLowerCase().includes("la caixa")
-  const isSabadell = finalBankName.toLowerCase().includes("sabadell") || 
-                     finalBankName.toLowerCase().includes("banco sabadell") ||
-                     finalBankName.toLowerCase().includes("banc sabadell")
-
-  // Get bank color
-  const bankColor = Object.keys(BANK_COLORS).find((bank) => finalBankName.toLowerCase().includes(bank.toLowerCase()))
-  const colorClass = bankColor ? BANK_COLORS[bankColor as keyof typeof BANK_COLORS] : BANK_COLORS.default
-
-  // Generate initials
-  const initials = finalBankName
-    .split(" ")
-    .map((word: string) => word.charAt(0))
-    .join("")
-    .substring(0, 2)
-    .toUpperCase()
-
-  // Determine logo source based on bank type
-  const [logoSrc, setLogoSrc] = useState<string>(() => {
-    if (isCaixabank) return "/bank-logos/caixabank.png"
-    if (isSabadell) return "/bank-logos/sabadell.png"
-    return `/bank-logos/${assetBase}.png`
-  })
+  useEffect(() => {
+    if (specialBank) {
+      setLogoSrc(`/bank-logos/${specialBank}.png`)
+    } else {
+      setLogoSrc(null)
+    }
+  }, [specialBank, finalBankName])
 
   const handleImageError = () => {
-    if (isCaixabank) {
-      if (logoSrc.endsWith(".png")) {
-        setLogoSrc("/bank-logos/caixabank.jpg")
-      } else {
-        setLogoSrc("/placeholder-logo.png")
-      }
-    } else if (isSabadell) {
-      if (logoSrc.endsWith(".png")) {
-        setLogoSrc("/bank-logos/sabadell.jpg")
-      } else {
-        setLogoSrc("/placeholder-logo.png")
-      }
-    } else {
-      if (logoSrc.endsWith(".png")) {
-        setLogoSrc(`/bank-logos/${assetBase}.jpg`)
-      } else if (logoSrc.endsWith(`/${assetBase}.jpg`)) {
-        setLogoSrc("/placeholder-logo.png")
-      }
+    if (!specialBank || !logoSrc) return
+
+    if (logoSrc.endsWith(".png")) {
+      setLogoSrc(`/bank-logos/${specialBank}.jpg`)
+    } else if (logoSrc.endsWith(".jpg")) {
+      setLogoSrc("/placeholder-logo.png")
     }
   }
 
+  const avatarSizeClass = size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"
+  const iconSizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5"
+
+  const isCaja = account?.tipo === "caja" || normalizedBankName.includes("caja") || normalizedBankName.includes("efectivo")
+  const IconComponent = isCaja ? PiggyBank : Building2
+
   return (
-    <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
-      {!isCash && <AvatarImage src={logoSrc || "/placeholder.svg"} onError={handleImageError} alt={finalBankName} />}
+    <Avatar
+      className={`${avatarSizeClass} bg-transparent`}
+      style={{ backgroundColor: finalAccountColor || "#4ECDC4" }}
+    >
+      {logoSrc && (
+        <AvatarImage
+          src={logoSrc}
+          onError={handleImageError}
+          alt={finalBankName}
+          className="h-full w-full object-contain p-1"
+        />
+      )}
       <AvatarFallback
-        className="text-white font-semibold"
-        style={{
-          backgroundColor:
-            finalAccountColor ||
-            (bankColor ? BANK_COLORS[bankColor as keyof typeof BANK_COLORS].replace("bg-", "#") : "#64748b"),
-        }}
+        className="flex h-full w-full items-center justify-center bg-transparent text-white"
+        style={{ backgroundColor: finalAccountColor || "#4ECDC4" }}
       >
-        {isCash ? (
-          <Banknote className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
-        ) : (
-          <span className={size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm"}>{initials}</span>
-        )}
+        <IconComponent className={iconSizeClass} />
       </AvatarFallback>
     </Avatar>
   )

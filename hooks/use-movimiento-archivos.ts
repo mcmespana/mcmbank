@@ -39,6 +39,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
         label: 'fetch-movimiento-archivos',
         table: 'movimiento_archivo',
         timeoutMs: TIMEOUT_MS,
+        abortController: ac,
         build: async (signal) =>
           await supabase
             .from("movimiento_archivo")

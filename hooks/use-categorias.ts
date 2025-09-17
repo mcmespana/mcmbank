@@ -37,6 +37,7 @@ export function useCategorias(
         label: 'fetch-categorias',
         table: 'categoria',
         timeoutMs: TIMEOUT_MS,
+        abortController: ac,
         build: async (signal) => {
           let query = supabase
             .from("categoria")

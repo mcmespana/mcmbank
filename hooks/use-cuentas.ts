@@ -72,6 +72,7 @@ export function useCuentas(
         label: 'fetch-cuentas',
         table: 'cuenta',
         timeoutMs: timeout,
+        abortController,
         build: async (signal) =>
           await supabase
             .from("cuenta")

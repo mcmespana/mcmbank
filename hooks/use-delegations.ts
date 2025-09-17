@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase/client"
 import { useAuth } from "@/contexts/auth-context"
 import type { Delegacion } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "@/hooks/use-app-status"
-import { runQuery } from "@/lib/db/query"
+import { QUERY_TIMEOUT_ERROR_NAME, runQuery } from "@/lib/db/query"
 
 // Robust delegations hook with timeout, cancelation, and focus revalidation
 export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
@@ -39,6 +39,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
         label: 'fetch-delegaciones',
         table: 'membresia',
         timeoutMs: timeout,
+        abortController,
         build: async (signal) =>
           await supabase
             .from("membresia")
@@ -66,7 +67,10 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
       await attempt()
     } catch (err) {
       if (abortController.signal.aborted) {
-        // Mark as not loading to avoid spinners stuck on abort/timeout
+        // Distinguish between an intentional abort and a timeout that bubbled up.
+        if ((err as Error)?.name === QUERY_TIMEOUT_ERROR_NAME) {
+          setError('La carga de delegaciones tardó demasiado. Intenta recargar.')
+        }
         setLoading(false)
         return
       }

@@ -11,7 +11,7 @@ import {
   type ImprovementProposalStatus,
   IMPROVEMENT_PROPOSAL_STATUS_LABELS,
   type ImprovementProposalWithAuthor,
-  IMPROVEMENT_PROPOSAL_STATUSES,
+  IMPROVEMENT_PROPOSAL_STATUS_FLOW,
 } from "@/lib/types/improvement-proposals"
 import type { ImprovementProposalStatusVisualConfig } from "./status-config"
 import { Clock, MessageCircle, ThumbsUp } from "lucide-react"
@@ -41,8 +41,30 @@ export function ProposalCard({
 }: ProposalCardProps) {
   const createdAgo = useMemo(() => formatRelativeDate(proposal.creado_en), [proposal.creado_en])
   const updatedAgo = useMemo(() => formatRelativeDate(proposal.actualizado_en), [proposal.actualizado_en])
-  const statusOptions = useMemo(() => IMPROVEMENT_PROPOSAL_STATUSES, [])
+  const statusOptions = useMemo(
+    () => IMPROVEMENT_PROPOSAL_STATUS_FLOW[proposal.tipo],
+    [proposal.tipo],
+  )
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const isIdea = proposal.tipo === "idea"
+  const typeLabel = isIdea ? "Idea" : "Error"
+  const voteLabel = isIdea
+    ? proposal.userHasVoted
+      ? "Apoyada"
+      : "Apoyar idea"
+    : proposal.userHasVoted
+      ? "Confirmado"
+      : "También me pasa"
+  const voteButtonClasses = proposal.userHasVoted
+    ? isIdea
+      ? "bg-indigo-600 text-white hover:bg-indigo-500"
+      : "bg-rose-600 text-white hover:bg-rose-500"
+    : "bg-background/80 text-foreground hover:bg-background"
+  const voteIconClass = proposal.userHasVoted
+    ? "text-white"
+    : isIdea
+      ? "text-indigo-500"
+      : "text-rose-500"
 
   return (
     <div
@@ -59,14 +81,19 @@ export function ProposalCard({
       <div className="space-y-6 p-6">
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
-            <Badge
-              className={cn(
-                "border px-3 py-1 text-xs font-semibold uppercase tracking-wide",
-                statusConfig.badgeClassName,
-              )}
-            >
-              {statusConfig.label}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                className={cn(
+                  "border px-3 py-1 text-xs font-semibold uppercase tracking-wide",
+                  statusConfig.badgeClassName,
+                )}
+              >
+                {statusConfig.label}
+              </Badge>
+              <Badge className="bg-muted/70 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {typeLabel}
+              </Badge>
+            </div>
             {createdAgo && (
               <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-3 py-1 text-[11px] font-medium text-muted-foreground">
                 <Clock className="h-3 w-3" /> {createdAgo}
@@ -100,18 +127,16 @@ export function ProposalCard({
               onClick={() => void onToggleVote?.(proposal.id)}
               className={cn(
                 "rounded-full px-3 text-xs font-semibold uppercase tracking-wide",
-                proposal.userHasVoted
-                  ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                  : "bg-background/80 text-foreground hover:bg-background",
+                voteButtonClasses,
               )}
             >
               <ThumbsUp
                 className={cn(
                   "mr-1.5 h-3.5 w-3.5",
-                  proposal.userHasVoted ? "text-white" : "text-indigo-500",
+                  voteIconClass,
                 )}
               />
-              {proposal.userHasVoted ? "Apoyada" : "Apoyar idea"} · {proposal.votesCount}
+              {voteLabel} · {proposal.votesCount}
             </Button>
 
             <Button

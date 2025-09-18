@@ -8,6 +8,7 @@ import type {
   ImprovementProposalInsert,
   ImprovementProposalStatus,
   ImprovementProposalWithAuthor,
+  ImprovementProposalType,
 } from "@/lib/types/improvement-proposals"
 import { IMPROVEMENT_PROPOSAL_STATUS_LABELS } from "@/lib/types/improvement-proposals"
 import { toast } from "sonner"
@@ -16,6 +17,7 @@ interface CreateImprovementProposalInput {
   title: string
   description: string
   impact?: string | null
+  type?: ImprovementProposalType
 }
 
 type ProposalQueryRow = ImprovementProposal & {
@@ -193,13 +195,16 @@ export function useImprovementProposals() {
   }, [currentUserId, enrichWithAuthor])
 
   const createProposal = useCallback(
-    async ({ title, description, impact }: CreateImprovementProposalInput) => {
+    async ({ title, description, impact, type = "idea" }: CreateImprovementProposalInput) => {
       const trimmedTitle = title.trim()
       const trimmedDescription = description.trim()
       const trimmedImpact = impact?.trim()
 
       if (!trimmedTitle) throw new Error("El título es obligatorio")
-      if (!trimmedDescription) throw new Error("Cuéntanos un poco sobre tu idea")
+      if (!trimmedDescription)
+        throw new Error(
+          type === "idea" ? "Cuéntanos un poco sobre tu idea" : "Cuéntanos qué está fallando",
+        )
 
       const {
         data: { user },
@@ -207,7 +212,7 @@ export function useImprovementProposals() {
       } = await supabase.auth.getUser()
 
       if (authError) throw authError
-      if (!user) throw new Error("Necesitas iniciar sesión para proponer una mejora")
+      if (!user) throw new Error("Necesitas iniciar sesión para participar")
 
       let authorName = user.email?.split("@")[0] || "Usuario"
 
@@ -226,11 +231,14 @@ export function useImprovementProposals() {
         console.warn("No pudimos obtener el perfil del usuario", profileError)
       }
 
+      const initialStatus = type === "idea" ? "nueva_idea" : "error_detectado"
+
       const payload: ImprovementProposalInsert = {
         titulo: trimmedTitle,
         descripcion: trimmedDescription,
         impacto: trimmedImpact || null,
-        estado: "nueva_idea",
+        estado: initialStatus,
+        tipo: type,
         creado_por: user.id,
         creado_por_nombre: authorName,
         creado_por_email: user.email ?? null,
@@ -301,13 +309,14 @@ export function useImprovementProposals() {
     async (proposalId: string) => {
       if (!proposalId) return
       if (!currentUserId) {
-        toast.error("Necesitas iniciar sesión para apoyar ideas")
+        toast.error("Necesitas iniciar sesión para participar")
         return
       }
 
       const target = proposalsRef.current.find((proposal) => proposal.id === proposalId)
       if (!target) return
 
+      const isIdea = target.tipo === "idea"
       setVotingId(proposalId)
 
       try {
@@ -331,7 +340,9 @@ export function useImprovementProposals() {
                 : proposal,
             ),
           )
-          toast.success("Has retirado tu apoyo")
+          toast.success(
+            isIdea ? "Has retirado tu apoyo" : "Has retirado tu confirmación",
+          )
         } else {
           const { error } = await supabase
             .from("propuesta_mejora_voto")
@@ -350,14 +361,16 @@ export function useImprovementProposals() {
                 : proposal,
             ),
           )
-          toast.success("¡Gracias por apoyar la idea!")
+          toast.success(
+            isIdea ? "¡Gracias por apoyar la idea!" : "Gracias por confirmar el error",
+          )
         }
       } catch (voteError) {
         console.error("Error toggling proposal vote", voteError)
         toast.error(
           voteError instanceof Error
             ? voteError.message
-            : "No pudimos actualizar tu voto. Inténtalo de nuevo.",
+            : "No pudimos actualizar tu participación. Inténtalo de nuevo.",
         )
       } finally {
         setVotingId(null)

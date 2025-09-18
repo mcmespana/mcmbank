@@ -296,7 +296,16 @@ export type Database = {
           titulo: string
           descripcion: string
           impacto: string | null
-          estado: "nueva_idea" | "en_estudio" | "lo_haremos" | "en_desarrollo" | "hechisimo"
+          tipo: "idea" | "error"
+          estado:
+            | "nueva_idea"
+            | "en_estudio"
+            | "lo_haremos"
+            | "en_desarrollo"
+            | "hechisimo"
+            | "error_detectado"
+            | "resolviendo"
+            | "resuelto"
           creado_por: string
           creado_por_nombre: string | null
           creado_por_email: string | null
@@ -308,7 +317,16 @@ export type Database = {
           titulo: string
           descripcion: string
           impacto?: string | null
-          estado?: "nueva_idea" | "en_estudio" | "lo_haremos" | "en_desarrollo" | "hechisimo"
+          tipo?: "idea" | "error"
+          estado?:
+            | "nueva_idea"
+            | "en_estudio"
+            | "lo_haremos"
+            | "en_desarrollo"
+            | "hechisimo"
+            | "error_detectado"
+            | "resolviendo"
+            | "resuelto"
           creado_por: string
           creado_por_nombre?: string | null
           creado_por_email?: string | null
@@ -320,7 +338,16 @@ export type Database = {
           titulo?: string
           descripcion?: string
           impacto?: string | null
-          estado?: "nueva_idea" | "en_estudio" | "lo_haremos" | "en_desarrollo" | "hechisimo"
+          tipo?: "idea" | "error"
+          estado?:
+            | "nueva_idea"
+            | "en_estudio"
+            | "lo_haremos"
+            | "en_desarrollo"
+            | "hechisimo"
+            | "error_detectado"
+            | "resolviendo"
+            | "resuelto"
           creado_por?: string
           creado_por_nombre?: string | null
           creado_por_email?: string | null

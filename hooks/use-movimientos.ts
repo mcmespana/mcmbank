@@ -300,6 +300,7 @@ export function useMovimientos(
 
   const loadMore = useCallback(() => {
     if (loading || !hasMore) return
+    if (isFetchingRef.current) return
     const nextPage = page + 1
     setPage(nextPage)
     fetchMovimientos(nextPage, true)

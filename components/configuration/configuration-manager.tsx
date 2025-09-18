@@ -29,6 +29,7 @@ interface DelegacionWithCount extends Delegacion {
 interface UserInfo {
   id: string
   email: string
+  createdAt: string | null
   delegaciones: { id: string; nombre: string }[]
   rol: string | null
 }
@@ -56,6 +57,7 @@ export function ConfigurationManager() {
         results.push({ ...d, movimientos: count ?? 0 })
       }
     }
+    results.sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "accent" }))
     setDelegaciones(results)
   }
 
@@ -66,6 +68,7 @@ export function ConfigurationManager() {
     const baseUsers: UserInfo[] = json.users.map((u: any) => ({
       id: u.id,
       email: u.email,
+      createdAt: u.createdAt || u.created_at || null,
       delegaciones: [],
       rol: null,
     }))
@@ -76,6 +79,11 @@ export function ConfigurationManager() {
       const memberships = (data || []).filter((m: any) => m.usuario_id === u.id)
       u.delegaciones = memberships.map((m: any) => m.delegacion).filter(Boolean)
       u.rol = memberships[0]?.rol || null
+    })
+    baseUsers.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      return bTime - aTime
     })
     setUsers(baseUsers)
   }
@@ -109,11 +117,11 @@ export function ConfigurationManager() {
     for (const id of toAdd) {
       await supabase
         .from("membresia")
-        .insert({ usuario_id: updated.id, delegacion_id: id, rol: updated.rol || "solo_lectura" })
+        .insert({ usuario_id: updated.id, delegacion_id: id, rol: updated.rol || "tesorero" })
     }
     await supabase
       .from("membresia")
-      .update({ rol: updated.rol || "solo_lectura" })
+      .update({ rol: updated.rol || "tesorero" })
       .in("delegacion_id", selectedIds)
       .eq("usuario_id", updated.id)
     await fetchUsers()
@@ -234,13 +242,13 @@ export function ConfigurationManager() {
               }}
             >
               <p className="text-sm">{editingUser.email}</p>
-              <Select name="rol" defaultValue={editingUser.rol || "solo_lectura"}>
+              <Select name="rol" defaultValue={editingUser.rol || "tesorero"}>
                 <SelectTrigger>
                   <SelectValue placeholder="Rol" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="gestor_central">Gestor Central</SelectItem>
-                  <SelectItem value="tesorero">Tesorero</SelectItem>
+                  <SelectItem value="tesorero">Tesorería</SelectItem>
                   <SelectItem value="solo_lectura">Solo Lectura</SelectItem>
                 </SelectContent>
               </Select>

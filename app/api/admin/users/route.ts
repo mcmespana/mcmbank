@@ -12,9 +12,15 @@ export async function GET() {
       .from("membresia")
       .select("usuario_id, rol, delegacion:delegacion_id (id, nombre)")
     if (mErr) return NextResponse.json({ error: mErr.message }, { status: 500 })
-    const users = (data?.users || []).map((u) => ({
+    const sortedUsers = [...(data?.users || [])].sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+      return bTime - aTime
+    })
+    const users = sortedUsers.map((u) => ({
       id: u.id,
       email: u.email,
+      createdAt: u.created_at,
       membresias: memberships?.filter((m) => m.usuario_id === u.id) || [],
     }))
     return NextResponse.json({ users })

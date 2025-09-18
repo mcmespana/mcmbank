@@ -1,93 +1,94 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Banknote } from "lucide-react"
+import { Landmark, PiggyBank } from "lucide-react"
 import type { Cuenta } from "@/lib/types/database"
-import { useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 
 interface BankAvatarProps {
   account?: Cuenta
   size?: "sm" | "md" | "lg"
 }
 
-const BANK_COLORS = {
-  BBVA: "bg-blue-600",
-  Santander: "bg-red-600",
-  CaixaBank: "bg-blue-800",
-  Bankia: "bg-orange-600",
-  ING: "bg-orange-500",
-  Openbank: "bg-green-600",
-  Revolut: "bg-purple-600",
-  N26: "bg-cyan-600",
-  Sabadell: "bg-blue-500",
-  "Banco Sabadell": "bg-blue-500",
-  Unicaja: "bg-green-700",
-  Kutxabank: "bg-blue-700",
-  Bankinter: "bg-orange-700",
-  Abanca: "bg-blue-900",
-  Cajamar: "bg-green-800",
-  Liberbank: "bg-purple-700",
-  "Eurocaja Rural": "bg-green-600",
-  Caja: "bg-amber-600",
-  default: "bg-slate-600",
-}
-
 export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
   const bankName = account?.banco_nombre || account?.nombre || "Caja"
-  const isCash = bankName.toLowerCase().includes("caja") || bankName.toLowerCase().includes("efectivo")
+  const normalizedBankName = bankName.toLowerCase()
 
-  const assetBase = useMemo(() => {
-    if (!account) return ""
-    return bankName
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]/g, "")
-  }, [account, bankName])
+  const accountType = account?.tipo || (normalizedBankName.includes("caja") ? "caja" : "banco")
+  const isCaja = accountType === "caja"
 
-  const [logoSrc, setLogoSrc] = useState<string>(`/bank-logos/${assetBase}.png`)
+  const isCaixabank = normalizedBankName.includes("caixabank") || normalizedBankName.includes("caixa") || normalizedBankName.includes("la caixa")
+  const isSabadell = normalizedBankName.includes("sabadell") || normalizedBankName.includes("banco sabadell") || normalizedBankName.includes("banc sabadell")
+  const shouldShowLogo = !isCaja && (isCaixabank || isSabadell)
+
+  const [logoSrc, setLogoSrc] = useState<string | null>(() => {
+    if (isCaixabank) return "/bank-logos/caixabank.png"
+    if (isSabadell) return "/bank-logos/sabadell.png"
+    return null
+  })
+
+  useEffect(() => {
+    if (isCaixabank) {
+      setLogoSrc("/bank-logos/caixabank.png")
+      return
+    }
+    if (isSabadell) {
+      setLogoSrc("/bank-logos/sabadell.png")
+      return
+    }
+    setLogoSrc(null)
+  }, [isCaixabank, isSabadell])
 
   if (!account) {
+    const iconClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-7 w-7" : "h-6 w-6"
     return (
       <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
         <AvatarFallback className="bg-slate-600">
-          <Banknote className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
+          <Landmark className={iconClass} />
         </AvatarFallback>
       </Avatar>
     )
   }
 
-  // Get bank color
-  const bankColor = Object.keys(BANK_COLORS).find((bank) => bankName.toLowerCase().includes(bank.toLowerCase()))
-  const colorClass = bankColor ? BANK_COLORS[bankColor as keyof typeof BANK_COLORS] : BANK_COLORS.default
-
-  // Generate initials
-  const initials = bankName
-    .split(" ")
-    .map((word: string) => word.charAt(0))
-    .join("")
-    .substring(0, 2)
-    .toUpperCase()
+  const iconClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-7 w-7" : "h-6 w-6"
+  const avatarClassName = size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"
+  const backgroundColor = account.color || "#334155"
+  const backgroundStyle = { backgroundColor }
+  const fallbackIcon = isCaja ? <PiggyBank className={iconClass} /> : <Landmark className={iconClass} />
 
   const handleImageError = () => {
-    if (logoSrc.endsWith(".png")) {
-      setLogoSrc(`/bank-logos/${assetBase}.jpg`)
-    } else if (logoSrc.endsWith(`/${assetBase}.jpg`)) {
-      setLogoSrc("/placeholder-logo.png")
+    if (!logoSrc) return
+
+    if (isCaixabank) {
+      if (logoSrc.endsWith(".png")) {
+        setLogoSrc("/bank-logos/caixabank.jpg")
+      } else {
+        setLogoSrc("/placeholder-logo.png")
+      }
+    } else if (isSabadell) {
+      if (logoSrc.endsWith(".png")) {
+        setLogoSrc("/bank-logos/sabadell.jpg")
+      } else {
+        setLogoSrc("/placeholder-logo.png")
+      }
     }
   }
 
   return (
-    <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
-      {!isCash && (
-        <AvatarImage src={logoSrc} onError={handleImageError} alt={bankName} />
+    <Avatar className={avatarClassName} style={backgroundStyle}>
+      {shouldShowLogo && logoSrc && (
+        <AvatarImage
+          src={logoSrc}
+          onError={handleImageError}
+          alt={bankName}
+          className="object-contain"
+        />
       )}
-      <AvatarFallback className={`${colorClass} text-white font-semibold`}>
-        {isCash ? (
-          <Banknote className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
-        ) : (
-          <span className={size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm"}>{initials}</span>
-        )}
+      <AvatarFallback
+        className="text-white font-semibold"
+        style={backgroundStyle}
+      >
+        {fallbackIcon}
       </AvatarFallback>
     </Avatar>
   )

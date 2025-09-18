@@ -118,7 +118,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
           <EmojiPickerButton
             value={formData.emoji}
             onChange={(emoji) => setFormData({ ...formData, emoji })}
-            className="w-full justify-start"
+            className="w-full center"
           />
         </div>
 

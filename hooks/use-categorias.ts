@@ -1,26 +1,35 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { supabase } from "@/lib/supabase/client"
-import type { Categoria } from "@/lib/types/database"
+import type { CategoriaConOrdenEfectivo } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
-import { runQuery } from "@/lib/db/query"
+import { DatabaseService } from "@/lib/services/database"
+
+type CategoriaOrdenChange = {
+  categoriaId: string
+  orden: number | null
+}
+
+const sortCategorias = (categorias: CategoriaConOrdenEfectivo[]) =>
+  [...categorias].sort((a, b) => {
+    if (a.orden_efectivo !== b.orden_efectivo) {
+      return a.orden_efectivo - b.orden_efectivo
+    }
+    return a.nombre.localeCompare(b.nombre)
+  })
 
 export function useCategorias(
   delegacionId?: string | null,
   options?: { includeGlobal?: boolean },
 ) {
-  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [categorias, setCategorias] = useState<CategoriaConOrdenEfectivo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const TIMEOUT_MS = 12000
   const includeGlobal = options?.includeGlobal ?? true
 
   const fetchCategorias = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort()
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     const ac = new AbortController()
     abortRef.current = ac
@@ -33,50 +42,19 @@ export function useCategorias(
 
       setLoading(true)
 
-      const { data, error } = await runQuery<Categoria[]>({
-        label: 'fetch-categorias',
-        table: 'categoria',
-        timeoutMs: TIMEOUT_MS,
-        build: async (signal) => {
-          let query = supabase
-            .from("categoria")
-            .select("*")
-            .order("orden", { ascending: true })
-            .order("nombre", { ascending: true })
-          if (delegacionId) {
-            query = includeGlobal
-              ? query.or(`delegacion_id.eq.${delegacionId},es_global.is.true`)
-              : query.eq("delegacion_id", delegacionId)
-          } else if (includeGlobal) {
-            query = query.eq("es_global", true)
-          }
-          return await query.abortSignal(signal)
-        }
+      const data = await DatabaseService.getCategoriasByDelegacion(delegacionId, {
+        includeGlobal,
+        signal: ac.signal,
       })
 
-      if (error) {
-        setError(error.message)
-        return
-      }
-
-      setCategorias(
-        (data || []).sort((a, b) => {
-          if (a.es_global !== b.es_global) {
-            return a.es_global ? -1 : 1
-          }
-          return a.orden - b.orden
-        }),
-      )
+      setCategorias(data)
+      setError(null)
     } catch (err) {
       if (!ac.signal.aborted) {
         setError(err instanceof Error ? err.message : "Error desconocido")
       }
     } finally {
       setLoading(false)
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
     }
   }, [delegacionId, includeGlobal])
 
@@ -84,24 +62,75 @@ export function useCategorias(
     fetchCategorias()
     return () => {
       if (abortRef.current) abortRef.current.abort()
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [fetchCategorias])
 
   // Revalidate on focus
   useRevalidateOnFocusJitter(fetchCategorias, { minMs: 60, maxMs: 160 })
 
-  const updateCategoria = async (id: string, updates: Partial<Categoria>) => {
+  const updateCategoria = async (id: string, updates: Partial<CategoriaConOrdenEfectivo>) => {
     try {
-      const { error } = await supabase.from("categoria").update(updates).eq("id", id)
+      await DatabaseService.updateCategoria(id, updates)
 
-      if (error) throw error
-
-      setCategorias((prev) => prev.map((cat) => (cat.id === id ? { ...cat, ...updates } : cat)))
+      setCategorias((prev) => {
+        const next = prev.map((cat) => {
+          if (cat.id !== id) return cat
+          const orden_base = updates.orden ?? cat.orden_base ?? cat.orden
+          const orden_override = cat.orden_override
+          const orden_efectivo = orden_override ?? orden_base
+          return {
+            ...cat,
+            ...updates,
+            orden: orden_base,
+            orden_base,
+            orden_efectivo,
+          }
+        })
+        return sortCategorias(next)
+      })
+      setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al actualizar categoría")
+      throw err
     }
   }
 
-  return { categorias, loading, error, updateCategoria, fetchCategorias }
+  const saveCategoriaOrdenes = async (changes: CategoriaOrdenChange[]) => {
+    if (!delegacionId) {
+      throw new Error("Se requiere una delegación para guardar el orden")
+    }
+
+    try {
+      await Promise.all(
+        changes.map((change) =>
+          change.orden === null
+            ? DatabaseService.clearDelegacionCategoryOrder(delegacionId, change.categoriaId)
+            : DatabaseService.setDelegacionCategoryOrder(delegacionId, change.categoriaId, change.orden),
+        ),
+      )
+
+      setCategorias((prev) => {
+        const changeMap = new Map(changes.map((change) => [change.categoriaId, change]))
+        const next = prev.map((cat) => {
+          const change = changeMap.get(cat.id)
+          if (!change) return cat
+          const orden_override = change.orden
+          const orden_base = cat.orden_base ?? cat.orden
+          const orden_efectivo = orden_override ?? orden_base
+          return {
+            ...cat,
+            orden_override,
+            orden_efectivo,
+          }
+        })
+        return sortCategorias(next)
+      })
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar el orden de categorías")
+      throw err
+    }
+  }
+
+  return { categorias, loading, error, updateCategoria, fetchCategorias, saveCategoriaOrdenes }
 }

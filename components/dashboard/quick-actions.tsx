@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Upload, List, Tag } from "lucide-react"
+import { Plus, Upload, List, Tag, ArrowRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export function QuickActions() {
@@ -9,49 +9,60 @@ export function QuickActions() {
 
   const actions = [
     {
-      title: "Ver movimientos",
-      description: "Listado completo",
+      title: "Ver Transacciones",
+      description: "Listado completo y filtros",
       icon: List,
       action: () => router.push("/transacciones"),
-      variant: "default" as const,
+      gradient: "from-blue-500 to-cyan-500",
+      bgGradient: "from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50",
     },
     {
-      title: "Crear movimiento",
+      title: "Nueva Transacción",
       description: "Registrar ingreso o gasto",
       icon: Plus,
       action: () => router.push("/transacciones?panel=create"),
-      variant: "outline" as const,
+      gradient: "from-green-500 to-emerald-500",
+      bgGradient: "from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50",
     },
     {
-      title: "Importar movimientos",
+      title: "Importar Datos",
       description: "CSV, Excel o conexión bancaria",
       icon: Upload,
       action: () => router.push("/transacciones?panel=import"),
-      variant: "outline" as const,
+      gradient: "from-purple-500 to-violet-500",
+      bgGradient: "from-purple-50 to-violet-50 dark:from-purple-950/50 dark:to-violet-950/50",
     },
     {
-      title: "Crear categoría",
+      title: "Gestionar Categorías",
       description: "Organizar y personalizar",
       icon: Tag,
       action: () => router.push("/categorias?panel=create"),
-      variant: "outline" as const,
+      gradient: "from-orange-500 to-red-500",
+      bgGradient: "from-orange-50 to-red-50 dark:from-orange-950/50 dark:to-red-950/50",
     },
   ]
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {actions.map((action) => (
-        <Card key={action.title} className="hover:shadow-md transition-shadow cursor-pointer" onClick={action.action}>
+        <Card
+          key={action.title}
+          className={`bg-gradient-to-br ${action.bgGradient} border-2 border-transparent hover:border-current transition-all duration-300 cursor-pointer group hover:shadow-lg hover:scale-105`}
+          onClick={action.action}
+        >
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <action.icon className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className={`p-3 rounded-xl bg-gradient-to-r ${action.gradient} text-white shadow-lg`}>
+                <action.icon className="h-5 w-5" />
               </div>
-              <CardTitle className="text-lg">{action.title}</CardTitle>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
             </div>
+            <CardTitle className="text-lg group-hover:text-foreground transition-colors">{action.title}</CardTitle>
           </CardHeader>
           <CardContent>
-            <CardDescription className="text-sm">{action.description}</CardDescription>
+            <CardDescription className="text-sm group-hover:text-muted-foreground transition-colors">
+              {action.description}
+            </CardDescription>
           </CardContent>
         </Card>
       ))}

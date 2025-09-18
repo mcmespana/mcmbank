@@ -42,4 +42,3 @@ function shouldRetryAuth(error: any): boolean {
   if (/jwt|token|auth|expired/i.test(msg)) return true
   return false
 }
-

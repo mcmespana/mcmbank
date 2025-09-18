@@ -7,6 +7,19 @@ export type ImprovementProposalStatus = ImprovementProposal["estado"]
 
 export interface ImprovementProposalWithAuthor extends ImprovementProposal {
   authorName: string
+  votesCount: number
+  commentsCount: number
+  userHasVoted: boolean
+}
+
+export interface ImprovementProposalComment {
+  id: string
+  propuesta_id: string
+  contenido: string
+  creado_por: string
+  creado_por_nombre: string | null
+  creado_por_email: string | null
+  creado_en: string
 }
 
 export const IMPROVEMENT_PROPOSAL_STATUSES: ImprovementProposalStatus[] = [

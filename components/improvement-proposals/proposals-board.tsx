@@ -21,6 +21,9 @@ interface ProposalsBoardProps {
   isAdmin?: boolean
   onStatusChange?: (proposalId: string, status: ImprovementProposalStatus) => Promise<void>
   updatingId?: string | null
+  onToggleVote?: (proposalId: string) => Promise<void>
+  votingId?: string | null
+  onCommentAdded?: (proposalId: string) => void
 }
 
 export function ProposalsBoard({
@@ -31,6 +34,9 @@ export function ProposalsBoard({
   isAdmin = false,
   onStatusChange,
   updatingId,
+  onToggleVote,
+  votingId,
+  onCommentAdded,
 }: ProposalsBoardProps) {
   const statusOrder = useMemo(() => {
     return showCompleted
@@ -121,6 +127,9 @@ export function ProposalsBoard({
                         statusConfig={config}
                         isAdmin={isAdmin}
                         disabled={updatingId === proposal.id}
+                        voting={votingId === proposal.id}
+                        onToggleVote={onToggleVote}
+                        onCommentAdded={onCommentAdded}
                         onStatusChange={
                           onStatusChange
                             ? async (nextStatus) => {

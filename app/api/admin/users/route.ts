@@ -12,11 +12,18 @@ export async function GET() {
       .from("membresia")
       .select("usuario_id, rol, delegacion:delegacion_id (id, nombre)")
     if (mErr) return NextResponse.json({ error: mErr.message }, { status: 500 })
-    const users = (data?.users || []).map((u) => ({
-      id: u.id,
-      email: u.email,
-      membresias: memberships?.filter((m) => m.usuario_id === u.id) || [],
-    }))
+    const users = (data?.users || [])
+      .map((u) => ({
+        id: u.id,
+        email: u.email,
+        createdAt: u.created_at,
+        membresias: memberships?.filter((m) => m.usuario_id === u.id) || [],
+      }))
+      .sort((a, b) => {
+        const aTime = new Date(a.createdAt ?? 0).getTime()
+        const bTime = new Date(b.createdAt ?? 0).getTime()
+        return bTime - aTime
+      })
     return NextResponse.json({ users })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 })

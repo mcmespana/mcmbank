@@ -23,6 +23,7 @@ interface UserMembresia {
 interface UserData {
   id: string
   email: string | undefined
+  createdAt?: string
   membresias: UserMembresia[]
 }
 
@@ -56,7 +57,10 @@ export function ConfigPage() {
         return { ...(d as Delegacion), movimientos: count || 0 }
       })
     )
-    setDelegaciones(withCounts)
+    const sorted = [...withCounts].sort((a, b) =>
+      (a?.nombre || "").localeCompare(b?.nombre || "", "es", { sensitivity: "base" }),
+    )
+    setDelegaciones(sorted)
   }
 
   const loadUsers = async () => {
@@ -70,7 +74,19 @@ export function ConfigPage() {
         setUsers([])
         return
       }
-      setUsers(json.users || [])
+      const users = Array.isArray(json.users) ? json.users : []
+      const normalizedUsers: UserData[] = users.map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        createdAt: user.createdAt ?? user.created_at,
+        membresias: Array.isArray(user.membresias) ? user.membresias : [],
+      }))
+      const sortedUsers = [...normalizedUsers].sort((a, b) => {
+        const aDate = new Date(a.createdAt ?? 0).getTime()
+        const bDate = new Date(b.createdAt ?? 0).getTime()
+        return bDate - aDate
+      })
+      setUsers(sortedUsers)
     } catch (err) {
       console.error("Error cargando usuarios:", err)
       setUsers([])
@@ -84,11 +100,14 @@ export function ConfigPage() {
     }
   }, [isAdmin])
 
-  const roles = useMemo(() => [
-    { value: "gestor_central", label: "Gestor Central" },
-    { value: "tesorero", label: "Tesorero" },
-    { value: "solo_lectura", label: "Solo Lectura" },
-  ], [])
+  const roles = useMemo(
+    () => [
+      { value: "gestor_central", label: "Gestor Central" },
+      { value: "tesorero", label: "Tesorería" },
+      { value: "solo_lectura", label: "Solo Lectura" },
+    ],
+    [],
+  )
 
   if (!isAdmin) {
     return <p className="text-center text-muted-foreground">Acceso restringido</p>
@@ -153,12 +172,16 @@ export function ConfigPage() {
           <TableBody>
             {users.map((u) => {
               const uniqueRoles = new Set(u.membresias.map((m) => m.rol))
-              const role = uniqueRoles.size === 1 ? (u.membresias[0]?.rol || "-") : "múltiples"
+              const baseRole = uniqueRoles.size === 1 ? (u.membresias[0]?.rol || "-") : "múltiples"
+              const roleLabel =
+                uniqueRoles.size === 1
+                  ? roles.find((r) => r.value === baseRole)?.label || baseRole
+                  : "múltiples"
               const delegs = u.membresias.map((m) => m.delegacion?.nombre).filter(Boolean).join(", ")
               return (
                 <TableRow key={u.id}>
                   <TableCell>{u.email}</TableCell>
-                  <TableCell>{role}</TableCell>
+                  <TableCell>{roleLabel}</TableCell>
                   <TableCell>{delegs}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button
@@ -172,7 +195,10 @@ export function ConfigPage() {
                           password: "",
                           memberships: u.membresias
                             .filter((m) => !!m.delegacion?.id)
-                            .map((m) => ({ delegacion_id: m.delegacion!.id, rol: m.rol })),
+                            .map((m) => ({
+                              delegacion_id: m.delegacion!.id,
+                              rol: m.rol || "tesorero",
+                            })),
                         })
                       }}
                     >
@@ -356,10 +382,20 @@ export function ConfigPage() {
                               setUserForm((f) => {
                                 const exists = f.memberships.find((m) => m.delegacion_id === d.id)
                                 if (e.target.checked) {
-                                  if (!exists) return { ...f, memberships: [...f.memberships, { delegacion_id: d.id, rol: "solo_lectura" }] }
+                                  if (!exists) {
+                                    return {
+                                      ...f,
+                                      memberships: [
+                                        ...f.memberships,
+                                        { delegacion_id: d.id, rol: "tesorero" },
+                                      ],
+                                    }
+                                  }
                                   return f
-                                } else {
-                                  return { ...f, memberships: f.memberships.filter((m) => m.delegacion_id !== d.id) }
+                                }
+                                return {
+                                  ...f,
+                                  memberships: f.memberships.filter((m) => m.delegacion_id !== d.id),
                                 }
                               })
                             }}
@@ -369,7 +405,7 @@ export function ConfigPage() {
                         {checked && (
                           <select
                             className="border rounded px-2 py-1 text-sm"
-                            value={current?.rol || "solo_lectura"}
+                            value={current?.rol || "tesorero"}
                             onChange={(e) => {
                               const value = e.target.value
                               setUserForm((f) => ({
@@ -473,12 +509,22 @@ export function ConfigPage() {
                           onChange={(e) => {
                             setUserForm((f) => {
                               const exists = f.memberships.find((m) => m.delegacion_id === d.id)
-                              if (e.target.checked) {
-                                if (!exists) return { ...f, memberships: [...f.memberships, { delegacion_id: d.id, rol: "solo_lectura" }] }
-                                return f
-                              } else {
-                                return { ...f, memberships: f.memberships.filter((m) => m.delegacion_id !== d.id) }
-                              }
+                                if (e.target.checked) {
+                                  if (!exists) {
+                                    return {
+                                      ...f,
+                                      memberships: [
+                                        ...f.memberships,
+                                        { delegacion_id: d.id, rol: "tesorero" },
+                                      ],
+                                    }
+                                  }
+                                  return f
+                                }
+                                return {
+                                  ...f,
+                                  memberships: f.memberships.filter((m) => m.delegacion_id !== d.id),
+                                }
                             })
                           }}
                         />
@@ -487,7 +533,7 @@ export function ConfigPage() {
                       {checked && (
                         <select
                           className="border rounded px-2 py-1 text-sm"
-                          value={current?.rol || "solo_lectura"}
+                          value={current?.rol || "tesorero"}
                           onChange={(e) => {
                             const value = e.target.value
                             setUserForm((f) => ({

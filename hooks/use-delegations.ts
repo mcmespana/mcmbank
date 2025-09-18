@@ -59,7 +59,10 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
       if (error) throw error
 
       const userDelegations = (data?.map((item: any) => item.delegacion).filter(Boolean) || []) as Delegacion[]
-      setDelegations(userDelegations)
+      const sortedDelegations = [...userDelegations].sort((a, b) =>
+        (a?.nombre || "").localeCompare(b?.nombre || "", "es", { sensitivity: "base" }),
+      )
+      setDelegations(sortedDelegations)
     }
 
     try {

@@ -299,7 +299,7 @@ export function useMovimientos(
   useRevalidateOnFocusJitter(() => fetchMovimientos(0, false), { minMs: 90, maxMs: 220 })
 
   const loadMore = useCallback(() => {
-    if (loading || !hasMore) return
+    if (loading || !hasMore || isFetchingRef.current) return
     const nextPage = page + 1
     setPage(nextPage)
     fetchMovimientos(nextPage, true)

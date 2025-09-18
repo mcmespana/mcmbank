@@ -58,9 +58,19 @@ export function CategoryMegaSelector({
       }
     })
 
-    const sortedParents = [...parentCategories].sort((a, b) => a.orden - b.orden)
+    const sortedParents = [...parentCategories].sort((a, b) => {
+      const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
+      const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+      if (ordenA !== ordenB) return ordenA - ordenB
+      return a.nombre.localeCompare(b.nombre)
+    })
     const groups: CategoryGroup[] = sortedParents.map((parent) => {
-      const children = (childMap.get(parent.id) || []).sort((a, b) => a.orden - b.orden)
+      const children = (childMap.get(parent.id) || []).sort((a, b) => {
+        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        if (ordenA !== ordenB) return ordenA - ordenB
+        return a.nombre.localeCompare(b.nombre)
+      })
       children.forEach((child) => parentLookupMap.set(child.id, parent))
       parentLookupMap.set(parent.id, undefined)
       return {
@@ -72,7 +82,12 @@ export function CategoryMegaSelector({
     const parentIds = new Set(parentCategories.map((cat) => cat.id))
     const orphans = categories
       .filter((cat) => cat.categoria_padre_id && !parentIds.has(cat.categoria_padre_id))
-      .sort((a, b) => a.orden - b.orden)
+      .sort((a, b) => {
+        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        if (ordenA !== ordenB) return ordenA - ordenB
+        return a.nombre.localeCompare(b.nombre)
+      })
 
     orphans.forEach((orphan) => {
       if (orphan.categoria_padre_id) {
@@ -98,7 +113,12 @@ export function CategoryMegaSelector({
         category.nombre.toLowerCase().includes(normalizedSearch) ||
         (category.emoji && category.emoji.includes(searchValue.trim())),
       )
-      .sort((a, b) => a.orden - b.orden)
+      .sort((a, b) => {
+        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        if (ordenA !== ordenB) return ordenA - ordenB
+        return a.nombre.localeCompare(b.nombre)
+      })
   }, [categories, normalizedSearch, searchValue])
 
   const handleSelect = (categoryId: string) => {

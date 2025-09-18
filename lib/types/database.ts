@@ -186,6 +186,29 @@ export type Database = {
           es_global?: boolean
         }
       }
+      categoria_orden_delegacion: {
+        Row: {
+          delegacion_id: string
+          categoria_id: string
+          orden: number
+          creado_en: string
+          actualizado_en: string
+        }
+        Insert: {
+          delegacion_id: string
+          categoria_id: string
+          orden: number
+          creado_en?: string
+          actualizado_en?: string
+        }
+        Update: {
+          delegacion_id?: string
+          categoria_id?: string
+          orden?: number
+          creado_en?: string
+          actualizado_en?: string
+        }
+      }
       membresia: {
         Row: {
           usuario_id: string
@@ -363,6 +386,12 @@ export type Delegacion = Database["public"]["Tables"]["delegacion"]["Row"]
 export type Cuenta = Database["public"]["Tables"]["cuenta"]["Row"]
 export type Movimiento = Database["public"]["Tables"]["movimiento"]["Row"]
 export type Categoria = Database["public"]["Tables"]["categoria"]["Row"]
+export type CategoriaOrdenDelegacion = Database["public"]["Tables"]["categoria_orden_delegacion"]["Row"]
+export type CategoriaConOrdenEfectivo = Categoria & {
+  orden_base: number
+  orden_override: number | null
+  orden_efectivo: number
+}
 export type Membresia = Database["public"]["Tables"]["membresia"]["Row"]
 export type Perfil = Database["public"]["Tables"]["perfil"]["Row"]
 export type MovimientoArchivo = Database["public"]["Tables"]["movimiento_archivo"]["Row"]

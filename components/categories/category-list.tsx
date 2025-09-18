@@ -378,7 +378,9 @@ export function CategoryList() {
 
     map.forEach((list) => {
       list.sort((a, b) => {
-        if (a.orden !== b.orden) return a.orden - b.orden
+        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        if (ordenA !== ordenB) return ordenA - ordenB
         return a.nombre.localeCompare(b.nombre)
       })
     })

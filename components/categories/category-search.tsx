@@ -28,7 +28,12 @@ export function CategorySearch({
   const [searchValue, setSearchValue] = useState("")
 
   const orderedCategories = useMemo(() => {
-    return [...categories].sort((a, b) => a.orden - b.orden)
+    return [...categories].sort((a, b) => {
+      const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
+      const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+      if (ordenA !== ordenB) return ordenA - ordenB
+      return a.nombre.localeCompare(b.nombre)
+    })
   }, [categories])
 
   const groupedCategories = useMemo(() => {
@@ -46,7 +51,12 @@ export function CategorySearch({
     const result: (Categoria & { depth: number })[] = []
     for (const cat of top) {
       result.push(cat)
-      const subs = (children[cat.id] || []).sort((a, b) => a.orden - b.orden)
+      const subs = (children[cat.id] || []).sort((a, b) => {
+        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        if (ordenA !== ordenB) return ordenA - ordenB
+        return a.nombre.localeCompare(b.nombre)
+      })
       for (const sub of subs) result.push({ ...sub, depth: 1 })
     }
     return result

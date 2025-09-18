@@ -397,23 +397,6 @@ export function useImprovementProposals() {
     fetchProposals()
   }, [fetchProposals])
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("propuestas-mejora-channel")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "propuesta_mejora" },
-        () => {
-          fetchProposals()
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [fetchProposals])
-
   return {
     proposals,
     loading,

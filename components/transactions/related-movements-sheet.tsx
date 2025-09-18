@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
@@ -11,7 +11,7 @@ import { useMovimientos } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { formatDate } from "@/lib/utils/format"
-import type { Cuenta, Categoria, MovimientoConRelaciones } from "@/lib/types/database"
+import type { Cuenta, Categoria } from "@/lib/types/database"
 
 interface RelatedMovementsSheetProps {
   account?: Cuenta | null
@@ -21,23 +21,28 @@ interface RelatedMovementsSheetProps {
 }
 
 export function RelatedMovementsSheet({ account, category, open, onOpenChange }: RelatedMovementsSheetProps) {
-  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
-  const { categorias: categories } = useCategorias(selectedDelegation)
-  const { cuentas: accounts } = useCuentas(selectedDelegation)
+  const { selectedDelegation } = useDelegationContext()
+  const shouldFetch = Boolean(open && (account?.id || category?.id))
+  useCategorias(shouldFetch ? selectedDelegation : null, {
+    includeGlobal: shouldFetch,
+  })
+  useCuentas(shouldFetch ? selectedDelegation : null)
 
   const { movimientos, loading, error, loadMore, hasMore } = useMovimientos(
-    selectedDelegation,
-    {
-      cuentaId: account?.id,
-      categoriaIds: category ? [category.id] : undefined,
-    },
+    shouldFetch ? selectedDelegation : null,
+    shouldFetch
+      ? {
+          cuentaId: account?.id,
+          categoriaIds: category ? [category.id] : undefined,
+        }
+      : undefined,
     { pageSize: 50 },
   )
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (!hasMore) return
+    if (!shouldFetch || !hasMore) return
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
         loadMore()
@@ -48,7 +53,7 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
     return () => {
       if (current) observer.unobserve(current)
     }
-  }, [loadMore, hasMore])
+  }, [loadMore, hasMore, shouldFetch])
 
   const title = account ? `Movimientos de ${account.nombre}` : category ? `Movimientos de ${category.nombre}` : "Movimientos"
 

@@ -10,6 +10,7 @@ import type {
   ImprovementProposalWithAuthor,
 } from "@/lib/types/improvement-proposals"
 import { IMPROVEMENT_PROPOSAL_STATUS_LABELS } from "@/lib/types/improvement-proposals"
+import { toast } from "sonner"
 
 interface CreateImprovementProposalInput {
   title: string
@@ -17,12 +18,20 @@ interface CreateImprovementProposalInput {
   impact?: string | null
 }
 
+type ProposalQueryRow = ImprovementProposal & {
+  votos?: { count: number | null }[]
+  comentarios?: { count: number | null }[]
+}
+
 export function useImprovementProposals() {
   const [proposals, setProposals] = useState<ImprovementProposalWithAuthor[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [votingId, setVotingId] = useState<string | null>(null)
   const hasFetchedRef = useRef(false)
+  const proposalsRef = useRef<ImprovementProposalWithAuthor[]>([])
 
   const enrichWithAuthor = useCallback(async (rows: ImprovementProposal[]) => {
     if (rows.length === 0) return [] as ImprovementProposalWithAuthor[]
@@ -65,6 +74,43 @@ export function useImprovementProposals() {
     }))
   }, [])
 
+  useEffect(() => {
+    proposalsRef.current = proposals
+  }, [proposals])
+
+  useEffect(() => {
+    let mounted = true
+
+    const resolveSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (mounted) {
+          setCurrentUserId(session?.user?.id ?? null)
+        }
+      } catch (sessionError) {
+        console.error("Error resolving current session for proposals", sessionError)
+        if (mounted) setCurrentUserId(null)
+      }
+    }
+
+    void resolveSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => {
+      if (mounted) {
+        setCurrentUserId(session?.user?.id ?? null)
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
   const fetchProposals = useCallback(async () => {
     if (!hasFetchedRef.current) {
       setLoading(true)
@@ -74,13 +120,15 @@ export function useImprovementProposals() {
 
     try {
       setError(null)
-      const { data, error: fetchError } = await runQuery<ImprovementProposal[]>({
+      const { data, error: fetchError } = await runQuery<ProposalQueryRow[]>({
         label: "fetch-improvement-proposals",
         table: "propuesta_mejora",
         build: async (signal) =>
           await supabase
             .from("propuesta_mejora")
-            .select("*")
+            .select(
+              "*, votos:propuesta_mejora_voto(count), comentarios:propuesta_mejora_comentario(count)",
+            )
             .order("estado", { ascending: true })
             .order("creado_en", { ascending: false })
             .abortSignal(signal),
@@ -95,8 +143,41 @@ export function useImprovementProposals() {
         return
       }
 
-      const enriched = await enrichWithAuthor(data ?? [])
-      setProposals(enriched)
+      const rows = data ?? []
+
+      let votedIds = new Set<string>()
+
+      if (currentUserId) {
+        try {
+          const { data: userVotes, error: votesError } = await supabase
+            .from("propuesta_mejora_voto")
+            .select("propuesta_id")
+            .eq("usuario_id", currentUserId)
+
+          if (votesError) {
+            console.error("Error fetching user votes for proposals", votesError)
+          } else if (userVotes) {
+            votedIds = new Set(userVotes.map((vote) => vote.propuesta_id))
+          }
+        } catch (votesErr) {
+          console.error("Unexpected error loading user votes", votesErr)
+        }
+      }
+
+      const enriched = await enrichWithAuthor(rows as ImprovementProposal[])
+      const normalized = enriched.map((proposal) => {
+        const raw = rows.find((row) => row.id === proposal.id)
+        const votesCount = raw?.votos?.[0]?.count ?? 0
+        const commentsCount = raw?.comentarios?.[0]?.count ?? 0
+        return {
+          ...proposal,
+          votesCount,
+          commentsCount,
+          userHasVoted: votedIds.has(proposal.id),
+        }
+      })
+
+      setProposals(normalized)
     } catch (err) {
       console.error("Unexpected error loading improvement proposals", err)
       setError(
@@ -109,7 +190,7 @@ export function useImprovementProposals() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [enrichWithAuthor])
+  }, [currentUserId, enrichWithAuthor])
 
   const createProposal = useCallback(
     async ({ title, description, impact }: CreateImprovementProposalInput) => {
@@ -169,6 +250,9 @@ export function useImprovementProposals() {
       const newProposal: ImprovementProposalWithAuthor = {
         ...(data as ImprovementProposal),
         authorName,
+        votesCount: 0,
+        commentsCount: 0,
+        userHasVoted: false,
       }
 
       setProposals((prev) => [newProposal, ...prev])
@@ -202,6 +286,9 @@ export function useImprovementProposals() {
             ? {
                 ...(data as ImprovementProposal),
                 authorName: proposal.authorName,
+                votesCount: proposal.votesCount,
+                commentsCount: proposal.commentsCount,
+                userHasVoted: proposal.userHasVoted,
               }
             : proposal,
         ),
@@ -209,6 +296,89 @@ export function useImprovementProposals() {
     },
     [],
   )
+
+  const toggleVote = useCallback(
+    async (proposalId: string) => {
+      if (!proposalId) return
+      if (!currentUserId) {
+        toast.error("Necesitas iniciar sesión para apoyar ideas")
+        return
+      }
+
+      const target = proposalsRef.current.find((proposal) => proposal.id === proposalId)
+      if (!target) return
+
+      setVotingId(proposalId)
+
+      try {
+        if (target.userHasVoted) {
+          const { error } = await supabase
+            .from("propuesta_mejora_voto")
+            .delete()
+            .eq("propuesta_id", proposalId)
+            .eq("usuario_id", currentUserId)
+
+          if (error) throw error
+
+          setProposals((prev) =>
+            prev.map((proposal) =>
+              proposal.id === proposalId
+                ? {
+                    ...proposal,
+                    votesCount: Math.max(0, proposal.votesCount - 1),
+                    userHasVoted: false,
+                  }
+                : proposal,
+            ),
+          )
+          toast.success("Has retirado tu apoyo")
+        } else {
+          const { error } = await supabase
+            .from("propuesta_mejora_voto")
+            .insert({ propuesta_id: proposalId, usuario_id: currentUserId })
+
+          if (error) throw error
+
+          setProposals((prev) =>
+            prev.map((proposal) =>
+              proposal.id === proposalId
+                ? {
+                    ...proposal,
+                    votesCount: proposal.votesCount + 1,
+                    userHasVoted: true,
+                  }
+                : proposal,
+            ),
+          )
+          toast.success("¡Gracias por apoyar la idea!")
+        }
+      } catch (voteError) {
+        console.error("Error toggling proposal vote", voteError)
+        toast.error(
+          voteError instanceof Error
+            ? voteError.message
+            : "No pudimos actualizar tu voto. Inténtalo de nuevo.",
+        )
+      } finally {
+        setVotingId(null)
+      }
+    },
+    [currentUserId],
+  )
+
+  const registerComment = useCallback((proposalId: string) => {
+    if (!proposalId) return
+    setProposals((prev) =>
+      prev.map((proposal) =>
+        proposal.id === proposalId
+          ? {
+              ...proposal,
+              commentsCount: proposal.commentsCount + 1,
+            }
+          : proposal,
+      ),
+    )
+  }, [])
 
   useEffect(() => {
     fetchProposals()
@@ -238,6 +408,9 @@ export function useImprovementProposals() {
     error,
     createProposal,
     updateProposalStatus,
+    toggleVote,
+    votingId,
+    registerComment,
     refetch: fetchProposals,
     statusLabels: IMPROVEMENT_PROPOSAL_STATUS_LABELS,
   }

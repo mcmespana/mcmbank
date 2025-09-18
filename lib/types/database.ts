@@ -305,6 +305,55 @@ export type Database = {
           actualizado_en?: string | null
         }
       }
+      propuesta_mejora_comentario: {
+        Row: {
+          id: string
+          propuesta_id: string
+          contenido: string
+          creado_por: string
+          creado_por_nombre: string | null
+          creado_por_email: string | null
+          creado_en: string
+        }
+        Insert: {
+          id?: string
+          propuesta_id: string
+          contenido: string
+          creado_por: string
+          creado_por_nombre?: string | null
+          creado_por_email?: string | null
+          creado_en?: string
+        }
+        Update: {
+          id?: string
+          propuesta_id?: string
+          contenido?: string
+          creado_por?: string
+          creado_por_nombre?: string | null
+          creado_por_email?: string | null
+          creado_en?: string
+        }
+      }
+      propuesta_mejora_voto: {
+        Row: {
+          id: string
+          propuesta_id: string
+          usuario_id: string
+          creado_en: string
+        }
+        Insert: {
+          id?: string
+          propuesta_id: string
+          usuario_id: string
+          creado_en?: string
+        }
+        Update: {
+          id?: string
+          propuesta_id?: string
+          usuario_id?: string
+          creado_en?: string
+        }
+      }
     }
   }
 }
@@ -318,6 +367,8 @@ export type Membresia = Database["public"]["Tables"]["membresia"]["Row"]
 export type Perfil = Database["public"]["Tables"]["perfil"]["Row"]
 export type MovimientoArchivo = Database["public"]["Tables"]["movimiento_archivo"]["Row"]
 export type PropuestaMejora = Database["public"]["Tables"]["propuesta_mejora"]["Row"]
+export type PropuestaMejoraComentario = Database["public"]["Tables"]["propuesta_mejora_comentario"]["Row"]
+export type PropuestaMejoraVoto = Database["public"]["Tables"]["propuesta_mejora_voto"]["Row"]
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {

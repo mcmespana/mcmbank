@@ -21,6 +21,9 @@ export function ImprovementProposalsPanel() {
     error,
     createProposal,
     updateProposalStatus,
+    toggleVote,
+    votingId,
+    registerComment,
     refetch,
     statusLabels,
   } = useImprovementProposals()
@@ -170,6 +173,9 @@ export function ImprovementProposalsPanel() {
         isAdmin={isAdmin}
         updatingId={updatingId}
         onStatusChange={isAdmin ? handleStatusChange : undefined}
+        onToggleVote={toggleVote}
+        votingId={votingId}
+        onCommentAdded={registerComment}
       />
 
       <CreateProposalDialog

@@ -38,6 +38,17 @@ export function ProposalCommentsDialog({
   const [commentDraft, setCommentDraft] = useState("")
 
   const hasComments = comments.length > 0
+  const isIdea = proposal.tipo === "idea"
+  const dialogDescription = isIdea
+    ? "Comparte qué te inspira o cómo mejorarías esta idea."
+    : "Añade pistas que nos ayuden a reproducir y arreglar este error."
+  const commentPlaceholder = isIdea
+    ? "¿Qué te parece esta propuesta?"
+    : "Explica si te ocurre lo mismo o aporta más detalles."
+  const loadingLabel = isIdea ? "Leyendo ideas..." : "Leyendo reportes..."
+  const helperLabel = isIdea
+    ? "Las aportaciones ayudan a priorizar mejoras."
+    : "Cuantos más detalles compartamos, antes lo arreglaremos."
 
   const loadComments = useCallback(async () => {
     if (!open) return
@@ -134,10 +145,10 @@ export function ProposalCommentsDialog({
   const disableButton = submitting || commentDraft.trim().length === 0
 
   const commentCountLabel = useMemo(() => {
-    if (loading) return "Leyendo ideas..."
+    if (loading) return loadingLabel
     if (!hasComments) return "Todavía no hay comentarios"
     return `${comments.length} comentario${comments.length === 1 ? "" : "s"}`
-  }, [comments.length, hasComments, loading])
+  }, [comments.length, hasComments, loading, loadingLabel])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -145,7 +156,7 @@ export function ProposalCommentsDialog({
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-lg font-semibold">Conversación sobre “{proposal.titulo}”</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Comparte qué te inspira o cómo mejorarías esta idea.
+            {dialogDescription}
           </DialogDescription>
         </DialogHeader>
 
@@ -157,11 +168,12 @@ export function ProposalCommentsDialog({
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Añadir comentario
           </label>
+          <p className="text-xs text-muted-foreground">{helperLabel}</p>
           <Textarea
             rows={4}
             value={commentDraft}
             onChange={(event) => setCommentDraft(event.target.value)}
-            placeholder="¿Qué te parece esta propuesta?"
+            placeholder={commentPlaceholder}
             className="min-h-[120px] resize-none rounded-xl border-border/60 bg-background/80"
           />
           <div className="flex justify-end">

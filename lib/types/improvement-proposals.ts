@@ -4,6 +4,7 @@ export type ImprovementProposal = Database["public"]["Tables"]["propuesta_mejora
 export type ImprovementProposalInsert = Database["public"]["Tables"]["propuesta_mejora"]["Insert"]
 export type ImprovementProposalUpdate = Database["public"]["Tables"]["propuesta_mejora"]["Update"]
 export type ImprovementProposalStatus = ImprovementProposal["estado"]
+export type ImprovementProposalType = ImprovementProposal["tipo"]
 
 export interface ImprovementProposalWithAuthor extends ImprovementProposal {
   authorName: string
@@ -22,18 +23,30 @@ export interface ImprovementProposalComment {
   creado_en: string
 }
 
-export const IMPROVEMENT_PROPOSAL_STATUSES: ImprovementProposalStatus[] = [
-  "nueva_idea",
-  "en_estudio",
-  "lo_haremos",
-  "en_desarrollo",
-  "hechisimo",
-]
-
 export const IMPROVEMENT_PROPOSAL_STATUS_LABELS: Record<ImprovementProposalStatus, string> = {
   nueva_idea: "Nueva idea",
   en_estudio: "En estudio",
   lo_haremos: "Lo haremos",
   en_desarrollo: "En desarrollo",
   hechisimo: "Hechísimo",
+  error_detectado: "Error detectado",
+  resolviendo: "Resolviendo",
+  resuelto: "Resuelto",
+}
+
+export const IMPROVEMENT_PROPOSAL_TYPES: ImprovementProposalType[] = ["idea", "error"]
+
+export const IMPROVEMENT_PROPOSAL_STATUS_FLOW: Record<ImprovementProposalType, ImprovementProposalStatus[]> = {
+  idea: ["nueva_idea", "en_estudio", "lo_haremos", "en_desarrollo", "hechisimo"],
+  error: ["error_detectado", "resolviendo", "resuelto"],
+}
+
+export const IMPROVEMENT_PROPOSAL_STATUSES: ImprovementProposalStatus[] = [
+  ...IMPROVEMENT_PROPOSAL_STATUS_FLOW.idea,
+  ...IMPROVEMENT_PROPOSAL_STATUS_FLOW.error,
+]
+
+export const IMPROVEMENT_PROPOSAL_TYPE_LABELS: Record<ImprovementProposalType, string> = {
+  idea: "Idea de mejora",
+  error: "Error detectado",
 }

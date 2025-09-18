@@ -5,8 +5,14 @@ import {
   CalendarCheck,
   Hammer,
   Trophy,
+  Bug,
+  Wrench,
+  ShieldCheck,
 } from "lucide-react"
-import type { ImprovementProposalStatus } from "@/lib/types/improvement-proposals"
+import type {
+  ImprovementProposalStatus,
+  ImprovementProposalType,
+} from "@/lib/types/improvement-proposals"
 
 export interface ImprovementProposalStatusVisualConfig {
   label: string
@@ -70,5 +76,61 @@ export const IMPROVEMENT_PROPOSAL_STATUS_CONFIG: Record<
     headerBackground:
       "bg-gradient-to-br from-emerald-500/10 via-lime-500/10 to-transparent",
     icon: Trophy,
+  },
+  error_detectado: {
+    label: "Error detectado",
+    description: "Lo tenemos localizado y necesitamos más detalles",
+    accentGradient: "from-red-500 via-rose-500 to-orange-500",
+    badgeClassName:
+      "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-100 dark:border-red-500/40",
+    headerBackground:
+      "bg-gradient-to-br from-red-500/10 via-rose-500/10 to-transparent",
+    icon: Bug,
+  },
+  resolviendo: {
+    label: "Resolviendo",
+    description: "Estamos trabajando para arreglarlo",
+    accentGradient: "from-amber-500 via-orange-500 to-yellow-500",
+    badgeClassName:
+      "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-100 dark:border-amber-500/40",
+    headerBackground:
+      "bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-transparent",
+    icon: Wrench,
+  },
+  resuelto: {
+    label: "Resuelto",
+    description: "Arreglado y verificado",
+    accentGradient: "from-emerald-400 via-teal-400 to-green-500",
+    badgeClassName:
+      "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-100 dark:border-emerald-500/40",
+    headerBackground:
+      "bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-transparent",
+    icon: ShieldCheck,
+  },
+}
+
+export const IMPROVEMENT_PROPOSAL_BOARD_COPY: Record<
+  ImprovementProposalType,
+  {
+    loading: string
+    emptyTitle: string
+    emptyDescription: string
+    emptyColumn: string
+    refreshing: string
+  }
+> = {
+  idea: {
+    loading: "Cargando propuestas de mejora...",
+    emptyTitle: "Aún no hay propuestas de mejora",
+    emptyDescription: "¡Danos ideas porfi!",
+    emptyColumn: "Aún no hay ideas en esta fase.",
+    refreshing: "Sincronizando ideas...",
+  },
+  error: {
+    loading: "Cargando errores reportados...",
+    emptyTitle: "Sin errores registrados",
+    emptyDescription: "Si encuentras un fallo, avísanos para arreglarlo.",
+    emptyColumn: "Aún no hay errores en esta fase.",
+    refreshing: "Sincronizando reportes...",
   },
 }

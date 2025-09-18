@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Sparkles, PartyPopper, EyeOff, Eye, RefreshCw } from "lucide-react"
+import { Sparkles, PartyPopper, EyeOff, Eye, RefreshCw, Bug } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -11,7 +11,10 @@ import { useImprovementProposals } from "@/hooks/use-improvement-proposals"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import type { ImprovementProposalStatus } from "@/lib/types/improvement-proposals"
+import type {
+  ImprovementProposalStatus,
+  ImprovementProposalType,
+} from "@/lib/types/improvement-proposals"
 
 export function ImprovementProposalsPanel() {
   const {
@@ -30,26 +33,42 @@ export function ImprovementProposalsPanel() {
   const isAdmin = useIsAdmin()
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogType, setDialogType] = useState<ImprovementProposalType>("idea")
   const [showCompleted, setShowCompleted] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [manualRefresh, setManualRefresh] = useState(false)
+  const ideaProposals = useMemo(
+    () => proposals.filter((proposal) => proposal.tipo === "idea"),
+    [proposals],
+  )
+  const errorProposals = useMemo(
+    () => proposals.filter((proposal) => proposal.tipo === "error"),
+    [proposals],
+  )
 
-  const stats = useMemo(() => {
-    const total = proposals.length
-    const celebrating = proposals.filter((proposal) => proposal.estado === "hechisimo").length
-    const active = proposals.filter((proposal) => proposal.estado !== "hechisimo").length
-    const fresh = proposals.filter((proposal) => proposal.estado === "nueva_idea").length
-
-    return { total, celebrating, active, fresh }
-  }, [proposals])
-
-  const handleCreateProposal = async (values: { title: string; description: string}) => {
+  const handleCreateProposal = async ({
+    title,
+    description,
+    type,
+  }: {
+    title: string
+    description: string
+    type: ImprovementProposalType
+  }) => {
     try {
-      await createProposal(values)
-      toast.success("¡Gracias por compartir tu idea! ✨")
+      await createProposal({ title, description, type })
+      toast.success(
+        type === "idea"
+          ? "¡Gracias por compartir tu idea! ✨"
+          : "Gracias por reportar el error 🛠️",
+      )
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "No pudimos guardar tu propuesta. Quizá es una buena propuesta que este sitema funcione, pero mira, no se puede tener todo."
+        err instanceof Error
+          ? err.message
+          : type === "idea"
+            ? "No pudimos guardar tu propuesta. Quizá es una buena propuesta que este sistema funcione, pero mira, no se puede tener todo."
+            : "No pudimos guardar el reporte del error. Seguiremos investigando igualmente."
       toast.error(message)
       throw err
     }
@@ -61,8 +80,13 @@ export function ImprovementProposalsPanel() {
       await updateProposalStatus(proposalId, status)
       toast.success(`Estado actualizado a ${statusLabels[status]}`)
     } catch (err) {
+      const target = proposals.find((proposal) => proposal.id === proposalId)
       const message =
-        err instanceof Error ? err.message : "No pudimos actualizar el estado de la idea. ¿Nos proponemos mejorarlo?"
+        err instanceof Error
+          ? err.message
+          : target?.tipo === "error"
+            ? "No pudimos actualizar el estado del error. Lo revisamos en un rato."
+            : "No pudimos actualizar el estado de la idea. ¿Nos proponemos mejorarlo?"
       toast.error(message)
       throw err
     } finally {
@@ -74,17 +98,24 @@ export function ImprovementProposalsPanel() {
     try {
       setManualRefresh(true)
       await refetch()
-      toast.success("Ideas actualizadas")
+      toast.success("Panel actualizado")
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "No pudimos actualizar la lista de ideas. Un fallito tontorrón..."
+        err instanceof Error
+          ? err.message
+          : "No pudimos actualizar la lista ahora mismo. Un fallito tontorrón..."
       toast.error(message)
     } finally {
       setManualRefresh(false)
     }
   }
 
-  const showCelebratedToggle = proposals.some((proposal) => proposal.estado === "hechisimo")
+  const showCelebratedToggle = ideaProposals.some((proposal) => proposal.estado === "hechisimo")
+
+  const handleOpenDialog = (type: ImprovementProposalType) => {
+    setDialogType(type)
+    setDialogOpen(true)
+  }
 
   return (
     <div className="space-y-8">
@@ -107,10 +138,20 @@ export function ImprovementProposalsPanel() {
               <Button
                 type="button"
                 size="lg"
-                onClick={() => setDialogOpen(true)}
+                onClick={() => handleOpenDialog("idea")}
                 className="rounded-full bg-white text-indigo-700 shadow-lg shadow-indigo-900/20 transition hover:bg-white/90"
               >
                 <PartyPopper className="mr-2 h-5 w-5" /> Compartir idea
+              </Button>
+
+              <Button
+                type="button"
+                size="lg"
+                variant="secondary"
+                onClick={() => handleOpenDialog("error")}
+                className="rounded-full border-white/30 bg-white/20 text-white hover:bg-white/30"
+              >
+                <Bug className="mr-2 h-5 w-5" /> Reportar error
               </Button>
 
               {showCelebratedToggle && (
@@ -151,6 +192,8 @@ export function ImprovementProposalsPanel() {
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
               {isAdmin && <Badge className="bg-white text-indigo-700 hover:bg-white">Control gestor central</Badge>}
+              <Badge className="bg-white/20 text-white">{ideaProposals.length} ideas</Badge>
+              <Badge className="bg-white/20 text-white">{errorProposals.length} errores</Badge>
             </div>
           </div>
 
@@ -166,7 +209,8 @@ export function ImprovementProposalsPanel() {
       )}
 
       <ProposalsBoard
-        proposals={proposals}
+        type="idea"
+        proposals={ideaProposals}
         loading={loading}
         refreshing={refreshing || manualRefresh}
         showCompleted={showCompleted}
@@ -178,9 +222,35 @@ export function ImprovementProposalsPanel() {
         onCommentAdded={registerComment}
       />
 
+      <section className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-foreground">Errores reportados por la comunidad</h2>
+            <p className="text-sm text-muted-foreground">
+              Usa este tablero para seguir el avance de los fallos que ya estamos revisando.
+            </p>
+          </div>
+        </div>
+
+        <ProposalsBoard
+          type="error"
+          proposals={errorProposals}
+          loading={loading}
+          refreshing={refreshing || manualRefresh}
+          isAdmin={isAdmin}
+          updatingId={updatingId}
+          onStatusChange={isAdmin ? handleStatusChange : undefined}
+          onToggleVote={toggleVote}
+          votingId={votingId}
+          onCommentAdded={registerComment}
+        />
+      </section>
+
       <CreateProposalDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        type={dialogType}
+        onTypeChange={setDialogType}
         onSubmit={handleCreateProposal}
       />
     </div>

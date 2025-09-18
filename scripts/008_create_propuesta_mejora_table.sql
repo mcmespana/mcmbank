@@ -4,8 +4,20 @@ CREATE TABLE IF NOT EXISTS public.propuesta_mejora (
   titulo TEXT NOT NULL,
   descripcion TEXT NOT NULL,
   impacto TEXT,
+  tipo TEXT NOT NULL DEFAULT 'idea' CHECK (
+    tipo IN ('idea', 'error')
+  ),
   estado TEXT NOT NULL DEFAULT 'nueva_idea' CHECK (
-    estado IN ('nueva_idea', 'en_estudio', 'lo_haremos', 'en_desarrollo', 'hechisimo')
+    estado IN (
+      'nueva_idea',
+      'en_estudio',
+      'lo_haremos',
+      'en_desarrollo',
+      'hechisimo',
+      'error_detectado',
+      'resolviendo',
+      'resuelto'
+    )
   ),
   creado_por UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
   creado_por_nombre TEXT,
@@ -14,8 +26,9 @@ CREATE TABLE IF NOT EXISTS public.propuesta_mejora (
   actualizado_en TIMESTAMPTZ
 );
 
-COMMENT ON TABLE public.propuesta_mejora IS 'Ideas y propuestas de mejora de la aplicación aportadas por la comunidad';
-COMMENT ON COLUMN public.propuesta_mejora.estado IS 'Workflow: nueva_idea, en_estudio, lo_haremos, en_desarrollo, hechisimo';
+COMMENT ON TABLE public.propuesta_mejora IS 'Ideas de mejora y errores detectados aportados por la comunidad';
+COMMENT ON COLUMN public.propuesta_mejora.tipo IS 'Clasificación de la propuesta: idea o error';
+COMMENT ON COLUMN public.propuesta_mejora.estado IS 'Workflow ideas: nueva_idea → en_estudio → lo_haremos → en_desarrollo → hechisimo; errores: error_detectado → resolviendo → resuelto';
 
 ALTER TABLE public.propuesta_mejora ENABLE ROW LEVEL SECURITY;
 
@@ -63,4 +76,5 @@ CREATE POLICY IF NOT EXISTS "Gestor central puede eliminar propuestas" ON public
   );
 
 CREATE INDEX IF NOT EXISTS propuesta_mejora_estado_idx ON public.propuesta_mejora (estado);
+CREATE INDEX IF NOT EXISTS propuesta_mejora_tipo_idx ON public.propuesta_mejora (tipo);
 CREATE INDEX IF NOT EXISTS propuesta_mejora_creado_en_idx ON public.propuesta_mejora (creado_en DESC);

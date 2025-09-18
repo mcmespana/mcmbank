@@ -2,18 +2,23 @@
 
 import { useMemo } from "react"
 import { ProposalCard } from "./proposal-card"
-import { IMPROVEMENT_PROPOSAL_STATUS_CONFIG } from "./status-config"
+import {
+  IMPROVEMENT_PROPOSAL_STATUS_CONFIG,
+  IMPROVEMENT_PROPOSAL_BOARD_COPY,
+} from "./status-config"
 import {
   type ImprovementProposalWithAuthor,
   type ImprovementProposalStatus,
-  IMPROVEMENT_PROPOSAL_STATUSES,
+  type ImprovementProposalType,
+  IMPROVEMENT_PROPOSAL_STATUS_FLOW,
 } from "@/lib/types/improvement-proposals"
 import { cn } from "@/lib/utils"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Lightbulb } from "lucide-react"
+import { Lightbulb, Bug } from "lucide-react"
 
 interface ProposalsBoardProps {
+  type: ImprovementProposalType
   proposals: ImprovementProposalWithAuthor[]
   loading?: boolean
   refreshing?: boolean
@@ -27,6 +32,7 @@ interface ProposalsBoardProps {
 }
 
 export function ProposalsBoard({
+  type,
   proposals,
   loading = false,
   refreshing = false,
@@ -39,10 +45,12 @@ export function ProposalsBoard({
   onCommentAdded,
 }: ProposalsBoardProps) {
   const statusOrder = useMemo(() => {
-    return showCompleted
-      ? IMPROVEMENT_PROPOSAL_STATUSES
-      : IMPROVEMENT_PROPOSAL_STATUSES.filter((status) => status !== "hechisimo")
-  }, [showCompleted])
+    const flow = IMPROVEMENT_PROPOSAL_STATUS_FLOW[type]
+    if (type === "idea") {
+      return showCompleted ? flow : flow.filter((status) => status !== "hechisimo")
+    }
+    return flow
+  }, [showCompleted, type])
 
   const grouped = useMemo(() => {
     return statusOrder.map((status) => ({
@@ -51,15 +59,19 @@ export function ProposalsBoard({
     }))
   }, [proposals, statusOrder])
 
-  const hiddenCompleted = !showCompleted
-    ? proposals.filter((proposal) => proposal.estado === "hechisimo").length
-    : 0
+  const hiddenCompleted =
+    type === "idea" && !showCompleted
+      ? proposals.filter((proposal) => proposal.estado === "hechisimo").length
+      : 0
+
+  const copy = IMPROVEMENT_PROPOSAL_BOARD_COPY[type]
+  const emptyIcon = type === "idea" ? <Lightbulb className="h-6 w-6" /> : <Bug className="h-6 w-6" />
 
   if (loading && proposals.length === 0) {
     return (
       <div className="flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-border/60 bg-muted/10 p-10 text-muted-foreground">
         <LoadingSpinner />
-        <p>Cargando propuestas de mejora...</p>
+        <p>{copy.loading}</p>
       </div>
     )
   }
@@ -67,9 +79,9 @@ export function ProposalsBoard({
   if (proposals.length === 0) {
     return (
       <EmptyState
-        title="Aún no hay propuestas de mejora"
-        description="¡Danos ideas porfi!"
-        icon={<Lightbulb className="h-6 w-6" />}
+        title={copy.emptyTitle}
+        description={copy.emptyDescription}
+        icon={emptyIcon}
       />
     )
   }
@@ -78,7 +90,7 @@ export function ProposalsBoard({
     <div className="space-y-6">
       {refreshing && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <LoadingSpinner className="h-3.5 w-3.5" size="sm" /> Sincronizando ideas...
+          <LoadingSpinner className="h-3.5 w-3.5" size="sm" /> {copy.refreshing}
         </div>
       )}
 
@@ -117,7 +129,7 @@ export function ProposalsBoard({
                 <div className="space-y-4">
                   {columnProposals.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-border/60 bg-muted/10 p-5 text-center text-xs text-muted-foreground">
-                      Aún no hay ideas en esta fase.
+                      {copy.emptyColumn}
                     </div>
                   ) : (
                     columnProposals.map((proposal) => (

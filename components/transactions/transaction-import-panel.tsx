@@ -771,7 +771,13 @@ export function TransactionImportPanel({
                   source === "sabadell" ? "border-primary bg-primary/5" : "border-muted"
                 }`}
               >
-                <Image src="/bank-logos/sabadell.png" alt="Sabadell" width={32} height={32} />
+                <Image
+                  src="/bank-logos/sabadell.png"
+                  alt="Sabadell"
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover"
+                />
                 <span>Sabadell</span>
               </button>
               <button
@@ -781,7 +787,13 @@ export function TransactionImportPanel({
                   source === "caixabank" ? "border-primary bg-primary/5" : "border-muted"
                 }`}
               >
-                <Image src="/bank-logos/caixabank.png" alt="Caixabank" width={32} height={32} />
+                <Image
+                  src="/bank-logos/caixabank.png"
+                  alt="Caixabank"
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover"
+                />
                 <span>Caixabank</span>
               </button>
             </div>

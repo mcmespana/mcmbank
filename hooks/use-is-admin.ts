@@ -30,6 +30,7 @@ export function useIsAdmin() {
           setIsAdmin(data?.length > 0)
         }
       } catch (err) {
+        console.error("useIsAdmin: unexpected error", err)
         if (mounted) setIsAdmin(false)
       }
     }

@@ -20,8 +20,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { DialogTitle } from "@/components/ui/dialog"
-import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { useDelegationCounts } from "@/hooks/use-delegation-counts"
 import type { DelegationCounts } from "@/hooks/use-delegation-counts"

@@ -6,11 +6,10 @@ import { cn } from "@/lib/utils"
 interface AmountDisplayProps {
   amount: number
   size?: "sm" | "md" | "lg"
-  variant?: "default" | "compact"
   className?: string
 }
 
-export function AmountDisplay({ amount, size = "md", variant = "default", className }: AmountDisplayProps) {
+export function AmountDisplay({ amount, size = "md", className }: AmountDisplayProps) {
   const isPositive = amount > 0
 
   const sizeClasses = {

@@ -28,17 +28,14 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { formatCurrency } from "@/lib/utils/format"
 import { Table, TableHeader, TableHead, TableRow, TableCell, TableBody } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import type { Timeframe } from "./timeframe-filter"
-
 interface Props {
-  timeframe: Timeframe
   from: string
   to: string
 }
 
 type SortField = "category" | "income" | "expense" | "balance" | "default"
 
-export function CategoryAnalysisDashboard({ timeframe, from, to }: Props) {
+export function CategoryAnalysisDashboard({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
   const [categoryIds, setCategoryIds] = useState<string[]>([])
   const [sortField, setSortField] = useState<SortField>("default")
@@ -216,7 +213,7 @@ export function CategoryAnalysisDashboard({ timeframe, from, to }: Props) {
                   stroke="#ffffff"
                   strokeWidth={2}
                 >
-                  {dataWithColors.map((d, index) => (
+                  {dataWithColors.map((d) => (
                     <Cell key={d.id} fill={d.fill} />
                   ))}
                 </Pie>

@@ -42,11 +42,11 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="actividad" className="space-y-6">
-            <ActivityBalanceDashboard timeframe={timeframe} from={from} to={to} />
+            <ActivityBalanceDashboard from={from} to={to} />
           </TabsContent>
 
           <TabsContent value="categorias" className="space-y-6">
-            <CategoryAnalysisDashboard timeframe={timeframe} from={from} to={to} />
+            <CategoryAnalysisDashboard from={from} to={to} />
           </TabsContent>
         </Tabs>
       </div>

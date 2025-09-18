@@ -80,7 +80,7 @@ export function FinancialInsights({ from, to }: Props) {
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold flex items-center gap-2">
         <div className="h-6 w-1 bg-gradient-to-b from-orange-500 to-red-500 rounded-full" />
-        Insights Financieros
+        Datitos de interés
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {insights.map((insight, index) => (

@@ -30,22 +30,19 @@ import {
   eachMonthOfInterval,
   eachYearOfInterval,
   parseISO,
-  differenceInDays,
   differenceInMonths,
   differenceInYears,
 } from "date-fns"
 import { es } from "date-fns/locale"
-import type { Timeframe } from "./timeframe-filter"
 import { formatCurrency } from "@/lib/utils/format"
 import { Badge } from "@/components/ui/badge"
 
 interface Props {
-  timeframe: Timeframe
   from: string
   to: string
 }
 
-export function ActivityBalanceDashboard({ timeframe, from, to }: Props) {
+export function ActivityBalanceDashboard({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
   const [categoryIds, setCategoryIds] = useState<string[]>([])
 
@@ -108,7 +105,6 @@ export function ActivityBalanceDashboard({ timeframe, from, to }: Props) {
     const startDate = parseISO(firstTransaction.fecha)
     const endDate = parseISO(lastTransaction.fecha)
 
-    const daysDiff = differenceInDays(endDate, startDate)
     const monthsDiff = differenceInMonths(endDate, startDate)
     const yearsDiff = differenceInYears(endDate, startDate)
 

@@ -68,6 +68,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     try {
       await attempt()
     } catch (err) {
+      console.error("useDelegations: initial fetch failed", err)
       if (abortController.signal.aborted) {
         // Mark as not loading to avoid spinners stuck on abort/timeout
         setLoading(false)

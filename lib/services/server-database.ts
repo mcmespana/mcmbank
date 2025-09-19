@@ -188,10 +188,11 @@ export class ServerDatabaseService {
   // Categoria operations (server-side)
   static async getCategoriasByDelegacion(
     delegacionId?: string | null,
-    options: { includeGlobal?: boolean } = {},
+    options: { includeGlobal?: boolean; includeInactive?: boolean } = {},
   ): Promise<CategoriaConOrdenEfectivo[]> {
     const supabase = this.getServerClient()
     const includeGlobal = options.includeGlobal ?? true
+    const includeInactive = options.includeInactive ?? false
 
     if (!delegacionId && includeGlobal === false) {
       return []
@@ -201,6 +202,10 @@ export class ServerDatabaseService {
       .from("categoria")
       .select(selectCategoriasWithOverrides)
       .order("orden", { ascending: true })
+
+    if (!includeInactive) {
+      query = query.eq("activa", true)
+    }
 
     if (delegacionId) {
       query = includeGlobal

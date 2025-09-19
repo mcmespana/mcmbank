@@ -67,10 +67,11 @@ export class DatabaseService {
   // Categoria operations (client-side only)
   static async getCategoriasByDelegacion(
     delegacionId?: string | null,
-    options: { includeGlobal?: boolean; signal?: AbortSignal } = {},
+    options: { includeGlobal?: boolean; includeInactive?: boolean; signal?: AbortSignal } = {},
   ): Promise<CategoriaConOrdenEfectivo[]> {
     const supabase = this.getClient()
     const includeGlobal = options.includeGlobal ?? true
+    const includeInactive = options.includeInactive ?? false
 
     if (!delegacionId && includeGlobal === false) {
       return []
@@ -80,6 +81,10 @@ export class DatabaseService {
       .from("categoria")
       .select(selectCategoriasWithOverrides)
       .order("orden", { ascending: true })
+
+    if (!includeInactive) {
+      query = query.eq("activa", true)
+    }
 
     if (delegacionId) {
       query = includeGlobal
@@ -103,7 +108,8 @@ export class DatabaseService {
     categoria: Omit<Categoria, "id" | "creado_en">,
   ): Promise<Categoria> {
     const supabase = this.getClient()
-    const { data, error } = await supabase.from("categoria").insert(categoria).select().single()
+    const payload = { activa: true, ...categoria }
+    const { data, error } = await supabase.from("categoria").insert(payload).select().single()
 
     if (error) throw error
     return data

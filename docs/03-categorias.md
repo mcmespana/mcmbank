@@ -10,6 +10,18 @@ Las categorías nos ayudan a clasificar los movimientos y comparar entre Delegac
 
 1. Desde el menú lateral entra en **Categorías**.
 2. Pulsa **Crear categoría** o el icono ✏️ para editar.
-3. Elige un nombre, un emoji y un color. También puedes arrastrar para ordenar.
+3. Elige un nombre, un emoji y un color. Usa las flechas para ordenar y arrastra solo si quieres crear una subcategoría.
 
 > 🗑️ Si borras una categoría, los movimientos asociados quedarán sin categorizar.
+
+## SQL: campo `activa`
+
+Para habilitar el botón de ocultar categorías necesitas añadir un campo booleano en la tabla `categoria`:
+
+```sql
+alter table public.categoria
+add column if not exists activa boolean not null default true;
+
+update public.categoria
+set activa = coalesce(activa, true);
+```

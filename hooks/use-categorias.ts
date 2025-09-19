@@ -20,13 +20,14 @@ const sortCategorias = (categorias: CategoriaConOrdenEfectivo[]) =>
 
 export function useCategorias(
   delegacionId?: string | null,
-  options?: { includeGlobal?: boolean },
+  options?: { includeGlobal?: boolean; includeInactive?: boolean },
 ) {
   const [categorias, setCategorias] = useState<CategoriaConOrdenEfectivo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const includeGlobal = options?.includeGlobal ?? true
+  const includeInactive = options?.includeInactive ?? false
 
   const fetchCategorias = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort()
@@ -44,6 +45,7 @@ export function useCategorias(
 
       const data = await DatabaseService.getCategoriasByDelegacion(delegacionId, {
         includeGlobal,
+        includeInactive,
         signal: ac.signal,
       })
 
@@ -56,7 +58,7 @@ export function useCategorias(
     } finally {
       setLoading(false)
     }
-  }, [delegacionId, includeGlobal])
+  }, [delegacionId, includeGlobal, includeInactive])
 
   useEffect(() => {
     fetchCategorias()

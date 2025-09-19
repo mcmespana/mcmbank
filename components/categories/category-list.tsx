@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import {
   DragDropContext,
@@ -36,6 +36,7 @@ import {
   ChevronDown,
 } from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
+import autoAnimate from "@formkit/auto-animate"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import type { CategoriaConOrdenEfectivo } from "@/lib/types/database"
@@ -63,6 +64,7 @@ interface CategoryCardProps {
   onToggleActive?: (category: CategoriaConOrdenEfectivo) => void
   canToggleActive: boolean
   isInactive: boolean
+  isRecentlyMoved?: boolean
 }
 
 function buildChildrenMap(items: CategoriaConOrdenEfectivo[]) {
@@ -113,6 +115,7 @@ function CategoryCard({
   onToggleActive,
   canToggleActive,
   isInactive,
+  isRecentlyMoved = false,
 }: CategoryCardProps) {
   const indentation = depth * 24
   const addSubcategoryTitle = canAddSubcategory
@@ -142,7 +145,8 @@ function CategoryCard({
                 snapshot.isDragging && "shadow-lg ring-2 ring-primary/40",
                 isDropTarget && !snapshot.isDragging && "ring-2 ring-primary/50",
                 depth > 0 && "border-muted-foreground/20",
-                isInactive && "opacity-70"
+                isInactive && "opacity-70",
+                isRecentlyMoved && "ring-2 ring-primary/40 shadow-lg shadow-primary/10",
               )}
             >
               <CardContent className="p-3 sm:p-4 lg:p-5">
@@ -297,6 +301,23 @@ export function CategoryList() {
   const [dateFrom, setDateFrom] = useState<string | undefined>()
   const [dateTo, setDateTo] = useState<string | undefined>()
   const [showInactive, setShowInactive] = useState(false)
+  const [optimisticOrders, setOptimisticOrders] = useState<Record<string, string[]>>({})
+  const [recentlyMovedId, setRecentlyMovedId] = useState<string | null>(null)
+  const animatedRefs = useRef(new WeakSet<Element>())
+
+  const registerAutoAnimate = useCallback((node: HTMLElement | null) => {
+    if (node && !animatedRefs.current.has(node)) {
+      autoAnimate(node, { duration: 220, easing: "ease-in-out" })
+      animatedRefs.current.add(node)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!recentlyMovedId) return
+
+    const timeout = setTimeout(() => setRecentlyMovedId(null), 800)
+    return () => clearTimeout(timeout)
+  }, [recentlyMovedId])
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
@@ -311,6 +332,10 @@ export function CategoryList() {
   } = useCategorias(selectedDelegation, { includeInactive: showInactive })
   const { movimientos } = useMovimientos(selectedDelegation || null)
   const searchParams = useSearchParams()
+
+  useEffect(() => {
+    setOptimisticOrders({})
+  }, [categories])
 
   useEffect(() => {
     if (searchParams.get("panel") === "create") {
@@ -538,42 +563,6 @@ export function CategoryList() {
     return matches
   }, [isFiltering, searchTerm, displayedCategories, categoryMap, childrenMap])
 
-  const hasAnyCategory = displayedCategories.length > 0
-  const hasVisibleCategories = displayedCategories.some((cat) => visibleCategoryIds.has(cat.id))
-
-  const totalCount = categories.length
-  const globalCount = categories.filter((category) => category.es_global).length
-  const inactiveCount = showInactive
-    ? categories.filter((category) => category.esta_activa === false).length
-    : undefined
-
-  if (!selectedDelegation) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Selecciona una delegación para ver las categorías</p>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Cargando categorías...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-destructive">Error: {error}</p>
-      </div>
-    )
-  }
-
   const parseDroppableId = (droppableId: string): string | null | undefined => {
     if (droppableId === "root") return null
     if (droppableId.startsWith("children-")) {
@@ -582,7 +571,36 @@ export function CategoryList() {
     return undefined
   }
 
-  const getItemsForParent = (parentId: string | null) => Array.from(allChildrenMap.get(parentId) ?? [])
+  const orderKey = (parentId: string | null) => parentId ?? "__root__"
+
+  const applyOptimisticOrder = useCallback(
+    (items: CategoriaConOrdenEfectivo[], parentId: string | null) => {
+      const key = orderKey(parentId)
+      const order = optimisticOrders[key]
+      if (!order) return items
+
+      const itemMap = new Map(items.map((item) => [item.id, item]))
+      const orderedItems: CategoriaConOrdenEfectivo[] = []
+
+      for (const id of order) {
+        const found = itemMap.get(id)
+        if (found) {
+          orderedItems.push(found)
+          itemMap.delete(id)
+        }
+      }
+
+      if (itemMap.size > 0) {
+        orderedItems.push(...items.filter((item) => itemMap.has(item.id)))
+      }
+
+      return orderedItems
+    },
+    [optimisticOrders],
+  )
+
+  const getItemsForParent = (parentId: string | null) =>
+    applyOptimisticOrder(Array.from(allChildrenMap.get(parentId) ?? []), parentId)
 
   const handleDragUpdate = (update: DragUpdate) => {
     const destination = update.destination
@@ -686,7 +704,6 @@ export function CategoryList() {
 
     try {
       await Promise.all(updates)
-      await fetchCategorias()
     } catch (err) {
       console.error("Error reordenando categorías:", err)
       alert("No se pudo reordenar la categoría.")
@@ -712,12 +729,25 @@ export function CategoryList() {
     reordered.splice(targetIndex, 0, removed)
 
     const lists = new Map<string | null, CategoriaConOrdenEfectivo[]>([[parentId, reordered]])
-    await persistListOrdering(lists, {
-      movedCategory: category,
-      sourceParentId: parentId,
-      destinationParentId: parentId,
-      destinationParent: parentId ? categoryMap.get(parentId) ?? null : null,
-    })
+
+    const key = orderKey(parentId)
+    setOptimisticOrders((prev) => ({ ...prev, [key]: reordered.map((item) => item.id) }))
+    setRecentlyMovedId(category.id)
+
+    try {
+      await persistListOrdering(lists, {
+        movedCategory: category,
+        sourceParentId: parentId,
+        destinationParentId: parentId,
+        destinationParent: parentId ? categoryMap.get(parentId) ?? null : null,
+      })
+    } finally {
+      setOptimisticOrders((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+    }
   }
 
   const handleDragEnd = async (result: DropResult) => {
@@ -789,9 +819,46 @@ export function CategoryList() {
     })
   }
 
+  const hasAnyCategory = displayedCategories.length > 0
+  const hasVisibleCategories = displayedCategories.some((cat) => visibleCategoryIds.has(cat.id))
+
+  const totalCount = categories.length
+  const globalCount = categories.filter((category) => category.es_global).length
+  const inactiveCount = showInactive
+    ? categories.filter((category) => category.esta_activa === false).length
+    : undefined
+
+  if (!selectedDelegation) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Selecciona una delegación para ver las categorías</p>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando categorías...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-destructive">Error: {error}</p>
+      </div>
+    )
+  }
+
   const renderCategoryTree = (parentId: string | null, depth: number) => {
     const droppableId = parentId ? `children-${parentId}` : "root"
-    const fullItems = childrenMap.get(parentId) ?? []
+    const baseItems = childrenMap.get(parentId) ?? []
+    const fullItems = applyOptimisticOrder([...baseItems], parentId)
     const items = !isFiltering ? fullItems : fullItems.filter((cat) => visibleCategoryIds.has(cat.id))
     const dropDisabled = isFiltering || depth > 1
     const noVisibleButExisting = isFiltering && fullItems.length > 0 && items.length === 0
@@ -800,7 +867,10 @@ export function CategoryList() {
       <Droppable droppableId={droppableId} type="CATEGORY" isDropDisabled={dropDisabled}>
         {(provided, snapshot) => (
           <div
-            ref={provided.innerRef}
+            ref={(node) => {
+              provided.innerRef(node)
+              registerAutoAnimate(node)
+            }}
             className={cn(
               parentId ? "space-y-2" : "space-y-4",
               parentId && "ml-6 border-l border-dashed border-muted-foreground/30 pl-4",
@@ -842,6 +912,7 @@ export function CategoryList() {
                     onToggleActive={handleToggleActive}
                     canToggleActive={canToggleCategoryVisibility(category)}
                     isInactive={isInactive}
+                    isRecentlyMoved={recentlyMovedId === category.id}
                   />
                   {depth < 1 && renderCategoryTree(category.id, depth + 1)}
                 </div>

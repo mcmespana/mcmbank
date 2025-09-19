@@ -46,6 +46,7 @@ export interface Categoria {
   categoria_padre_id: UUID | null
   creado_en: string
   es_global: boolean
+  esta_activa: boolean
 }
 
 export interface Movimiento {

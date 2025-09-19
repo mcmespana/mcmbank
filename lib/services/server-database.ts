@@ -188,10 +188,11 @@ export class ServerDatabaseService {
   // Categoria operations (server-side)
   static async getCategoriasByDelegacion(
     delegacionId?: string | null,
-    options: { includeGlobal?: boolean } = {},
+    options: { includeGlobal?: boolean; includeInactive?: boolean } = {},
   ): Promise<CategoriaConOrdenEfectivo[]> {
     const supabase = this.getServerClient()
     const includeGlobal = options.includeGlobal ?? true
+    const includeInactive = options.includeInactive ?? false
 
     if (!delegacionId && includeGlobal === false) {
       return []
@@ -208,6 +209,10 @@ export class ServerDatabaseService {
         : query.eq("delegacion_id", delegacionId)
     } else if (includeGlobal) {
       query = query.eq("es_global", true)
+    }
+
+    if (!includeInactive) {
+      query = query.eq("esta_activa", true)
     }
 
     const { data, error } = await query

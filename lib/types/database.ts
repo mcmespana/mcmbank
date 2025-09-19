@@ -160,6 +160,7 @@ export type Database = {
           categoria_padre_id: string | null
           creado_en: string
           es_global: boolean
+          esta_activa: boolean
         }
         Insert: {
           id?: string
@@ -172,6 +173,7 @@ export type Database = {
           categoria_padre_id?: string | null
           creado_en?: string
           es_global?: boolean
+          esta_activa?: boolean
         }
         Update: {
           id?: string
@@ -184,6 +186,7 @@ export type Database = {
           categoria_padre_id?: string | null
           creado_en?: string
           es_global?: boolean
+          esta_activa?: boolean
         }
       }
       categoria_orden_delegacion: {

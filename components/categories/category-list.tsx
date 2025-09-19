@@ -21,7 +21,20 @@ import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { DatabaseService } from "@/lib/services/database"
-import { GripVertical, Search, Edit, Trash2, Plus, X, Globe2, PlusCircle } from "lucide-react"
+import {
+  GripVertical,
+  Search,
+  Edit,
+  Trash2,
+  Plus,
+  X,
+  Globe2,
+  PlusCircle,
+  ChevronUp,
+  ChevronDown,
+  Eye,
+  EyeOff,
+} from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
@@ -36,13 +49,20 @@ interface CategoryCardProps {
   onSearch: (category: Categoria) => void
   onDelete: (category: Categoria) => void
   onAddSubcategory?: (category: Categoria) => void
+  onMove: (category: Categoria, direction: "up" | "down") => void
   canEdit: boolean
   canDelete: boolean
   canAddSubcategory: boolean
+  canMoveUp: boolean
+  canMoveDown: boolean
+  moveDisabled: boolean
   isDragDisabled: boolean
   dragHint: string
   isGlobal: boolean
   isDropTarget?: boolean
+  onToggleVisibility?: (category: Categoria) => void
+  canToggleVisibility?: boolean
+  isInactive?: boolean
 }
 
 function CategoryCard({
@@ -54,13 +74,20 @@ function CategoryCard({
   onSearch,
   onDelete,
   onAddSubcategory,
+  onMove,
   canEdit,
   canDelete,
   canAddSubcategory,
+  canMoveUp,
+  canMoveDown,
+  moveDisabled,
   isDragDisabled,
   dragHint,
   isGlobal,
   isDropTarget = false,
+  onToggleVisibility,
+  canToggleVisibility = false,
+  isInactive = false,
 }: CategoryCardProps) {
   const indentation = depth * 24
   const addSubcategoryTitle = canAddSubcategory
@@ -70,6 +97,23 @@ function CategoryCard({
       : category.es_global
         ? "Solo el gestor central puede añadir subcategorías globales"
         : "No puedes añadir subcategorías en este momento"
+  const showVisibilityToggle = Boolean(onToggleVisibility) && canToggleVisibility
+
+  const handleMove = (direction: "up" | "down") => {
+    if (moveDisabled) return
+    onMove(category, direction)
+  }
+
+  const moveUpTitle = moveDisabled
+    ? "Activa el listado completo para reordenar"
+    : canMoveUp
+      ? "Mover categoría hacia arriba"
+      : "Ya está en la primera posición"
+  const moveDownTitle = moveDisabled
+    ? "Activa el listado completo para reordenar"
+    : canMoveDown
+      ? "Mover categoría hacia abajo"
+      : "Ya está en la última posición"
 
   return (
     <Draggable draggableId={category.id} index={index} isDragDisabled={isDragDisabled}>
@@ -89,9 +133,10 @@ function CategoryCard({
                 snapshot.isDragging && "shadow-lg ring-2 ring-primary/40",
                 isDropTarget && !snapshot.isDragging && "ring-2 ring-primary/50",
                 depth > 0 && "border-muted-foreground/20",
+                isInactive && "border-dashed border-muted-foreground/40 bg-muted/30",
               )}
             >
-              <CardContent className="p-3 sm:p-4 lg:p-5">
+              <CardContent className={cn("p-3 sm:p-4 lg:p-5", isInactive && "opacity-80")}>
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div
                     {...(provided.dragHandleProps ?? {})}
@@ -105,6 +150,29 @@ function CategoryCard({
                   >
                     <GripVertical className="h-4 w-4" />
                   </div>
+
+                  <div className="flex flex-col items-center gap-1 pt-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleMove("up")}
+                    disabled={moveDisabled || !canMoveUp}
+                    title={moveUpTitle}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleMove("down")}
+                    disabled={moveDisabled || !canMoveDown}
+                    title={moveDownTitle}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
 
                   <div
                     className={cn(
@@ -132,6 +200,11 @@ function CategoryCard({
                           title="Categoría global"
                         >
                           <Globe2 className="h-3 w-3" />
+                        </span>
+                      )}
+                      {isInactive && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Oculta
                         </span>
                       )}
                     </div>
@@ -170,16 +243,29 @@ function CategoryCard({
                     >
                       <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 sm:h-9 sm:w-9 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                      onClick={() => onDelete(category)}
-                      title={canDelete ? "Eliminar categoría" : "Solo el gestor central puede eliminar categorías globales"}
-                      disabled={!canDelete}
-                    >
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
+                    {showVisibilityToggle ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                        onClick={() => onToggleVisibility?.(category)}
+                        title={isInactive ? "Mostrar categoría global" : "Ocultar categoría global"}
+                        disabled={!canToggleVisibility}
+                      >
+                        {isInactive ? <Eye className="h-3 w-3 sm:h-4 sm:w-4" /> : <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        onClick={() => onDelete(category)}
+                        title={canDelete ? "Eliminar categoría" : "Solo el gestor central puede eliminar categorías globales"}
+                        disabled={!canDelete}
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -205,20 +291,58 @@ export function CategoryList() {
   const [activeDropParentId, setActiveDropParentId] = useState<string | null>(null)
   const [dateFrom, setDateFrom] = useState<string | undefined>()
   const [dateTo, setDateTo] = useState<string | undefined>()
+  const [showInactive, setShowInactive] = useState(false)
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
 
   const {
-    categorias: categories,
+    categorias: allCategories,
     loading,
     error,
     updateCategoria,
     fetchCategorias,
     saveCategoriaOrdenes,
-  } = useCategorias(selectedDelegation)
+  } = useCategorias(selectedDelegation, { includeInactive: showInactive })
   const { movimientos } = useMovimientos(selectedDelegation || null)
   const searchParams = useSearchParams()
+
+  const activeCategories = useMemo(
+    () => allCategories.filter((category) => category.esta_activa !== false),
+    [allCategories],
+  )
+
+  const inactiveCategories = useMemo(
+    () => allCategories.filter((category) => category.esta_activa === false),
+    [allCategories],
+  )
+
+  const inactiveChildrenMap = useMemo(() => {
+    const map = new Map<string | null, Categoria[]>()
+    const inactiveIds = new Set(inactiveCategories.map((category) => category.id))
+
+    for (const category of inactiveCategories) {
+      const parentId = category.categoria_padre_id
+      const key = parentId && inactiveIds.has(parentId) ? parentId : null
+      const list = map.get(key)
+      if (list) {
+        list.push(category)
+      } else {
+        map.set(key, [category])
+      }
+    }
+
+    map.forEach((list) => {
+      list.sort((a, b) => {
+        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        if (ordenA !== ordenB) return ordenA - ordenB
+        return a.nombre.localeCompare(b.nombre)
+      })
+    })
+
+    return map
+  }, [inactiveCategories])
 
   useEffect(() => {
     if (searchParams.get("panel") === "create") {
@@ -248,7 +372,6 @@ export function CategoryList() {
 
   const canEditCategory = (category: Categoria) => !category.es_global || isCentralManager
   const canDeleteCategory = (category: Categoria) => !category.es_global || isCentralManager
-  const canReorderCategory = () => true
   const canCreateSubcategory = (category: Categoria) =>
     category.categoria_padre_id === null && (category.es_global ? isCentralManager : true)
 
@@ -318,7 +441,7 @@ export function CategoryList() {
           if (
             patch.es_global &&
             editingCategory.categoria_padre_id &&
-            !categories.find((c) => c.id === editingCategory.categoria_padre_id)?.es_global
+            !allCategories.find((c) => c.id === editingCategory.categoria_padre_id)?.es_global
           ) {
             updates.categoria_padre_id = null
           }
@@ -327,7 +450,7 @@ export function CategoryList() {
         await updateCategoria(editingCategory.id, updates)
 
         if (updates.color && editingCategory.categoria_padre_id === null) {
-          const children = categories.filter((c) => c.categoria_padre_id === editingCategory.id)
+          const children = allCategories.filter((c) => c.categoria_padre_id === editingCategory.id)
           for (const child of children) {
             await updateCategoria(child.id, { color: updates.color })
           }
@@ -351,7 +474,7 @@ export function CategoryList() {
           return
         }
 
-        const siblings = categories.filter(
+        const siblings = allCategories.filter(
           (category) =>
             (category.categoria_padre_id ?? null) === parentId &&
             (targetIsGlobal ? category.es_global : !category.es_global),
@@ -368,6 +491,7 @@ export function CategoryList() {
           orden: maxOrder + 1,
           categoria_padre_id: parentId,
           es_global: targetIsGlobal,
+          esta_activa: true,
         })
       }
 
@@ -382,11 +506,14 @@ export function CategoryList() {
     }
   }
 
-  const categoryMap = useMemo(() => new Map(categories.map((cat) => [cat.id, cat])), [categories])
+  const categoryMap = useMemo(
+    () => new Map(activeCategories.map((cat) => [cat.id, cat])),
+    [activeCategories],
+  )
 
   const childrenMap = useMemo(() => {
     const map = new Map<string | null, Categoria[]>()
-    for (const category of categories) {
+    for (const category of activeCategories) {
       const key = category.categoria_padre_id ?? null
       const collection = map.get(key)
       if (collection) {
@@ -406,13 +533,13 @@ export function CategoryList() {
     })
 
     return map
-  }, [categories])
+  }, [activeCategories])
 
   const isFiltering = searchTerm.trim().length > 0
 
   const visibleCategoryIds = useMemo(() => {
     if (!isFiltering) {
-      return new Set(categories.map((cat) => cat.id))
+      return new Set(activeCategories.map((cat) => cat.id))
     }
 
     const lowerTerm = searchTerm.toLowerCase()
@@ -437,7 +564,7 @@ export function CategoryList() {
       }
     }
 
-    for (const category of categories) {
+    for (const category of activeCategories) {
       if (category.nombre.toLowerCase().includes(lowerTerm)) {
         matches.add(category.id)
         addAncestors(category.id)
@@ -446,13 +573,14 @@ export function CategoryList() {
     }
 
     return matches
-  }, [isFiltering, searchTerm, categories, categoryMap, childrenMap])
+  }, [isFiltering, searchTerm, activeCategories, categoryMap, childrenMap])
 
-  const hasAnyCategory = categories.length > 0
-  const hasVisibleCategories = categories.some((cat) => visibleCategoryIds.has(cat.id))
+  const hasAnyCategory = activeCategories.length > 0
+  const hasVisibleCategories = activeCategories.some((cat) => visibleCategoryIds.has(cat.id))
 
-  const totalCount = categories.length
-  const globalCount = categories.filter((category) => category.es_global).length
+  const totalCount = activeCategories.length
+  const hiddenCount = inactiveCategories.length
+  const globalCount = activeCategories.filter((category) => category.es_global).length
 
   if (!selectedDelegation) {
     return (
@@ -491,84 +619,17 @@ export function CategoryList() {
 
   const getItemsForParent = (parentId: string | null) => Array.from(childrenMap.get(parentId) ?? [])
 
-  const handleDragUpdate = (update: DragUpdate) => {
-    const destination = update.destination
-    if (!destination) {
-      setActiveDropParentId(null)
-      return
-    }
-
-    const parentId = parseDroppableId(destination.droppableId)
-    if (parentId === undefined) return
-    setActiveDropParentId(parentId)
-  }
-
-  const handleDragEnd = async (result: DropResult) => {
-    setActiveDropParentId(null)
-
-    const { destination, source, draggableId } = result
-    if (!destination) return
-    if (isFiltering) return
-
-    const sourceParentId = parseDroppableId(source.droppableId)
-    const destinationParentId = parseDroppableId(destination.droppableId)
-
-    if (sourceParentId === undefined || destinationParentId === undefined) return
-    if (sourceParentId === destinationParentId && destination.index === source.index) return
-
-    const moved = categoryMap.get(draggableId)
-    if (!moved) return
-
-    const destinationParent = destinationParentId ? categoryMap.get(destinationParentId) ?? null : null
-
-    if (destinationParent && moved.es_global && !destinationParent.es_global) {
-      alert("No puedes anidar una categoría global dentro de una categoría local.")
-      return
-    }
-
-    if (destinationParent && destinationParent.es_global && !moved.es_global) {
-      alert("Solo el gestor central puede crear subcategorías globales.")
-      return
-    }
-
-    if (
-      destinationParent &&
-      destinationParent.delegacion_id &&
-      destinationParent.delegacion_id !== (moved.delegacion_id || selectedDelegation)
-    ) {
-      alert("No puedes mover la categoría a otra delegación.")
-      return
-    }
-
-    if (!isCentralManager && moved.es_global && sourceParentId !== destinationParentId) {
-      alert("Solo el gestor central puede cambiar la jerarquía de una categoría global.")
-      return
-    }
-
-    const sourceItems = getItemsForParent(sourceParentId)
-    const destinationItems =
-      sourceParentId === destinationParentId ? sourceItems : getItemsForParent(destinationParentId)
-
-    const [removed] = sourceItems.splice(source.index, 1)
-    if (!removed || removed.id !== moved.id) {
-      return
-    }
-
-    if (sourceParentId === destinationParentId) {
-      sourceItems.splice(destination.index, 0, removed)
-    } else {
-      destinationItems.splice(destination.index, 0, removed)
-    }
-
-    const affectedLists = new Map<string | null, Categoria[]>([[sourceParentId, sourceItems]])
-    if (sourceParentId !== destinationParentId) {
-      affectedLists.set(destinationParentId, destinationItems)
-    }
-
+  const persistOrderChanges = async (
+    lists: Map<string | null, Categoria[]>,
+    moved: Categoria,
+    sourceParentId: string | null,
+    destinationParentId: string | null,
+    destinationParent: Categoria | null,
+  ) => {
     const localUpdates: Promise<void>[] = []
     const globalOrderChanges: { categoriaId: string; orden: number }[] = []
 
-    affectedLists.forEach((list, parentKey) => {
+    lists.forEach((list, parentKey) => {
       let localPosition = 0
       let globalPosition = 0
 
@@ -647,6 +708,112 @@ export function CategoryList() {
     }
   }
 
+  const handleDragUpdate = (update: DragUpdate) => {
+    const destination = update.destination
+    if (!destination) {
+      setActiveDropParentId(null)
+      return
+    }
+
+    const parentId = parseDroppableId(destination.droppableId)
+    if (parentId === undefined) return
+    setActiveDropParentId(parentId)
+  }
+
+  const handleDragEnd = async (result: DropResult) => {
+    setActiveDropParentId(null)
+
+    const { destination, source, draggableId } = result
+    if (!destination) return
+    if (isFiltering) return
+
+    const sourceParentId = parseDroppableId(source.droppableId)
+    const destinationParentId = parseDroppableId(destination.droppableId)
+
+    if (sourceParentId === undefined || destinationParentId === undefined) return
+    if (sourceParentId === destinationParentId) return
+
+    const moved = categoryMap.get(draggableId)
+    if (!moved) return
+
+    const destinationParent = destinationParentId ? categoryMap.get(destinationParentId) ?? null : null
+
+    if (destinationParent && moved.es_global && !destinationParent.es_global) {
+      alert("No puedes anidar una categoría global dentro de una categoría local.")
+      return
+    }
+
+    if (destinationParent && destinationParent.es_global && !moved.es_global) {
+      alert("Solo el gestor central puede crear subcategorías globales.")
+      return
+    }
+
+    if (
+      destinationParent &&
+      destinationParent.delegacion_id &&
+      destinationParent.delegacion_id !== (moved.delegacion_id || selectedDelegation)
+    ) {
+      alert("No puedes mover la categoría a otra delegación.")
+      return
+    }
+
+    if (!isCentralManager && moved.es_global && sourceParentId !== destinationParentId) {
+      alert("Solo el gestor central puede cambiar la jerarquía de una categoría global.")
+      return
+    }
+
+    const sourceItems = getItemsForParent(sourceParentId)
+    const destinationItems =
+      sourceParentId === destinationParentId ? sourceItems : getItemsForParent(destinationParentId)
+
+    const [removed] = sourceItems.splice(source.index, 1)
+    if (!removed || removed.id !== moved.id) {
+      return
+    }
+
+    destinationItems.splice(destination.index, 0, removed)
+
+    const affectedLists = new Map<string | null, Categoria[]>([[sourceParentId, sourceItems]])
+    if (sourceParentId !== destinationParentId) {
+      affectedLists.set(destinationParentId, destinationItems)
+    }
+
+    await persistOrderChanges(affectedLists, moved, sourceParentId, destinationParentId, destinationParent)
+  }
+
+  const handleMoveCategory = async (category: Categoria, direction: "up" | "down") => {
+    if (isFiltering) return
+
+    const parentId = category.categoria_padre_id ?? null
+    const siblings = getItemsForParent(parentId)
+    const fromIndex = siblings.findIndex((item) => item.id === category.id)
+
+    if (fromIndex === -1) return
+
+    const targetIndex = direction === "up" ? fromIndex - 1 : fromIndex + 1
+    if (targetIndex < 0 || targetIndex >= siblings.length) return
+
+    const [removed] = siblings.splice(fromIndex, 1)
+    siblings.splice(targetIndex, 0, removed)
+
+    const lists = new Map<string | null, Categoria[]>([[parentId, siblings]])
+    const destinationParent = parentId ? categoryMap.get(parentId) ?? null : null
+
+    await persistOrderChanges(lists, category, parentId, parentId, destinationParent)
+  }
+
+  const handleToggleVisibility = async (category: Categoria) => {
+    const nextActive = category.esta_activa === false
+
+    try {
+      await updateCategoria(category.id, { esta_activa: nextActive })
+      await fetchCategorias()
+    } catch (err) {
+      console.error("Error actualizando la visibilidad de la categoría:", err)
+      alert(nextActive ? "No se pudo mostrar la categoría." : "No se pudo ocultar la categoría.")
+    }
+  }
+
   const renderCategoryTree = (parentId: string | null, depth: number) => {
     const droppableId = parentId ? `children-${parentId}` : "root"
     const fullItems = childrenMap.get(parentId) ?? []
@@ -667,12 +834,14 @@ export function CategoryList() {
             )}
           >
             {items.map((category, index) => {
-              const dragDisabled = isFiltering || !canReorderCategory()
+              const dragDisabled = isFiltering
               const dragHint = dragDisabled
-                ? "Desactiva los filtros para reorganizar"
-                : category.es_global && !isCentralManager
-                  ? "Arrastra para ordenar globales dentro de esta delegación. Solo el gestor central puede cambiar su jerarquía."
-                  : "Arrastra para reordenar o anidar subcategorías"
+                ? "Desactiva los filtros para mover categorías entre niveles"
+                : "Arrastra esta tarjeta sobre otra para convertirla en subcategoría"
+              const moveDisabled = isFiltering
+              const canMoveUp = index > 0
+              const canMoveDown = index < items.length - 1
+              const showVisibilityToggle = category.es_global && !isCentralManager
 
               return (
                 <div key={category.id} className="space-y-2">
@@ -685,13 +854,20 @@ export function CategoryList() {
                     onSearch={handleSearch}
                     onDelete={handleDeleteRequest}
                     onAddSubcategory={handleAddSubcategory}
+                    onMove={handleMoveCategory}
                     canEdit={canEditCategory(category)}
                     canDelete={canDeleteCategory(category)}
                     canAddSubcategory={canCreateSubcategory(category)}
+                    canMoveUp={canMoveUp}
+                    canMoveDown={canMoveDown}
+                    moveDisabled={moveDisabled}
                     isDragDisabled={dragDisabled}
                     dragHint={dragHint}
                     isGlobal={category.es_global}
                     isDropTarget={activeDropParentId === category.id}
+                    onToggleVisibility={showVisibilityToggle ? handleToggleVisibility : undefined}
+                    canToggleVisibility={showVisibilityToggle}
+                    isInactive={category.esta_activa === false}
                   />
                   {depth < 1 && renderCategoryTree(category.id, depth + 1)}
                 </div>
@@ -709,6 +885,50 @@ export function CategoryList() {
     )
   }
 
+  const renderInactiveCategoryTree = (parentId: string | null, depth: number) => {
+    const items = inactiveChildrenMap.get(parentId) ?? []
+    if (items.length === 0) return null
+
+    return (
+      <div
+        className={cn(
+          parentId ? "space-y-2" : "space-y-4",
+          parentId && "ml-6 border-l border-dashed border-muted-foreground/30 pl-4",
+        )}
+      >
+        {items.map((category, index) => (
+          <div key={category.id} className="space-y-2">
+            <CategoryCard
+              category={category}
+              index={index}
+              depth={depth}
+              balance={getCategoryBalance(category.id)}
+              onEdit={handleEdit}
+              onSearch={handleSearch}
+              onDelete={handleDeleteRequest}
+              onAddSubcategory={handleAddSubcategory}
+              onMove={handleMoveCategory}
+              canEdit={canEditCategory(category)}
+              canDelete={canDeleteCategory(category)}
+              canAddSubcategory={false}
+              canMoveUp={false}
+              canMoveDown={false}
+              moveDisabled={true}
+              isDragDisabled={true}
+              dragHint="Activa la categoría para reorganizarla"
+              isGlobal={category.es_global}
+              isDropTarget={false}
+              onToggleVisibility={handleToggleVisibility}
+              canToggleVisibility={category.es_global && !isCentralManager}
+              isInactive={true}
+            />
+            {depth < 1 && renderInactiveCategoryTree(category.id, depth + 1)}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   const showEmptyState = !hasAnyCategory && !isFiltering
   const showNoResults = hasAnyCategory && !hasVisibleCategories
 
@@ -718,8 +938,9 @@ export function CategoryList() {
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold">Categorías</h2>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            {totalCount} categorías en total ({globalCount} globales). Arrastra para reordenar y anidar; las globales solo
-            cambian de jerarquía con permisos centrales.
+            {totalCount} categorías activas ({globalCount} globales)
+            {showInactive ? ` · ${hiddenCount} ocultas` : ""}. Usa las flechas para reordenar y arrastra una tarjeta sobre
+            otra para crear subcategorías. Las globales solo cambian de jerarquía con permisos centrales.
           </p>
         </div>
         <Button onClick={handleCreate} size="default" className="w-full sm:w-auto" disabled={!organizacionId}>
@@ -802,15 +1023,49 @@ export function CategoryList() {
             </div>
           )}
 
-          <div className="space-y-3 text-xs text-muted-foreground">
+          <div className="space-y-2 text-xs text-muted-foreground">
             <p>
-              Arrastra una tarjeta sobre otra para crear subcategorías (máximo un nivel). El icono de globo identifica las
-              globales.
+              Usa las flechas de cada tarjeta para moverla dentro de su nivel. Arrastra una tarjeta sobre otra para crear
+              subcategorías (máximo un nivel).
             </p>
+            <p>El icono de globo identifica las globales.</p>
           </div>
           <DragDropContext onDragEnd={handleDragEnd} onDragUpdate={handleDragUpdate}>
             <div className="mt-4">{renderCategoryTree(null, 0)}</div>
           </DragDropContext>
+
+          <div className="mt-6 border-t border-dashed border-muted-foreground/40 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowInactive((prev) => !prev)}
+              className={cn(
+                "flex w-full items-center justify-between rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted/30",
+                showInactive ? "bg-muted/30" : "",
+              )}
+            >
+              <span>
+                {showInactive
+                  ? hiddenCount > 0
+                    ? `Ocultar categorías desactivadas (${hiddenCount})`
+                    : "Ocultar categorías desactivadas"
+                  : "Mostrar categorías desactivadas"}
+              </span>
+              <ChevronDown
+                className={cn("h-4 w-4 transition-transform", showInactive && "rotate-180")}
+                aria-hidden="true"
+              />
+            </button>
+
+            {showInactive && (
+              <div className="mt-4 space-y-4">
+                {hiddenCount === 0 ? (
+                  <p className="text-xs text-muted-foreground">No hay categorías desactivadas.</p>
+                ) : (
+                  renderInactiveCategoryTree(null, 0)
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -832,7 +1087,7 @@ export function CategoryList() {
           {editingCategory && (
             <CategoryEditForm
               category={editingCategory}
-              parentCategory={categories.find((c) => c.id === editingCategory.categoria_padre_id)}
+              parentCategory={allCategories.find((c) => c.id === editingCategory.categoria_padre_id)}
               onSave={handleSaveCategory}
               onCancel={() => setEditSheetOpen(false)}
               canManageGlobal={isCentralManager}

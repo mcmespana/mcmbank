@@ -28,7 +28,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
     tipo: category.tipo || "mixto",
     color: parentCategory?.color || category.color || "#4ECDC4",
     scope: (parentCategory
-      ? parentCategory.es_global
+      ? parentCategory.es_global && canManageGlobal
         ? "global"
         : "delegacion"
       : category.es_global
@@ -46,14 +46,14 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
       tipo: category.tipo || "mixto",
       color: parentCategory?.color || category.color || "#4ECDC4",
       scope: (parentCategory
-        ? parentCategory.es_global
+        ? parentCategory.es_global && canManageGlobal
           ? "global"
           : "delegacion"
         : category.es_global
           ? "global"
           : "delegacion") as ScopeOption,
     })
-  }, [category, parentCategory])
+  }, [category, parentCategory, canManageGlobal])
 
   useEffect(() => {
     if (!canToggleGlobal) {
@@ -73,7 +73,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
 
     try {
       const resolvedScope = parentCategory
-        ? parentCategory.es_global
+        ? parentCategory.es_global && canManageGlobal
           ? "global"
           : "delegacion"
         : formData.scope

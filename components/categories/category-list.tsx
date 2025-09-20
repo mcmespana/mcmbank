@@ -53,6 +53,7 @@ interface CategoryCardProps {
   canEdit: boolean
   canDelete: boolean
   canAddSubcategory: boolean
+  addSubcategoryTitle: string
   isDragDisabled: boolean
   dragHint: string
   isGlobal: boolean
@@ -106,6 +107,7 @@ function CategoryCard({
   canEdit,
   canDelete,
   canAddSubcategory,
+  addSubcategoryTitle,
   isDragDisabled,
   dragHint,
   isGlobal,
@@ -122,13 +124,6 @@ function CategoryCard({
   isRecentlyMoved = false,
 }: CategoryCardProps) {
   const indentation = depth * 24
-  const addSubcategoryTitle = canAddSubcategory
-    ? "Añadir subcategoría"
-    : category.categoria_padre_id !== null
-      ? "Solo las categorías principales pueden tener subcategorías"
-      : category.es_global
-        ? "Solo el gestor central puede añadir subcategorías globales"
-        : "No puedes añadir subcategorías en este momento"
   const toggleTitle = isInactive ? "Mostrar categoría" : "Ocultar categoría"
 
   return (
@@ -402,8 +397,39 @@ export function CategoryList() {
   const canToggleCategoryVisibility = (category: CategoriaConOrdenEfectivo) =>
     !isCentralManager && category.es_global
   const canReorderCategory = () => true
-  const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) =>
-    category.categoria_padre_id === null && (category.es_global ? isCentralManager : true)
+  const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) => {
+    if (category.categoria_padre_id !== null) return false
+
+    if (!category.es_global) {
+      return true
+    }
+
+    if (isCentralManager) {
+      return true
+    }
+
+    return Boolean(selectedDelegation)
+  }
+
+  const getAddSubcategoryTitle = (category: CategoriaConOrdenEfectivo) => {
+    if (canCreateSubcategory(category)) {
+      return "Añadir subcategoría"
+    }
+
+    if (category.categoria_padre_id !== null) {
+      return "Solo las categorías principales pueden tener subcategorías"
+    }
+
+    if (category.es_global) {
+      if (!isCentralManager && !selectedDelegation) {
+        return "Selecciona una delegación para añadir subcategorías locales a esta categoría global"
+      }
+
+      return "Solo el gestor central puede añadir subcategorías globales"
+    }
+
+    return "No puedes añadir subcategorías en este momento"
+  }
 
   const handleEdit = (category: CategoriaConOrdenEfectivo) => {
     if (!canEditCategory(category)) return
@@ -507,7 +533,7 @@ export function CategoryList() {
 
         const parentCategory = creatingParent
         const parentId = parentCategory?.id ?? patch.categoria_padre_id ?? null
-        const targetIsGlobal = parentCategory ? parentCategory.es_global : !!patch.es_global
+        const targetIsGlobal = !!patch.es_global
 
         if (targetIsGlobal && !isCentralManager) {
           alert("Solo el gestor central puede crear categorías globales")
@@ -654,8 +680,6 @@ export function CategoryList() {
 
       const destinationParent =
         destinationParentId !== null ? categoryMap.get(destinationParentId) ?? null : null
-      const sourceParent =
-        sourceParentId !== null ? categoryMap.get(sourceParentId) ?? null : null
 
       if (destinationParentId === draggableId) {
         return {
@@ -715,23 +739,15 @@ export function CategoryList() {
         }
       }
 
-      if (!isCentralManager && sourceParent?.es_global) {
-        return {
-          allowed: false,
-          message:
-            "No permitido: solo el gestor central puede sacar subcategorías de una categoría global.",
-          status: "invalid" as const,
-          reason: "Solo el gestor central puede modificar las subcategorías de esta categoría global.",
-        }
-      }
-
       if (!isCentralManager && destinationParent?.es_global) {
-        return {
-          allowed: false,
-          message:
-            "No permitido: solo el gestor central puede añadir subcategorías a esta categoría global.",
-          status: "invalid" as const,
-          reason: "Solo el gestor central puede añadir subcategorías a esta categoría global.",
+        if (!selectedDelegation) {
+          return {
+            allowed: false,
+            message:
+              "Selecciona una delegación para añadir esta categoría como subcategoría local de la categoría global.",
+            status: "invalid" as const,
+            reason: "Debes seleccionar una delegación para añadir subcategorías locales a categorías globales.",
+          }
         }
       }
 
@@ -1061,6 +1077,7 @@ export function CategoryList() {
                     canEdit={canEditCategory(category)}
                     canDelete={canDeleteCategory(category)}
                     canAddSubcategory={canCreateSubcategory(category)}
+                    addSubcategoryTitle={getAddSubcategoryTitle(category)}
                     isDragDisabled={dragDisabled}
                     dragHint={dragHint}
                     isGlobal={category.es_global}

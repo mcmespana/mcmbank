@@ -25,7 +25,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: category.emoji || "📁",
-    tipo: category.tipo,
+    tipo: category.tipo || "mixto",
     color: parentCategory?.color || category.color || "#4ECDC4",
     scope: (parentCategory
       ? parentCategory.es_global
@@ -43,7 +43,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
     setFormData({
       nombre: category.nombre,
       emoji: category.emoji || "📁",
-      tipo: category.tipo,
+      tipo: category.tipo || "mixto",
       color: parentCategory?.color || category.color || "#4ECDC4",
       scope: (parentCategory
         ? parentCategory.es_global
@@ -81,7 +81,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
       await onSave({
         nombre: formData.nombre.trim(),
         emoji: formData.emoji,
-        tipo: formData.tipo,
+        tipo: formData.tipo || "mixto",
         ...(parentCategory
           ? { categoria_padre_id: parentCategory.id }
           : { color: formData.color }),
@@ -192,7 +192,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
 
       {/* Category Type */}
       <div className="space-y-2">
-        <Label>Tipo *</Label>
+        <Label>Tipo</Label>
         <Select value={formData.tipo} onValueChange={(value) => setFormData({ ...formData, tipo: value })}>
           <SelectTrigger>
             <SelectValue />

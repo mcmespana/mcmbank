@@ -45,10 +45,11 @@ export function CategoryMegaSelector({
     return () => cancelAnimationFrame(frame)
   }, [])
 
-  const { groups, orphans, parentLookup } = useMemo(() => {
+  const { groups, orphans, parentLookup, parentsWithoutChildren } = useMemo(() => {
     const parentCategories = categories.filter((cat) => !cat.categoria_padre_id)
     const childMap = new Map<string, Categoria[]>()
     const parentLookupMap = new Map<string, Categoria | undefined>()
+    const standaloneParents: Categoria[] = []
 
     categories.forEach((category) => {
       if (category.categoria_padre_id) {
@@ -71,6 +72,9 @@ export function CategoryMegaSelector({
         if (ordenA !== ordenB) return ordenA - ordenB
         return a.nombre.localeCompare(b.nombre)
       })
+      if (children.length === 0) {
+        standaloneParents.push(parent)
+      }
       children.forEach((child) => parentLookupMap.set(child.id, parent))
       parentLookupMap.set(parent.id, undefined)
       return {
@@ -98,7 +102,7 @@ export function CategoryMegaSelector({
       }
     })
 
-    return { groups, orphans, parentLookup: parentLookupMap }
+    return { groups, orphans, parentLookup: parentLookupMap, parentsWithoutChildren: standaloneParents }
   }, [categories])
 
   const normalizedSearch = searchValue.trim().toLowerCase()
@@ -243,19 +247,32 @@ export function CategoryMegaSelector({
               </div>
             ) : (
               <div className="space-y-5 pb-4">
-                {groups.map((group) => (
-                  <CategoryGroupSection
-                    key={group.parent.id}
-                    group={group}
-                    selectedCategoryId={selectedCategoryId}
-                    onSelect={handleSelect}
-                  />
-                ))}
+                {groups
+                  .filter((group) => group.children.length > 0)
+                  .map((group) => (
+                    <CategoryGroupSection
+                      key={group.parent.id}
+                      group={group}
+                      selectedCategoryId={selectedCategoryId}
+                      onSelect={handleSelect}
+                    />
+                  ))}
 
-                {orphans.length > 0 && (
+                {(parentsWithoutChildren.length > 0 || orphans.length > 0) && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Otras categorías</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase">
+                      Categorías sin subcategorías
+                    </p>
                     <div className="flex flex-wrap gap-2">
+                      {parentsWithoutChildren.map((category) => (
+                        <CategoryPill
+                          key={category.id}
+                          category={category}
+                          size="sm"
+                          isSelected={selectedCategoryId === category.id}
+                          onClick={() => handleSelect(category.id)}
+                        />
+                      ))}
                       {orphans.map((category) => (
                         <CategoryPill
                           key={category.id}
@@ -296,8 +313,9 @@ function CategoryResultRow({ category, parent, isSelected, onSelect }: CategoryR
       onClick={onSelect}
       style={style}
       className={cn(
-        "w-full rounded-3xl border border-transparent bg-[rgba(var(--category-color-rgb),0.06)] px-4 py-3 text-left transition hover:bg-[rgba(var(--category-color-rgb),0.12)]",
-        isSelected && "border-[rgba(var(--category-color-rgb),0.3)] ring-2 ring-offset-2 ring-[rgba(var(--category-color-rgb),0.45)]",
+        "w-full rounded-3xl border border-transparent bg-[rgba(var(--category-color-rgb),0.06)] px-4 py-3 text-left transition hover:bg-[rgba(var(--category-color-rgb),0.12)] dark:bg-[rgba(var(--category-color-rgb),0.2)] dark:hover:bg-[rgba(var(--category-color-rgb),0.32)]",
+        isSelected &&
+          "border-[rgba(var(--category-color-rgb),0.3)] ring-2 ring-offset-2 ring-offset-background ring-[rgba(var(--category-color-rgb),0.45)] dark:border-[rgba(var(--category-color-rgb),0.45)]",
       )}
     >
       <div className="flex flex-col gap-2">
@@ -329,7 +347,7 @@ function CategoryGroupSection({ group, selectedCategoryId, onSelect }: CategoryG
 
   return (
     <div
-      className="rounded-3xl border border-[rgba(var(--category-color-rgb),0.25)] bg-[rgba(var(--category-color-rgb),0.08)] p-4 shadow-sm transition hover:shadow-md"
+      className="rounded-3xl border border-[rgba(var(--category-color-rgb),0.18)] bg-[rgba(var(--category-color-rgb),0.08)] p-4 shadow-sm transition hover:shadow-md dark:border-[rgba(var(--category-color-rgb),0.32)] dark:bg-[rgba(var(--category-color-rgb),0.22)]"
       style={sectionStyle}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -339,11 +357,12 @@ function CategoryGroupSection({ group, selectedCategoryId, onSelect }: CategoryG
           onClick={() => onSelect(parent.id)}
           isSelected={isParentSelected}
           className={cn(
-            !isParentSelected && "bg-white/80 text-slate-900 hover:bg-white",
+            !isParentSelected &&
+              "border border-border/40 bg-card text-foreground hover:bg-muted dark:border-border/60 dark:bg-card dark:hover:bg-muted",
           )}
         />
         {children.length > 0 && (
-          <span className="text-xs font-medium text-[rgba(var(--category-color-rgb),0.9)] bg-white/70 px-2 py-1 rounded-full">
+          <span className="text-xs font-medium text-[color:var(--category-color)] dark:text-white bg-[rgba(var(--category-color-rgb),0.18)] dark:bg-[rgba(var(--category-color-rgb),0.35)] px-2 py-1 rounded-full shadow-sm">
             {children.length} subcategoría{children.length !== 1 ? "s" : ""}
           </span>
         )}

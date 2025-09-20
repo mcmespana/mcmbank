@@ -35,12 +35,12 @@ export function CategoryPill({
 
   const baseClasses = cn(
     "inline-flex items-center gap-2 rounded-full border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-    "bg-[rgba(var(--category-color-rgb),0.1)] text-slate-900 dark:text-slate-100",
+    "bg-[rgba(var(--category-color-rgb),0.1)] text-slate-900 dark:text-slate-100 dark:bg-[rgba(var(--category-color-rgb),0.28)]",
     category.categoria_padre_id
-      ? "border-[rgba(var(--category-color-rgb),0.25)] text-[color:var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.18)]"
-      : "border-[rgba(var(--category-color-rgb),0.35)] hover:bg-[rgba(var(--category-color-rgb),0.16)]",
+      ? "border-[rgba(var(--category-color-rgb),0.25)] text-[color:var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.18)] dark:border-[rgba(var(--category-color-rgb),0.35)] dark:text-[color:var(--category-color)] dark:hover:bg-[rgba(var(--category-color-rgb),0.36)]"
+      : "border-[rgba(var(--category-color-rgb),0.35)] hover:bg-[rgba(var(--category-color-rgb),0.16)] dark:border-[rgba(var(--category-color-rgb),0.45)] dark:hover:bg-[rgba(var(--category-color-rgb),0.32)]",
     isSelected &&
-      "ring-2 ring-offset-2 ring-[color:var(--category-color)] ring-offset-background border-[rgba(var(--category-color-rgb),0.45)] bg-[rgba(var(--category-color-rgb),0.2)]",
+      "ring-2 ring-offset-2 ring-[color:var(--category-color)] ring-offset-background border-[rgba(var(--category-color-rgb),0.45)] bg-[rgba(var(--category-color-rgb),0.2)] dark:bg-[rgba(var(--category-color-rgb),0.4)]",
     {
       lg: "text-sm px-4 py-2.5",
       md: "text-sm px-3.5 py-2",

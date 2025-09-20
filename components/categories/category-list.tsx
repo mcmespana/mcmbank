@@ -20,6 +20,7 @@ import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import useIsAdmin from "@/hooks/use-is-admin"
+import useDelegationRole from "@/hooks/use-delegation-role"
 import { DatabaseService } from "@/lib/services/database"
 import {
   GripVertical,
@@ -127,7 +128,7 @@ function CategoryCard({
     : category.categoria_padre_id !== null
       ? "Solo las categorías principales pueden tener subcategorías"
       : category.es_global
-        ? "Solo el gestor central puede añadir subcategorías globales"
+        ? "Solo el gestor central o la tesorería pueden añadir subcategorías globales"
         : "No puedes añadir subcategorías en este momento"
   const toggleTitle = isInactive ? "Mostrar categoría" : "Ocultar categoría"
 
@@ -355,6 +356,8 @@ export function CategoryList() {
 
   const currentDelegation = getCurrentDelegation()
   const organizacionId = currentDelegation?.organizacion_id
+  const { role: delegationRole } = useDelegationRole(selectedDelegation)
+  const isDelegationTreasurer = delegationRole === "tesorero"
 
   const {
     categorias: categories,
@@ -402,8 +405,11 @@ export function CategoryList() {
   const canToggleCategoryVisibility = (category: CategoriaConOrdenEfectivo) =>
     !isCentralManager && category.es_global
   const canReorderCategory = () => true
-  const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) =>
-    category.categoria_padre_id === null && (category.es_global ? isCentralManager : true)
+  const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) => {
+    if (category.categoria_padre_id !== null) return false
+    if (!category.es_global) return true
+    return isCentralManager || (isDelegationTreasurer && !!selectedDelegation)
+  }
 
   const handleEdit = (category: CategoriaConOrdenEfectivo) => {
     if (!canEditCategory(category)) return
@@ -725,13 +731,20 @@ export function CategoryList() {
         }
       }
 
-      if (!isCentralManager && destinationParent?.es_global) {
+      const canDelegationManageGlobal =
+        isDelegationTreasurer &&
+        !!selectedDelegation &&
+        !moved.es_global &&
+        moved.delegacion_id === selectedDelegation
+
+      if (!isCentralManager && destinationParent?.es_global && !canDelegationManageGlobal) {
         return {
           allowed: false,
           message:
-            "No permitido: solo el gestor central puede añadir subcategorías a esta categoría global.",
+            "No permitido: solo el gestor central o la tesorería de esta delegación pueden añadir subcategorías a esta categoría global.",
           status: "invalid" as const,
-          reason: "Solo el gestor central puede añadir subcategorías a esta categoría global.",
+          reason:
+            "Solo el gestor central o la tesorería de esta delegación pueden añadir subcategorías a esta categoría global.",
         }
       }
 
@@ -757,7 +770,7 @@ export function CategoryList() {
         reason: null,
       }
     },
-    [categoryMap, isCentralManager, selectedDelegation],
+    [categoryMap, isCentralManager, isDelegationTreasurer, selectedDelegation],
   )
 
   const handleDragUpdate = (update: DragUpdate) => {

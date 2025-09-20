@@ -3,13 +3,13 @@
 import { useMemo, useState, useEffect, useRef, type CSSProperties } from "react"
 import { X, Search, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { BankAvatar } from "@/components/bank-avatar"
 import { formatCurrency } from "@/lib/utils/format"
 import { getCategoryColorTokens } from "@/lib/utils/category-colors"
 import type { Categoria, Movimiento, Cuenta } from "@/lib/types/database"
 import { cn } from "@/lib/utils"
+import { CategoryPill } from "./category-pill"
 
 interface CategoryMegaSelectorProps {
   categories: Categoria[]
@@ -285,22 +285,28 @@ interface CategoryResultRowProps {
 }
 
 function CategoryResultRow({ category, parent, isSelected, onSelect }: CategoryResultRowProps) {
+  const { rgbValue } = getCategoryColorTokens(parent ?? category)
+  const style: CSSProperties = {
+    ["--category-color-rgb" as string]: rgbValue,
+  }
+
   return (
     <button
       type="button"
       onClick={onSelect}
+      style={style}
       className={cn(
-        "w-full rounded-2xl border border-transparent bg-muted/30 px-4 py-3 text-left transition hover:bg-muted",
-        isSelected && "border-primary bg-primary/5",
+        "w-full rounded-3xl border border-transparent bg-[rgba(var(--category-color-rgb),0.06)] px-4 py-3 text-left transition hover:bg-[rgba(var(--category-color-rgb),0.12)]",
+        isSelected && "border-[rgba(var(--category-color-rgb),0.3)] ring-2 ring-offset-2 ring-[rgba(var(--category-color-rgb),0.45)]",
       )}
     >
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <CategoryPill category={category} size={category.categoria_padre_id ? "xs" : "md"} />
-          {parent && (
-            <span className="text-xs text-muted-foreground">{parent.nombre}</span>
-          )}
-        </div>
+      <div className="flex flex-col gap-2">
+        <CategoryPill category={category} size={category.categoria_padre_id ? "sm" : "md"} isSelected={isSelected} />
+        {parent && (
+          <div className="text-xs text-muted-foreground">
+            Pertenece a <span className="font-medium text-foreground/80">{parent.nombre}</span>
+          </div>
+        )}
       </div>
     </button>
   )
@@ -314,24 +320,36 @@ interface CategoryGroupSectionProps {
 
 function CategoryGroupSection({ group, selectedCategoryId, onSelect }: CategoryGroupSectionProps) {
   const { parent, children } = group
+  const { color, rgbValue } = getCategoryColorTokens(parent)
+  const sectionStyle: CSSProperties = {
+    ["--category-color" as string]: color,
+    ["--category-color-rgb" as string]: rgbValue,
+  }
+  const isParentSelected = selectedCategoryId === parent.id
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
+    <div
+      className="rounded-3xl border border-[rgba(var(--category-color-rgb),0.25)] bg-[rgba(var(--category-color-rgb),0.08)] p-4 shadow-sm transition hover:shadow-md"
+      style={sectionStyle}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <CategoryPill
           category={parent}
           size="lg"
           onClick={() => onSelect(parent.id)}
-          isSelected={selectedCategoryId === parent.id}
+          isSelected={isParentSelected}
+          className={cn(
+            !isParentSelected && "bg-white/80 text-slate-900 hover:bg-white",
+          )}
         />
         {children.length > 0 && (
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs font-medium text-[rgba(var(--category-color-rgb),0.9)] bg-white/70 px-2 py-1 rounded-full">
             {children.length} subcategoría{children.length !== 1 ? "s" : ""}
           </span>
         )}
       </div>
       {children.length > 0 && (
-        <div className="flex flex-wrap gap-2 pl-6 sm:pl-12">
+        <div className="mt-3 flex flex-wrap gap-2">
           {children.map((child) => (
             <CategoryPill
               key={child.id}
@@ -344,47 +362,5 @@ function CategoryGroupSection({ group, selectedCategoryId, onSelect }: CategoryG
         </div>
       )}
     </div>
-  )
-}
-
-interface CategoryPillProps {
-  category: Categoria
-  size?: "xs" | "sm" | "md" | "lg"
-  isSelected?: boolean
-  onClick?: () => void
-}
-
-function CategoryPill({ category, size = "md", isSelected = false, onClick }: CategoryPillProps) {
-  const { color, textColor, rgbValue } = getCategoryColorTokens(category)
-  const badgeStyles: CSSProperties = {
-    ["--category-color" as string]: color,
-    ["--category-text-color" as string]: textColor,
-    ["--category-color-rgb" as string]: rgbValue,
-  }
-
-  const sizeClasses =
-    size === "lg"
-      ? "text-sm px-4 py-2"
-      : size === "sm"
-        ? "text-xs px-3 py-1.5"
-        : size === "xs"
-          ? "text-xs px-2.5 py-1"
-          : "text-xs px-3.5 py-1.5"
-
-  return (
-    <Badge
-      variant="outline"
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-transparent shadow-sm transition-all duration-200 bg-[var(--category-color)] text-[var(--category-text-color)] hover:shadow-md cursor-pointer",
-        isSelected && "ring-2 ring-offset-2 ring-primary",
-        sizeClasses,
-        category.categoria_padre_id && size !== "lg" && "bg-[var(--category-color)]/90",
-      )}
-      style={badgeStyles}
-    >
-      {category.emoji && <span className="text-sm leading-none">{category.emoji}</span>}
-      <span className="font-medium leading-none">{category.nombre}</span>
-    </Badge>
   )
 }

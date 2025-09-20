@@ -2,15 +2,14 @@
 
 import type React from "react"
 
-import { useState, useMemo, useEffect, useRef, type CSSProperties } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Check, ChevronsUpDown, X, Search, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { getCategoryColorTokens } from "@/lib/utils/category-colors"
 import type { Categoria } from "@/lib/types/database"
+import { CategoryPill } from "./category-pill"
 
 interface CategorySelectorProps {
   categories: Categoria[]
@@ -160,34 +159,21 @@ export function CategorySelector({
               ) : (
                 <div className="space-y-1">
                   {filteredCategories.map((category) => {
-                    const { color, textColor, rgbValue } = getCategoryColorTokens(category)
-                    const badgeStyles: CSSProperties = {
-                      ["--category-color" as string]: color,
-                      ["--category-text-color" as string]: textColor,
-                      ["--category-color-rgb" as string]: rgbValue,
-                    }
-
+                    const isSelected = selectedCategories.includes(category.id)
                     return (
-                      <div
-                        key={category.id}
-                        className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
-                        onClick={() => handleSelect(category.id)}
-                      >
-                        <Badge
-                          variant="outline"
-                          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium border border-transparent shadow-sm bg-[var(--category-color)] text-[var(--category-text-color)] transition-all duration-200 dark:bg-transparent dark:text-foreground dark:border-[var(--category-color)] dark:shadow-none"
-                          style={badgeStyles}
-                        >
-                          <span
-                            aria-hidden
-                            className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--category-color)] dark:inline-flex"
-                          />
-                          {category.emoji && <span className="text-xs">{category.emoji}</span>}
-                          <span className="text-xs font-medium leading-none">{category.nombre}</span>
-                        </Badge>
-                        <div className="ml-auto">
-                          {selectedCategories.includes(category.id) && <Check className="h-4 w-4 text-primary" />}
-                        </div>
+                      <div key={category.id} className="p-2">
+                        <CategoryPill
+                          category={category}
+                          size={category.categoria_padre_id ? "sm" : "md"}
+                          isSelected={isSelected}
+                          onClick={() => handleSelect(category.id)}
+                          className="flex w-full justify-between"
+                          suffix={
+                            isSelected ? (
+                              <Check className="h-4 w-4 text-[rgba(var(--category-color-rgb),0.95)]" />
+                            ) : undefined
+                          }
+                        />
                       </div>
                     )
                   })}
@@ -222,39 +208,24 @@ export function CategorySelector({
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {selectedCategoryObjects.map((category) => {
-              const { color, textColor, rgbValue } = getCategoryColorTokens(category)
-              const badgeStyles: CSSProperties = {
-                ["--category-color" as string]: color,
-                ["--category-text-color" as string]: textColor,
-                ["--category-color-rgb" as string]: rgbValue,
-              }
-
-              return (
-                <Badge
-                  key={category.id}
-                  variant="outline"
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium border border-transparent shadow-sm bg-[var(--category-color)] text-[var(--category-text-color)] dark:bg-transparent dark:text-foreground dark:border-[var(--category-color)] dark:shadow-none"
-                  style={badgeStyles}
-                >
-                  <span
-                    aria-hidden
-                    className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--category-color)] dark:inline-flex"
-                  />
-                  {category.emoji && <span className="text-xs">{category.emoji}</span>}
-                  <span className="text-xs font-medium leading-none">{category.nombre}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+            {selectedCategoryObjects.map((category) => (
+              <CategoryPill
+                key={category.id}
+                category={category}
+                size="sm"
+                className="gap-1"
+                suffix={
+                  <button
                     type="button"
-                    onClick={(e) => removeCategory(category.id, e)}
-                    className="h-auto p-0 ml-1 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-100/60 dark:hover:bg-red-950/20"
+                    className="ml-1 rounded-full p-0.5 text-[rgba(var(--category-color-rgb),0.85)] hover:bg-[rgba(var(--category-color-rgb),0.15)]"
+                    onClick={(event) => removeCategory(category.id, event)}
+                    aria-label={`Quitar ${category.nombre}`}
                   >
                     <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              )
-            })}
+                  </button>
+                }
+              />
+            ))}
           </div>
         </div>
       )}

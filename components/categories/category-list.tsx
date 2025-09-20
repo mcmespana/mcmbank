@@ -57,6 +57,8 @@ interface CategoryCardProps {
   dragHint: string
   isGlobal: boolean
   isDropTarget?: boolean
+  dropPreviewMessage?: string | null
+  dropPreviewStatus?: "valid" | "invalid"
   onMoveUp?: (category: CategoriaConOrdenEfectivo) => void
   onMoveDown?: (category: CategoriaConOrdenEfectivo) => void
   canMoveUp: boolean
@@ -108,6 +110,8 @@ function CategoryCard({
   dragHint,
   isGlobal,
   isDropTarget = false,
+  dropPreviewMessage,
+  dropPreviewStatus = "valid",
   onMoveUp,
   onMoveDown,
   canMoveUp,
@@ -138,58 +142,76 @@ function CategoryCard({
           }}
           className={cn("relative", snapshot.isDragging && "z-40")}
         >
+          {isDropTarget && dropPreviewMessage && (
+            <div className="absolute -top-3 left-14 sm:left-16 z-50">
+              <div
+                className={cn(
+                  "rounded-md px-2 py-1 text-xs font-medium shadow-md",
+                  dropPreviewStatus === "valid"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-destructive text-destructive-foreground",
+                )}
+              >
+                {dropPreviewMessage}
+              </div>
+            </div>
+          )}
           <div style={{ marginLeft: indentation }}>
             <Card
               className={cn(
                 "transition-shadow hover:shadow-md bg-background",
                 snapshot.isDragging && "shadow-lg ring-2 ring-primary/40",
-                isDropTarget && !snapshot.isDragging && "ring-2 ring-primary/50",
+                isDropTarget &&
+                  !snapshot.isDragging &&
+                  (dropPreviewStatus === "valid"
+                    ? "ring-2 ring-primary/50"
+                    : "ring-2 ring-destructive/40"),
                 depth > 0 && "border-muted-foreground/20",
                 isInactive && "opacity-70",
                 isRecentlyMoved && "ring-2 ring-primary/40 shadow-lg shadow-primary/10",
               )}
             >
-              <CardContent className="p-3 sm:p-4 lg:p-5">
-                <div className="flex items-start gap-3 sm:gap-4">
+              <CardContent className="px-3 py-3 sm:px-4 sm:py-3.5">
+                <div className="flex items-start gap-2.5 sm:gap-3">
                   <div className="flex flex-col items-center gap-1 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-muted-foreground"
+                      className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground"
                       onClick={() => onMoveUp?.(category)}
                       disabled={!canMoveUp}
                       title={canMoveUp ? "Mover hacia arriba" : "No se puede mover más arriba"}
                     >
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                     <div
                       {...(provided.dragHandleProps ?? {})}
                       className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-md border border-dashed text-muted-foreground",
+                        "flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md border border-dashed text-muted-foreground",
                         isDragDisabled
                           ? "cursor-not-allowed border-transparent opacity-40"
                           : "cursor-grab border-transparent bg-muted/40 hover:bg-muted/70 active:cursor-grabbing",
                       )}
                       title={dragHint}
                     >
-                      <GripVertical className="h-4 w-4" />
+                      <GripVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-muted-foreground"
+                      className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground"
                       onClick={() => onMoveDown?.(category)}
                       disabled={!canMoveDown}
                       title={canMoveDown ? "Mover hacia abajo" : "No se puede mover más abajo"}
                     >
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
 
                   <div
                     className={cn(
-                      "flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl text-xl sm:text-2xl shadow-sm flex-shrink-0",
-                      depth > 0 && "h-10 w-10 sm:h-12 sm:w-12 text-lg sm:text-xl",
+                      "flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl text-lg sm:text-xl shadow-sm flex-shrink-0",
+                      depth > 0 && "h-9 w-9 sm:h-10 sm:w-10 text-base sm:text-lg",
                     )}
                     style={{ backgroundColor: category.color || "#e5e7eb" }}
                   >
@@ -197,10 +219,10 @@ function CategoryCard({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <h3
                         className={cn(
-                          "font-semibold text-base sm:text-lg truncate",
+                          "font-semibold text-sm sm:text-base truncate",
                           depth > 0 && "font-medium",
                         )}
                       >
@@ -218,7 +240,7 @@ function CategoryCard({
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
+                    <div className="mt-0.5 text-[11px] text-muted-foreground">
                       <AmountDisplay amount={balance} size="sm" />
                     </div>
                   </div>
@@ -227,52 +249,56 @@ function CategoryCard({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 sm:h-9 sm:w-9 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                      className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                       onClick={() => onSearch(category)}
                       title="Buscar transacciones"
                     >
-                      <Search className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <Search className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 sm:h-9 sm:w-9 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                      className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                       onClick={() => onAddSubcategory?.(category)}
                       title={addSubcategoryTitle}
                       disabled={!canAddSubcategory}
                     >
-                      <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <PlusCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 sm:h-9 sm:w-9 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/30"
+                      className="h-7 w-7 sm:h-8 sm:w-8 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/30"
                       onClick={() => onEdit(category)}
                       title={canEdit ? "Editar categoría" : "Solo el gestor central puede editar categorías globales"}
                       disabled={!canEdit}
                     >
-                      <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </Button>
                     {canToggleActive ? (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                         onClick={() => onToggleActive?.(category)}
                         title={toggleTitle}
                       >
-                        {isInactive ? <Eye className="h-3 w-3 sm:h-4 sm:w-4" /> : <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />}
+                        {isInactive ? (
+                          <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                        ) : (
+                          <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                        )}
                       </Button>
                     ) : (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                         onClick={() => onDelete(category)}
                         title={canDelete ? "Eliminar categoría" : "Solo el gestor central puede eliminar categorías globales"}
                         disabled={!canDelete}
                       >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       </Button>
                     )}
                   </div>
@@ -298,6 +324,14 @@ export function CategoryList() {
   const [creatingParent, setCreatingParent] = useState<CategoriaConOrdenEfectivo | null>(null)
   const [viewingCategory, setViewingCategory] = useState<CategoriaConOrdenEfectivo | null>(null)
   const [activeDropParentId, setActiveDropParentId] = useState<string | null>(null)
+  const [dropPreview, setDropPreview] = useState<
+    | {
+        parentId: string | null
+        message: string
+        status: "valid" | "invalid"
+      }
+    | null
+  >(null)
   const [dateFrom, setDateFrom] = useState<string | undefined>()
   const [dateTo, setDateTo] = useState<string | undefined>()
   const [showInactive, setShowInactive] = useState(false)
@@ -431,7 +465,10 @@ export function CategoryList() {
         const updates: Partial<Categoria> = {
           nombre: patch.nombre,
           emoji: patch.emoji,
-          tipo: patch.tipo,
+        }
+
+        if (patch.tipo !== undefined) {
+          updates.tipo = patch.tipo
         }
 
         if (patch.categoria_padre_id !== undefined) {
@@ -493,7 +530,7 @@ export function CategoryList() {
           organizacion_id: organizacionId,
           delegacion_id: targetIsGlobal ? null : parentCategory?.delegacion_id ?? selectedDelegation!,
           nombre: patch.nombre!,
-          tipo: patch.tipo!,
+          tipo: patch.tipo ?? "mixto",
           emoji: patch.emoji || parentCategory?.emoji || "📁",
           color: parentCategory?.color || patch.color || "#4ECDC4",
           orden: maxOrder + 1,
@@ -602,16 +639,153 @@ export function CategoryList() {
   const getItemsForParent = (parentId: string | null) =>
     applyOptimisticOrder(Array.from(allChildrenMap.get(parentId) ?? []), parentId)
 
+  const evaluateDropTarget = useCallback(
+    ({
+      draggableId,
+      sourceParentId,
+      destinationParentId,
+    }: {
+      draggableId: string
+      sourceParentId: string | null
+      destinationParentId: string | null
+    }) => {
+      const moved = categoryMap.get(draggableId)
+      if (!moved) return null
+
+      const destinationParent =
+        destinationParentId !== null ? categoryMap.get(destinationParentId) ?? null : null
+      const sourceParent =
+        sourceParentId !== null ? categoryMap.get(sourceParentId) ?? null : null
+
+      if (destinationParentId === draggableId) {
+        return {
+          allowed: false,
+          message: "No permitido: no puedes convertir una categoría en subcategoría de sí misma.",
+          status: "invalid" as const,
+          reason: "Una categoría no puede ser subcategoría de sí misma.",
+        }
+      }
+
+      if (destinationParent) {
+        let current: CategoriaConOrdenEfectivo | null = destinationParent
+        while (current) {
+          if (current.id === moved.id) {
+            return {
+              allowed: false,
+              message:
+                "No permitido: no puedes mover la categoría dentro de su propia jerarquía.",
+              status: "invalid" as const,
+              reason: "No puedes mover una categoría dentro de su propia jerarquía.",
+            }
+          }
+
+          current = current.categoria_padre_id
+            ? categoryMap.get(current.categoria_padre_id) ?? null
+            : null
+        }
+      }
+
+      if (destinationParentId === sourceParentId) {
+        return {
+          allowed: false,
+          message: destinationParent
+            ? `Ya es subcategoría de ${destinationParent.nombre}`
+            : "Ya es una categoría principal",
+          status: "invalid" as const,
+          reason: null,
+        }
+      }
+
+      if (destinationParent && moved.es_global && !destinationParent.es_global) {
+        return {
+          allowed: false,
+          message: "No permitido: una categoría global no puede depender de una delegación.",
+          status: "invalid" as const,
+          reason: "No puedes anidar una categoría global dentro de una categoría de delegación.",
+        }
+      }
+
+      if (!isCentralManager && moved.es_global) {
+        return {
+          allowed: false,
+          message:
+            "No permitido: solo el gestor central puede cambiar la jerarquía de una categoría global.",
+          status: "invalid" as const,
+          reason: "Solo el gestor central puede cambiar la jerarquía de una categoría global.",
+        }
+      }
+
+      if (!isCentralManager && sourceParent?.es_global) {
+        return {
+          allowed: false,
+          message:
+            "No permitido: solo el gestor central puede sacar subcategorías de una categoría global.",
+          status: "invalid" as const,
+          reason: "Solo el gestor central puede modificar las subcategorías de esta categoría global.",
+        }
+      }
+
+      if (!isCentralManager && destinationParent?.es_global) {
+        return {
+          allowed: false,
+          message:
+            "No permitido: solo el gestor central puede añadir subcategorías a esta categoría global.",
+          status: "invalid" as const,
+          reason: "Solo el gestor central puede añadir subcategorías a esta categoría global.",
+        }
+      }
+
+      if (
+        destinationParent &&
+        destinationParent.delegacion_id &&
+        destinationParent.delegacion_id !== (moved.delegacion_id || selectedDelegation)
+      ) {
+        return {
+          allowed: false,
+          message: "No permitido: no puedes mover la categoría a otra delegación.",
+          status: "invalid" as const,
+          reason: "No puedes mover la categoría a otra delegación.",
+        }
+      }
+
+      return {
+        allowed: true,
+        message: destinationParent
+          ? `Soltar para convertirla en subcategoría de ${destinationParent.nombre}`
+          : "Soltar para convertirla en categoría principal",
+        status: "valid" as const,
+        reason: null,
+      }
+    },
+    [categoryMap, isCentralManager, selectedDelegation],
+  )
+
   const handleDragUpdate = (update: DragUpdate) => {
     const destination = update.destination
     if (!destination) {
       setActiveDropParentId(null)
+      setDropPreview(null)
       return
     }
 
     const parentId = parseDroppableId(destination.droppableId)
     if (parentId === undefined) return
+
+    const sourceParentId = parseDroppableId(update.source.droppableId)
+    if (sourceParentId === undefined) return
+
+    const evaluation = evaluateDropTarget({
+      draggableId: update.draggableId,
+      sourceParentId,
+      destinationParentId: parentId,
+    })
+
     setActiveDropParentId(parentId)
+    if (evaluation) {
+      setDropPreview({ parentId, message: evaluation.message, status: evaluation.status })
+    } else {
+      setDropPreview(null)
+    }
   }
 
   const persistListOrdering = async (
@@ -752,6 +926,7 @@ export function CategoryList() {
 
   const handleDragEnd = async (result: DropResult) => {
     setActiveDropParentId(null)
+    setDropPreview(null)
 
     const { destination, source, draggableId } = result
     if (!destination) return
@@ -761,40 +936,23 @@ export function CategoryList() {
     const destinationParentId = parseDroppableId(destination.droppableId)
 
     if (sourceParentId === undefined || destinationParentId === undefined) return
-    if (sourceParentId === destinationParentId && destination.index === source.index) return
+
+    const evaluation = evaluateDropTarget({
+      draggableId,
+      sourceParentId,
+      destinationParentId,
+    })
+
+    if (!evaluation) return
+    if (!evaluation.allowed) {
+      if (evaluation.reason) {
+        alert(evaluation.reason)
+      }
+      return
+    }
 
     const moved = categoryMap.get(draggableId)
     if (!moved) return
-
-    const destinationParent = destinationParentId ? categoryMap.get(destinationParentId) ?? null : null
-
-    if (destinationParent && moved.es_global && !destinationParent.es_global) {
-      alert("No puedes anidar una categoría global dentro de una categoría local.")
-      return
-    }
-
-    if (destinationParent && destinationParent.es_global && !moved.es_global) {
-      alert("Solo el gestor central puede crear subcategorías globales.")
-      return
-    }
-
-    if (
-      destinationParent &&
-      destinationParent.delegacion_id &&
-      destinationParent.delegacion_id !== (moved.delegacion_id || selectedDelegation)
-    ) {
-      alert("No puedes mover la categoría a otra delegación.")
-      return
-    }
-
-    if (!isCentralManager && moved.es_global && sourceParentId !== destinationParentId) {
-      alert("Solo el gestor central puede cambiar la jerarquía de una categoría global.")
-      return
-    }
-
-    if (sourceParentId === destinationParentId) {
-      return
-    }
 
     const sourceItems = getItemsForParent(sourceParentId)
     const destinationItems = getItemsForParent(destinationParentId)
@@ -804,7 +962,8 @@ export function CategoryList() {
       return
     }
 
-    destinationItems.splice(destination.index, 0, removed)
+    const insertionIndex = Math.min(destination.index, destinationItems.length)
+    destinationItems.splice(insertionIndex, 0, removed)
 
     const affectedLists = new Map<string | null, CategoriaConOrdenEfectivo[]>([
       [sourceParentId, sourceItems],
@@ -815,7 +974,8 @@ export function CategoryList() {
       movedCategory: moved,
       sourceParentId,
       destinationParentId,
-      destinationParent,
+      destinationParent:
+        destinationParentId !== null ? categoryMap.get(destinationParentId) ?? null : null,
     })
   }
 
@@ -872,9 +1032,9 @@ export function CategoryList() {
               registerAutoAnimate(node)
             }}
             className={cn(
-              parentId ? "space-y-2" : "space-y-4",
-              parentId && "ml-6 border-l border-dashed border-muted-foreground/30 pl-4",
-              items.length === 0 && "py-2",
+              parentId ? "space-y-1.5" : "space-y-3.5",
+              parentId && "ml-5 border-l border-dashed border-muted-foreground/30 pl-3.5",
+              items.length === 0 && "py-1.5",
               snapshot.isDraggingOver && !dropDisabled && depth < 1 && "rounded-lg bg-muted/40",
             )}
           >
@@ -882,13 +1042,13 @@ export function CategoryList() {
               const dragDisabled = isFiltering || !canReorderCategory()
               const dragHint = dragDisabled
                 ? "Desactiva los filtros para mover subcategorías"
-                : "Arrastra esta tarjeta sobre otra categoría principal para crear una subcategoría"
+                : "Arrastra esta tarjeta sobre otra categoría principal para anidarla o hacia el encabezado para dejarla como categoría principal"
               const canMoveUp = !isFiltering && index > 0
               const canMoveDown = !isFiltering && index < items.length - 1
               const isInactive = category.esta_activa === false
 
               return (
-                <div key={category.id} className="space-y-2">
+                <div key={category.id} className="space-y-1.5">
                   <CategoryCard
                     category={category}
                     index={index}
@@ -905,6 +1065,16 @@ export function CategoryList() {
                     dragHint={dragHint}
                     isGlobal={category.es_global}
                     isDropTarget={activeDropParentId === category.id}
+                    dropPreviewMessage={
+                      dropPreview && dropPreview.parentId === category.id
+                        ? dropPreview.message
+                        : null
+                    }
+                    dropPreviewStatus={
+                      dropPreview && dropPreview.parentId === category.id
+                        ? dropPreview.status
+                        : undefined
+                    }
                     onMoveUp={(cat) => handleMoveCategory(cat, "up")}
                     onMoveDown={(cat) => handleMoveCategory(cat, "down")}
                     canMoveUp={canMoveUp}
@@ -918,6 +1088,20 @@ export function CategoryList() {
                 </div>
               )
             })}
+            {parentId === null && dropPreview && dropPreview.parentId === null && (
+              <div className="mb-2 flex justify-center">
+                <div
+                  className={cn(
+                    "rounded-md px-3 py-1 text-xs font-medium shadow-md",
+                    dropPreview.status === "valid"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-destructive text-destructive-foreground",
+                  )}
+                >
+                  {dropPreview.message}
+                </div>
+              </div>
+            )}
             {noVisibleButExisting && (
               <div className="rounded-md bg-muted/30 py-3 text-center text-xs text-muted-foreground">
                 No hay resultados dentro de esta categoría.
@@ -934,22 +1118,22 @@ export function CategoryList() {
   const showNoResults = hasAnyCategory && !hasVisibleCategories
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold">Categorías</h2>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+          <h2 className="text-xl sm:text-2xl font-bold">Categorías</h2>
+          <p className="text-muted-foreground mt-0.5 text-sm">
             {totalCount} categorías en total ({globalCount} globales). Usa las flechas para reordenar y arrastra una tarjeta
             sobre otra para anidar subcategorías; las globales solo cambian de jerarquía con permisos centrales.
           </p>
         </div>
-        <Button onClick={handleCreate} size="default" className="w-full sm:w-auto" disabled={!organizacionId}>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={handleCreate} size="sm" className="w-full sm:w-auto" disabled={!organizacionId}>
+          <Plus className="h-3.5 w-3.5 mr-2" />
           Añadir categoría
         </Button>
       </div>
 
-      <div className="flex gap-4 flex-col sm:flex-row">
+      <div className="flex gap-3 flex-col sm:flex-row">
         <div className="flex-1 sm:flex-1">
           <DateRangeFilter dateFrom={dateFrom} dateTo={dateTo} onDateRangeChange={handleDateRangeChange} />
         </div>
@@ -964,14 +1148,14 @@ export function CategoryList() {
                     placeholder="Filtrar categorías..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-12"
+                    className="pl-10 h-10"
                     autoFocus
                   />
                 </div>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 flex-shrink-0"
+                  className="h-10 w-10 flex-shrink-0"
                   onClick={() => {
                     setSearchOpen(false)
                     setSearchTerm("")
@@ -981,7 +1165,7 @@ export function CategoryList() {
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => setSearchOpen(true)}>
+              <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => setSearchOpen(true)}>
                 <Search className="h-4 w-4" />
               </Button>
             )}
@@ -993,7 +1177,7 @@ export function CategoryList() {
               placeholder="Filtrar por nombre de la categoría..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 h-10"
             />
           </div>
         </div>
@@ -1023,18 +1207,18 @@ export function CategoryList() {
             </div>
           )}
 
-          <div className="space-y-3 text-xs text-muted-foreground">
+          <div className="space-y-2.5 text-xs text-muted-foreground">
             <p>
               Usa las flechas de cada tarjeta para cambiar el orden y arrastra una tarjeta sobre otra para crear
               subcategorías (máximo un nivel). El icono de globo identifica las globales.
             </p>
           </div>
           <DragDropContext onDragEnd={handleDragEnd} onDragUpdate={handleDragUpdate}>
-            <div className="mt-4">{renderCategoryTree(null, 0)}</div>
+            <div className="mt-3.5">{renderCategoryTree(null, 0)}</div>
           </DragDropContext>
 
-          <div className="pt-4 border-t border-dashed border-muted-foreground/30 mt-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="pt-3.5 border-t border-dashed border-muted-foreground/30 mt-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
               <p className="text-xs text-muted-foreground">
                 {showInactive
                   ? "Las categorías desactivadas aparecen atenuadas. Puedes volver a mostrarlas cuando quieras."
@@ -1105,7 +1289,7 @@ export function CategoryList() {
                 ? creatingParent.delegacion_id
                 : selectedDelegation || null,
               nombre: "",
-              tipo: creatingParent?.tipo || "gasto",
+              tipo: creatingParent?.tipo || "mixto",
               emoji: creatingParent?.emoji || "📁",
               color: creatingParent?.color || "#4ECDC4",
               orden: 0,

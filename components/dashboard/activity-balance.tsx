@@ -261,22 +261,6 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
               allowMultiple
               placeholder="Seleccionar categorías..."
             />
-            {categoryIds.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {categoryIds.map((id) => {
-                  const categoria = categorias.find((c) => c.id === id)
-                  return (
-                    <div key={id} className="flex items-center gap-1 bg-secondary px-2 py-1 rounded-md text-sm">
-                      {categoria?.emoji && <span>{categoria.emoji}</span>}
-                      {categoria?.nombre || "Sin categoría"}
-                    </div>
-                  )
-                })}
-                <Button variant="outline" size="sm" onClick={clearFilters}>
-                  Limpiar
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

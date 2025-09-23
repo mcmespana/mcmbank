@@ -80,12 +80,19 @@ export function useCategorias(
           const orden_base = updates.orden ?? cat.orden_base ?? cat.orden
           const orden_override = cat.orden_override
           const orden_efectivo = orden_override ?? orden_base
+          const esta_activa = updates.esta_activa ?? cat.esta_activa
+          const esta_activa_override = cat.esta_activa_override
+          const esta_activa_efectiva =
+            esta_activa_override !== null ? esta_activa_override : esta_activa
           return {
             ...cat,
             ...updates,
             orden: orden_base,
             orden_base,
             orden_efectivo,
+            esta_activa,
+            esta_activa_override,
+            esta_activa_efectiva,
           }
         })
         return sortCategorias(next)
@@ -123,6 +130,7 @@ export function useCategorias(
             ...cat,
             orden_override,
             orden_efectivo,
+            has_override: orden_override !== null || cat.has_override,
           }
         })
         return sortCategorias(next)

@@ -196,6 +196,7 @@ export type Database = {
           orden: number
           creado_en: string
           actualizado_en: string
+          esta_activa: boolean
         }
         Insert: {
           delegacion_id: string
@@ -203,6 +204,7 @@ export type Database = {
           orden: number
           creado_en?: string
           actualizado_en?: string
+          esta_activa?: boolean
         }
         Update: {
           delegacion_id?: string
@@ -210,6 +212,7 @@ export type Database = {
           orden?: number
           creado_en?: string
           actualizado_en?: string
+          esta_activa?: boolean
         }
       }
       membresia: {
@@ -421,6 +424,9 @@ export type CategoriaConOrdenEfectivo = Categoria & {
   orden_base: number
   orden_override: number | null
   orden_efectivo: number
+  esta_activa_override: boolean | null
+  esta_activa_efectiva: boolean
+  has_override: boolean
 }
 export type Membresia = Database["public"]["Tables"]["membresia"]["Row"]
 export type Perfil = Database["public"]["Tables"]["perfil"]["Row"]

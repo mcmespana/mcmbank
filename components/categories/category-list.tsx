@@ -172,8 +172,8 @@ function CategoryCard({
                 isRecentlyMoved && "ring-2 ring-primary/40 shadow-lg shadow-primary/10",
               )}
             >
-              <CardContent className="px-3 py-3 sm:px-4 sm:py-3.5">
-                <div className="flex items-start gap-2.5 sm:gap-3">
+              <CardContent className="px-3 py-2.5 sm:px-3.5 sm:py-3">
+                <div className="flex items-start gap-2 sm:gap-2.5">
                   <div className="flex flex-col items-center gap-1 flex-shrink-0">
                     <Button
                       variant="ghost"
@@ -183,19 +183,19 @@ function CategoryCard({
                       disabled={!canMoveUp}
                       title={canMoveUp ? "Mover hacia arriba" : "No se puede mover más arriba"}
                     >
-                      <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <ChevronUp className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </Button>
                     <div
                       {...(provided.dragHandleProps ?? {})}
                       className={cn(
-                        "flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md border border-dashed text-muted-foreground",
+                        "flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md border border-dashed text-muted-foreground",
                         isDragDisabled
                           ? "cursor-not-allowed border-transparent opacity-40"
                           : "cursor-grab border-transparent bg-muted/40 hover:bg-muted/70 active:cursor-grabbing",
                       )}
                       title={dragHint}
                     >
-                      <GripVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <GripVertical className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </div>
                     <Button
                       variant="ghost"
@@ -205,14 +205,14 @@ function CategoryCard({
                       disabled={!canMoveDown}
                       title={canMoveDown ? "Mover hacia abajo" : "No se puede mover más abajo"}
                     >
-                      <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <ChevronDown className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </Button>
                   </div>
 
                   <div
                     className={cn(
-                      "flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl text-lg sm:text-xl shadow-sm flex-shrink-0",
-                      depth > 0 && "h-9 w-9 sm:h-10 sm:w-10 text-base sm:text-lg",
+                      "flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg text-lg sm:text-xl shadow flex-shrink-0",
+                      depth > 0 && "h-8 w-8 sm:h-9 sm:w-9 text-sm sm:text-base",
                     )}
                     style={{ backgroundColor: category.color || "#e5e7eb" }}
                   >
@@ -403,7 +403,7 @@ export function CategoryList() {
   const canEditCategory = (category: CategoriaConOrdenEfectivo) => !category.es_global || isCentralManager
   const canDeleteCategory = (category: CategoriaConOrdenEfectivo) => !category.es_global || isCentralManager
   const canToggleCategoryVisibility = (category: CategoriaConOrdenEfectivo) =>
-    !isCentralManager && category.es_global
+    !isCentralManager && !!selectedDelegation && category.es_global
   const canReorderCategory = () => true
   const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) => {
     if (category.categoria_padre_id !== null) return false
@@ -441,10 +441,36 @@ export function CategoryList() {
 
   const handleToggleActive = async (category: CategoriaConOrdenEfectivo) => {
     try {
-      await updateCategoria(category.id, { esta_activa: !category.esta_activa })
-      if (showInactive) {
-        await fetchCategorias()
+      if (category.es_global && !isCentralManager) {
+        if (!selectedDelegation) {
+          alert("Selecciona una delegación para gestionar la visibilidad")
+          return
+        }
+
+        const nextActive = !category.esta_activa_efectiva
+
+        if (!nextActive) {
+          await DatabaseService.setDelegacionCategoryVisibility(
+            selectedDelegation,
+            category.id,
+            false,
+            category.orden_override ?? category.orden,
+          )
+        } else if (category.orden_override === null && category.has_override) {
+          await DatabaseService.clearDelegacionCategoryOrder(selectedDelegation, category.id)
+        } else {
+          await DatabaseService.setDelegacionCategoryVisibility(
+            selectedDelegation,
+            category.id,
+            true,
+            category.orden_override ?? category.orden,
+          )
+        }
+      } else {
+        await updateCategoria(category.id, { esta_activa: !category.esta_activa })
       }
+
+      await fetchCategorias()
     } catch (err) {
       console.error("Error toggling category visibility:", err)
       alert("No se pudo actualizar la visibilidad de la categoría")
@@ -471,10 +497,6 @@ export function CategoryList() {
         const updates: Partial<Categoria> = {
           nombre: patch.nombre,
           emoji: patch.emoji,
-        }
-
-        if (patch.tipo !== undefined) {
-          updates.tipo = patch.tipo
         }
 
         if (patch.categoria_padre_id !== undefined) {
@@ -542,8 +564,8 @@ export function CategoryList() {
           organizacion_id: organizacionId,
           delegacion_id: targetIsGlobal ? null : parentCategory?.delegacion_id ?? selectedDelegation!,
           nombre: patch.nombre!,
-          tipo: patch.tipo ?? "mixto",
-          emoji: patch.emoji || parentCategory?.emoji || "📁",
+          tipo: "mixto",
+          emoji: patch.emoji || "📁",
           color: parentCategory?.color || patch.color || "#4ECDC4",
           orden: maxOrder + 1,
           categoria_padre_id: parentId,
@@ -564,7 +586,10 @@ export function CategoryList() {
   }
 
   const displayedCategories = useMemo(
-    () => (showInactive ? categories : categories.filter((cat) => cat.esta_activa !== false)),
+    () =>
+      showInactive
+        ? categories
+        : categories.filter((cat) => cat.esta_activa_efectiva !== false),
     [categories, showInactive],
   )
 
@@ -1004,7 +1029,7 @@ export function CategoryList() {
   const totalCount = categories.length
   const globalCount = categories.filter((category) => category.es_global).length
   const inactiveCount = showInactive
-    ? categories.filter((category) => category.esta_activa === false).length
+    ? categories.filter((category) => category.esta_activa_efectiva === false).length
     : undefined
 
   if (!selectedDelegation) {
@@ -1051,8 +1076,8 @@ export function CategoryList() {
               registerAutoAnimate(node)
             }}
             className={cn(
-              parentId ? "space-y-1.5" : "space-y-3.5",
-              parentId && "ml-5 border-l border-dashed border-muted-foreground/30 pl-3.5",
+              parentId ? "space-y-1" : "space-y-3",
+              parentId && "ml-4 border-l border-dashed border-muted-foreground/30 pl-3",
               items.length === 0 && "py-1.5",
               snapshot.isDraggingOver && !dropDisabled && depth < 1 && "rounded-lg bg-muted/40",
             )}
@@ -1064,10 +1089,10 @@ export function CategoryList() {
                 : "Arrastra esta tarjeta sobre otra categoría principal para anidarla o hacia el encabezado para dejarla como categoría principal"
               const canMoveUp = !isFiltering && index > 0
               const canMoveDown = !isFiltering && index < items.length - 1
-              const isInactive = category.esta_activa === false
+              const isInactive = category.esta_activa_efectiva === false
 
               return (
-                <div key={category.id} className="space-y-1.5">
+                <div key={category.id} className="space-y-1">
                   <CategoryCard
                     category={category}
                     index={index}
@@ -1308,8 +1333,8 @@ export function CategoryList() {
                 ? creatingParent.delegacion_id
                 : selectedDelegation || null,
               nombre: "",
-              tipo: creatingParent?.tipo || "mixto",
-              emoji: creatingParent?.emoji || "📁",
+              tipo: "mixto",
+              emoji: "📁",
               color: creatingParent?.color || "#4ECDC4",
               orden: 0,
               categoria_padre_id: creatingParent?.id ?? null,

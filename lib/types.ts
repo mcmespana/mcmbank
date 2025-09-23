@@ -3,7 +3,6 @@ export type UUID = string
 
 export type TipoCuenta = "banco" | "caja"
 export type OrigenCuenta = "manual" | "conectada"
-export type TipoCategoria = "ingreso" | "gasto" | "mixto"
 
 export interface Organizacion {
   id: UUID
@@ -39,7 +38,7 @@ export interface Categoria {
   organizacion_id: UUID
   delegacion_id: UUID | null
   nombre: string
-  tipo: TipoCategoria
+  tipo: string
   emoji: string | null
   color: string | null
   orden: number

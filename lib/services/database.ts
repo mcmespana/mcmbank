@@ -14,7 +14,8 @@ const selectCategoriasWithOverrides = `
   overrides:categoria_orden_delegacion!left (
     delegacion_id,
     categoria_id,
-    orden
+    orden,
+    esta_activa
   )
 `
 
@@ -31,8 +32,18 @@ function mapCategorias(
       : null
 
     const orden_base = orden
-    const orden_override = override?.orden ?? null
+    const overrideOrdenRaw = override?.orden ?? null
+    const orden_override =
+      override && overrideOrdenRaw !== null && overrideOrdenRaw !== orden_base
+        ? overrideOrdenRaw
+        : null
     const orden_efectivo = orden_override ?? orden_base
+    const esta_activa_override =
+      override && typeof override.esta_activa === "boolean"
+        ? override.esta_activa
+        : null
+    const esta_activa_efectiva =
+      esta_activa_override !== null ? esta_activa_override : categoria.esta_activa
 
     return {
       ...categoria,
@@ -40,6 +51,9 @@ function mapCategorias(
       orden_base,
       orden_override,
       orden_efectivo,
+      esta_activa_override,
+      esta_activa_efectiva,
+      has_override: Boolean(override),
     }
   })
 
@@ -90,10 +104,6 @@ export class DatabaseService {
       query = query.eq("es_global", true)
     }
 
-    if (!includeInactive) {
-      query = query.eq("esta_activa", true)
-    }
-
     if (options.signal) {
       query = query.abortSignal(options.signal)
     }
@@ -101,7 +111,11 @@ export class DatabaseService {
     const { data, error } = await query
 
     if (error) throw error
-    return mapCategorias(data as CategoriaWithOverrides[] | null, delegacionId)
+    const mapped = mapCategorias(data as CategoriaWithOverrides[] | null, delegacionId)
+    if (includeInactive) {
+      return mapped
+    }
+    return mapped.filter((categoria) => categoria.esta_activa_efectiva !== false)
   }
 
   static async createCategoria(
@@ -134,19 +148,55 @@ export class DatabaseService {
     orden: number,
   ): Promise<void> {
     const supabase = this.getClient()
-    const { error } = await supabase
+    const now = new Date().toISOString()
+
+    const { data, error } = await supabase
       .from("categoria_orden_delegacion")
-      .upsert(
-        {
-          delegacion_id: delegacionId,
-          categoria_id: categoriaId,
-          orden,
-          actualizado_en: new Date().toISOString(),
-        },
-        { onConflict: "delegacion_id,categoria_id" },
-      )
+      .update({ orden, actualizado_en: now })
+      .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
+      .select("categoria_id")
 
     if (error) throw error
+
+    if (!data || data.length === 0) {
+      const { error: insertError } = await supabase.from("categoria_orden_delegacion").insert({
+        delegacion_id: delegacionId,
+        categoria_id: categoriaId,
+        orden,
+        esta_activa: true,
+      })
+
+      if (insertError) throw insertError
+    }
+  }
+
+  static async setDelegacionCategoryVisibility(
+    delegacionId: string,
+    categoriaId: string,
+    estaActiva: boolean,
+    ordenFallback: number,
+  ): Promise<void> {
+    const supabase = this.getClient()
+    const now = new Date().toISOString()
+
+    const { data, error } = await supabase
+      .from("categoria_orden_delegacion")
+      .update({ esta_activa: estaActiva, actualizado_en: now })
+      .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
+      .select("categoria_id")
+
+    if (error) throw error
+
+    if (!data || data.length === 0) {
+      const { error: insertError } = await supabase.from("categoria_orden_delegacion").insert({
+        delegacion_id: delegacionId,
+        categoria_id: categoriaId,
+        orden: ordenFallback,
+        esta_activa: estaActiva,
+      })
+
+      if (insertError) throw insertError
+    }
   }
 
   static async clearDelegacionCategoryOrder(

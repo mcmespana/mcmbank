@@ -1,0 +1,20 @@
+id,organizacion_id,nombre,tipo,emoji,orden,categoria_padre_id,creado_en,color,delegacion_id,es_global,esta_activa,activa
+07b04e61-3094-421b-91c8-43c7ab6610be,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Subvenciones,mixto,💸,1,,2025-09-19 17:17:48.741135+00,#edd3f8,,true,true,true
+15d33a7f-8f23-4cc9-a609-66547d4c7830,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Cuotas MIC-COM,mixto,🤝,1,3fc46a31-15fa-4378-adec-c6ed7e6407aa,2025-09-19 17:15:34.914422+00,#96CEB4,,true,false,true
+2035b1d8-7fee-44ea-bc19-6b62d36ec6b6,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,"Comidas, dietas, viajes y eventos",mixto,🌭,5,,2025-09-19 17:26:31.18952+00,#d0ecdf,,true,true,true
+20d6c2ba-213c-4569-be24-70a5071df753,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Compras Inversión,mixto,🖥️,4,,2025-09-19 17:23:33.277881+00,#cbe7fb,,true,true,true
+2dd00654-4179-4819-bf3c-aed6a37dc696,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Comisiones bancos,mixto,🏦,10,,2025-09-19 18:42:54.819122+00,#A9DFBF,,true,true,true
+3fc46a31-15fa-4378-adec-c6ed7e6407aa,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Cuotas,mixto,🤝,2,,2025-09-19 17:15:10.024949+00,#96CEB4,,true,true,true
+464508be-c135-4fd8-a2a3-febc9ab8fb94,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Otros,mixto,⚠️,11,,2025-09-19 18:45:18.619581+00,#f6eef6,,true,true,true
+51dc569d-51d2-4d50-90b4-71a8be04ca48,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Seguros,mixto,🏥,9,,2025-09-19 18:22:11.362099+00,#ffcccc,,true,true,true
+5581019d-6834-470a-a2f7-82c864c5498b,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,CARRERA PRUEBA,mixto,📁,1,,2025-09-20 18:01:03.8385+00,#4ECDC4,80a3bb56-5ee2-4354-bf5d-0af99afcbf2a,false,true,true
+5f84209e-70af-480c-93c7-146640a85d1b,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,ACTIVIDAD PRUEBA,mixto,📁,1,,2025-09-20 18:01:08.405083+00,#4ECDC4,dd91a1cb-c2e5-4bb0-8996-b56a5cfe44c0,false,true,true
+6a0804cb-9fc5-4cba-8918-26ddd48beb05,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Actividades 25-26,mixto,🌱,1,,2025-09-19 17:13:44.122166+00,#F9E79F,,true,true,true
+870899a4-2049-4c15-8b57-02f086585947,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Compras Material,mixto,✏️,3,,2025-09-19 17:20:10.477047+00,#c7d6d2,,true,false,true
+93cd88e3-1e7a-4285-aa15-868500fa43c7,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Cuotas COM-LC +18,mixto,🤝,2,3fc46a31-15fa-4378-adec-c6ed7e6407aa,2025-09-19 17:16:49.652303+00,#96CEB4,,true,false,true
+95b2a4e9-1085-4b7c-98d9-7f28b1297f46,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Software y suscripciones,mixto,🔒️,8,,2025-09-19 18:17:28.104341+00,#dceaf4,,true,true,true
+dd2d67b1-1c97-40ad-a4a9-f774babbee5a,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Convivencia inicial,mixto,🚌,1,6a0804cb-9fc5-4cba-8918-26ddd48beb05,2025-09-20 10:27:52.721783+00,#F9E79F,98c1ba5e-9f35-4280-804e-b85483e644b1,false,true,true
+dffc4309-b4dd-45d1-b762-f770280da645,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Remanente - Saldo Inicial,mixto,💰️,12,,2025-09-19 18:48:26.294827+00,#f2e8c0,,true,true,true
+e214f7cc-c447-4092-9a39-3f4a895556c7,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Formación,mixto,👩‍🎓,6,,2025-09-19 17:27:43.243319+00,#fff8db,,true,true,true
+e6a26a02-1d72-4eb5-a037-79247cf0b130,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Prueba carrera,mixto,🏃,1,,2025-09-20 18:01:05.255059+00,#85C1E9,8aedd91a-b165-427f-b8d4-a53801373e3d,false,true,true
+fb95bbde-7bf8-41d9-860c-6668a1aa1bb9,9f9fa8cc-af6f-47a7-a575-e1f931ecfd29,Suministros,mixto,💡,7,,2025-09-19 18:15:41.000219+00,#b0eaf7,,true,true,true

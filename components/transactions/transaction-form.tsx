@@ -64,9 +64,9 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
     }
   }
 
-  const filteredCategories = categories.filter(cat => 
-    cat.tipo === formData.tipo || cat.tipo === "mixto"
-  )
+  const availableCategories = categories
+    .filter((cat) => cat.esta_activa !== false)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -164,10 +164,10 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
                   <SelectValue placeholder="Seleccionar categoría" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredCategories.map((categoria) => (
+                  {availableCategories.map((categoria) => (
                     <SelectItem key={categoria.id} value={categoria.id}>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{categoria.emoji}</span>
+                        <span className="text-lg">{categoria.emoji || "📁"}</span>
                         <span>{categoria.nombre}</span>
                       </div>
                     </SelectItem>

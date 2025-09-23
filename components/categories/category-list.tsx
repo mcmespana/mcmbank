@@ -514,10 +514,16 @@ export function CategoryList() {
         const parentCategory = creatingParent
         const parentId = parentCategory?.id ?? patch.categoria_padre_id ?? null
         const targetIsGlobal = parentCategory ? parentCategory.es_global : !!patch.es_global
+        const isGlobalSubcategory = Boolean(parentCategory?.es_global)
 
         if (targetIsGlobal && !isCentralManager) {
-          alert("Solo el gestor central puede crear categorías globales")
-          return
+          const canTreasurerCreateGlobalSubcategory =
+            isDelegationTreasurer && isGlobalSubcategory && !!selectedDelegation
+
+          if (!canTreasurerCreateGlobalSubcategory) {
+            alert("Solo el gestor central puede crear categorías globales")
+            return
+          }
         }
 
         if (!targetIsGlobal && !selectedDelegation) {

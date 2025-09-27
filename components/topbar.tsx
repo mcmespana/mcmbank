@@ -6,9 +6,18 @@ import { useAuth } from "@/contexts/auth-context"
 import { usePerfil } from "@/hooks/use-perfil"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { LogOut, BookOpen, Moon, Sun, Monitor } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { LogOut, BookOpen, Moon, Sun, Monitor, ChevronDown, Sparkles } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 
 interface TopbarProps {
   selectedDelegation?: string | null
@@ -152,24 +161,65 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
 
         {/* User info and logout */}
         <div className="flex items-center gap-3 pl-2 border-l border-border">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="" alt={getUserDisplayName()} />
-              <AvatarFallback className="text-xs font-medium">
-                {getUserInitials(perfil?.nombre_completo, user?.email)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="hidden sm:flex flex-col items-start text-sm">
-              <span className="font-medium text-foreground leading-none">
-                {getUserDisplayName()}
-              </span>
-              {user?.email && (
-                <span className="text-xs text-muted-foreground mt-0.5">
-                  {user.email}
-                </span>
-              )}
-            </div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Abrir menú de perfil y acciones personales"
+                className="group flex items-center gap-3 rounded-full border border-transparent bg-transparent px-2 py-1.5 text-left transition hover:border-border/80 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8 border border-border/60 shadow-sm">
+                    <AvatarImage src="" alt={getUserDisplayName()} />
+                    <AvatarFallback className="text-xs font-medium">
+                      {getUserInitials(perfil?.nombre_completo, user?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="hidden sm:flex flex-col items-start text-sm">
+                    <span className="font-semibold text-foreground leading-none">
+                      {getUserDisplayName()}
+                    </span>
+                    {user?.email && (
+                      <span className="text-xs text-muted-foreground mt-0.5">
+                        {user.email}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground transition group-hover:text-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[18rem]">
+              <DropdownMenuLabel className="flex items-center gap-2 text-muted-foreground/70">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Centro de control personal
+              </DropdownMenuLabel>
+              <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-background via-background/90 to-muted/60 p-3">
+                <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground/70">Sesión activa</p>
+                <p className="mt-2 text-sm font-semibold text-foreground">{getUserDisplayName()}</p>
+                {user?.email && (
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                )}
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href="/perfil/cambiar-contrasena" className="flex w-full items-center justify-between">
+                  <span>Cambiar contraseña</span>
+                  <span className="text-xs text-muted-foreground">Seguro y elegante</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-950/40"
+                onSelect={(event) => {
+                  event.preventDefault()
+                  handleSignOut()
+                }}
+              >
+                <span>Cerrar sesión</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Logout button */}
           <Button

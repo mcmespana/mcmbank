@@ -17,10 +17,10 @@ function SubmitButton() {
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Registrando...
+          Enviando...
         </>
       ) : (
-        "Registrarse"
+        "Pedir acceso"
       )}
     </Button>
   )
@@ -32,8 +32,10 @@ export default function SignUpForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Crear Cuenta</CardTitle>
-        <CardDescription className="text-center">Regístrate en MCM Bank</CardDescription>
+        <CardTitle className="text-2xl font-bold text-center">Solicitar acceso</CardTitle>
+        <CardDescription className="text-center">
+          Cuéntanos qué delegación necesitas y te avisaremos cuando esté listo.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
@@ -50,17 +52,28 @@ export default function SignUpForm() {
           )}
 
           <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
+            <label htmlFor="delegation" className="block text-sm font-medium">
+              Delegación a la que quieres acceder
             </label>
-            <Input id="email" name="email" type="email" placeholder="tu@email.com" required />
+            <Input
+              id="delegation"
+              name="delegation"
+              placeholder="Ej. Madrid Centro, Valencia..."
+              required
+            />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium">
-              Contraseña
+            <label htmlFor="email" className="block text-sm font-medium">
+              Correo de contacto
             </label>
-            <Input id="password" name="password" type="password" required />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="tu@email.com"
+              required
+            />
           </div>
 
           <SubmitButton />
@@ -71,6 +84,10 @@ export default function SignUpForm() {
               Inicia sesión
             </Link>
           </div>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Respondemos cuando podemos, así que paciencia y mantén el ojo en tu bandeja de entrada.
+          </p>
         </form>
       </CardContent>
     </Card>

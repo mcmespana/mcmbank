@@ -40,19 +40,55 @@ export const useAppStatus = () => {
   }, [])
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      const isNowFocused = !document.hidden
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return
+    }
+
+    const setFocusState = (isNowFocused: boolean, reason: string) => {
       setIsFocused(isNowFocused)
       if (isNowFocused) {
-        console.log("✨ App is focused, notifying listeners to revalidate data.")
+        console.log(
+          `✨ App is focused (${reason}), notifying listeners to revalidate data.`,
+        )
         appStatusEmitter.emit()
       }
     }
 
+    const handleVisibilityChange = () => {
+      setFocusState(!document.hidden, "visibilitychange")
+    }
+
+    const handleFocus = () => {
+      setFocusState(true, "window-focus")
+    }
+
+    const handleBlur = () => {
+      setFocusState(false, "window-blur")
+    }
+
+    const handlePageShow = () => {
+      setFocusState(true, "pageshow")
+    }
+
+    const handlePageHide = () => {
+      setFocusState(false, "pagehide")
+    }
+
+    // Sync with the current visibility state when the hook mounts
+    setFocusState(!document.hidden, "init")
+
     document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", handleFocus)
+    window.addEventListener("blur", handleBlur)
+    window.addEventListener("pageshow", handlePageShow)
+    window.addEventListener("pagehide", handlePageHide)
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", handleFocus)
+      window.removeEventListener("blur", handleBlur)
+      window.removeEventListener("pageshow", handlePageShow)
+      window.removeEventListener("pagehide", handlePageHide)
     }
   }, [])
 

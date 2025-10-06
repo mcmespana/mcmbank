@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -11,6 +11,7 @@ import { CategorySelector } from "@/components/transactions/category-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
+import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -37,7 +38,7 @@ type SortField = "category" | "income" | "expense" | "balance" | "default"
 
 export function CategoryAnalysisDashboard({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  const [categoryIds, setCategoryIds] = useState<string[]>([])
+  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
   const [sortField, setSortField] = useState<SortField>("default")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
@@ -235,11 +236,14 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
         <div className="w-80">
           <CategorySelector
             categories={categorias}
-            selectedCategories={categoryIds}
+            selectedCategories={selectedCategories}
             onSelectionChange={setCategoryIds}
             allowMultiple
             placeholder="Filtrar categorías..."
           />
+          {isPending && (
+            <p className="text-xs text-muted-foreground mt-1">Aplicando filtros...</p>
+          )}
         </div>
       </div>
 

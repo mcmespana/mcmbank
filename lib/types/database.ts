@@ -437,11 +437,9 @@ export type PropuestaMejoraVoto = Database["public"]["Tables"]["propuesta_mejora
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {
-  cuenta: Cuenta & {
-    delegacion: Delegacion
-  }
+  cuenta: Cuenta
   categoria?: Categoria
-  archivos?: MovimientoArchivo[]
+  archivos?: MovimientoArchivo[] // Lazy loaded - not included in default queries
 }
 
 export type CuentaConDelegacion = Cuenta & {

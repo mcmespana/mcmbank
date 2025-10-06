@@ -16,12 +16,32 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
   const timeout = setTimeout(() => ac.abort(), timeoutMs)
   try {
     let { data, error } = await build(ac.signal)
+
+    // Retry logic with abort validation
     if (error && retryOnAuth && shouldRetryAuth(error)) {
+      // Check if request was aborted before retrying
+      if (ac.signal.aborted) {
+        const ms = Date.now() - started
+        addMetric({ at: Date.now(), label, table, ms, status: 'aborted', error: 'Request aborted before retry' })
+        return { data: null as T | null, error: new Error('Request aborted') }
+      }
+
       try {
         await supabase.auth.refreshSession()
-      } catch {}
+      } catch {
+        // Ignore refresh errors
+      }
+
+      // Check again after refresh
+      if (ac.signal.aborted) {
+        const ms = Date.now() - started
+        addMetric({ at: Date.now(), label, table, ms, status: 'aborted', error: 'Request aborted after refresh' })
+        return { data: null as T | null, error: new Error('Request aborted') }
+      }
+
       ;({ data, error } = await build(ac.signal))
     }
+
     const ms = Date.now() - started
     addMetric({ at: Date.now(), label, table, ms, status: error ? 'error' : 'ok', error: error?.message })
     return { data, error }

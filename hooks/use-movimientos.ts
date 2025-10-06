@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { MovimientoConRelaciones } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
@@ -21,29 +21,25 @@ const DEFAULT_PAGE_SIZE = 100
 export function useMovimientos(
   delegacionId: string | null,
   filters?: MovimientosFilters,
-    options: { timeoutMs?: number; pageSize?: number } = {}
-  ) {
+  options: { timeoutMs?: number; pageSize?: number } = {}
+) {
   const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
 
-  const abortRef = useRef<AbortController | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const isFetchingRef = useRef(false)
-  const hasFetchedRef = useRef(false)
-  const lastResultWasEmptyRef = useRef(false)
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
+  const abortRef = useRef<AbortController | null>(null)
+  const fetchingRef = useRef(false)
+  const lastFetchKeyRef = useRef<string>("")
 
   const serializedFilters = useMemo(() => {
     if (!filters) return "__no_filters__"
-
     const normalized = {
       ...filters,
       categoriaIds: filters.categoriaIds ? [...filters.categoriaIds].sort() : undefined,
     }
-
     try {
       return JSON.stringify(normalized)
     } catch (error) {
@@ -52,10 +48,8 @@ export function useMovimientos(
     }
   }, [filters])
 
-  // Memoize filters using their serialized representation to avoid effect churn
   const memoizedFilters = useMemo(() => {
     if (serializedFilters === "__no_filters__") return undefined
-
     try {
       const parsed = JSON.parse(serializedFilters) as MovimientosFilters
       return {
@@ -68,43 +62,41 @@ export function useMovimientos(
     }
   }, [serializedFilters])
 
-  const lastResetKey = useRef<string | null>(null)
-  const resetKey = useMemo(() => `${delegacionId ?? "__no_delegacion__"}|${serializedFilters}|${pageSize}`, [delegacionId, serializedFilters, pageSize])
+  const fetchKey = useMemo(
+    () => `${delegacionId || "null"}|${serializedFilters}`,
+    [delegacionId, serializedFilters]
+  )
 
   const fetchMovimientos = useCallback(
-    async (pageIndex: number = 0, append: boolean = true) => {
+    async (pageIndex: number = 0, isAppend: boolean = false) => {
       if (!delegacionId) {
         setMovimientos([])
         setLoading(false)
         setError(null)
-        return { data: [], totalCount: 0 }
+        setHasMore(false)
+        return
       }
 
+      // Prevent concurrent fetches
+      if (fetchingRef.current) {
+        console.log("[useMovimientos] Already fetching, skipping...")
+        return
+      }
+
+      // Cancel previous request
       if (abortRef.current) {
         abortRef.current.abort()
       }
 
       const abortController = new AbortController()
       abortRef.current = abortController
-
-      // Add timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-
-      let wasAborted = false
+      fetchingRef.current = true
 
       try {
-        if (!append || pageIndex === 0) {
-          setLoading(true)
-          setError(null)
-          hasFetchedRef.current = false
-          lastResultWasEmptyRef.current = false
-        }
+        setLoading(true)
+        setError(null)
 
-        isFetchingRef.current = true
-
-        // Build base query
+        // Optimized query: removed delegacion JOIN and archivos JOIN
         let query = supabase
           .from("movimiento")
           .select(
@@ -134,14 +126,7 @@ export function useMovimientos(
               tipo,
               origen,
               banco_nombre,
-              color,
-              delegacion:delegacion_id (
-                id,
-                organizacion_id,
-                codigo,
-                nombre,
-                creado_en
-              )
+              color
             ),
             categoria:categoria_id (
               id,
@@ -152,20 +137,6 @@ export function useMovimientos(
               orden,
               categoria_padre_id,
               creado_en
-            ),
-            archivos:movimiento_archivo!movimiento_id (
-              id,
-              nombre_original,
-              nombre_archivo,
-              tipo_mime,
-              tamaño_bytes,
-              bucket,
-              path_storage,
-              url_publica,
-              es_factura,
-              descripcion,
-              subido_por,
-              subido_en
             )
           `,
             { count: "exact" }
@@ -190,9 +161,7 @@ export function useMovimientos(
             query = query.eq("cuenta_id", memoizedFilters.cuentaId)
           }
           if (memoizedFilters.busqueda) {
-            const term = memoizedFilters.busqueda
-              .replace(/%/g, "\\%")
-              .replace(/,/g, "\\,")
+            const term = memoizedFilters.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
             query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%`)
           }
           if (memoizedFilters.amountFrom !== undefined) {
@@ -213,103 +182,84 @@ export function useMovimientos(
 
         const { data, count, error } = await query.abortSignal(abortController.signal)
 
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current)
-          timeoutRef.current = null
-        }
-
         if (abortController.signal.aborted) {
-          return { data: [], totalCount: 0 }
+          console.log("[useMovimientos] Request aborted")
+          return
         }
 
         if (error) throw error
 
-        const movimientosData = data as any[]
+        const movimientosData = (data || []) as MovimientoConRelaciones[]
         const totalCount = count || 0
 
-        if (append && pageIndex > 0) {
+        if (isAppend && pageIndex > 0) {
           setMovimientos((prev) => [...prev, ...movimientosData])
         } else {
           setMovimientos(movimientosData)
-          lastResultWasEmptyRef.current = movimientosData.length === 0
         }
 
         setHasMore(movimientosData.length === pageSize && (pageIndex + 1) * pageSize < totalCount)
-
-        return { data: movimientosData, totalCount }
-      } catch (error: any) {
-        const errorMessage = error?.message || "Error desconocido"
-        console.error("Error fetching movimientos:", errorMessage)
-
+      } catch (err: any) {
         if (abortController.signal.aborted) {
-          console.log("Request was cancelled")
-          wasAborted = true
-          return { data: [], totalCount: 0 }
+          console.log("[useMovimientos] Caught aborted request")
+          return
         }
-
+        const errorMessage = err?.message || "Error desconocido"
+        console.error("[useMovimientos] Error:", errorMessage)
         setError(errorMessage)
-        return { data: [], totalCount: 0 }
       } finally {
         setLoading(false)
-        isFetchingRef.current = false
-        if (!wasAborted) {
-          hasFetchedRef.current = true
-        }
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current)
-          timeoutRef.current = null
-        }
+        fetchingRef.current = false
       }
     },
     [delegacionId, memoizedFilters, pageSize]
   )
 
+  // Main effect: fetch when key changes
   useEffect(() => {
-    if (lastResetKey.current === resetKey && hasFetchedRef.current) {
+    // Skip if same key and already fetched
+    if (fetchKey === lastFetchKeyRef.current) {
       return
     }
 
-    lastResetKey.current = resetKey
+    lastFetchKeyRef.current = fetchKey
 
-    // Cleanup any in-flight when dependencies change
-    if (abortRef.current) abortRef.current.abort()
-
-    // Reset pagination and fetch new data
+    // Reset state
     setPage(0)
     setHasMore(true)
+
+    // Fetch
     fetchMovimientos(0, false)
 
+    // Cleanup
     return () => {
-      if (abortRef.current) abortRef.current.abort()
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (abortRef.current) {
+        abortRef.current.abort()
+      }
     }
-  }, [resetKey, fetchMovimientos])
+  }, [fetchKey, fetchMovimientos])
 
-  useEffect(() => {
-    if (!delegacionId) return
-    if (loading) return
-    if (isFetchingRef.current) return
-    if (hasFetchedRef.current) return
-    if (movimientos.length === 0 && lastResultWasEmptyRef.current) return
-    if (movimientos.length > 0) return
+  // Revalidate on focus - with debouncing (only if not currently fetching)
+  const revalidate = useCallback(() => {
+    if (!fetchingRef.current && lastFetchKeyRef.current !== "") {
+      console.log("[useMovimientos] Revalidating on focus")
+      setPage(0)
+      setHasMore(true)
+      fetchMovimientos(0, false)
+    }
+  }, [fetchMovimientos])
 
-    fetchMovimientos(0, false)
-  }, [delegacionId, loading, movimientos.length, fetchMovimientos])
-
-  useRevalidateOnFocusJitter(() => fetchMovimientos(0, false), { minMs: 90, maxMs: 220 })
+  useRevalidateOnFocusJitter(revalidate, { minMs: 90, maxMs: 220 })
 
   const loadMore = useCallback(() => {
-    if (loading || !hasMore || isFetchingRef.current) return
+    if (loading || !hasMore || fetchingRef.current) return
     const nextPage = page + 1
     setPage(nextPage)
     fetchMovimientos(nextPage, true)
   }, [loading, hasMore, page, fetchMovimientos])
 
-  const createMovimiento = async (
-    data: Partial<MovimientoConRelaciones>,
-  ) => {
+  const createMovimiento = async (data: Partial<MovimientoConRelaciones>) => {
     try {
-      // Ensure we have an authenticated user for creado_por
       const {
         data: { user },
         error: authError,
@@ -317,7 +267,6 @@ export function useMovimientos(
       if (authError) throw authError
       if (!user) throw new Error("Usuario no autenticado")
 
-      // Normalize payload: optional UUIDs must be null, not empty string
       const payload: any = {
         ...data,
         categoria_id: (data as any)?.categoria_id || null,
@@ -394,25 +343,27 @@ export function useMovimientos(
         .single()
 
       if (error) throw error
-      setMovimientos(prev => [created as any, ...prev])
+
+      // Optimistically add to local state
+      setMovimientos(prev => [created as MovimientoConRelaciones, ...prev])
+
       return created as MovimientoConRelaciones
     } catch (err) {
       throw err
     }
   }
 
-  const updateMovimiento = async (
-    movimientoId: string,
-    patch: Partial<MovimientoConRelaciones>,
-  ) => {
+  const updateMovimiento = async (movimientoId: string, patch: Partial<MovimientoConRelaciones>) => {
     try {
       const { error } = await supabase
         .from("movimiento")
         .update(patch as any)
         .eq("id", movimientoId)
       if (error) throw error
+
+      // Optimistically update local state
       setMovimientos(prev =>
-        prev.map(mov => (mov.id === movimientoId ? { ...mov, ...patch } : mov)),
+        prev.map(mov => (mov.id === movimientoId ? { ...mov, ...patch } : mov))
       )
     } catch (err) {
       throw err
@@ -420,15 +371,15 @@ export function useMovimientos(
   }
 
   const deleteMovimientos = async (movimientoIds: string[]) => {
-    if (movimientoIds.length === 0) {
-      return
-    }
+    if (movimientoIds.length === 0) return
 
     try {
       const { error } = await supabase.from("movimiento").delete().in("id", movimientoIds)
       if (error) throw error
-      const idsToDelete = new Set(movimientoIds)
-      setMovimientos((prev) => prev.filter((mov) => !idsToDelete.has(mov.id)))
+
+      // Optimistically remove from local state
+      const idsSet = new Set(movimientoIds)
+      setMovimientos(prev => prev.filter(mov => !idsSet.has(mov.id)))
     } catch (err) {
       throw err
     }
@@ -438,18 +389,20 @@ export function useMovimientos(
     try {
       const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
       if (error) throw error
-      setMovimientos(prev => prev.map(mov => (mov.id === movimientoId ? { ...mov, categoria_id: categoriaId } : mov)))
+
+      // Optimistically update local state
+      setMovimientos(prev =>
+        prev.map(mov => (mov.id === movimientoId ? { ...mov, categoria_id: categoriaId } : mov))
+      )
     } catch (err) {
       throw err
     }
   }
 
-  const refetch = () => {
-    setMovimientos([])
-    setPage(0)
-    setHasMore(true)
-    return fetchMovimientos(0, false)
-  }
+  const refetch = useCallback(() => {
+    lastFetchKeyRef.current = "" // Force refetch
+    fetchMovimientos(0, false)
+  }, [fetchMovimientos])
 
   return {
     movimientos,

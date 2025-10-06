@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CategorySelector } from "@/components/transactions/category-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
+import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
 import { TrendingUp, TrendingDown, Wallet, BarChart3, PieChart } from "lucide-react"
 import {
   XAxis,
@@ -44,16 +45,34 @@ interface Props {
 
 export function ActivityBalanceDashboard({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  const [categoryIds, setCategoryIds] = useState<string[]>([])
+  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
 
   const { categorias } = useCategorias(selectedDelegation)
-  const { movimientos } = useMovimientos(selectedDelegation, {
-    fechaDesde: from,
-    fechaHasta: to,
-    categoriaIds: categoryIds.length ? categoryIds : undefined,
-  })
 
+  // Fetch all movimientos for historical data (without date filters)
   const { movimientos: allMovimientos } = useMovimientos(selectedDelegation)
+
+  // Filter locally for the current period and categories
+  const movimientos = useMemo(() => {
+    let filtered = allMovimientos
+
+    // Apply date range filter
+    if (from || to) {
+      filtered = filtered.filter((m) => {
+        if (from && m.fecha < from) return false
+        if (to && m.fecha > to) return false
+        return true
+      })
+    }
+
+    // Apply category filter
+    if (categoryIds.length > 0) {
+      const categorySet = new Set(categoryIds)
+      filtered = filtered.filter((m) => m.categoria_id && categorySet.has(m.categoria_id))
+    }
+
+    return filtered
+  }, [allMovimientos, from, to, categoryIds])
 
   const summary = useMemo(() => {
     let ingresos = 0
@@ -256,11 +275,14 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
           <CardContent>
             <CategorySelector
               categories={categorias}
-              selectedCategories={categoryIds}
+              selectedCategories={selectedCategories}
               onSelectionChange={setCategoryIds}
               allowMultiple
               placeholder="Seleccionar categorías..."
             />
+            {isPending && (
+              <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
+            )}
           </CardContent>
         </Card>
       </div>

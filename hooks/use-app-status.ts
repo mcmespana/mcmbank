@@ -67,19 +67,65 @@ export const useRevalidateOnFocus = (revalidate: () => void) => {
   }, [revalidate])
 }
 
+// Global debouncing for revalidations to avoid thundering herd
+const REVALIDATION_WINDOW = 500 // ms
+const pendingRevalidations = new Set<() => void>()
+let revalidationTimer: NodeJS.Timeout | null = null
+
+function scheduleRevalidation(callback: () => void) {
+  pendingRevalidations.add(callback)
+
+  if (revalidationTimer) {
+    clearTimeout(revalidationTimer)
+  }
+
+  revalidationTimer = setTimeout(() => {
+    const callbacks = Array.from(pendingRevalidations)
+    pendingRevalidations.clear()
+
+    // Execute with staggered timing to reduce load spike
+    callbacks.forEach((cb, index) => {
+      setTimeout(cb, index * 50)
+    })
+
+    revalidationTimer = null
+  }, REVALIDATION_WINDOW)
+}
+
 // Same as above but adds a small jitter to avoid thundering herd on focus
+// Now also includes global debouncing to batch revalidations
 export const useRevalidateOnFocusJitter = (
   revalidate: () => void,
   { minMs = 40, maxMs = 160 }: { minMs?: number; maxMs?: number } = {}
 ) => {
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null
+
     const handler = () => {
+      // Clear any existing timeout before creating a new one
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId)
+      }
+
       const jitter = Math.floor(minMs + Math.random() * (maxMs - minMs))
-      const id = setTimeout(() => revalidate(), jitter)
-      return () => clearTimeout(id)
+      timeoutId = setTimeout(() => {
+        // Use global debouncing scheduler
+        scheduleRevalidation(revalidate)
+        timeoutId = null
+      }, jitter)
     }
-    const wrapped = () => { handler() }
-    const unsubscribe = appStatusEmitter.subscribe(wrapped)
-    return () => { unsubscribe() }
+
+    const unsubscribe = appStatusEmitter.subscribe(handler)
+
+    return () => {
+      unsubscribe()
+      // Clean up timeout on unmount
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+      // Remove from pending revalidations
+      pendingRevalidations.delete(revalidate)
+    }
   }, [revalidate, minMs, maxMs])
 }

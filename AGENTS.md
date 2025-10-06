@@ -1,39 +1,43 @@
-# Repository Guidelines
+# 🧑‍💻 Guía rápida para colaborar en MCM Bank
 
-## Project Structure & Module Organization
-- `app/`: Next.js App Router routes (`layout.tsx`, `page.tsx`, feature folders like `auth/`, `cuentas/`, `transacciones/`).
-- `components/`: Reusable UI and feature components (e.g., `ui/`, `dashboard/`).
-- `lib/`: App logic (`services/`, `utils/`, `supabase/`, `types/`). Use `@/` alias (e.g., `@/lib/utils`).
-- `hooks/`, `contexts/`: React hooks and context providers.
-- `public/`: Static assets (logos, placeholders).
-- `scripts/`: Utilities and SQL files for data/setup.
-- `styles/`: Global styles; Tailwind configured in `tailwind.config.ts`.
+Este documento reúne las normas de trabajo para todo el repositorio. Si editas archivos en subcarpetas con su propio `AGENTS.md`, respeta primero el más específico.
 
-## Build, Test, and Development Commands
-- Install: `pnpm install` (or `npm install`). Node `>=20` (repo uses `.nvmrc` → `nvm use`).
-- Dev: `pnpm dev` → runs at `http://localhost:3000`.
-- Build: `pnpm build` → Next.js production build.
-- Start: `pnpm start` → serve the built app.
-- Lint: `pnpm lint` → Next.js/ESLint checks.
+## 📦 Arquitectura del proyecto
+- `app/`: Rutas del App Router de Next.js (`layout.tsx`, `page.tsx` y features como `auth/`, `cuentas/`, `transacciones/`).
+- `components/`: Componentes reutilizables (UI base, dashboards, formularios, etc.).
+- `lib/`: Lógica de negocio (`services/`, `utils/`, `supabase/`, `types/`). Usa siempre el alias `@/` (ej. `@/lib/utils`).
+- `hooks/`, `contexts/`: Hooks personalizados y providers de React.
+- `public/`: Assets estáticos (logos, placeholders).
+- `scripts/`: Utilidades y SQL para inicializar/diagnosticar datos.
+- `styles/`: Estilos globales; Tailwind configurado en `tailwind.config.ts`.
 
-## Coding Style & Naming Conventions
-- Language: TypeScript (strict). React function components.
-- Files: kebab-case for filenames (`amount-display.tsx`); PascalCase for component exports; camelCase for vars/functions.
-- Styling: Tailwind CSS. Prefer `cn(...)` from `@/lib/utils` to merge classes.
-- Imports: use `@/` alias for internal modules; absolute over relative when possible.
-- Formatting/Linting: Next.js ESLint defaults; keep consistent 2‑space indentation.
+## 🧰 Comandos esenciales
+- Instalar dependencias: `pnpm install` (o `npm install`). El proyecto requiere Node `>= 20`; puedes usar `.nvmrc` → `nvm use`.
+- Desarrollo local: `pnpm dev` (Next.js en `http://localhost:3000`).
+- Build de producción: `pnpm build`.
+- Servir la build: `pnpm start`.
+- Linter: `pnpm lint`.
 
-## Testing Guidelines
-- No test runner is configured yet. When adding tests, prefer React Testing Library + Vitest.
-- Location: co-locate as `*.test.tsx` next to source or under `components/__tests__/`.
-- Coverage: target critical paths (auth, transactions, services in `lib/`).
-- Run: add `"test": "vitest"` and use `pnpm test` once configured.
+## ✨ Estilo de código
+- TypeScript estricto, componentes de React como funciones.
+- Nombres de archivo en kebab-case (`amount-display.tsx`), componentes exportados en PascalCase y variables/funciones en camelCase.
+- Usa Tailwind CSS y utilidades como `cn(...)` de `@/lib/utils` para combinar clases.
+- Prefiere imports absolutos con `@/` en lugar de rutas relativas profundas.
+- Respeta el formateo por defecto de ESLint/Next (indentación de 2 espacios).
 
-## Commit & Pull Request Guidelines
-- History is informal (short Spanish/English messages). Prefer imperative, concise subjects (≤72 chars) and descriptive bodies.
-- Reference issues (e.g., `Fix delegación filter (#123)`). Optional Conventional Commits: `feat(cuentas): resumen`.
-- PRs: include scope/goal, linked issues, screenshots for UI changes, and test/QA steps. Keep diffs focused; avoid unrelated formatting.
+## 🧪 Testing
+- Todavía no hay runner configurado. Si agregas tests, usa React Testing Library + Vitest.
+- Ubica las pruebas junto al archivo (`*.test.tsx`) o bajo `components/__tests__/`.
+- Enfócate en paths críticos (auth, transacciones, servicios en `lib/`).
+- Una vez configurado, ejecuta con `pnpm test` (añade `"test": "vitest"` al package.json cuando corresponda).
 
-## Security & Configuration
-- Env: define in `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL`). Do not commit secrets.
-- Client vs server: only expose keys with `NEXT_PUBLIC_`. Rotate leaked keys via Supabase.
+## 📦 Commits y PRs
+- Mensajes cortos e imperativos (≤72 caracteres). Puedes usar Convencional Commits (`feat(cuentas): resumen`) pero no es obligatorio.
+- Referencia issues cuando aplique (`Fix delegación filter (#123)`).
+- PRs: explica objetivo, enlaza issues, adjunta capturas para cambios de UI y describe pasos de QA. Evita mezclar refactors sin relación.
+
+## 🔐 Variables y seguridad
+- Configura `.env.local` con `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL`. No subas secretos al repo.
+- Diferencia cliente vs. servidor: solo expón claves con prefijo `NEXT_PUBLIC_`. Si una clave se filtra, rótala desde Supabase.
+
+¡Gracias por mantener coherente el proyecto! 💙

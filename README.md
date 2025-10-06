@@ -1,30 +1,87 @@
-# Mcm bank clone
+# 🏦 MCM Bank
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+¡Hola! Este repositorio contiene la versión web del panel financiero usado por las delegaciones del Movimiento Consolación para el Mundo. La app permite llevar un control limpio de ingresos, gastos y balances por actividades, con importaciones bancarias guiadas y dashboards listos para compartir.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/mcmespana/v0-mcm-bank-clone)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/A1JxpZTjnEc)
+## 🚀 TL;DR para arrancar
+1. Clona el repo y entra en la carpeta del proyecto.
+2. Asegura Node.js 20 (`nvm use` si tienes el archivo `.nvmrc`).
+3. Instala dependencias con `pnpm install` (habilita pnpm ejecutando `corepack enable` una vez).
+4. Crea `.env.local` con tus claves de Supabase (ver más abajo).
+5. Ejecuta `pnpm dev` y abre `http://localhost:3000`.
 
-## Overview
+> 🧪 Usuario demo: `admin@movimientoconsolacion.com` · contraseña `1234`.
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+## 📋 Requisitos
+- **Node.js ≥ 20** (el repo incluye `.nvmrc`).
+- **pnpm ≥ 8** (viene con Node 20 usando Corepack).
+- **Cuenta Supabase** para obtener `URL` y `anon key`.
 
-## Deployment
+## 🛠️ Instalación paso a paso
+```bash
+# 1. Clonar y entrar
+ git clone https://github.com/mcmespana/mcmbank.git
+ cd mcmbank
 
-Your project is live at:
+# 2. Seleccionar la versión de Node recomendada
+ nvm use
 
-**[https://vercel.com/mcmespana/v0-mcm-bank-clone](https://vercel.com/mcmespana/v0-mcm-bank-clone)**
+# 3. Habilitar pnpm (solo la primera vez)
+ corepack enable
 
-## Build your app
+# 4. Instalar dependencias
+ pnpm install
+```
 
-Continue building your app on:
+### Variables de entorno
+Crea un archivo `.env.local` en la raíz con las siguientes claves (añade valores reales de Supabase):
 
-**[https://v0.app/chat/projects/A1JxpZTjnEc](https://v0.app/chat/projects/A1JxpZTjnEc)**
+```bash
+NEXT_PUBLIC_SUPABASE_URL="https://tu-proyecto.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="tu-clave-anon"
+NEXT_PUBLIC_SITE_URL="http://localhost:3000"
+NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL="http://localhost:3000/auth/callback"
+```
 
-## How It Works
+> 💡 Después de añadir o cambiar variables, reinicia el servidor de desarrollo.
 
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+### Ejecutar la app
+```bash
+# Servidor de desarrollo
+pnpm dev
+
+# Compilar para producción
+pnpm build
+
+# Servir la build localmente
+pnpm start
+```
+
+### Calidad y mantenimiento
+```bash
+# Linter en modo lectura
+pnpm lint
+
+# Linter con autofix
+pnpm lint:fix
+```
+
+## 🧭 Estructura esencial del proyecto
+- `app/`: Rutas App Router de Next.js (auth, cuentas, transacciones, etc.).
+- `components/`: Componentes reutilizables (UI, dashboard, formularios).
+- `lib/`: Servicios, utilidades y clientes Supabase (`@/lib/...`).
+- `hooks/` y `contexts/`: Hooks personalizados y providers de React.
+- `docs/`: Manual funcional para las delegaciones (`docs/README.md`).
+- `scripts/`: Utilidades y scripts de soporte (ej. comprobaciones de Supabase).
+
+## 📚 Recursos útiles
+- Manual funcional: `docs/README.md` y capítulos numerados para cada módulo.
+- Guía rápida de categorías, cuentas y movimientos en `docs/03-categorias.md`, `docs/04-cuentas.md` y `docs/05-movimientos.md`.
+- Configuración detallada del proyecto y convenciones internas en `AGENTS.md`.
+
+## 🤝 Cómo contribuir
+1. Crea una rama descriptiva (`git checkout -b feat/nueva-funcionalidad`).
+2. Sigue las convenciones de código descritas en `AGENTS.md` (TypeScript estricto, Tailwind + `cn`).
+3. Verifica el linting y documenta cualquier comando/test que ejecutes.
+4. Abre un PR incluyendo contexto, capturas si hay cambios de UI y pasos de QA.
+
+¡Gracias por aportar a la transparencia financiera del movimiento! 💙

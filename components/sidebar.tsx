@@ -120,9 +120,9 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
   ]
 
   return (
-    <div className={cn("flex h-full flex-col bg-sidebar", className)}>
+    <div className={cn("flex h-full flex-col bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border/50", className)}>
       {/* Logo */}
-      <div className="flex h-16 items-center border-b border-sidebar-border px-6">
+      <div className="flex h-16 items-center border-b border-sidebar-border/30 px-6 bg-gradient-to-r from-primary/5 to-transparent">
         <button
           type="button"
           onClick={() => {
@@ -132,11 +132,13 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
               // no-op
             }
           }}
-          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+          className="flex items-center gap-3 hover:opacity-90 transition-all duration-300 hover:scale-105"
           title="Ir al inicio"
         >
-          <Building2 className="h-8 w-8 text-sidebar-primary" />
-          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">MCM Bank</span>}
+          <div className="bg-gradient-to-br from-primary to-primary/70 p-2 rounded-xl shadow-lg">
+            <Building2 className="h-5 w-5 text-white" />
+          </div>
+          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground bg-gradient-to-r from-sidebar-foreground to-sidebar-foreground/70 bg-clip-text text-transparent">MCM Bank</span>}
         </button>
       </div>
 
@@ -149,25 +151,33 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
           const linkContent = (
             <div
               className={cn(
-                "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 relative overflow-hidden group",
                 isDisabled
                   ? "text-muted-foreground cursor-not-allowed opacity-50"
                   : isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    ? "bg-gradient-to-r from-primary/20 to-primary/10 text-sidebar-accent-foreground shadow-md backdrop-blur-sm border border-primary/30"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:shadow-md hover:backdrop-blur-sm hover:scale-105 hover:border hover:border-sidebar-border/30",
               )}
             >
-              <div className="flex items-center gap-3">
-                <item.icon className="h-5 w-5" />
+              {isActive && (
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent animate-pulse" />
+              )}
+              <div className="flex items-center gap-3 relative z-10">
+                <div className={cn(
+                  "p-1.5 rounded-lg transition-all duration-300",
+                  isActive ? "bg-primary/20 shadow-sm" : "group-hover:bg-primary/10"
+                )}>
+                  <item.icon className="h-4 w-4" />
+                </div>
                 {!collapsed && <span>{item.name}</span>}
               </div>
               {!collapsed && item.count !== null && (
                 <span
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-xs",
+                    "rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-sm relative z-10",
                     isDisabled
                       ? "bg-muted text-muted-foreground"
-                      : "bg-sidebar-primary text-sidebar-primary-foreground",
+                      : "bg-primary/90 text-primary-foreground border border-primary/20",
                   )}
                 >
                   {item.count}
@@ -219,14 +229,14 @@ export function Sidebar({
           <SidebarContent collapsed={collapsed} counts={counts} countsLoading={countsLoading} />
 
           {/* Collapse Toggle Button */}
-          <div className="absolute -right-3 top-8">
+          <div className="absolute -right-4 top-10">
             <Button
               variant="outline"
               size="icon"
-              className="h-6 w-6 rounded-full bg-background border-2 shadow-md"
+              className="h-8 w-8 rounded-full bg-card/90 backdrop-blur-xl border-2 border-border/50 shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300"
               onClick={onToggleCollapse}
             >
-              {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
           </div>
         </div>

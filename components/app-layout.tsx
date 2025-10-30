@@ -51,10 +51,15 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Show loading state while auth is loading or redirecting
   if (loading || (isRedirecting && !user)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">{isRedirecting ? "Redirigiendo..." : "Cargando..."}</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center relative overflow-hidden">
+        <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50 pointer-events-none" />
+        <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.1),rgba(255,255,255,0))] pointer-events-none" />
+        <div className="text-center relative z-10">
+          <div className="relative inline-block">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto mb-6"></div>
+            <div className="absolute inset-0 rounded-full bg-primary/5 blur-xl"></div>
+          </div>
+          <p className="text-muted-foreground text-lg font-medium">{isRedirecting ? "Redirigiendo..." : "Cargando..."}</p>
         </div>
       </div>
     )
@@ -66,7 +71,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 relative">
+      {/* Subtle animated background gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.1),rgba(255,255,255,0))] pointer-events-none" />
+
       {/* Desktop Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -75,12 +84,12 @@ export function AppLayout({ children }: AppLayoutProps) {
       />
 
       {/* Main Content */}
-      <div className={cn("transition-all duration-300", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
+      <div className={cn("transition-all duration-300 relative z-10", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
         {/* Topbar */}
         <Topbar selectedDelegation={selectedDelegation} onDelegationChange={(id) => setSelectedDelegation(id)} />
 
         {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main className="flex-1 p-4 lg:p-8">{children}</main>
       </div>
     </div>
   )

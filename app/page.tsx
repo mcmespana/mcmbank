@@ -15,17 +15,25 @@ export default function HomePage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-2 bg-gradient-to-b from-primary via-primary/70 to-primary/40 rounded-full shadow-lg shadow-primary/30" />
+            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
+              Dashboard
+            </h1>
+          </div>
           <TimeframeFilter value={timeframe} onChange={setTimeframe} />
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-12">
+        {/* Tabs */}
+        <Tabs defaultValue="overview" className="space-y-8">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Resumen</span>
+              <span className="sm:hidden">Inicio</span>
             </TabsTrigger>
             <TabsTrigger value="actividad" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -33,19 +41,19 @@ export default function HomePage() {
             </TabsTrigger>
             <TabsTrigger value="categorias" className="flex items-center gap-2">
               <PieChart className="h-4 w-4" />
-              <span className="hidden sm:inline">Análisis ingresos y gastos</span>
+              <span className="hidden sm:inline">Análisis</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="space-y-8">
             <OverviewDashboard from={from} to={to} />
           </TabsContent>
 
-          <TabsContent value="actividad" className="space-y-6">
+          <TabsContent value="actividad" className="space-y-8">
             <ActivityBalanceDashboard from={from} to={to} />
           </TabsContent>
 
-          <TabsContent value="categorias" className="space-y-6">
+          <TabsContent value="categorias" className="space-y-8">
             <CategoryAnalysisDashboard from={from} to={to} />
           </TabsContent>
         </Tabs>

@@ -40,6 +40,7 @@ export function CuentasManager() {
     [cuentasWithDelegacion],
   )
   const [searchTerm, setSearchTerm] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
   const [editingCuenta, setEditingCuenta] = useState<Cuenta | null>(null)
   const [deletingCuenta, setDeletingCuenta] = useState<Cuenta | null>(null)
@@ -321,30 +322,53 @@ export function CuentasManager() {
   const bancosCount = cuentas.filter((c) => c.tipo === "banco").length
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:gap-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-sm order-2 sm:order-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Buscar cuentas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10 sm:h-11 bg-background border-border"
-            />
+        {searchOpen ? (
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Buscar cuentas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10"
+                autoFocus
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchOpen(false)
+                setSearchTerm("")
+              }}
+              className="h-10"
+            >
+              Cerrar
+            </Button>
           </div>
-
-          <Button 
-            onClick={() => setIsCreateSheetOpen(true)} 
-            className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-6 order-1 sm:order-2" 
-            size="default"
-            disabled={Object.values(operationStates).some(state => state === 'creating')}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Cuenta
-          </Button>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setSearchOpen(true)}
+              className="h-10"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Buscar
+            </Button>
+            <Button
+              onClick={() => setIsCreateSheetOpen(true)}
+              className="h-10"
+              size="default"
+              disabled={Object.values(operationStates).some(state => state === 'creating')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Cuenta
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">

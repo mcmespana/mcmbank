@@ -208,9 +208,9 @@ export function TransactionManager() {
           handleMovementUpdate(movementId, { categoria_id: categoryId } as Partial<MovimientoConRelaciones>),
         ),
       )
-      toast.success(`Categoría actualizada en ${selectionCount} transacciones`)
+      toast.success(`Categoría actualizada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkCategoryOpen(false)
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error updating categories in bulk", error)
       toast.error("No se pudieron actualizar las categorías seleccionadas")
@@ -233,10 +233,10 @@ export function TransactionManager() {
           handleMovementUpdate(movementId, { concepto: nextConcept }),
         ),
       )
-      toast.success(`Concepto actualizado en ${selectionCount} transacciones`)
+      toast.success(`Concepto actualizado en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkConceptOpen(false)
       setBulkConceptValue("")
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error updating concept in bulk", error)
       toast.error("No se pudieron actualizar los conceptos seleccionados")
@@ -263,10 +263,10 @@ export function TransactionManager() {
           return handleMovementUpdate(movement.id, { descripcion: newDescription })
         }),
       )
-      toast.success(`Descripción ampliada en ${selectionCount} transacciones`)
+      toast.success(`Descripción ampliada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkDescriptionOpen(false)
       setBulkDescriptionValue("")
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error appending description in bulk", error)
       toast.error("No se pudieron actualizar las descripciones seleccionadas")

@@ -208,26 +208,16 @@ export function ImprovementProposalsPanel() {
         </Alert>
       )}
 
-      <ProposalsBoard
-        type="idea"
-        proposals={ideaProposals}
-        loading={loading}
-        refreshing={refreshing || manualRefresh}
-        showCompleted={showCompleted}
-        isAdmin={isAdmin}
-        updatingId={updatingId}
-        onStatusChange={isAdmin ? handleStatusChange : undefined}
-        onToggleVote={toggleVote}
-        votingId={votingId}
-        onCommentAdded={registerComment}
-      />
-
+      {/* Errores primero */}
       <section className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <h2 className="text-xl font-semibold text-foreground">Errores reportados por la comunidad</h2>
+            <h2 className="text-2xl font-bold text-destructive flex items-center gap-2">
+              <Bug className="h-6 w-6" />
+              Errores reportados por la comunidad
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Usa este tablero para seguir el avance de los fallos que ya estamos revisando.
+              Usa este tablero para seguir el avance de los fallos que ya estamos revisando. Esto está arriba para que no se olviden.
             </p>
           </div>
         </div>
@@ -237,6 +227,35 @@ export function ImprovementProposalsPanel() {
           proposals={errorProposals}
           loading={loading}
           refreshing={refreshing || manualRefresh}
+          isAdmin={isAdmin}
+          updatingId={updatingId}
+          onStatusChange={isAdmin ? handleStatusChange : undefined}
+          onToggleVote={toggleVote}
+          votingId={votingId}
+          onCommentAdded={registerComment}
+        />
+      </section>
+
+      {/* Ideas después */}
+      <section className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
+              <Sparkles className="h-6 w-6" />
+              Ideas de mejora
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Comparte tus ideas para mejorar la aplicación. La comunidad puede votarlas y el equipo las revisará.
+            </p>
+          </div>
+        </div>
+
+        <ProposalsBoard
+          type="idea"
+          proposals={ideaProposals}
+          loading={loading}
+          refreshing={refreshing || manualRefresh}
+          showCompleted={showCompleted}
           isAdmin={isAdmin}
           updatingId={updatingId}
           onStatusChange={isAdmin ? handleStatusChange : undefined}

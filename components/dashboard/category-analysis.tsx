@@ -43,11 +43,17 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
   const { categorias } = useCategorias(selectedDelegation)
-  const { movimientos } = useMovimientos(selectedDelegation, {
-    fechaDesde: from,
-    fechaHasta: to,
-    categoriaIds: categoryIds.length ? categoryIds : undefined,
-  })
+  // Dashboard needs ALL movements for accurate calculations
+  // Apply date and category filters at DB level for better performance
+  const { movimientos } = useMovimientos(
+    selectedDelegation,
+    {
+      fechaDesde: from,
+      fechaHasta: to,
+      categoriaIds: categoryIds.length ? categoryIds : undefined,
+    },
+    { pageSize: 0 } // Disable pagination to load ALL movements
+  )
 
   const aggregate = useMemo(() => {
     const ingresoMap = new Map<string, { id: string; name: string; value: number; emoji?: string }>()

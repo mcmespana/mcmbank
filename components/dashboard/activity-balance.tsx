@@ -49,30 +49,23 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
 
   const { categorias } = useCategorias(selectedDelegation)
 
-  // Fetch all movimientos for historical data (without date filters)
-  const { movimientos: allMovimientos } = useMovimientos(selectedDelegation)
+  // Dashboard needs ALL movements for accurate calculations
+  // Apply date filters at DB level for better performance
+  const { movimientos } = useMovimientos(
+    selectedDelegation,
+    {
+      fechaDesde: from,
+      fechaHasta: to,
+      categoriaIds: categoryIds.length > 0 ? categoryIds : undefined,
+    },
+    { pageSize: 0 } // Disable pagination to load ALL movements
+  )
 
-  // Filter locally for the current period and categories
-  const movimientos = useMemo(() => {
-    let filtered = allMovimientos
-
-    // Apply date range filter
-    if (from || to) {
-      filtered = filtered.filter((m) => {
-        if (from && m.fecha < from) return false
-        if (to && m.fecha > to) return false
-        return true
-      })
-    }
-
-    // Apply category filter
-    if (categoryIds.length > 0) {
-      const categorySet = new Set(categoryIds)
-      filtered = filtered.filter((m) => m.categoria_id && categorySet.has(m.categoria_id))
-    }
-
-    return filtered
-  }, [allMovimientos, from, to, categoryIds])
+  // Movements are already filtered by date at DB level
+  // No need for local filtering anymore
+  const filteredMovimientos = useMemo(() => {
+    return movimientos
+  }, [movimientos, categoryIds])
 
   const summary = useMemo(() => {
     let ingresos = 0
@@ -112,12 +105,12 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
   }
 
   const monthlyData = useMemo(() => {
-    if (allMovimientos.length === 0) return []
+    if (movimientos.length === 0) return []
 
-    const firstTransaction = allMovimientos.reduce((earliest, current) =>
+    const firstTransaction = movimientos.reduce((earliest, current) =>
       current.fecha < earliest.fecha ? current : earliest,
     )
-    const lastTransaction = allMovimientos.reduce((latest, current) =>
+    const lastTransaction = movimientos.reduce((latest, current) =>
       current.fecha > latest.fecha ? current : latest,
     )
 
@@ -153,7 +146,7 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
       const nextInterval = intervals[intervals.indexOf(interval) + 1]
       const intervalEnd = nextInterval ? nextInterval.toISOString().split("T")[0] : endDate.toISOString().split("T")[0]
 
-      const intervalMovimientos = allMovimientos.filter((m) => m.fecha >= intervalStart && m.fecha < intervalEnd)
+      const intervalMovimientos = movimientos.filter((m) => m.fecha >= intervalStart && m.fecha < intervalEnd)
 
       let ingresos = 0
       let gastos = 0
@@ -170,7 +163,7 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
         balance: ingresos - gastos,
       }
     })
-  }, [allMovimientos])
+  }, [movimientos])
 
   const chartConfig = {
     ingresos: { label: "Ingresos", color: "hsl(var(--chart-1))" },

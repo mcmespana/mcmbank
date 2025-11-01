@@ -112,16 +112,15 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-2 lg:gap-4 border-b border-border/30 bg-background/80 backdrop-blur-2xl shadow-sm px-2 sm:px-4 lg:px-6 overflow-hidden">
-      {/* Mobile menu button */}
-      <Sidebar showDesktop={false} />
-
-      {/* Delegation selector */}
-      <div className="flex items-center min-w-0 flex-shrink">
-        <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
+      {/* Mobile menu button - fixed width */}
+      <div className="flex-shrink-0">
+        <Sidebar showDesktop={false} />
       </div>
 
-      {/* Spacer */}
-      <div className="flex-1 min-w-0" />
+      {/* Delegation selector - takes all remaining space */}
+      <div className="flex items-center flex-1 min-w-0 overflow-hidden">
+        <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
+      </div>
 
       {/* Right side actions */}
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">

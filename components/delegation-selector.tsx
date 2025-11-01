@@ -36,7 +36,7 @@ export function DelegationSelector({ value, onValueChange }: DelegationSelectorP
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[140px] sm:w-[180px] lg:w-[200px] justify-between bg-transparent"
+          className="w-full justify-between bg-transparent"
           data-testid="delegation-selector"
         >
           <div className="flex items-center gap-2 min-w-0">

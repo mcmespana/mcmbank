@@ -17,10 +17,15 @@ export function FinancialSummary({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
   const router = useRouter()
 
-  const { movimientos } = useMovimientos(selectedDelegation, {
-    fechaDesde: from,
-    fechaHasta: to,
-  })
+  // Dashboard needs ALL movements for accurate calculations, not just first 100
+  const { movimientos } = useMovimientos(
+    selectedDelegation,
+    {
+      fechaDesde: from,
+      fechaHasta: to,
+    },
+    { pageSize: 0 } // Disable pagination to load ALL movements
+  )
 
   const summary = useMemo(() => {
     if (!movimientos.length) return { ingresos: 0, gastos: 0, balance: 0, count: 0, uncategorized: 0 }

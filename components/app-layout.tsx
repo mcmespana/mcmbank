@@ -18,7 +18,21 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [isRedirecting, setIsRedirecting] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // Load from localStorage on mount
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mcmbank-sidebar-collapsed')
+      return saved === 'true'
+    }
+    return false
+  })
+
+  // Persist sidebar state to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mcmbank-sidebar-collapsed', sidebarCollapsed.toString())
+    }
+  }, [sidebarCollapsed])
 
   useEffect(() => {
     if (!loading && !user && !isRedirecting) {

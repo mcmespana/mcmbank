@@ -122,6 +122,9 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
       </div>
 
+      {/* Spacer */}
+      <div className="flex-1" />
+
       {/* Right side actions */}
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
         {/* Manual/Documentation button */}

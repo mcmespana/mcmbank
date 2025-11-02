@@ -473,23 +473,23 @@ export function TransactionManager() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Floating Filter Toggle Button */}
-        {sidebarCollapsed && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSidebarCollapsed(false)}
-            className="hidden lg:flex absolute left-2 top-2 z-20 shadow-lg hover:shadow-xl transition-shadow"
-            title="Mostrar filtros"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        )}
         {/* Header with Date Filter and Actions */}
         <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
           <div className="flex items-center justify-between gap-2 min-h-[40px]">
-            {/* Date Filter - Responsive width */}
-            <div className="flex-shrink-0">
+            {/* Date Filter with show filters button - Responsive width */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Desktop Show Filters Button */}
+              {sidebarCollapsed && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSidebarCollapsed(false)}
+                  className="hidden lg:flex flex-shrink-0"
+                  title="Mostrar filtros"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
               <div className="w-[200px] sm:w-[240px] md:w-[280px] lg:w-[320px]">
                 <DateRangeFilter
                   dateFrom={filters.dateFrom}

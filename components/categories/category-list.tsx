@@ -173,8 +173,8 @@ function CategoryCard({
                 isRecentlyMoved && "ring-2 ring-primary/40 shadow-lg shadow-primary/10",
               )}
             >
-              <CardContent className="px-2.5 py-1.5 sm:px-3 sm:py-2">
-                <div className="flex items-start gap-1.5 sm:gap-2">
+              <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
                     <Button
                       variant="ghost"
@@ -234,21 +234,19 @@ function CategoryCard({
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Oculta</span>
                       )}
                       {isGlobal && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-blue-500 dark:text-blue-200 cursor-help">
-                                <Globe2 className="h-3 w-3" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="text-center">
-                                <div className="font-medium">Categoría global</div>
-                                <div className="text-xs text-muted-foreground mt-0.5">No puedes modificar algunos aspectos</div>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-blue-500 dark:text-blue-200 cursor-help">
+                              <Globe2 className="h-3 w-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-center">
+                              <div className="font-medium">Categoría global</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">No puedes modificar algunos aspectos</div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                     <div className="mt-0.5 text-[11px] text-muted-foreground">
@@ -1172,7 +1170,8 @@ export function CategoryList() {
   const showNoResults = hasAnyCategory && !hasVisibleCategories
 
   return (
-    <div className="space-y-6">
+    <TooltipProvider>
+      <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="space-y-3">
           <div className="flex items-center gap-4">
@@ -1368,6 +1367,7 @@ export function CategoryList() {
           if (!open) setViewingCategory(null)
         }}
       />
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }

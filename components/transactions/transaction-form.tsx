@@ -130,13 +130,29 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
               <div className="flex gap-2">
                 {/* Manual date input */}
                 <Input
-                  type="date"
+                  type="text"
                   value={formData.fecha ? format(formData.fecha, "yyyy-MM-dd") : ""}
                   onChange={(e) => {
-                    if (e.target.value) {
-                      setFormData({ ...formData, fecha: new Date(e.target.value) })
+                    const value = e.target.value
+                    // Allow typing in format yyyy-MM-dd
+                    if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                      const date = new Date(value)
+                      if (!isNaN(date.getTime())) {
+                        setFormData({ ...formData, fecha: date })
+                      }
                     }
                   }}
+                  onBlur={(e) => {
+                    // Validate on blur and fix if needed
+                    const value = e.target.value
+                    if (value && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                      const date = new Date(value)
+                      if (!isNaN(date.getTime())) {
+                        setFormData({ ...formData, fecha: date })
+                      }
+                    }
+                  }}
+                  placeholder="YYYY-MM-DD"
                   className="flex-1"
                   required
                 />

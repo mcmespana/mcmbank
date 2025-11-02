@@ -41,7 +41,7 @@ import { AmountDisplay } from "@/components/amount-display"
 import autoAnimate from "@formkit/auto-animate"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
-import type { CategoriaConOrdenEfectivo } from "@/lib/types/database"
+import type { Categoria, CategoriaConOrdenEfectivo } from "@/lib/types/database"
 
 interface CategoryCardProps {
   category: CategoriaConOrdenEfectivo
@@ -67,6 +67,7 @@ interface CategoryCardProps {
   canMoveDown: boolean
   onToggleActive?: (category: CategoriaConOrdenEfectivo) => void
   canToggleActive: boolean
+  canHideGlobal: boolean
   isInactive: boolean
   isRecentlyMoved?: boolean
 }
@@ -86,8 +87,8 @@ function buildChildrenMap(items: CategoriaConOrdenEfectivo[]) {
 
   map.forEach((list) => {
     list.sort((a, b) => {
-      const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-      const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+      const ordenA = a.orden_efectivo
+      const ordenB = b.orden_efectivo
       if (ordenA !== ordenB) return ordenA - ordenB
       return a.nombre.localeCompare(b.nombre)
     })
@@ -120,6 +121,7 @@ function CategoryCard({
   canMoveDown,
   onToggleActive,
   canToggleActive,
+  canHideGlobal,
   isInactive,
   isRecentlyMoved = false,
 }: CategoryCardProps) {
@@ -131,7 +133,11 @@ function CategoryCard({
       : category.es_global
         ? "Solo el gestor central o la tesorería pueden añadir subcategorías globales"
         : "No puedes añadir subcategorías en este momento"
-  const toggleTitle = isInactive ? "Mostrar categoría" : "Ocultar categoría"
+
+  // Título del botón de toggle más descriptivo
+  const toggleTitle = canHideGlobal
+    ? (isInactive ? "Mostrar esta categoría global en tu delegación" : "Ocultar esta categoría global en tu delegación")
+    : (isInactive ? "Activar categoría" : "Desactivar categoría")
 
   return (
     <Draggable draggableId={category.id} index={index} isDragDisabled={isDragDisabled}>
@@ -284,7 +290,7 @@ function CategoryCard({
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
-                    {canToggleActive ? (
+                    {(canToggleActive || canHideGlobal) && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -298,14 +304,14 @@ function CategoryCard({
                           <EyeOff className="h-3 w-3" />
                         )}
                       </Button>
-                    ) : (
+                    )}
+                    {canDelete && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 sm:h-7 sm:w-7 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 p-0"
                         onClick={() => onDelete(category)}
-                        title={canDelete ? "Eliminar categoría" : "Solo el gestor central puede eliminar categorías globales"}
-                        disabled={!canDelete}
+                        title="Eliminar categoría"
                       >
                         <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       </Button>
@@ -408,11 +414,63 @@ export function CategoryList() {
     setDateTo(newDateTo)
   }
 
-  const canEditCategory = (category: CategoriaConOrdenEfectivo) => !category.es_global || isCentralManager
-  const canDeleteCategory = (category: CategoriaConOrdenEfectivo) => !category.es_global || isCentralManager
-  const canToggleCategoryVisibility = (category: CategoriaConOrdenEfectivo) =>
-    !isCentralManager && !!selectedDelegation && category.es_global
+  // ============================================================================
+  // LÓGICA DE PERMISOS MEJORADA
+  // ============================================================================
+
+  /**
+   * Puede EDITAR (nombre, emoji, color) una categoría
+   * - Gestor MCM: puede editar cualquier categoría (global o local)
+   * - Tesorero: solo puede editar categorías locales de su delegación
+   */
+  const canEditCategory = (category: CategoriaConOrdenEfectivo) => {
+    if (isCentralManager) return true
+    if (!selectedDelegation) return false
+    // Tesoreros solo pueden editar categorías locales de su delegación
+    return !category.es_global && category.delegacion_id === selectedDelegation
+  }
+
+  /**
+   * Puede ELIMINAR una categoría (borrado físico)
+   * - Gestor MCM: puede eliminar cualquier categoría
+   * - Tesorero: solo puede eliminar categorías locales de su delegación
+   */
+  const canDeleteCategory = (category: CategoriaConOrdenEfectivo) => {
+    if (isCentralManager) return true
+    if (!selectedDelegation) return false
+    // Tesoreros solo pueden eliminar categorías locales de su delegación
+    return !category.es_global && category.delegacion_id === selectedDelegation
+  }
+
+  /**
+   * Puede ACTIVAR/DESACTIVAR una categoría (cambiar esta_activa)
+   * - Gestor MCM: puede activar/desactivar categorías globales
+   * - Tesorero: puede activar/desactivar categorías locales de su delegación
+   */
+  const canToggleCategoryActive = (category: CategoriaConOrdenEfectivo) => {
+    if (isCentralManager) {
+      // Gestor MCM solo activa/desactiva globales (las locales las elimina directamente)
+      return category.es_global
+    }
+    if (!selectedDelegation) return false
+    // Tesoreros pueden activar/desactivar sus categorías locales
+    return !category.es_global && category.delegacion_id === selectedDelegation
+  }
+
+  /**
+   * Puede OCULTAR/MOSTRAR una categoría global en su delegación (override local)
+   * - Solo tesoreros pueden ocultar categorías globales en su delegación
+   * - Gestor MCM no necesita ocultar, puede desactivar directamente
+   */
+  const canHideGlobalCategory = (category: CategoriaConOrdenEfectivo) => {
+    if (isCentralManager) return false
+    if (!selectedDelegation) return false
+    // Solo para categorías globales
+    return category.es_global
+  }
+
   const canReorderCategory = () => true
+
   const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) => {
     if (category.categoria_padre_id !== null) return false
     if (!category.es_global) return true
@@ -449,7 +507,8 @@ export function CategoryList() {
 
   const handleToggleActive = async (category: CategoriaConOrdenEfectivo) => {
     try {
-      if (category.es_global && !isCentralManager) {
+      // Caso 1: Ocultar/Mostrar categoría global (tesoreros)
+      if (canHideGlobalCategory(category)) {
         if (!selectedDelegation) {
           alert("Selecciona una delegación para gestionar la visibilidad")
           return
@@ -458,6 +517,7 @@ export function CategoryList() {
         const nextActive = !category.esta_activa_efectiva
 
         if (!nextActive) {
+          // Ocultar categoría global en esta delegación
           await DatabaseService.setDelegacionCategoryVisibility(
             selectedDelegation,
             category.id,
@@ -465,8 +525,10 @@ export function CategoryList() {
             category.orden_override ?? category.orden,
           )
         } else if (category.orden_override === null && category.has_override) {
+          // Si solo tiene override de visibilidad, eliminar el override
           await DatabaseService.clearDelegacionCategoryOrder(selectedDelegation, category.id)
         } else {
+          // Mostrar categoría global en esta delegación
           await DatabaseService.setDelegacionCategoryVisibility(
             selectedDelegation,
             category.id,
@@ -474,7 +536,9 @@ export function CategoryList() {
             category.orden_override ?? category.orden,
           )
         }
-      } else {
+      }
+      // Caso 2: Activar/Desactivar categoría (gestor MCM para globales, tesoreros para locales)
+      else if (canToggleCategoryActive(category)) {
         await updateCategoria(category.id, { esta_activa: !category.esta_activa })
       }
 
@@ -543,17 +607,32 @@ export function CategoryList() {
 
         const parentCategory = creatingParent
         const parentId = parentCategory?.id ?? patch.categoria_padre_id ?? null
-        const targetIsGlobal = parentCategory ? parentCategory.es_global : !!patch.es_global
-        const isGlobalSubcategory = Boolean(parentCategory?.es_global)
+        const isCreatingSubcategoryOfGlobal = Boolean(parentCategory?.es_global)
 
+        // Determinar si la nueva categoría será global
+        // - Si hay parent y es global: solo gestor MCM puede crear subcategorías globales
+        // - Tesoreros siempre crean categorías locales (incluso si el padre es global)
+        let targetIsGlobal = false
+        if (!parentCategory) {
+          // Creando categoría principal: usar el valor del form
+          targetIsGlobal = !!patch.es_global
+        } else if (parentCategory.es_global) {
+          // Creando subcategoría de global: solo global si es gestor MCM
+          targetIsGlobal = isCentralManager && !!patch.es_global
+        } else {
+          // Creando subcategoría de local: siempre local
+          targetIsGlobal = false
+        }
+
+        // Validación de permisos
         if (targetIsGlobal && !isCentralManager) {
-          const canTreasurerCreateGlobalSubcategory =
-            isDelegationTreasurer && isGlobalSubcategory && !!selectedDelegation
+          alert("Solo el gestor central puede crear categorías globales")
+          return
+        }
 
-          if (!canTreasurerCreateGlobalSubcategory) {
-            alert("Solo el gestor central puede crear categorías globales")
-            return
-          }
+        if (isCreatingSubcategoryOfGlobal && !isCentralManager && !isDelegationTreasurer) {
+          alert("Solo el gestor central o tesoreros pueden crear subcategorías de categorías globales")
+          return
         }
 
         if (!targetIsGlobal && !selectedDelegation) {
@@ -1132,7 +1211,8 @@ export function CategoryList() {
                     canMoveUp={canMoveUp}
                     canMoveDown={canMoveDown}
                     onToggleActive={handleToggleActive}
-                    canToggleActive={canToggleCategoryVisibility(category)}
+                    canToggleActive={canToggleCategoryActive(category)}
+                    canHideGlobal={canHideGlobalCategory(category)}
                     isInactive={isInactive}
                     isRecentlyMoved={recentlyMovedId === category.id}
                   />

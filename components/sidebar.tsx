@@ -122,7 +122,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
   return (
     <div className={cn("flex h-full flex-col bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border/50", className)}>
       {/* Logo */}
-      <div className="flex h-16 items-center border-b border-sidebar-border/30 px-6 bg-gradient-to-r from-primary/5 to-transparent">
+      <div className={cn("flex h-16 items-center border-b border-sidebar-border/30 bg-gradient-to-r from-primary/5 to-transparent", collapsed ? "justify-center px-2" : "px-6")}>
         <button
           type="button"
           onClick={() => {
@@ -135,7 +135,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
           className="flex items-center gap-3 hover:opacity-90 transition-all duration-300 hover:scale-105"
           title="Ir al inicio"
         >
-          <div className="bg-gradient-to-br from-primary to-primary/70 p-2 rounded-xl shadow-lg">
+          <div className="bg-gradient-to-br from-primary to-primary/70 p-2 rounded-xl shadow-lg flex-shrink-0">
             <Building2 className="h-5 w-5 text-white" />
           </div>
           {!collapsed && <span className="text-xl font-bold text-sidebar-foreground bg-gradient-to-r from-sidebar-foreground to-sidebar-foreground/70 bg-clip-text text-transparent">MCM Bank</span>}
@@ -151,7 +151,8 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
           const linkContent = (
             <div
               className={cn(
-                "flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 relative overflow-hidden group",
+                "flex items-center rounded-xl text-sm font-medium transition-all duration-300 relative overflow-hidden group",
+                collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3",
                 isDisabled
                   ? "text-muted-foreground cursor-not-allowed opacity-50"
                   : isActive
@@ -164,7 +165,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
               )}
               <div className="flex items-center gap-3 relative z-10">
                 <div className={cn(
-                  "p-1.5 rounded-lg transition-all duration-300",
+                  "p-1.5 rounded-lg transition-all duration-300 flex-shrink-0",
                   isActive ? "bg-primary/20 shadow-sm" : "group-hover:bg-primary/10"
                 )}>
                   <item.icon className="h-4 w-4" />

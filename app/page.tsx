@@ -30,17 +30,17 @@ export default function HomePage() {
         {/* Tabs */}
         <Tabs defaultValue="overview" className="space-y-8">
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
-            <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:gap-2">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
               <Home className="h-4 w-4" />
-              <span className="hidden data-[state=active]:inline">Resumen</span>
+              <span className="data-[state=inactive]:hidden">Resumen</span>
             </TabsTrigger>
-            <TabsTrigger value="actividad" className="flex items-center gap-2 data-[state=active]:gap-2">
+            <TabsTrigger value="actividad" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              <span className="hidden data-[state=active]:inline">Balance</span>
+              <span className="data-[state=inactive]:hidden">Balance</span>
             </TabsTrigger>
-            <TabsTrigger value="categorias" className="flex items-center gap-2 data-[state=active]:gap-2">
+            <TabsTrigger value="categorias" className="flex items-center gap-2">
               <PieChart className="h-4 w-4" />
-              <span className="hidden data-[state=active]:inline">Análisis</span>
+              <span className="data-[state=inactive]:hidden">Análisis</span>
             </TabsTrigger>
           </TabsList>
 

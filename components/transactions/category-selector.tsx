@@ -236,7 +236,7 @@ export function CategorySelector({
               />
             </div>
           </div>
-          <ScrollArea className="max-h-[320px]">
+          <ScrollArea className="max-h-[480px]">
             <div className="space-y-3 p-3">
               {normalizedSearch ? (
                 filteredCategories.length === 0 ? (
@@ -297,12 +297,6 @@ export function CategorySelector({
               )}
             </div>
           </ScrollArea>
-          <div className="border-t p-3">
-            <Button variant="outline" size="sm" className="h-9 w-full bg-transparent" type="button">
-              <Plus className="mr-2 h-4 w-4" />
-              Crear nueva categoría
-            </Button>
-          </div>
         </PopoverContent>
       </Popover>
 
@@ -446,7 +440,7 @@ function CategoryChipButton({ category, colorSource, selected, onSelect }: Categ
         "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2",
         selected
           ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)] shadow-sm"
-          : "border-transparent bg-[rgba(var(--category-color-rgb),0.14)] text-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.22)] dark:bg-[rgba(var(--category-color-rgb),0.18)] dark:hover:bg-[rgba(var(--category-color-rgb),0.26)]",
+          : "border-[rgba(var(--category-color-rgb),0.25)] bg-[rgba(var(--category-color-rgb),0.20)] text-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.30)] dark:bg-[rgba(var(--category-color-rgb),0.18)] dark:hover:bg-[rgba(var(--category-color-rgb),0.26)] dark:border-transparent",
       )}
       style={style}
     >
@@ -524,7 +518,7 @@ function SelectedCategoryBadge({ category, colorSource, onRemove }: SelectedCate
 
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-full border border-[rgba(var(--category-color-rgb),0.3)] px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors duration-200 bg-[rgba(var(--category-color-rgb),0.12)] text-[var(--category-color)] dark:bg-[rgba(var(--category-color-rgb),0.2)] dark:border-[rgba(var(--category-color-rgb),0.4)]"
+      className="inline-flex items-center gap-2 rounded-full border border-[rgba(var(--category-color-rgb),0.35)] px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors duration-200 bg-[rgba(var(--category-color-rgb),0.18)] text-[var(--category-color)] dark:bg-[rgba(var(--category-color-rgb),0.2)] dark:border-[rgba(var(--category-color-rgb),0.4)]"
       style={style}
     >
       {category.emoji && <span className="text-sm leading-none">{category.emoji}</span>}

@@ -117,8 +117,8 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         <Sidebar showDesktop={false} />
       </div>
 
-      {/* Delegation selector - takes all remaining space */}
-      <div className="flex items-center flex-1 min-w-0 overflow-hidden">
+      {/* Delegation selector - limited width */}
+      <div className="flex items-center min-w-0 overflow-hidden max-w-[280px] sm:max-w-[320px]">
         <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
       </div>
 
@@ -159,11 +159,11 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
               </AvatarFallback>
             </Avatar>
             <div className="hidden sm:flex flex-col items-start text-sm min-w-0">
-              <span className="font-semibold text-foreground leading-none truncate max-w-[120px]">
+              <span className="font-semibold text-foreground leading-none truncate max-w-[180px] text-sm">
                 {getUserDisplayName()}
               </span>
               {user?.email && (
-                <span className="text-xs text-muted-foreground mt-1 truncate max-w-[120px]">
+                <span className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">
                   {user.email}
                 </span>
               )}

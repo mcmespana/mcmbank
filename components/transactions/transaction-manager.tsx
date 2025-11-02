@@ -471,22 +471,20 @@ export function TransactionManager() {
         )}
       </div>
 
-      {sidebarCollapsed && (
-        <div className="hidden lg:flex items-start p-2">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Floating Filter Toggle Button */}
+        {sidebarCollapsed && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => setSidebarCollapsed(false)}
-            className="rotate-0"
+            className="hidden lg:flex absolute left-2 top-2 z-20 shadow-lg hover:shadow-xl transition-shadow"
             title="Mostrar filtros"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+        )}
         {/* Header with Date Filter and Actions */}
         <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
           <div className="flex items-center justify-between gap-2 min-h-[40px]">

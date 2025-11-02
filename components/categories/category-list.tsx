@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { CategoryEditForm } from "./category-edit-form"
 import { DateRangeFilter } from "@/components/transactions/date-range-filter"
 import { useCategorias } from "@/hooks/use-categorias"
@@ -172,47 +173,47 @@ function CategoryCard({
                 isRecentlyMoved && "ring-2 ring-primary/40 shadow-lg shadow-primary/10",
               )}
             >
-              <CardContent className="px-3 py-2.5 sm:px-3.5 sm:py-3">
-                <div className="flex items-start gap-2 sm:gap-2.5">
-                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <CardContent className="px-2.5 py-1.5 sm:px-3 sm:py-2">
+                <div className="flex items-start gap-1.5 sm:gap-2">
+                  <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground"
+                      className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground p-0"
                       onClick={() => onMoveUp?.(category)}
                       disabled={!canMoveUp}
                       title={canMoveUp ? "Mover hacia arriba" : "No se puede mover más arriba"}
                     >
-                      <ChevronUp className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <ChevronUp className="h-3 w-3" />
                     </Button>
                     <div
                       {...(provided.dragHandleProps ?? {})}
                       className={cn(
-                        "flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md border border-dashed text-muted-foreground",
+                        "flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md border border-dashed text-muted-foreground",
                         isDragDisabled
                           ? "cursor-not-allowed border-transparent opacity-40"
                           : "cursor-grab border-transparent bg-muted/40 hover:bg-muted/70 active:cursor-grabbing",
                       )}
                       title={dragHint}
                     >
-                      <GripVertical className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <GripVertical className="h-3 w-3" />
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground"
+                      className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground p-0"
                       onClick={() => onMoveDown?.(category)}
                       disabled={!canMoveDown}
                       title={canMoveDown ? "Mover hacia abajo" : "No se puede mover más abajo"}
                     >
-                      <ChevronDown className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <ChevronDown className="h-3 w-3" />
                     </Button>
                   </div>
 
                   <div
                     className={cn(
-                      "flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg text-lg sm:text-xl shadow flex-shrink-0",
-                      depth > 0 && "h-8 w-8 sm:h-9 sm:w-9 text-sm sm:text-base",
+                      "flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg text-lg sm:text-xl shadow flex-shrink-0",
+                      depth > 0 && "h-7 w-7 sm:h-8 sm:w-8 text-sm sm:text-base",
                     )}
                     style={{ backgroundColor: category.color || "#e5e7eb" }}
                   >
@@ -233,12 +234,21 @@ function CategoryCard({
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Oculta</span>
                       )}
                       {isGlobal && (
-                        <span
-                          className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-blue-500 dark:text-blue-200"
-                          title="Categoría global"
-                        >
-                          <Globe2 className="h-3 w-3" />
-                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-blue-500 dark:text-blue-200 cursor-help">
+                                <Globe2 className="h-3 w-3" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-center">
+                                <div className="font-medium">Categoría global</div>
+                                <div className="text-xs text-muted-foreground mt-0.5">No puedes modificar algunos aspectos</div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     <div className="mt-0.5 text-[11px] text-muted-foreground">
@@ -246,55 +256,55 @@ function CategoryCard({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                      className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 p-0"
                       onClick={() => onSearch(category)}
                       title="Buscar transacciones"
                     >
-                      <Search className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <Search className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                      className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 p-0"
                       onClick={() => onAddSubcategory?.(category)}
                       title={addSubcategoryTitle}
                       disabled={!canAddSubcategory}
                     >
-                      <PlusCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <PlusCircle className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 sm:h-8 sm:w-8 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/30"
+                      className="h-6 w-6 sm:h-7 sm:w-7 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/30 p-0"
                       onClick={() => onEdit(category)}
                       title={canEdit ? "Editar categoría" : "Solo el gestor central puede editar categorías globales"}
                       disabled={!canEdit}
                     >
-                      <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <Edit className="h-3 w-3" />
                     </Button>
                     {canToggleActive ? (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                        className="h-6 w-6 sm:h-7 sm:w-7 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 p-0"
                         onClick={() => onToggleActive?.(category)}
                         title={toggleTitle}
                       >
                         {isInactive ? (
-                          <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                          <Eye className="h-3 w-3" />
                         ) : (
-                          <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                          <EyeOff className="h-3 w-3" />
                         )}
                       </Button>
                     ) : (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        className="h-6 w-6 sm:h-7 sm:w-7 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 p-0"
                         onClick={() => onDelete(category)}
                         title={canDelete ? "Eliminar categoría" : "Solo el gestor central puede eliminar categorías globales"}
                         disabled={!canDelete}
@@ -1172,8 +1182,7 @@ export function CategoryList() {
             </h2>
           </div>
           <p className="text-muted-foreground ml-6 pl-4 text-base">
-            {totalCount} categorías en total ({globalCount} globales). Usa las flechas para reordenar y arrastra una tarjeta
-            sobre otra para anidar subcategorías; las globales solo cambian de jerarquía con permisos centrales.
+            {totalCount} categorías en total ({globalCount} globales).
           </p>
         </div>
         <Button onClick={handleCreate} className="w-full sm:w-auto" disabled={!organizacionId}>
@@ -1256,12 +1265,6 @@ export function CategoryList() {
             </div>
           )}
 
-          <div className="space-y-2.5 text-xs text-muted-foreground">
-            <p>
-              Usa las flechas de cada tarjeta para cambiar el orden y arrastra una tarjeta sobre otra para crear
-              subcategorías (máximo un nivel). El icono de globo identifica las globales.
-            </p>
-          </div>
           <DragDropContext onDragEnd={handleDragEnd} onDragUpdate={handleDragUpdate}>
             <div className="mt-3.5">{renderCategoryTree(null, 0)}</div>
           </DragDropContext>

@@ -157,9 +157,9 @@ export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRan
 
   return (
     <div className="flex flex-wrap items-center gap-2 w-full">
-      <CalendarIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      <CalendarIcon className="hidden sm:block h-4 w-4 text-muted-foreground flex-shrink-0" />
       <Select value={selectedPreset} onValueChange={handlePresetChange}>
-        <SelectTrigger className="h-12 w-full min-w-[160px] flex-1">
+        <SelectTrigger className="h-9 sm:h-10 w-full min-w-[160px] flex-1">
           <SelectValue>{getDisplayValue()}</SelectValue>
         </SelectTrigger>
         <SelectContent className="max-h-none">

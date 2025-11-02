@@ -36,11 +36,11 @@ export function DelegationSelector({ value, onValueChange }: DelegationSelectorP
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between bg-transparent"
+          className="w-full justify-between bg-transparent"
           data-testid="delegation-selector"
         >
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 min-w-0">
+            <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span className="truncate">
               {selectedDelegation ? selectedDelegation.nombre : "Seleccionar delegación"}
             </span>
@@ -48,7 +48,7 @@ export function DelegationSelector({ value, onValueChange }: DelegationSelectorP
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent className="w-[200px] sm:w-[250px] p-0">
         <Command>
           <CommandInput placeholder="Buscar delegación..." />
           <CommandList>

@@ -208,9 +208,9 @@ export function TransactionManager() {
           handleMovementUpdate(movementId, { categoria_id: categoryId } as Partial<MovimientoConRelaciones>),
         ),
       )
-      toast.success(`Categoría actualizada en ${selectionCount} transacciones`)
+      toast.success(`Categoría actualizada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkCategoryOpen(false)
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error updating categories in bulk", error)
       toast.error("No se pudieron actualizar las categorías seleccionadas")
@@ -233,10 +233,10 @@ export function TransactionManager() {
           handleMovementUpdate(movementId, { concepto: nextConcept }),
         ),
       )
-      toast.success(`Concepto actualizado en ${selectionCount} transacciones`)
+      toast.success(`Concepto actualizado en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkConceptOpen(false)
       setBulkConceptValue("")
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error updating concept in bulk", error)
       toast.error("No se pudieron actualizar los conceptos seleccionados")
@@ -263,10 +263,10 @@ export function TransactionManager() {
           return handleMovementUpdate(movement.id, { descripcion: newDescription })
         }),
       )
-      toast.success(`Descripción ampliada en ${selectionCount} transacciones`)
+      toast.success(`Descripción ampliada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkDescriptionOpen(false)
       setBulkDescriptionValue("")
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error appending description in bulk", error)
       toast.error("No se pudieron actualizar las descripciones seleccionadas")
@@ -514,13 +514,13 @@ export function TransactionManager() {
                 title="Filtros"
               >
                 <Filter className="h-4 w-4" />
-                <span className="hidden sm:ml-2 sm:inline">Filtros</span>
+                <span className="sr-only">Filtros</span>
                 {hasActiveFilters && (
                   <div className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
                 )}
               </Button>
 
-              {/* Add Button - Always show text on sm+ screens */}
+              {/* Add Button - Show text on md+ screens */}
               <Button
                 variant="outline"
                 size="sm"
@@ -529,10 +529,10 @@ export function TransactionManager() {
                 title="Añadir transacción"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:ml-2 sm:inline">Añadir</span>
+                <span className="hidden md:ml-2 md:inline">Añadir</span>
               </Button>
 
-              {/* Import Button - Hide text on smaller screens */}
+              {/* Import Button - Show text on md+ screens */}
               <Button
                 variant="outline"
                 size="sm"
@@ -541,10 +541,10 @@ export function TransactionManager() {
                 onClick={() => setImportOpen(true)}
               >
                 <Upload className="h-4 w-4" />
-                <span className="hidden lg:ml-2 lg:inline">Importar</span>
+                <span className="hidden md:ml-2 md:inline">Importar</span>
               </Button>
 
-              {/* Download Button - Hide text on smaller screens */}
+              {/* Download Button - Show text on md+ screens */}
               <Button
                 variant="outline"
                 size="sm"
@@ -562,7 +562,7 @@ export function TransactionManager() {
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                <span className="hidden lg:ml-2 lg:inline">
+                <span className="hidden md:ml-2 md:inline">
                   {downloadState === "downloading"
                     ? "Descargando..."
                     : downloadState === "success"
@@ -586,9 +586,6 @@ export function TransactionManager() {
                   <div className="space-y-1">
                     <p className="text-sm font-semibold tracking-tight">
                       {selectionCount} transacciones seleccionadas
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Estas acciones aplican a las transacciones visibles, sin importar la cuenta de origen.
                     </p>
                   </div>
                 </div>

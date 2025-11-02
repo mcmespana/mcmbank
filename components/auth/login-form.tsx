@@ -73,15 +73,15 @@ export default function LoginForm() {
         <Cpu className="h-7 w-7 text-muted-foreground" />
       </div>
 
-      <Card className="backdrop-blur-sm bg-card/95 border-border/50 shadow-2xl transition-all duration-500 hover:shadow-3xl">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/5 transition-all duration-300 hover:bg-primary/10">
-            <Building2 className="h-8 w-8 text-primary" />
+      <Card className="backdrop-blur-2xl bg-card/90 border-2 border-border/30 shadow-2xl transition-all duration-500 hover:shadow-3xl">
+        <CardHeader className="space-y-2 text-center">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 hover:scale-110 hover:shadow-xl border border-primary/20">
+            <Building2 className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <CardTitle className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
             MCM Bank
           </CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
+          <CardDescription className="text-base text-muted-foreground/90">
             Bienvenido a la aplicación de tesorería del MCM
           </CardDescription>
         </CardHeader>

@@ -382,9 +382,10 @@ function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCateg
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(var(--category-color-rgb),0.35)] bg-white text-[var(--category-color)] shadow-sm transition-colors",
-              "dark:bg-background",
-              isParentSelected && "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)]",
+              "flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(var(--category-color-rgb),0.25)] transition-colors shadow-sm",
+              isParentSelected
+                ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)]"
+                : "bg-[rgba(var(--category-color-rgb),0.1)] text-[var(--category-color)] dark:bg-[rgba(var(--category-color-rgb),0.2)]",
             )}
           >
             {isParentSelected ? (
@@ -523,7 +524,7 @@ function SelectedCategoryBadge({ category, colorSource, onRemove }: SelectedCate
 
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-full border border-transparent bg-[rgba(var(--category-color-rgb),0.16)] px-3 py-1.5 text-xs font-medium text-[var(--category-color)] shadow-sm transition-colors duration-200 dark:bg-[rgba(var(--category-color-rgb),0.26)]"
+      className="inline-flex items-center gap-2 rounded-full border border-[rgba(var(--category-color-rgb),0.3)] px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors duration-200 bg-[rgba(var(--category-color-rgb),0.12)] text-[var(--category-color)] dark:bg-[rgba(var(--category-color-rgb),0.2)] dark:border-[rgba(var(--category-color-rgb),0.4)]"
       style={style}
     >
       {category.emoji && <span className="text-sm leading-none">{category.emoji}</span>}

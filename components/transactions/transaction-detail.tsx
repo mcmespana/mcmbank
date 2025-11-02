@@ -459,30 +459,43 @@ export function TransactionDetail({
                       <Label htmlFor="fecha" className="text-sm font-medium">
                         Fecha
                       </Label>
-                      <Popover open={isFormDateOpen} onOpenChange={setIsFormDateOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal h-9",
-                              !formData.fecha && "text-muted-foreground",
-                            )}
-                            type="button"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : "Fecha"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-[80]" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={formData.fecha ? new Date(formData.fecha) : undefined}
-                            onSelect={(date) => handleDateSelection(date, () => setIsFormDateOpen(false))}
-                            locale={es}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <div className="flex gap-2">
+                        {/* Manual date input */}
+                        <Input
+                          id="fecha"
+                          type="date"
+                          value={formData.fecha || ""}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setFormData((prev) => ({ ...prev, fecha: e.target.value }))
+                            }
+                          }}
+                          className="flex-1 h-9"
+                        />
+                        {/* Calendar picker button */}
+                        <Popover open={isFormDateOpen} onOpenChange={setIsFormDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="flex-shrink-0 h-9 w-9"
+                              title="Abrir calendario"
+                            >
+                              <CalendarIcon className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 z-[80]" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={formData.fecha ? new Date(formData.fecha) : undefined}
+                              onSelect={(date) => handleDateSelection(date, () => setIsFormDateOpen(false))}
+                              locale={es}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                   </div>
 

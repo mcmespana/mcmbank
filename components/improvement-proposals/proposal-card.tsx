@@ -46,8 +46,10 @@ export function ProposalCard({
     [proposal.tipo],
   )
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const isIdea = proposal.tipo === "idea"
   const typeLabel = isIdea ? "Idea" : "Error"
+  const isLongText = proposal.descripcion && proposal.descripcion.length > 200
   const voteLabel = isIdea
     ? proposal.userHasVoted
       ? "Apoyada"
@@ -105,17 +107,27 @@ export function ProposalCard({
           </h3>
         </div>
 
-        <p
-          className="rounded-2xl border border-transparent bg-muted/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground transition group-hover:border-border/60"
-          style={{
-            display: "-webkit-box",
-            WebkitLineClamp: 4,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {proposal.descripcion}
-        </p>
+        <div className="space-y-2">
+          <p
+            className={cn(
+              "rounded-2xl border border-transparent bg-muted/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground transition group-hover:border-border/60 whitespace-pre-wrap",
+              !expanded && isLongText && "line-clamp-4"
+            )}
+          >
+            {proposal.descripcion}
+          </p>
+          {isLongText && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded(!expanded)}
+              className="text-xs text-primary hover:text-primary/80 h-auto p-1 px-2 font-medium rounded-full"
+            >
+              {expanded ? "Ver menos ↑" : "Ver texto completo ↓"}
+            </Button>
+          )}
+        </div>
 
         <div className="space-y-5 border-t border-dashed border-border/60 pt-5">
           <div className="flex flex-wrap items-center gap-3">

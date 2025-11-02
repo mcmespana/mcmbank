@@ -1162,27 +1162,32 @@ export function CategoryList() {
   const showNoResults = hasAnyCategory && !hasVisibleCategories
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Categorías</h2>
-          <p className="text-muted-foreground mt-0.5 text-sm">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-2 bg-gradient-to-b from-primary via-primary/70 to-primary/40 rounded-full shadow-lg shadow-primary/30" />
+            <h2 className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
+              Categorías
+            </h2>
+          </div>
+          <p className="text-muted-foreground ml-6 pl-4 text-base">
             {totalCount} categorías en total ({globalCount} globales). Usa las flechas para reordenar y arrastra una tarjeta
             sobre otra para anidar subcategorías; las globales solo cambian de jerarquía con permisos centrales.
           </p>
         </div>
-        <Button onClick={handleCreate} size="sm" className="w-full sm:w-auto" disabled={!organizacionId}>
-          <Plus className="h-3.5 w-3.5 mr-2" />
+        <Button onClick={handleCreate} className="w-full sm:w-auto" disabled={!organizacionId}>
+          <Plus className="h-4 w-4 mr-2" />
           Añadir categoría
         </Button>
       </div>
 
-      <div className="flex gap-3 flex-col sm:flex-row">
-        <div className="flex-1 sm:flex-1">
+      <div className="flex gap-2 sm:gap-3 flex-wrap sm:flex-row items-center">
+        <div className="flex-1 min-w-[200px]">
           <DateRangeFilter dateFrom={dateFrom} dateTo={dateTo} onDateRangeChange={handleDateRangeChange} />
         </div>
 
-        <div className="w-auto sm:flex-1">
+        <div className="flex-shrink-0 sm:flex-1">
           <div className="sm:hidden">
             {searchOpen ? (
               <div className="relative flex items-center gap-2">
@@ -1192,14 +1197,14 @@ export function CategoryList() {
                     placeholder="Filtrar categorías..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10"
+                    className="pl-10 h-9"
                     autoFocus
                   />
                 </div>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-10 w-10 flex-shrink-0"
+                  className="h-9 w-9 flex-shrink-0"
                   onClick={() => {
                     setSearchOpen(false)
                     setSearchTerm("")
@@ -1209,7 +1214,7 @@ export function CategoryList() {
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => setSearchOpen(true)}>
+              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setSearchOpen(true)}>
                 <Search className="h-4 w-4" />
               </Button>
             )}
@@ -1221,7 +1226,7 @@ export function CategoryList() {
               placeholder="Filtrar por nombre de la categoría..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10"
+              className="pl-10 h-9 sm:h-10"
             />
           </div>
         </div>

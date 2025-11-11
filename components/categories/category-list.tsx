@@ -337,6 +337,7 @@ export function CategoryList() {
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [creatingParent, setCreatingParent] = useState<CategoriaConOrdenEfectivo | null>(null)
+  const [newCategoryDraft, setNewCategoryDraft] = useState<Categoria | null>(null)
   const [viewingCategory, setViewingCategory] = useState<CategoriaConOrdenEfectivo | null>(null)
   const [activeDropParentId, setActiveDropParentId] = useState<string | null>(null)
   const [dropPreview, setDropPreview] = useState<
@@ -392,9 +393,23 @@ export function CategoryList() {
     if (searchParams.get("panel") === "create") {
       setEditingCategory(null)
       setCreatingParent(null)
+      setNewCategoryDraft({
+        id: "",
+        organizacion_id: organizacionId || "",
+        delegacion_id: selectedDelegation || null,
+        nombre: "",
+        tipo: "mixto",
+        emoji: "📁",
+        color: "#4ECDC4",
+        orden: 0,
+        categoria_padre_id: null,
+        creado_en: "",
+        es_global: false,
+        esta_activa: true,
+      })
       setCreateSheetOpen(true)
     }
-  }, [searchParams])
+  }, [searchParams, organizacionId, selectedDelegation])
 
   const getCategoryBalance = (categoryId: string) => {
     let filteredMovements = movimientos.filter((mov) => mov.categoria_id === categoryId)
@@ -486,6 +501,20 @@ export function CategoryList() {
   const handleCreate = () => {
     setEditingCategory(null)
     setCreatingParent(null)
+    setNewCategoryDraft({
+      id: "",
+      organizacion_id: organizacionId || "",
+      delegacion_id: selectedDelegation || null,
+      nombre: "",
+      tipo: "mixto",
+      emoji: "📁",
+      color: "#4ECDC4",
+      orden: 0,
+      categoria_padre_id: null,
+      creado_en: "",
+      es_global: false,
+      esta_activa: true,
+    })
     setCreateSheetOpen(true)
   }
 
@@ -493,6 +522,20 @@ export function CategoryList() {
     if (!canCreateSubcategory(category)) return
     setCreatingParent(category)
     setEditingCategory(null)
+    setNewCategoryDraft({
+      id: "",
+      organizacion_id: organizacionId || "",
+      delegacion_id: category.delegacion_id,
+      nombre: "",
+      tipo: "mixto",
+      emoji: "📁",
+      color: category.color || "#4ECDC4",
+      orden: 0,
+      categoria_padre_id: category.id,
+      creado_en: "",
+      es_global: category.es_global,
+      esta_activa: true,
+    })
     setCreateSheetOpen(true)
   }
 
@@ -666,6 +709,7 @@ export function CategoryList() {
       setCreateSheetOpen(false)
       setEditingCategory(null)
       setCreatingParent(null)
+      setNewCategoryDraft(null)
     } catch (err) {
       console.error("Error saving category:", err)
       alert("Error al guardar la categoría")
@@ -683,6 +727,11 @@ export function CategoryList() {
   const categoryMap = useMemo(() => new Map(categories.map((cat) => [cat.id, cat])), [categories])
   const allChildrenMap = useMemo(() => buildChildrenMap(categories), [categories])
   const childrenMap = useMemo(() => buildChildrenMap(displayedCategories), [displayedCategories])
+
+  const editingParentCategory = useMemo(() => {
+    if (!editingCategory?.categoria_padre_id) return undefined
+    return categories.find((c) => c.id === editingCategory.categoria_padre_id)
+  }, [editingCategory?.categoria_padre_id, categories])
 
   const isFiltering = searchTerm.trim().length > 0
 
@@ -1390,7 +1439,7 @@ export function CategoryList() {
           {editingCategory && (
             <CategoryEditForm
               category={editingCategory}
-              parentCategory={categories.find((c) => c.id === editingCategory.categoria_padre_id)}
+              parentCategory={editingParentCategory}
               onSave={handleSaveCategory}
               onCancel={() => setEditSheetOpen(false)}
               canManageGlobal={isCentralManager}
@@ -1403,7 +1452,10 @@ export function CategoryList() {
         open={createSheetOpen}
         onOpenChange={(open) => {
           setCreateSheetOpen(open)
-          if (!open) setCreatingParent(null)
+          if (!open) {
+            setCreatingParent(null)
+            setNewCategoryDraft(null)
+          }
         }}
       >
         <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto">
@@ -1412,31 +1464,19 @@ export function CategoryList() {
               {creatingParent ? `Añadir subcategoría a ${creatingParent.nombre}` : "Crear categoría"}
             </SheetTitle>
           </SheetHeader>
-          <CategoryEditForm
-            category={{
-              id: "",
-              organizacion_id: organizacionId || "",
-              delegacion_id: creatingParent
-                ? creatingParent.delegacion_id
-                : selectedDelegation || null,
-              nombre: "",
-              tipo: "mixto",
-              emoji: "📁",
-              color: creatingParent?.color || "#4ECDC4",
-              orden: 0,
-              categoria_padre_id: creatingParent?.id ?? null,
-              creado_en: "",
-              es_global: creatingParent ? creatingParent.es_global : false,
-              esta_activa: true,
-            }}
-            parentCategory={creatingParent ?? undefined}
-            onSave={handleSaveCategory}
-            onCancel={() => {
-              setCreateSheetOpen(false)
-              setCreatingParent(null)
-            }}
-            canManageGlobal={isCentralManager}
-          />
+          {newCategoryDraft && (
+            <CategoryEditForm
+              category={newCategoryDraft}
+              parentCategory={creatingParent ?? undefined}
+              onSave={handleSaveCategory}
+              onCancel={() => {
+                setCreateSheetOpen(false)
+                setCreatingParent(null)
+                setNewCategoryDraft(null)
+              }}
+              canManageGlobal={isCentralManager}
+            />
+          )}
         </SheetContent>
       </Sheet>
 

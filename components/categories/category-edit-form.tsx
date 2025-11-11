@@ -22,17 +22,19 @@ interface CategoryEditFormProps {
 type ScopeOption = "delegacion" | "global"
 
 export function CategoryEditForm({ category, parentCategory, onSave, onCancel, canManageGlobal }: CategoryEditFormProps) {
+  const initialScope = (parentCategory
+    ? parentCategory.es_global
+      ? "global"
+      : "delegacion"
+    : category.es_global
+      ? "global"
+      : "delegacion") as ScopeOption
+
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: parentCategory?.emoji || category.emoji || "📁",
     color: parentCategory?.color || category.color || "#4ECDC4",
-    scope: (parentCategory
-      ? parentCategory.es_global
-        ? "global"
-        : "delegacion"
-      : category.es_global
-        ? "global"
-        : "delegacion") as ScopeOption,
+    scope: initialScope,
   })
   const [loading, setLoading] = useState(false)
 
@@ -70,11 +72,16 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
     setLoading(true)
 
     try {
+      // Lógica de resolvedScope:
+      // - Sin padre: usar la selección del usuario
+      // - Con padre local: siempre local (heredar del padre)
+      // - Con padre global y gestor central: permitir elegir
+      // - Con padre global sin permisos: forzar a local
       const resolvedScope = parentCategory
-        ? parentCategory.es_global
-          ? "global"
-          : "delegacion"
-        : formData.scope
+        ? (parentCategory.es_global && canManageGlobal)
+          ? formData.scope  // Gestor central puede elegir global o local
+          : "delegacion"    // Tesoreros o subcategorías de locales siempre local
+        : formData.scope    // Sin padre, usar la selección
 
       await onSave({
         nombre: formData.nombre.trim(),
@@ -167,9 +174,14 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
               <SelectItem value="global">Global (todas las delegaciones)</SelectItem>
             </SelectContent>
           </Select>
-          {!canToggleGlobal && (
+          {!canToggleGlobal && parentCategory && !parentCategory.es_global && (
             <p className="text-xs text-muted-foreground">
-              Solo puedes marcar una subcategoría como global si su categoría superior también es global.
+              Las subcategorías de una categoría local deben ser también locales.
+            </p>
+          )}
+          {canToggleGlobal && parentCategory && parentCategory.es_global && (
+            <p className="text-xs text-muted-foreground">
+              Puedes crear una subcategoría local (solo para la delegación seleccionada) o global (para todas).
             </p>
           )}
         </div>

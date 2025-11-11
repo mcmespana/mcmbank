@@ -24,7 +24,7 @@ type ScopeOption = "delegacion" | "global"
 export function CategoryEditForm({ category, parentCategory, onSave, onCancel, canManageGlobal }: CategoryEditFormProps) {
   const [formData, setFormData] = useState({
     nombre: category.nombre,
-    emoji: category.emoji || "📁",
+    emoji: parentCategory?.emoji || category.emoji || "📁",
     color: parentCategory?.color || category.color || "#4ECDC4",
     scope: (parentCategory
       ? parentCategory.es_global
@@ -41,7 +41,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
   useEffect(() => {
     setFormData({
       nombre: category.nombre,
-      emoji: category.emoji || "📁",
+      emoji: parentCategory?.emoji || category.emoji || "📁",
       color: parentCategory?.color || category.color || "#4ECDC4",
       scope: (parentCategory
         ? parentCategory.es_global

@@ -22,17 +22,28 @@ interface CategoryEditFormProps {
 type ScopeOption = "delegacion" | "global"
 
 export function CategoryEditForm({ category, parentCategory, onSave, onCancel, canManageGlobal }: CategoryEditFormProps) {
+  const initialScope = (parentCategory
+    ? parentCategory.es_global
+      ? "global"
+      : "delegacion"
+    : category.es_global
+      ? "global"
+      : "delegacion") as ScopeOption
+
+  console.log('[CategoryEditForm] RENDER - Initial state:', {
+    category_es_global: category.es_global,
+    category_delegacion_id: category.delegacion_id,
+    parentCategory_exists: !!parentCategory,
+    parentCategory_es_global: parentCategory?.es_global,
+    initialScope,
+    canManageGlobal,
+  })
+
   const [formData, setFormData] = useState({
     nombre: category.nombre,
     emoji: category.emoji || "📁",
     color: parentCategory?.color || category.color || "#4ECDC4",
-    scope: (parentCategory
-      ? parentCategory.es_global
-        ? "global"
-        : "delegacion"
-      : category.es_global
-        ? "global"
-        : "delegacion") as ScopeOption,
+    scope: initialScope,
   })
   const [loading, setLoading] = useState(false)
 
@@ -75,6 +86,16 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
           ? "global"
           : "delegacion"
         : formData.scope
+
+      console.log('[CategoryEditForm] handleSubmit DEBUG:', {
+        formData_scope: formData.scope,
+        parentCategory_exists: !!parentCategory,
+        parentCategory_es_global: parentCategory?.es_global,
+        resolvedScope,
+        es_global_to_save: resolvedScope === "global",
+        category_es_global: category.es_global,
+        category_delegacion_id: category.delegacion_id,
+      })
 
       await onSave({
         nombre: formData.nombre.trim(),

@@ -652,6 +652,14 @@ export function CategoryList() {
         const parentId = parentCategory?.id ?? patch.categoria_padre_id ?? null
         const isCreatingSubcategoryOfGlobal = Boolean(parentCategory?.es_global)
 
+        console.log('[CategoryList] handleSaveCategory - CREATION DEBUG:', {
+          patch_es_global: patch.es_global,
+          creatingParent_exists: !!creatingParent,
+          creatingParent_es_global: creatingParent?.es_global,
+          isCentralManager,
+          selectedDelegation,
+        })
+
         // Determinar si la nueva categoría será global
         // - Si hay parent y es global: solo gestor MCM puede crear subcategorías globales
         // - Tesoreros siempre crean categorías locales (incluso si el padre es global)
@@ -666,6 +674,11 @@ export function CategoryList() {
           // Creando subcategoría de local: siempre local
           targetIsGlobal = false
         }
+
+        console.log('[CategoryList] handleSaveCategory - targetIsGlobal calculated:', {
+          targetIsGlobal,
+          calculated_delegacion_id: targetIsGlobal ? null : parentCategory?.delegacion_id ?? selectedDelegation,
+        })
 
         // Validación de permisos
         if (targetIsGlobal && !isCentralManager) {
@@ -690,18 +703,22 @@ export function CategoryList() {
         )
         const maxOrder = siblings.length > 0 ? Math.max(...siblings.map((c) => c.orden)) : 0
 
-        await DatabaseService.createCategoria({
+        const newCategoriaData = {
           organizacion_id: organizacionId,
           delegacion_id: targetIsGlobal ? null : parentCategory?.delegacion_id ?? selectedDelegation!,
           nombre: patch.nombre!,
-          tipo: "mixto",
+          tipo: "mixto" as const,
           emoji: patch.emoji || "📁",
           color: parentCategory?.color || patch.color || "#4ECDC4",
           orden: maxOrder + 1,
           categoria_padre_id: parentId,
           es_global: targetIsGlobal,
           esta_activa: true,
-        })
+        }
+
+        console.log('[CategoryList] About to INSERT categoria into DB:', newCategoriaData)
+
+        await DatabaseService.createCategoria(newCategoriaData)
       }
 
       await fetchCategorias()

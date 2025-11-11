@@ -1,14 +1,14 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CategorySelector } from "@/components/transactions/category-selector"
+import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
-import { TrendingUp, TrendingDown, Wallet, BarChart3, PieChart } from "lucide-react"
+import { TrendingUp, TrendingDown, Wallet, BarChart3, PieChart, Filter } from "lucide-react"
 import {
   XAxis,
   YAxis,
@@ -46,6 +46,7 @@ interface Props {
 export function ActivityBalanceDashboard({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
   const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
+  const [selectorOpen, setSelectorOpen] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
 
@@ -266,19 +267,35 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
             <CardTitle>Filtrar por Categorías</CardTitle>
           </CardHeader>
           <CardContent>
-            <CategorySelector
-              categories={categorias}
-              selectedCategories={selectedCategories}
-              onSelectionChange={setCategoryIds}
-              allowMultiple
-              placeholder="Seleccionar categorías..."
-            />
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => setSelectorOpen(true)}
+            >
+              <Filter className="h-4 w-4" />
+              {categoryIds.length === 0
+                ? "Seleccionar categorías..."
+                : `${categoryIds.length} categoría${categoryIds.length !== 1 ? "s" : ""} seleccionada${categoryIds.length !== 1 ? "s" : ""}`}
+            </Button>
             {isPending && (
               <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {selectorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <CategoryMegaSelector
+            categories={categorias}
+            selectedCategories={categoryIds}
+            onSelectionChange={setCategoryIds}
+            onClose={() => setSelectorOpen(false)}
+            allowMultiple
+            title="Filtrar por Categorías"
+          />
+        </div>
+      )}
 
       {monthlyData.length > 0 && hasFilteredMovements && (
         <Card>

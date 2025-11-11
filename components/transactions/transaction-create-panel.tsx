@@ -177,33 +177,67 @@ export function TransactionCreatePanel({
           {/* Date */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-muted-foreground">FECHA</Label>
-            <Popover open={dateOpen} onOpenChange={setDateOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal bg-muted/30",
-                    !formData.fecha && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.fecha ? format(new Date(formData.fecha), "dd 'de' MMMM 'de' yyyy", { locale: es }) : "Seleccionar fecha"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={formData.fecha ? new Date(formData.fecha) : undefined}
-                  onSelect={(date) => {
-                    if (date) {
+            <div className="flex gap-2">
+              {/* Manual date input */}
+              <Input
+                type="text"
+                value={formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : ""}
+                onChange={(e) => {
+                  const value = e.target.value
+                  // Allow typing in format dd/MM/yyyy
+                  const parts = value.split("/")
+                  if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                    const [day, month, year] = parts
+                    const date = new Date(`${year}-${month}-${day}`)
+                    if (!isNaN(date.getTime())) {
                       setFormData({ ...formData, fecha: format(date, "yyyy-MM-dd") })
-                      setDateOpen(false)
                     }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+                  }
+                }}
+                onBlur={(e) => {
+                  // Validate on blur and fix if needed
+                  const value = e.target.value
+                  const parts = value.split("/")
+                  if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                    const [day, month, year] = parts
+                    const date = new Date(`${year}-${month}-${day}`)
+                    if (!isNaN(date.getTime())) {
+                      setFormData({ ...formData, fecha: format(date, "yyyy-MM-dd") })
+                    }
+                  }
+                }}
+                placeholder="DD/MM/AAAA"
+                className="flex-1 bg-muted/30"
+              />
+              {/* Calendar picker button */}
+              <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="flex-shrink-0"
+                    title="Abrir calendario"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.fecha ? new Date(formData.fecha) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setFormData({ ...formData, fecha: format(date, "yyyy-MM-dd") })
+                        setDateOpen(false)
+                      }
+                    }}
+                    locale={es}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           {/* Account Selection */}

@@ -463,13 +463,53 @@ export function TransactionDetail({
                         {/* Manual date input */}
                         <Input
                           id="fecha"
-                          type="date"
-                          value={formData.fecha || ""}
+                          type="text"
+                          value={formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : ""}
                           onChange={(e) => {
-                            if (e.target.value) {
-                              setFormData((prev) => ({ ...prev, fecha: e.target.value }))
+                            const value = e.target.value
+                            // Allow typing in format dd/MM/yyyy
+                            const parts = value.split("/")
+                            if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                              const [day, month, year] = parts
+                              const date = new Date(`${year}-${month}-${day}`)
+                              if (!isNaN(date.getTime())) {
+                                setFormData((prev) => {
+                                  const formattedDate = format(date, "yyyy-MM-dd")
+                                  if (prev.fecha === formattedDate) {
+                                    return prev
+                                  }
+                                  return {
+                                    ...prev,
+                                    fecha: formattedDate,
+                                    descripcion: appendHistoryNote(prev, "date"),
+                                  }
+                                })
+                              }
                             }
                           }}
+                          onBlur={(e) => {
+                            // Validate on blur and fix if needed
+                            const value = e.target.value
+                            const parts = value.split("/")
+                            if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                              const [day, month, year] = parts
+                              const date = new Date(`${year}-${month}-${day}`)
+                              if (!isNaN(date.getTime())) {
+                                setFormData((prev) => {
+                                  const formattedDate = format(date, "yyyy-MM-dd")
+                                  if (prev.fecha === formattedDate) {
+                                    return prev
+                                  }
+                                  return {
+                                    ...prev,
+                                    fecha: formattedDate,
+                                    descripcion: appendHistoryNote(prev, "date"),
+                                  }
+                                })
+                              }
+                            }
+                          }}
+                          placeholder="DD/MM/AAAA"
                           className="flex-1 h-9"
                         />
                         {/* Calendar picker button */}

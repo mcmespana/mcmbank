@@ -52,14 +52,10 @@ export function CategoryChip({
       <div className="flex items-center gap-2">
         <Badge
           variant="outline"
-          className="group cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium inline-flex items-center gap-2 transition-all duration-200 border border-transparent shadow-sm hover:shadow-md hover:scale-105 bg-[var(--category-color)] text-[var(--category-text-color)]"
+          className="group cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium inline-flex items-center gap-2 transition-all duration-200 border border-transparent shadow-sm hover:shadow-md hover:scale-105 bg-[var(--category-color)] text-[var(--category-text-color)] dark:bg-transparent dark:border-[var(--category-color)] dark:text-[var(--category-color)]"
           style={badgeStyles}
           onClick={openDialog}
         >
-          <span
-            aria-hidden
-            className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--category-text-color)]/20"
-          />
           {category.emoji && <span className="text-xs">{category.emoji}</span>}
           <span className="text-xs font-medium leading-none">{category.nombre}</span>
         </Badge>

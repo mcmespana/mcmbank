@@ -377,9 +377,8 @@ function CategoryPill({ category, size = "md", isSelected = false, onClick }: Ca
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-2 rounded-full border border-transparent shadow-sm transition-all duration-200 bg-[var(--category-color)] text-[var(--category-text-color)] hover:shadow-md cursor-pointer",
-        isSelected && "ring-2 ring-offset-2 ring-primary",
+        isSelected && "ring-2 ring-primary",
         sizeClasses,
-        category.categoria_padre_id && size !== "lg" && "bg-[var(--category-color)]/90",
       )}
       style={badgeStyles}
     >

@@ -235,11 +235,15 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Para comprender los ingresos y los gastos de un periodo de tiempo (este mes, todo el curso...)
-        </div>
-        <div className="w-80">
+      <div className="text-sm text-muted-foreground mb-6">
+        Para comprender los ingresos y los gastos de un periodo de tiempo (este mes, todo el curso...)
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filtrar por Categorías</CardTitle>
+        </CardHeader>
+        <CardContent>
           <CategorySelector
             categories={categorias}
             selectedCategories={selectedCategories}
@@ -248,10 +252,10 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
             placeholder="Filtrar categorías..."
           />
           {isPending && (
-            <p className="text-xs text-muted-foreground mt-1">Aplicando filtros...</p>
+            <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {movimientos.length === 0 ? (
         <EmptyState

@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import LoginForm from "@/components/auth/login-form"
@@ -19,7 +20,9 @@ export default async function LoginPage() {
       <AnimatedBackground />
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <LoginForm />
+        <Suspense fallback={<div className="animate-pulse">Cargando...</div>}>
+          <LoginForm />
+        </Suspense>
       </div>
 
       <div className="absolute top-0 left-0 h-32 w-32 bg-gradient-to-br from-primary/5 to-transparent rounded-br-full"></div>

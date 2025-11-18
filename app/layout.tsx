@@ -1,21 +1,10 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { AppProviders } from "@/contexts/app-providers"
 import "./globals.css"
-
-const geist = Geist({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-geist",
-})
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-geist-mono",
-})
 
 export const metadata: Metadata = {
   title: "MCM Bank",
@@ -58,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${geist.variable} ${geistMono.variable} antialiased`}>
+    <html lang="es" className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
       <head>
         <meta name="apple-mobile-web-app-title" content="MCM Bank" />
         <meta name="application-name" content="MCM Bank" />

@@ -36,6 +36,7 @@ import {
   Eye,
   ChevronUp,
   ChevronDown,
+  HelpCircle,
 } from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
 import autoAnimate from "@formkit/auto-animate"
@@ -1313,10 +1314,29 @@ export function CategoryList() {
             {totalCount} categorías en total ({globalCount} globales).
           </p>
         </div>
-        <Button onClick={handleCreate} className="w-full sm:w-auto" disabled={!organizacionId}>
-          <Plus className="h-4 w-4 mr-2" />
-          Añadir categoría
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button onClick={handleCreate} className="flex-1 sm:flex-none" disabled={!organizacionId}>
+            <Plus className="h-4 w-4 mr-2" />
+            Añadir categoría
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="flex-1 sm:flex-none sm:w-auto"
+            asChild
+            title="¿Qué añado en cada categoría?"
+          >
+            <a
+              href="https://docs.movimientoconsolacion.com/mcmespana/tesoreria/mcm-bank-guia/3.-categorias#que-pongo-en-cada-categoria"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">¿Qué añado en cada categoría?</span>
+            </a>
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2 sm:gap-3 flex-wrap sm:flex-row items-center">

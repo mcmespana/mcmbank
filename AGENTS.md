@@ -13,6 +13,7 @@ Este documento reúne las normas de trabajo para todo el repositorio. Si editas 
 
 ## 🧰 Comandos esenciales
 - Instalar dependencias: `pnpm install` (o `npm install`). El proyecto requiere Node `>= 20`; puedes usar `.nvmrc` → `nvm use`.
+  > **IMPORTANTE:** Si realizas cambios importantes en dependencias usando `npm`, ejecuta SIEMPRE `npx pnpm install` después para sincronizar el archivo `pnpm-lock.yaml`, ya que Vercel lo prioriza para el despliegue.
 - Desarrollo local: `pnpm dev` (Next.js en `http://localhost:3000`).
 - Build de producción: `pnpm build`.
 - Servir la build: `pnpm start`.

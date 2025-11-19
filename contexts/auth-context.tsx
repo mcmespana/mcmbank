@@ -50,29 +50,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
 
         if (event === "SIGNED_IN" && session?.user) {
-          // TEMPORARY SOLUTION: Skip profile creation if table doesn't exist
-          // TODO: Remove this condition once the perfil table is created in production
-          const SKIP_PROFILE_CREATION = process.env.NEXT_PUBLIC_SKIP_PROFILE_CREATION === 'true'
-          
-          if (!SKIP_PROFILE_CREATION) {
-            try {
-              // Check if profile exists, create if not
-              const { data: profile } = await supabase
-                .from("perfil")
-                .select("usuario_id")
-                .eq("usuario_id", session.user.id)
-                .single()
+          try {
+            // Check if profile exists, create if not
+            const { data: profile } = await supabase
+              .from("perfil")
+              .select("usuario_id")
+              .eq("usuario_id", session.user.id)
+              .single()
 
-              if (!profile) {
-                await supabase.from("perfil").insert({
-                  usuario_id: session.user.id,
-                  nombre_completo: session.user.email?.split("@")[0] || "Usuario",
-                })
-              }
-            } catch (error) {
-              console.error("Error creating profile (table may not exist):", error)
-              console.log("To skip profile creation temporarily, set NEXT_PUBLIC_SKIP_PROFILE_CREATION=true")
+            if (!profile) {
+              await supabase.from("perfil").insert({
+                usuario_id: session.user.id,
+                nombre_completo: session.user.email?.split("@")[0] || "Usuario",
+              })
             }
+          } catch (error) {
+            // Silently fail if profile creation fails (e.g., table doesn't exist yet or RLS issues)
+            // This ensures the user can still log in even if profile setup has issues
+            console.warn("Profile creation/check failed:", error)
           }
         }
       }

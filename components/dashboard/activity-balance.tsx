@@ -45,7 +45,7 @@ interface Props {
 
 export function ActivityBalanceDashboard({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
+  const { categoryIds, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
   const [selectorOpen, setSelectorOpen] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
@@ -61,12 +61,6 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
     },
     { pageSize: 0 } // Disable pagination to load ALL movements
   )
-
-  // Movements are already filtered by date at DB level
-  // No need for local filtering anymore
-  const filteredMovimientos = useMemo(() => {
-    return movimientos
-  }, [movimientos, categoryIds])
 
   const summary = useMemo(() => {
     let ingresos = 0
@@ -206,11 +200,10 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
         </Card>
 
         <Card
-          className={`${
-            summary.balance >= 0
+          className={`${summary.balance >= 0
               ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200 dark:border-blue-800"
               : "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 border-orange-200 dark:border-orange-800"
-          }`}
+            }`}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Balance</CardTitle>

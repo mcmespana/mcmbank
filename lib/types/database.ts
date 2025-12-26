@@ -105,6 +105,9 @@ export type Database = {
           creado_por: string
           creado_en: string
           concepto_hash: string | null
+          source: string | null
+          external_id: string | null
+          external_raw: any | null
         }
         Insert: {
           id?: string
@@ -125,6 +128,9 @@ export type Database = {
           creado_por: string
           creado_en?: string
           concepto_hash?: string | null
+          source?: string | null
+          external_id?: string | null
+          external_raw?: any | null
         }
         Update: {
           id?: string
@@ -145,6 +151,135 @@ export type Database = {
           creado_por?: string
           creado_en?: string
           concepto_hash?: string | null
+          source?: string | null
+          external_id?: string | null
+          external_raw?: any | null
+        }
+      }
+      enablebanking_consent: {
+        Row: {
+          id: string
+          organizacion_id: string
+          aspsp_name: string
+          aspsp_country: string
+          aspsp_bic: string | null
+          psu_type: string
+          authorization_id: string
+          state: string
+          redirect_url: string
+          status: string
+          session_id: string | null
+          authorized_at: string | null
+          error_code: string | null
+          error_description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organizacion_id: string
+          aspsp_name: string
+          aspsp_country: string
+          aspsp_bic?: string | null
+          psu_type: string
+          authorization_id: string
+          state: string
+          redirect_url: string
+          status?: string
+          session_id?: string | null
+          authorized_at?: string | null
+          error_code?: string | null
+          error_description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          organizacion_id?: string
+          aspsp_name?: string
+          aspsp_country?: string
+          aspsp_bic?: string | null
+          psu_type?: string
+          authorization_id?: string
+          state?: string
+          redirect_url?: string
+          status?: string
+          session_id?: string | null
+          authorized_at?: string | null
+          error_code?: string | null
+          error_description?: string | null
+          created_at?: string
+        }
+      }
+      enablebanking_account: {
+        Row: {
+          id: string
+          consent_id: string
+          provider_account_id: string
+          identification_hash: string | null
+          iban: string | null
+          currency: string | null
+          owner_name: string | null
+          raw_payload: any | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          consent_id: string
+          provider_account_id: string
+          identification_hash?: string | null
+          iban?: string | null
+          currency?: string | null
+          owner_name?: string | null
+          raw_payload?: any | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          consent_id?: string
+          provider_account_id?: string
+          identification_hash?: string | null
+          iban?: string | null
+          currency?: string | null
+          owner_name?: string | null
+          raw_payload?: any | null
+          created_at?: string
+        }
+      }
+      enablebanking_link: {
+        Row: {
+          id: string
+          cuenta_id: string
+          enablebanking_account_id: string
+          status: string
+          sync_start_date: string | null
+          last_sync_at: string | null
+          last_sync_from: string | null
+          last_sync_to: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          cuenta_id: string
+          enablebanking_account_id: string
+          status?: string
+          sync_start_date?: string | null
+          last_sync_at?: string | null
+          last_sync_from?: string | null
+          last_sync_to?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          cuenta_id?: string
+          enablebanking_account_id?: string
+          status?: string
+          sync_start_date?: string | null
+          last_sync_at?: string | null
+          last_sync_from?: string | null
+          last_sync_to?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       categoria: {
@@ -434,6 +569,9 @@ export type MovimientoArchivo = Database["public"]["Tables"]["movimiento_archivo
 export type PropuestaMejora = Database["public"]["Tables"]["propuesta_mejora"]["Row"]
 export type PropuestaMejoraComentario = Database["public"]["Tables"]["propuesta_mejora_comentario"]["Row"]
 export type PropuestaMejoraVoto = Database["public"]["Tables"]["propuesta_mejora_voto"]["Row"]
+export type EnableBankingConsent = Database["public"]["Tables"]["enablebanking_consent"]["Row"]
+export type EnableBankingAccount = Database["public"]["Tables"]["enablebanking_account"]["Row"]
+export type EnableBankingLink = Database["public"]["Tables"]["enablebanking_link"]["Row"]
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {

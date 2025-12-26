@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import type { Delegacion } from "@/lib/types/database"
 import { useIsAdmin } from "@/hooks/use-is-admin"
+import { EnableBankingSection } from "@/components/configuracion/enablebanking-section"
 
 interface DelegacionWithCount extends Delegacion {
   movimientos?: number
@@ -115,6 +116,8 @@ export function ConfigPage() {
 
   return (
     <div className="space-y-10">
+      <EnableBankingSection />
+
       {/* Delegaciones Section */}
       <section>
         <div className="flex items-center justify-between mb-4">

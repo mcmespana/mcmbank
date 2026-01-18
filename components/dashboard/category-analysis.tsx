@@ -29,6 +29,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { formatCurrency } from "@/lib/utils/format"
 import { Table, TableHeader, TableHead, TableRow, TableCell, TableBody } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { buildExpandedCategoryIds } from "@/lib/utils/category-utils"
 interface Props {
   from: string
   to: string
@@ -44,6 +45,10 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
   const [selectorOpen, setSelectorOpen] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
+  const expandedCategoryIds = useMemo(
+    () => buildExpandedCategoryIds(categoryIds, categorias),
+    [categoryIds, categorias],
+  )
   // Dashboard needs ALL movements for accurate calculations
   // Apply date and category filters at DB level for better performance
   const { movimientos } = useMovimientos(
@@ -51,7 +56,7 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
     {
       fechaDesde: from,
       fechaHasta: to,
-      categoriaIds: categoryIds.length ? categoryIds : undefined,
+      categoriaIds: expandedCategoryIds.length ? expandedCategoryIds : undefined,
     },
     { pageSize: 0 } // Disable pagination to load ALL movements
   )

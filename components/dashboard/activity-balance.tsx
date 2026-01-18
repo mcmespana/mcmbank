@@ -37,6 +37,7 @@ import {
 import { es } from "date-fns/locale"
 import { formatCurrency } from "@/lib/utils/format"
 import { Badge } from "@/components/ui/badge"
+import { buildExpandedCategoryIds } from "@/lib/utils/category-utils"
 
 interface Props {
   from: string
@@ -49,6 +50,10 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
   const [selectorOpen, setSelectorOpen] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
+  const expandedCategoryIds = useMemo(
+    () => buildExpandedCategoryIds(categoryIds, categorias),
+    [categoryIds, categorias],
+  )
 
   // Dashboard needs ALL movements for accurate calculations
   // Apply date filters at DB level for better performance
@@ -57,7 +62,7 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
     {
       fechaDesde: from,
       fechaHasta: to,
-      categoriaIds: categoryIds.length > 0 ? categoryIds : undefined,
+      categoriaIds: expandedCategoryIds.length > 0 ? expandedCategoryIds : undefined,
     },
     { pageSize: 0 } // Disable pagination to load ALL movements
   )

@@ -1,17 +1,63 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { AppLayout } from "@/components/app-layout"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TimeframeFilter, type Timeframe, getTimeframeRange } from "@/components/dashboard/timeframe-filter"
 import { ActivityBalanceDashboard } from "@/components/dashboard/activity-balance"
 import { CategoryAnalysisDashboard } from "@/components/dashboard/category-analysis"
 import { OverviewDashboard } from "@/components/dashboard/overview-dashboard"
-import { TrendingUp, PieChart, Home } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useLocalStorageState } from "@/hooks/use-local-storage"
+import { TrendingUp, PieChart, Home, RotateCcw } from "lucide-react"
+
+type DashboardTab = "overview" | "actividad" | "categorias"
+
+const DEFAULT_TIMEFRAME: Timeframe = "school-year"
 
 export default function HomePage() {
-  const [timeframe, setTimeframe] = useState<Timeframe>("school-year")
-  const { from, to } = getTimeframeRange(timeframe)
+  const [activeTab, setActiveTab] = useLocalStorageState<DashboardTab>("mcmbank-dashboard-tab", "overview")
+  const [overviewTimeframe, setOverviewTimeframe] = useLocalStorageState<Timeframe>(
+    "mcmbank-dashboard-timeframe-overview",
+    DEFAULT_TIMEFRAME,
+  )
+  const [balanceTimeframe, setBalanceTimeframe] = useLocalStorageState<Timeframe>(
+    "mcmbank-dashboard-timeframe-balance",
+    DEFAULT_TIMEFRAME,
+  )
+  const [analysisTimeframe, setAnalysisTimeframe] = useLocalStorageState<Timeframe>(
+    "mcmbank-dashboard-timeframe-analysis",
+    DEFAULT_TIMEFRAME,
+  )
+  const [resetToken, setResetToken] = useState(0)
+
+  const overviewRange = useMemo(() => getTimeframeRange(overviewTimeframe), [overviewTimeframe])
+  const balanceRange = useMemo(() => getTimeframeRange(balanceTimeframe), [balanceTimeframe])
+  const analysisRange = useMemo(() => getTimeframeRange(analysisTimeframe), [analysisTimeframe])
+
+  const activeTimeframe = useMemo(() => {
+    if (activeTab === "actividad") return balanceTimeframe
+    if (activeTab === "categorias") return analysisTimeframe
+    return overviewTimeframe
+  }, [activeTab, analysisTimeframe, balanceTimeframe, overviewTimeframe])
+
+  const handleTimeframeChange = (value: Timeframe) => {
+    if (activeTab === "actividad") {
+      setBalanceTimeframe(value)
+    } else if (activeTab === "categorias") {
+      setAnalysisTimeframe(value)
+    } else {
+      setOverviewTimeframe(value)
+    }
+  }
+
+  const handleResetAll = () => {
+    setActiveTab("overview")
+    setOverviewTimeframe(DEFAULT_TIMEFRAME)
+    setBalanceTimeframe(DEFAULT_TIMEFRAME)
+    setAnalysisTimeframe(DEFAULT_TIMEFRAME)
+    setResetToken((prev) => prev + 1)
+  }
 
   return (
     <AppLayout>
@@ -24,11 +70,17 @@ export default function HomePage() {
               Dashboard
             </h1>
           </div>
-          <TimeframeFilter value={timeframe} onChange={setTimeframe} />
+          <div className="flex flex-wrap items-center gap-2">
+            <TimeframeFilter value={activeTimeframe} onChange={handleTimeframeChange} />
+            <Button variant="outline" onClick={handleResetAll} className="gap-2">
+              <RotateCcw className="h-4 w-4" />
+              Eliminar todos los filtros
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="overview" className="space-y-8">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as DashboardTab)} className="space-y-8">
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Home className="h-4 w-4" />
@@ -45,15 +97,23 @@ export default function HomePage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-8">
-            <OverviewDashboard from={from} to={to} />
+            <OverviewDashboard from={overviewRange.from} to={overviewRange.to} />
           </TabsContent>
 
           <TabsContent value="actividad" className="space-y-8">
-            <ActivityBalanceDashboard from={from} to={to} />
+            <ActivityBalanceDashboard
+              from={balanceRange.from}
+              to={balanceRange.to}
+              resetToken={resetToken}
+            />
           </TabsContent>
 
           <TabsContent value="categorias" className="space-y-8">
-            <CategoryAnalysisDashboard from={from} to={to} />
+            <CategoryAnalysisDashboard
+              from={analysisRange.from}
+              to={analysisRange.to}
+              resetToken={resetToken}
+            />
           </TabsContent>
         </Tabs>
       </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
@@ -8,6 +8,7 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
+import { useLocalStorageState } from "@/hooks/use-local-storage"
 import { TrendingUp, TrendingDown, Wallet, BarChart3, PieChart, Filter } from "lucide-react"
 import {
   XAxis,
@@ -41,11 +42,21 @@ import { Badge } from "@/components/ui/badge"
 interface Props {
   from: string
   to: string
+  resetToken?: number
 }
 
-export function ActivityBalanceDashboard({ from, to }: Props) {
+const areCategoriesEqual = (left: string[], right: string[]) => {
+  if (left.length !== right.length) return false
+  return left.every((value, index) => value === right[index])
+}
+
+export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  const { categoryIds, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
+  const [storedCategoryIds, setStoredCategoryIds] = useLocalStorageState<string[]>(
+    "mcmbank-dashboard-balance-categories",
+    [],
+  )
+  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter(storedCategoryIds)
   const [selectorOpen, setSelectorOpen] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
@@ -61,6 +72,24 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
     },
     { pageSize: 0 } // Disable pagination to load ALL movements
   )
+
+  useEffect(() => {
+    if (!areCategoriesEqual(storedCategoryIds, selectedCategories)) {
+      setCategoryIds(storedCategoryIds)
+    }
+  }, [storedCategoryIds, selectedCategories, setCategoryIds])
+
+  useEffect(() => {
+    if (!areCategoriesEqual(selectedCategories, storedCategoryIds)) {
+      setStoredCategoryIds(selectedCategories)
+    }
+  }, [selectedCategories, setStoredCategoryIds, storedCategoryIds])
+
+  useEffect(() => {
+    if (!resetToken) return
+    setCategoryIds([])
+    setStoredCategoryIds([])
+  }, [resetToken, setCategoryIds, setStoredCategoryIds])
 
   const summary = useMemo(() => {
     let ingresos = 0
@@ -266,9 +295,9 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
               onClick={() => setSelectorOpen(true)}
             >
               <Filter className="h-4 w-4" />
-              {categoryIds.length === 0
+              {selectedCategories.length === 0
                 ? "Seleccionar categorías..."
-                : `${categoryIds.length} categoría${categoryIds.length !== 1 ? "s" : ""} seleccionada${categoryIds.length !== 1 ? "s" : ""}`}
+                : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
             </Button>
             {isPending && (
               <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
@@ -281,7 +310,7 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <CategoryMegaSelector
             categories={categorias}
-            selectedCategories={categoryIds}
+            selectedCategories={selectedCategories}
             onSelectionChange={setCategoryIds}
             onClose={() => setSelectorOpen(false)}
             allowMultiple

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -12,6 +12,7 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
+import { useLocalStorageState } from "@/hooks/use-local-storage"
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -32,13 +33,18 @@ import { Badge } from "@/components/ui/badge"
 interface Props {
   from: string
   to: string
+  resetToken?: number
 }
 
 type SortField = "category" | "income" | "expense" | "balance" | "default"
 
-export function CategoryAnalysisDashboard({ from, to }: Props) {
+export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
+  const [storedCategoryIds, setStoredCategoryIds] = useLocalStorageState<string[]>(
+    "mcmbank-dashboard-analysis-categories",
+    [],
+  )
+  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter(storedCategoryIds)
   const [sortField, setSortField] = useState<SortField>("default")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [selectorOpen, setSelectorOpen] = useState(false)
@@ -55,6 +61,29 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
     },
     { pageSize: 0 } // Disable pagination to load ALL movements
   )
+
+  const areCategoriesEqual = (left: string[], right: string[]) => {
+    if (left.length !== right.length) return false
+    return left.every((value, index) => value === right[index])
+  }
+
+  useEffect(() => {
+    if (!areCategoriesEqual(storedCategoryIds, selectedCategories)) {
+      setCategoryIds(storedCategoryIds)
+    }
+  }, [storedCategoryIds, selectedCategories, setCategoryIds])
+
+  useEffect(() => {
+    if (!areCategoriesEqual(selectedCategories, storedCategoryIds)) {
+      setStoredCategoryIds(selectedCategories)
+    }
+  }, [selectedCategories, setStoredCategoryIds, storedCategoryIds])
+
+  useEffect(() => {
+    if (!resetToken) return
+    setCategoryIds([])
+    setStoredCategoryIds([])
+  }, [resetToken, setCategoryIds, setStoredCategoryIds])
 
   const aggregate = useMemo(() => {
     const ingresoMap = new Map<string, { id: string; name: string; value: number; emoji?: string }>()
@@ -251,9 +280,9 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
             onClick={() => setSelectorOpen(true)}
           >
             <Filter className="h-4 w-4" />
-            {categoryIds.length === 0
+            {selectedCategories.length === 0
               ? "Seleccionar categorías..."
-              : `${categoryIds.length} categoría${categoryIds.length !== 1 ? "s" : ""} seleccionada${categoryIds.length !== 1 ? "s" : ""}`}
+              : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
           </Button>
           {isPending && (
             <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
@@ -265,7 +294,7 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <CategoryMegaSelector
             categories={categorias}
-            selectedCategories={categoryIds}
+            selectedCategories={selectedCategories}
             onSelectionChange={setCategoryIds}
             onClose={() => setSelectorOpen(false)}
             allowMultiple

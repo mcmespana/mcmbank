@@ -413,7 +413,17 @@ export function CategoryList() {
   }, [searchParams, organizacionId, selectedDelegation])
 
   const getCategoryBalance = (categoryId: string) => {
-    let filteredMovements = movimientos.filter((mov) => mov.categoria_id === categoryId)
+    const relatedCategoryIds = new Set([categoryId])
+
+    for (const category of categories) {
+      if (category.categoria_padre_id === categoryId) {
+        relatedCategoryIds.add(category.id)
+      }
+    }
+
+    let filteredMovements = movimientos.filter(
+      (mov) => mov.categoria_id && relatedCategoryIds.has(mov.categoria_id),
+    )
 
     if (dateFrom) {
       filteredMovements = filteredMovements.filter((mov) => mov.fecha >= dateFrom)

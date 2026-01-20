@@ -12,7 +12,6 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
-import { useLocalStorageState } from "@/hooks/use-local-storage"
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -41,11 +40,10 @@ type SortField = "category" | "income" | "expense" | "balance" | "default"
 
 export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  const [storedCategoryIds, setStoredCategoryIds] = useLocalStorageState<string[]>(
-    "mcmbank-dashboard-analysis-categories",
-    [],
-  )
-  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter(storedCategoryIds)
+  // State for initial local storage loading to prevent hydration mismatch
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
   const [sortField, setSortField] = useState<SortField>("default")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [selectorOpen, setSelectorOpen] = useState(false)
@@ -67,28 +65,45 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     { pageSize: 0 } // Disable pagination to load ALL movements
   )
 
-  const areCategoriesEqual = (left: string[], right: string[]) => {
-    if (left.length !== right.length) return false
-    return left.every((value, index) => value === right[index])
-  }
 
-  useEffect(() => {
-    if (!areCategoriesEqual(storedCategoryIds, selectedCategories)) {
-      setCategoryIds(storedCategoryIds)
-    }
-  }, [storedCategoryIds, selectedCategories, setCategoryIds])
 
+  // Load configuration from local storage on mount
   useEffect(() => {
-    if (!areCategoriesEqual(selectedCategories, storedCategoryIds)) {
-      setStoredCategoryIds(selectedCategories)
+    const loadFromStorage = () => {
+      try {
+        const stored = window.localStorage.getItem("mcmbank-dashboard-analysis-categories")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCategoryIds(parsed)
+          }
+        }
+      } catch (error) {
+        console.warn("Error loading categories from local storage", error)
+      } finally {
+        setIsLoaded(true)
+      }
     }
-  }, [selectedCategories, setStoredCategoryIds, storedCategoryIds])
+
+    loadFromStorage()
+  }, [setCategoryIds])
+
+  // Save configuration to local storage when it changes
+  useEffect(() => {
+    if (!isLoaded) return // Don't save empty state before loading
+
+    try {
+      window.localStorage.setItem("mcmbank-dashboard-analysis-categories", JSON.stringify(selectedCategories))
+    } catch (error) {
+      console.warn("Error saving categories to local storage", error)
+    }
+  }, [selectedCategories, isLoaded])
 
   useEffect(() => {
     if (!resetToken) return
     setCategoryIds([])
-    setStoredCategoryIds([])
-  }, [resetToken, setCategoryIds, setStoredCategoryIds])
+    // Local storage will be updated by the effect above
+  }, [resetToken, setCategoryIds])
 
   const aggregate = useMemo(() => {
     const ingresoMap = new Map<string, { id: string; name: string; value: number; emoji?: string }>()
@@ -97,7 +112,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     movimientos.forEach((m) => {
       const id = m.categoria_id || "uncategorized"
       const name = m.categoria?.nombre || "Sin etiqueta"
-      const emoji = m.categoria?.emoji
+      const emoji = m.categoria?.emoji || undefined
       const map = m.importe > 0 ? ingresoMap : gastoMap
       const entry = map.get(id) || { id, name, value: 0, emoji }
       entry.value += Math.abs(m.importe)
@@ -179,7 +194,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     }
   }
 
-  const PieTooltip = ({ active, payload, total }: TooltipProps<number, string> & { total: number }) => {
+  const PieTooltip = ({ active, payload, total }: any) => {
     if (!active || !payload?.length) return null
     const d = payload[0].payload as { name: string; value: number; id: string; emoji?: string; fill: string }
     const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0.0"

@@ -8,7 +8,6 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
-import { useLocalStorageState } from "@/hooks/use-local-storage"
 import { TrendingUp, TrendingDown, Wallet, BarChart3, PieChart, Filter } from "lucide-react"
 import {
   XAxis,
@@ -21,7 +20,7 @@ import {
   Line,
   Pie,
   Tooltip as RechartsTooltip,
-  type TooltipProps,
+
 } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -46,18 +45,15 @@ interface Props {
   resetToken?: number
 }
 
-const areCategoriesEqual = (left: string[], right: string[]) => {
-  if (left.length !== right.length) return false
-  return left.every((value, index) => value === right[index])
-}
+
 
 export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  const [storedCategoryIds, setStoredCategoryIds] = useLocalStorageState<string[]>(
-    "mcmbank-dashboard-balance-categories",
-    [],
-  )
-  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter(storedCategoryIds)
+  // State for initial local storage loading to prevent hydration mismatch
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Initialize with empty array, will be populated from localStorage on client side
+  const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
   const [selectorOpen, setSelectorOpen] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
@@ -78,23 +74,43 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
     { pageSize: 0 } // Disable pagination to load ALL movements
   )
 
+  // Load configuration from local storage on mount
   useEffect(() => {
-    if (!areCategoriesEqual(storedCategoryIds, selectedCategories)) {
-      setCategoryIds(storedCategoryIds)
+    const loadFromStorage = () => {
+      try {
+        const stored = window.localStorage.getItem("mcmbank-dashboard-balance-categories")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCategoryIds(parsed)
+          }
+        }
+      } catch (error) {
+        console.warn("Error loading categories from local storage", error)
+      } finally {
+        setIsLoaded(true)
+      }
     }
-  }, [storedCategoryIds, selectedCategories, setCategoryIds])
 
+    loadFromStorage()
+  }, [setCategoryIds])
+
+  // Save configuration to local storage when it changes
   useEffect(() => {
-    if (!areCategoriesEqual(selectedCategories, storedCategoryIds)) {
-      setStoredCategoryIds(selectedCategories)
+    if (!isLoaded) return // Don't save empty state before loading
+
+    try {
+      window.localStorage.setItem("mcmbank-dashboard-balance-categories", JSON.stringify(selectedCategories))
+    } catch (error) {
+      console.warn("Error saving categories to local storage", error)
     }
-  }, [selectedCategories, setStoredCategoryIds, storedCategoryIds])
+  }, [selectedCategories, isLoaded])
 
   useEffect(() => {
     if (!resetToken) return
     setCategoryIds([])
-    setStoredCategoryIds([])
-  }, [resetToken, setCategoryIds, setStoredCategoryIds])
+    // Local storage will be updated by the effect above
+  }, [resetToken, setCategoryIds])
 
   const summary = useMemo(() => {
     let ingresos = 0
@@ -111,7 +127,7 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
     { name: "Gastos", value: summary.gastos, fill: "#ef4444" },
   ]
 
-  const DonutTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+  const DonutTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
     if (!active || !payload?.length) return null
     const data = payload[0].payload as { name: string; value: number; fill: string }
     const total = summary.ingresos + summary.gastos
@@ -235,8 +251,8 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
 
         <Card
           className={`${summary.balance >= 0
-              ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200 dark:border-blue-800"
-              : "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 border-orange-200 dark:border-orange-800"
+            ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200 dark:border-blue-800"
+            : "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 border-orange-200 dark:border-orange-800"
             }`}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

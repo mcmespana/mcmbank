@@ -58,7 +58,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${geist.variable} ${geistMono.variable} antialiased`}>
+    <html lang="es" className={`${geist.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
       <head>
         <meta name="apple-mobile-web-app-title" content="MCM Bank" />
         <meta name="application-name" content="MCM Bank" />

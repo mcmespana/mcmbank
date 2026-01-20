@@ -19,7 +19,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { useDelegationCounts } from "@/hooks/use-delegation-counts"
 import type { DelegationCounts } from "@/hooks/use-delegation-counts"
@@ -94,14 +94,14 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
     },
     ...(isAdmin
       ? [
-          {
-            name: "Configuración",
-            href: "/configuracion",
-            icon: Settings,
-            count: null,
-            enabled: true,
-          },
-        ]
+        {
+          name: "Configuración",
+          href: "/configuracion",
+          icon: Settings,
+          count: null,
+          enabled: true,
+        },
+      ]
       : []),
     {
       name: "Diagnóstico",
@@ -253,6 +253,10 @@ export function Sidebar({
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Menú de Navegación</SheetTitle>
+              <SheetDescription>Accede a las diferentes secciones bancarias</SheetDescription>
+            </SheetHeader>
             <SidebarContent counts={counts} countsLoading={countsLoading} />
           </SheetContent>
         </Sheet>
@@ -260,3 +264,4 @@ export function Sidebar({
     </>
   )
 }
+

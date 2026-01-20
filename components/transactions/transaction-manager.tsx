@@ -324,12 +324,12 @@ export function TransactionManager() {
         setSelectedMovementSnapshot((prev) =>
           prev
             ? {
-                ...prev,
-                ...movementPatch,
-                ...(categoriaIdForMovement !== undefined
-                  ? { categoria_id: categoriaIdForMovement }
-                  : {}),
-              }
+              ...prev,
+              ...movementPatch,
+              ...(categoriaIdForMovement !== undefined
+                ? { categoria_id: categoriaIdForMovement }
+                : {}),
+            }
             : prev,
         )
       }
@@ -440,9 +440,8 @@ export function TransactionManager() {
     <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
       {/* Desktop Sidebar Filters */}
       <div
-        className={`hidden lg:block border-r bg-card transition-all duration-300 ${
-          sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
-        }`}
+        className={`hidden lg:block border-r bg-card transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
+          }`}
       >
         {!sidebarCollapsed && (
           <div className="p-6 space-y-6">
@@ -506,9 +505,8 @@ export function TransactionManager() {
                 variant={hasActiveFilters ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFiltersOpen(!filtersOpen)}
-                className={`lg:hidden flex-shrink-0 relative ${
-                  hasActiveFilters ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
-                }`}
+                className={`lg:hidden flex-shrink-0 relative ${hasActiveFilters ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
+                  }`}
                 title="Filtros"
               >
                 <Filter className="h-4 w-4" />
@@ -548,9 +546,8 @@ export function TransactionManager() {
                 size="sm"
                 onClick={handleDownload}
                 disabled={downloadState === "downloading"}
-                className={`flex-shrink-0 bg-transparent ${
-                  downloadState === "success" ? "bg-green-500 hover:bg-green-600 text-white" : ""
-                }`}
+                className={`flex-shrink-0 bg-transparent ${downloadState === "success" ? "bg-green-500 hover:bg-green-600 text-white" : ""
+                  }`}
                 title="Descargar transacciones"
               >
                 {downloadState === "downloading" ? (
@@ -564,8 +561,8 @@ export function TransactionManager() {
                   {downloadState === "downloading"
                     ? "Descargando..."
                     : downloadState === "success"
-                    ? "Descargado"
-                    : "Descargar"}
+                      ? "Descargado"
+                      : "Descargar"}
                 </span>
               </Button>
             </div>
@@ -661,7 +658,7 @@ export function TransactionManager() {
 
         {/* Transaction List */}
         <div className="flex-1 overflow-auto">
-          
+
           <TransactionList
             movements={movements}
             accounts={accounts as unknown as Cuenta[]}
@@ -735,6 +732,12 @@ export function TransactionManager() {
         }}
       >
         <DialogContent className="max-w-4xl w-full p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Seleccionar categoría en bloque</DialogTitle>
+            <DialogDescription>
+              Selecciona la categoría que se aplicará a las {selectionCount} transacciones seleccionadas.
+            </DialogDescription>
+          </DialogHeader>
           <CategoryMegaSelector
             categories={categories as unknown as Categoria[]}
             selectedCategoryId={undefined}

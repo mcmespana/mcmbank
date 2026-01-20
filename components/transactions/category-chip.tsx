@@ -3,7 +3,13 @@
 import { useState, type CSSProperties } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Plus, X } from "lucide-react"
 import { getCategoryColorTokens } from "@/lib/utils/category-colors"
 import type { Categoria, Movimiento, Cuenta } from "@/lib/types/database"
@@ -75,6 +81,12 @@ export function CategoryChip({
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-3xl w-full p-0 overflow-hidden">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Cambiar categoría</DialogTitle>
+              <DialogDescription>
+                Selecciona una nueva categoría para esta transacción.
+              </DialogDescription>
+            </DialogHeader>
             <CategoryMegaSelector
               categories={categories}
               selectedCategoryId={category.id}
@@ -105,6 +117,12 @@ export function CategoryChip({
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl w-full p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Asignar categoría</DialogTitle>
+            <DialogDescription>
+              Busca y selecciona la mejor categoría para esta transacción.
+            </DialogDescription>
+          </DialogHeader>
           <CategoryMegaSelector
             categories={categories}
             selectedCategoryId={null}

@@ -40,13 +40,41 @@ export default function LoginForm() {
   const [state, formAction] = useActionState(signIn, null)
 
   const supabase = createClient()
+  const debugEnabled = searchParams.get("debug") === "1"
+
+  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ""
+  const rawDevRedirectUrl = process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ?? ""
+
+  const normalizeUrl = (url: string) => {
+    if (!url) return ""
+    if (url.startsWith("http://") || url.startsWith("https://")) return url
+    return `https://${url}`
+  }
+
+  const siteUrl = normalizeUrl(rawSiteUrl)
+  const fallbackOrigin = typeof window !== "undefined" ? window.location.origin : ""
+  const baseUrl = siteUrl || fallbackOrigin
+  const oauthRedirectUrl = `${baseUrl}/auth/callback`
+  const finalRedirectUrl = rawDevRedirectUrl || oauthRedirectUrl
 
   async function handleGoogleLogin() {
-    console.log("OAuth start", { provider: "google" })
-    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback`
+    if (rawSiteUrl && !rawSiteUrl.startsWith("http")) {
+      console.warn("OAuth config: NEXT_PUBLIC_SITE_URL missing protocol", {
+        rawSiteUrl,
+      })
+    }
+    console.log("OAuth start", {
+      provider: "google",
+      rawSiteUrl,
+      siteUrl,
+      fallbackOrigin,
+      oauthRedirectUrl,
+      rawDevRedirectUrl,
+      finalRedirectUrl,
+    })
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo },
+      options: { redirectTo: finalRedirectUrl },
     })
     if (error) console.error("OAuth error", error)
   }
@@ -87,6 +115,20 @@ export default function LoginForm() {
           {(state?.error || searchParams.get("error")) && (
             <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded-lg animate-in slide-in-from-top-2 duration-300">
               {state?.error || searchParams.get("error")}
+            </div>
+          )}
+          {debugEnabled && (
+            <div className="rounded-lg border border-border/50 bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+              <div className="font-semibold text-foreground">Debug OAuth</div>
+              <div>rawSiteUrl: {rawSiteUrl || "—"}</div>
+              <div>siteUrl: {siteUrl || "—"}</div>
+              <div>fallbackOrigin: {fallbackOrigin || "—"}</div>
+              <div>rawDevRedirectUrl: {rawDevRedirectUrl || "—"}</div>
+              <div>oauthRedirectUrl: {oauthRedirectUrl || "—"}</div>
+              <div>finalRedirectUrl: {finalRedirectUrl || "—"}</div>
+              <div className="italic">
+                Usa /auth/login?debug=1 para ver esta sección.
+              </div>
             </div>
           )}
 

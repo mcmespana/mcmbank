@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect } from "react"
 import { signIn } from "@/lib/actions/auth"
 import { createClient } from "@/lib/supabase/client"
+import { getAuthCallbackUrl, getDebugAuthConfig } from "@/lib/supabase/redirect"
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -40,10 +41,18 @@ export default function LoginForm() {
   const [state, formAction] = useActionState(signIn, null)
 
   const supabase = createClient()
+  const debugAuthConfig = getDebugAuthConfig({ fallbackToWindow: true })
+  const shouldShowDebug = searchParams.get("debug") === "1"
 
   async function handleGoogleLogin() {
-    console.log("OAuth start", { provider: "google" })
-    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback`
+    const redirectTo = getAuthCallbackUrl({ fallbackToWindow: true })
+    console.log("OAuth start", {
+      provider: "google",
+      redirectTo,
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+      devRedirectUrl: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL,
+      origin: window.location.origin,
+    })
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
@@ -121,6 +130,24 @@ export default function LoginForm() {
             </svg>
             Entrar con Google
           </Button>
+          {shouldShowDebug && (
+            <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 text-xs text-muted-foreground">
+              <p className="font-semibold text-foreground">Depuración OAuth</p>
+              <ul className="mt-2 space-y-1">
+                <li>Base normalizada: {debugAuthConfig.normalizedBaseUrl || "No disponible"}</li>
+                <li>Callback OAuth: {debugAuthConfig.oauthCallbackUrl || "No disponible"}</li>
+                <li>NEXT_PUBLIC_SITE_URL: {debugAuthConfig.siteUrl || "No definida"}</li>
+                <li>NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL: {debugAuthConfig.devRedirectUrl || "No definida"}</li>
+                <li>Origin actual: {debugAuthConfig.origin || "No disponible"}</li>
+                <li>
+                  {debugAuthConfig.hasProtocol
+                    ? "✅ NEXT_PUBLIC_SITE_URL incluye protocolo."
+                    : "⚠️ NEXT_PUBLIC_SITE_URL sin protocolo. Usa https://..."}
+                </li>
+                <li>Tip: agrega ?debug=1 para ver este panel.</li>
+              </ul>
+            </div>
+          )}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

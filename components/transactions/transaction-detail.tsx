@@ -20,6 +20,7 @@ import { CategoryChip } from "./category-chip"
 import { BankAvatar } from "@/components/bank-avatar"
 import { TabWithCounter } from "./tab-with-counter"
 import { formatCurrency } from "@/lib/utils/format"
+import { formatIsoDateToInput, maskDateInput, parseDateInputToIso } from "@/lib/utils/date-input"
 import { TransactionFiles } from "./transaction-files"
 import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -56,6 +57,7 @@ export function TransactionDetail({
   const [showAmountConfirm, setShowAmountConfirm] = useState(false)
   const [pendingAmount, setPendingAmount] = useState<string>("")
   const [isAmountEditing, setIsAmountEditing] = useState(false)
+  const [dateInput, setDateInput] = useState("")
   const [activeTab, setActiveTab] = useState<"datos" | "archivos">(initialTab)
   const [fileCount, setFileCount] = useState(0)
 
@@ -92,6 +94,7 @@ export function TransactionDetail({
       setActiveTab("datos")
       setFileCount(0)
       setIsAmountEditing(false)
+      setDateInput("")
       setShowAmountConfirm(false)
       setPendingAmount("")
       setSaveStatus("idle")
@@ -102,6 +105,7 @@ export function TransactionDetail({
     }
 
     setFormData({ ...baselineData })
+    setDateInput(formatIsoDateToInput(baselineData.fecha))
     setFormMovementId(movement.id)
     setActiveTab(initialTab)
     setFileCount(0)
@@ -279,6 +283,7 @@ export function TransactionDetail({
     }
 
     const formattedDate = format(selectedDate, "yyyy-MM-dd")
+    setDateInput(formatIsoDateToInput(formattedDate))
 
     setFormData((prev) => {
       if (prev.fecha === formattedDate) {
@@ -364,7 +369,7 @@ export function TransactionDetail({
                           className="mx-auto flex items-center gap-2 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
                         >
                           <CalendarIcon className="h-4 w-4" />
-                          {formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : "Sin fecha"}
+                          {formData.fecha ? formatIsoDateToInput(formData.fecha) : "Sin fecha"}
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 z-[80]" align="center" sideOffset={12}>
@@ -464,51 +469,32 @@ export function TransactionDetail({
                         <Input
                           id="fecha"
                           type="text"
-                          value={formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : ""}
+                          value={dateInput}
                           onChange={(e) => {
-                            const value = e.target.value
-                            // Allow typing in format dd/MM/yyyy
-                            const parts = value.split("/")
-                            if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-                              const [day, month, year] = parts
-                              const date = new Date(`${year}-${month}-${day}`)
-                              if (!isNaN(date.getTime())) {
-                                setFormData((prev) => {
-                                  const formattedDate = format(date, "yyyy-MM-dd")
-                                  if (prev.fecha === formattedDate) {
-                                    return prev
-                                  }
-                                  return {
-                                    ...prev,
-                                    fecha: formattedDate,
-                                    descripcion: appendHistoryNote(prev, "date"),
-                                  }
-                                })
-                              }
+                            const maskedValue = maskDateInput(e.target.value)
+                            setDateInput(maskedValue)
+
+                            const parsedDate = parseDateInputToIso(maskedValue)
+                            if (!parsedDate) {
+                              return
                             }
-                          }}
-                          onBlur={(e) => {
-                            // Validate on blur and fix if needed
-                            const value = e.target.value
-                            const parts = value.split("/")
-                            if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-                              const [day, month, year] = parts
-                              const date = new Date(`${year}-${month}-${day}`)
-                              if (!isNaN(date.getTime())) {
-                                setFormData((prev) => {
-                                  const formattedDate = format(date, "yyyy-MM-dd")
-                                  if (prev.fecha === formattedDate) {
-                                    return prev
-                                  }
-                                  return {
-                                    ...prev,
-                                    fecha: formattedDate,
-                                    descripcion: appendHistoryNote(prev, "date"),
-                                  }
-                                })
+
+                            setFormData((prev) => {
+                              if (prev.fecha === parsedDate) {
+                                return prev
                               }
-                            }
+                              return {
+                                ...prev,
+                                fecha: parsedDate,
+                                descripcion: appendHistoryNote(prev, "date"),
+                              }
+                            })
                           }}
+                          onBlur={() => {
+                            setDateInput(formatIsoDateToInput(formData.fecha))
+                          }}
+                          inputMode="numeric"
+                          autoComplete="off"
                           placeholder="DD/MM/AAAA"
                           className="flex-1 h-9"
                         />

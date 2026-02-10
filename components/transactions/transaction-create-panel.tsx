@@ -7,6 +7,7 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarIcon, Building2, X, Save } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatIsoDateToInput, maskDateInput, parseDateInputToIso } from "@/lib/utils/date-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,6 +46,7 @@ export function TransactionCreatePanel({
   })
   const [dateOpen, setDateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [dateInput, setDateInput] = useState(() => formatIsoDateToInput(format(new Date(), "yyyy-MM-dd")))
 
   const isFormValid = 
     formData.concepto?.trim() && 
@@ -72,15 +74,17 @@ export function TransactionCreatePanel({
         contraparte: formData.contraparte?.trim() || "",
       })
       // Reset form
+      const initialDate = format(new Date(), "yyyy-MM-dd")
       setFormData({
         concepto: "",
         importe: 0,
-        fecha: format(new Date(), "yyyy-MM-dd"),
+        fecha: initialDate,
         descripcion: "",
         categoria_id: "",
         contraparte: "",
         cuenta_id: "",
       })
+      setDateInput(formatIsoDateToInput(initialDate))
       onOpenChange(false)
     } catch (error) {
       console.error("Error creating transaction:", error)
@@ -92,15 +96,17 @@ export function TransactionCreatePanel({
 
   const handleCancel = () => {
     // Reset form
+    const initialDate = format(new Date(), "yyyy-MM-dd")
     setFormData({
       concepto: "",
       importe: 0,
-      fecha: format(new Date(), "yyyy-MM-dd"),
+      fecha: initialDate,
       descripcion: "",
       categoria_id: "",
       contraparte: "",
       cuenta_id: "",
     })
+    setDateInput(formatIsoDateToInput(initialDate))
     onOpenChange(false)
   }
 
@@ -181,31 +187,21 @@ export function TransactionCreatePanel({
               {/* Manual date input */}
               <Input
                 type="text"
-                value={formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : ""}
+                value={dateInput}
                 onChange={(e) => {
-                  const value = e.target.value
-                  // Allow typing in format dd/MM/yyyy
-                  const parts = value.split("/")
-                  if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-                    const [day, month, year] = parts
-                    const date = new Date(`${year}-${month}-${day}`)
-                    if (!isNaN(date.getTime())) {
-                      setFormData({ ...formData, fecha: format(date, "yyyy-MM-dd") })
-                    }
+                  const maskedValue = maskDateInput(e.target.value)
+                  setDateInput(maskedValue)
+
+                  const parsedDate = parseDateInputToIso(maskedValue)
+                  if (parsedDate) {
+                    setFormData((prev) => ({ ...prev, fecha: parsedDate }))
                   }
                 }}
-                onBlur={(e) => {
-                  // Validate on blur and fix if needed
-                  const value = e.target.value
-                  const parts = value.split("/")
-                  if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-                    const [day, month, year] = parts
-                    const date = new Date(`${year}-${month}-${day}`)
-                    if (!isNaN(date.getTime())) {
-                      setFormData({ ...formData, fecha: format(date, "yyyy-MM-dd") })
-                    }
-                  }
+                onBlur={() => {
+                  setDateInput(formatIsoDateToInput(formData.fecha))
                 }}
+                inputMode="numeric"
+                autoComplete="off"
                 placeholder="DD/MM/AAAA"
                 className="flex-1 bg-muted/30"
               />
@@ -228,7 +224,9 @@ export function TransactionCreatePanel({
                     selected={formData.fecha ? new Date(formData.fecha) : undefined}
                     onSelect={(date) => {
                       if (date) {
-                        setFormData({ ...formData, fecha: format(date, "yyyy-MM-dd") })
+                        const formattedDate = format(date, "yyyy-MM-dd")
+                        setFormData({ ...formData, fecha: formattedDate })
+                        setDateInput(formatIsoDateToInput(formattedDate))
                         setDateOpen(false)
                       }
                     }}

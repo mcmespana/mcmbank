@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarIcon, Building2, X, Save } from "lucide-react"
@@ -34,14 +34,44 @@ export function TransactionCreatePanel({
   onOpenChange,
   onCreate,
 }: TransactionCreatePanelProps) {
-  const [formData, setFormData] = useState<Partial<Movimiento>>({
+  const defaultAccountId = useMemo(() => {
+    if (accounts.length === 1) {
+      return accounts[0].id
+    }
+
+    const bankAccounts = accounts.filter((account) => account.tipo === "banco")
+    if (bankAccounts.length === 0) {
+      return ""
+    }
+
+    return bankAccounts.reduce((oldestAccount, currentAccount) => {
+      const oldestDate = new Date(oldestAccount.creado_en).getTime()
+      const currentDate = new Date(currentAccount.creado_en).getTime()
+
+      if (Number.isNaN(oldestDate)) {
+        return currentAccount
+      }
+
+      if (Number.isNaN(currentDate)) {
+        return oldestAccount
+      }
+
+      return currentDate < oldestDate ? currentAccount : oldestAccount
+    }).id
+  }, [accounts])
+
+  const getInitialFormData = () => ({
     concepto: "",
     importe: 0,
     fecha: format(new Date(), "yyyy-MM-dd"),
     descripcion: "",
     categoria_id: "",
     contraparte: "",
-    cuenta_id: "",
+    cuenta_id: defaultAccountId,
+  })
+
+  const [formData, setFormData] = useState<Partial<Movimiento>>({
+    ...getInitialFormData(),
   })
   const [dateOpen, setDateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -54,6 +84,20 @@ export function TransactionCreatePanel({
 
   const selectedAccount = accounts.find((acc) => acc.id === formData.cuenta_id)
   const selectedCategory = categories.find((cat) => cat.id === formData.categoria_id)
+
+  useEffect(() => {
+    const hasSelectedAccount = formData.cuenta_id && accounts.some((account) => account.id === formData.cuenta_id)
+
+    if (hasSelectedAccount) {
+      return
+    }
+
+    if (formData.cuenta_id === defaultAccountId) {
+      return
+    }
+
+    setFormData((prev) => ({ ...prev, cuenta_id: defaultAccountId }))
+  }, [accounts, defaultAccountId, formData.cuenta_id])
 
   const handleCreate = async () => {
     if (!isFormValid) {
@@ -73,13 +117,7 @@ export function TransactionCreatePanel({
       })
       // Reset form
       setFormData({
-        concepto: "",
-        importe: 0,
-        fecha: format(new Date(), "yyyy-MM-dd"),
-        descripcion: "",
-        categoria_id: "",
-        contraparte: "",
-        cuenta_id: "",
+        ...getInitialFormData(),
       })
       onOpenChange(false)
     } catch (error) {
@@ -93,13 +131,7 @@ export function TransactionCreatePanel({
   const handleCancel = () => {
     // Reset form
     setFormData({
-      concepto: "",
-      importe: 0,
-      fecha: format(new Date(), "yyyy-MM-dd"),
-      descripcion: "",
-      categoria_id: "",
-      contraparte: "",
-      cuenta_id: "",
+      ...getInitialFormData(),
     })
     onOpenChange(false)
   }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,18 +24,44 @@ interface TransactionFormProps {
   mode: "create" | "edit"
 }
 
+function getDefaultAccountId(accounts: Cuenta[]): string {
+  if (accounts.length === 1) {
+    return accounts[0].id
+  }
+
+  const oldestBankAccount = accounts
+    .filter((account) => account.tipo === "banco")
+    .sort((a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime())[0]
+
+  return oldestBankAccount?.id || ""
+}
+
 export function TransactionForm({ movement, accounts, categories, onSave, onCancel, mode }: TransactionFormProps) {
+  const defaultAccountId = movement?.cuenta_id || getDefaultAccountId(accounts)
   const [formData, setFormData] = useState({
     concepto: movement?.concepto || "",
     importe: movement?.importe || 0,
     fecha: movement?.fecha ? new Date(movement.fecha) : new Date(),
     categoria_id: movement?.categoria_id || "",
-    cuenta_id: movement?.cuenta_id || "",
+    cuenta_id: defaultAccountId,
     notas: movement?.notas || "",
     tipo: (movement && "tipo" in movement ? (movement as any).tipo : undefined) || "gasto",
   })
   const [loading, setLoading] = useState(false)
   const [dateOpen, setDateOpen] = useState(false)
+
+  useEffect(() => {
+    if (mode !== "create" || movement || formData.cuenta_id) {
+      return
+    }
+
+    const nextDefaultAccountId = getDefaultAccountId(accounts)
+    if (!nextDefaultAccountId) {
+      return
+    }
+
+    setFormData((prev) => ({ ...prev, cuenta_id: nextDefaultAccountId }))
+  }, [accounts, formData.cuenta_id, mode, movement])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

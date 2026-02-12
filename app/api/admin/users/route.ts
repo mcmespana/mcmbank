@@ -8,7 +8,7 @@ export async function GET() {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-    const { data: memberships, error: mErr } = await supabase
+    const { data: memberships, error: mErr } = await (supabase as any)
       .from("membresia")
       .select("usuario_id, rol, delegacion:delegacion_id (id, nombre)")
     if (mErr) return NextResponse.json({ error: mErr.message }, { status: 500 })
@@ -17,7 +17,7 @@ export async function GET() {
         id: u.id,
         email: u.email,
         createdAt: u.created_at,
-        membresias: memberships?.filter((m) => m.usuario_id === u.id) || [],
+        membresias: memberships?.filter((m: any) => m.usuario_id === u.id) || [],
       }))
       .sort((a, b) => {
         const aTime = new Date(a.createdAt ?? 0).getTime()
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
     // Create/Upsert profile
     if (typeof name === "string" && name.trim().length > 0) {
-      const { error: profileError } = await supabase
+      const { error: profileError } = await (supabase as any)
         .from("perfil")
         .upsert({ usuario_id: userId, nombre_completo: name })
       if (profileError) {
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         .filter((m: any) => m && m.delegacion_id && m.rol)
         .map((m: any) => ({ usuario_id: userId, delegacion_id: m.delegacion_id, rol: m.rol }))
       if (rows.length) {
-        const { error: insError } = await supabase.from("membresia").insert(rows)
+        const { error: insError } = await (supabase as any).from("membresia").insert(rows)
         if (insError) {
           return NextResponse.json({ error: insError.message }, { status: 400 })
         }

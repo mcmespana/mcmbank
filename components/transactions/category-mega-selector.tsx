@@ -72,15 +72,15 @@ export function CategoryMegaSelector({
     })
 
     const sortedParents = [...parentCategories].sort((a, b) => {
-      const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-      const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+      const ordenA = "orden_efectivo" in a ? (a as any).orden_efectivo ?? a.orden : a.orden
+      const ordenB = "orden_efectivo" in b ? (b as any).orden_efectivo ?? b.orden : b.orden
       if (ordenA !== ordenB) return ordenA - ordenB
       return a.nombre.localeCompare(b.nombre)
     })
     const groups: CategoryGroup[] = sortedParents.map((parent) => {
       const children = (childMap.get(parent.id) || []).sort((a, b) => {
-        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        const ordenA = "orden_efectivo" in a ? (a as any).orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? (b as any).orden_efectivo ?? b.orden : b.orden
         if (ordenA !== ordenB) return ordenA - ordenB
         return a.nombre.localeCompare(b.nombre)
       })
@@ -96,8 +96,8 @@ export function CategoryMegaSelector({
     const orphans = categories
       .filter((cat) => cat.categoria_padre_id && !parentIds.has(cat.categoria_padre_id))
       .sort((a, b) => {
-        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        const ordenA = "orden_efectivo" in a ? (a as any).orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? (b as any).orden_efectivo ?? b.orden : b.orden
         if (ordenA !== ordenB) return ordenA - ordenB
         return a.nombre.localeCompare(b.nombre)
       })
@@ -127,8 +127,8 @@ export function CategoryMegaSelector({
         (category.emoji && category.emoji.includes(searchValue.trim())),
       )
       .sort((a, b) => {
-        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        const ordenA = "orden_efectivo" in a ? (a as any).orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? (b as any).orden_efectivo ?? b.orden : b.orden
         if (ordenA !== ordenB) return ordenA - ordenB
         return a.nombre.localeCompare(b.nombre)
       })

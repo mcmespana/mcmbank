@@ -47,10 +47,10 @@ export function ConfigPage() {
 
   // Helpers to load data
   const loadDelegaciones = async () => {
-    const { data } = await supabase.from("delegacion").select("id,codigo,nombre,organizacion_id")
+    const { data } = await (supabase as any).from("delegacion").select("id,codigo,nombre,organizacion_id")
     const withCounts: DelegacionWithCount[] = await Promise.all(
-      (data || []).map(async (d) => {
-        const { count } = await supabase
+      (data || []).map(async (d: any) => {
+        const { count } = await (supabase as any)
           .from("movimiento")
           .select("id", { count: "exact", head: true })
           .eq("delegacion_id", d.id)
@@ -236,7 +236,7 @@ export function ConfigPage() {
                 const formData = new FormData(e.currentTarget)
                 const nombre = formData.get("nombre") as string
                 const codigo = formData.get("codigo") as string
-                await supabase
+                await (supabase as any)
                   .from("delegacion")
                   .update({ nombre, codigo })
                   .eq("id", editingDelegacion.id)
@@ -286,7 +286,7 @@ export function ConfigPage() {
                 alert("No se puede crear: falta organizacion_id")
                 return
               }
-              const { error } = await supabase
+              const { error } = await (supabase as any)
                 .from("delegacion")
                 .insert({ nombre, codigo, organizacion_id: orgId } as any)
               if (error) {
@@ -321,8 +321,8 @@ export function ConfigPage() {
           {editingUser && (
             <form
               className="space-y-4 py-4"
-            onSubmit={async (e) => {
-              e.preventDefault()
+              onSubmit={async (e) => {
+                e.preventDefault()
                 await fetch(`/api/admin/users/${editingUser.id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
@@ -332,18 +332,18 @@ export function ConfigPage() {
                     memberships: userForm.memberships,
                   }),
                 })
-                .then(async (res) => {
-                  const text = await res.text()
-                  const json = text ? JSON.parse(text) : {}
-                  if (!res.ok) {
-                    console.error('PUT /api/admin/users/:id error:', json?.error || text)
-                    toast.error(json?.error || 'No se pudo guardar el usuario')
-                    return
-                  }
-                  toast.success('Usuario actualizado')
-                  await loadUsers()
-                  setEditingUser(null)
-                })
+                  .then(async (res) => {
+                    const text = await res.text()
+                    const json = text ? JSON.parse(text) : {}
+                    if (!res.ok) {
+                      console.error('PUT /api/admin/users/:id error:', json?.error || text)
+                      toast.error(json?.error || 'No se pudo guardar el usuario')
+                      return
+                    }
+                    toast.success('Usuario actualizado')
+                    await loadUsers()
+                    setEditingUser(null)
+                  })
               }}
             >
               <div className="space-y-2">
@@ -509,22 +509,22 @@ export function ConfigPage() {
                           onChange={(e) => {
                             setUserForm((f) => {
                               const exists = f.memberships.find((m) => m.delegacion_id === d.id)
-                                if (e.target.checked) {
-                                  if (!exists) {
-                                    return {
-                                      ...f,
-                                      memberships: [
-                                        ...f.memberships,
-                                        { delegacion_id: d.id, rol: "tesorero" },
-                                      ],
-                                    }
+                              if (e.target.checked) {
+                                if (!exists) {
+                                  return {
+                                    ...f,
+                                    memberships: [
+                                      ...f.memberships,
+                                      { delegacion_id: d.id, rol: "tesorero" },
+                                    ],
                                   }
-                                  return f
                                 }
-                                return {
-                                  ...f,
-                                  memberships: f.memberships.filter((m) => m.delegacion_id !== d.id),
-                                }
+                                return f
+                              }
+                              return {
+                                ...f,
+                                memberships: f.memberships.filter((m) => m.delegacion_id !== d.id),
+                              }
                             })
                           }}
                         />

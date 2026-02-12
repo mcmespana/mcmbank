@@ -72,6 +72,8 @@ export function TransactionManager() {
   const [detailInitialTab, setDetailInitialTab] = useState<"datos" | "archivos">("datos")
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+
   const [createFormOpen, setCreateFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle")
@@ -112,6 +114,13 @@ export function TransactionManager() {
     amountTo: filters.amountTo,
     uncategorized: filters.uncategorized,
   })
+
+  // Notify on fetch error
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
 
   const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)

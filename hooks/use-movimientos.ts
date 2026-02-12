@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
-import type { MovimientoConRelaciones } from "@/lib/types/database"
+import type { Database, MovimientoConRelaciones } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 
 interface MovimientosFilters {
@@ -31,6 +31,7 @@ export function useMovimientos(
 
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
   const abortRef = useRef<AbortController | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fetchingRef = useRef(false)
   const lastFetchKeyRef = useRef<string>("")
 
@@ -83,14 +84,24 @@ export function useMovimientos(
         return
       }
 
-      // Cancel previous request
+      // Cancel previous request and clear timeout
       if (abortRef.current) {
         abortRef.current.abort()
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
       }
 
       const abortController = new AbortController()
       abortRef.current = abortController
       fetchingRef.current = true
+
+      // Set safety timeout
+      const timeoutMs = options.timeoutMs || 15000
+      timeoutRef.current = setTimeout(() => {
+        console.warn(`[useMovimientos] Request timed out after ${timeoutMs}ms`)
+        abortController.abort()
+      }, timeoutMs)
 
       try {
         setLoading(true)
@@ -210,12 +221,21 @@ export function useMovimientos(
       } finally {
         setLoading(false)
         fetchingRef.current = false
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
       }
     },
     [delegacionId, memoizedFilters, pageSize]
   )
 
-  // Main effect: fetch when key changes
+  // Keep a ref to the latest fetchMovimientos so the effect below does not
+  // need it as a dependency (which would cause cleanup/abort on identity changes)
+  const fetchMovimientosRef = useRef(fetchMovimientos)
+  fetchMovimientosRef.current = fetchMovimientos
+
+  // Main effect: fetch when key changes — ONLY depends on fetchKey
   useEffect(() => {
     // Skip if same key and already fetched
     if (fetchKey === lastFetchKeyRef.current) {
@@ -228,16 +248,21 @@ export function useMovimientos(
     setPage(0)
     setHasMore(true)
 
-    // Fetch
-    fetchMovimientos(0, false)
+    // Fetch using ref to avoid stale closure
+    fetchMovimientosRef.current(0, false)
 
-    // Cleanup
+    // Cleanup: only abort if unmounting (not on fetchKey change — abort is
+    // already handled inside fetchMovimientos itself)
     return () => {
       if (abortRef.current) {
         abortRef.current.abort()
       }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
     }
-  }, [fetchKey, fetchMovimientos])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchKey])
 
   // Revalidate on focus - with debouncing (only if not currently fetching)
   const revalidate = useCallback(() => {
@@ -245,9 +270,9 @@ export function useMovimientos(
       console.log("[useMovimientos] Revalidating on focus")
       setPage(0)
       setHasMore(true)
-      fetchMovimientos(0, false)
+      fetchMovimientosRef.current(0, false)
     }
-  }, [fetchMovimientos])
+  }, [])
 
   useRevalidateOnFocusJitter(revalidate, { minMs: 90, maxMs: 220 })
 
@@ -255,8 +280,8 @@ export function useMovimientos(
     if (loading || !hasMore || fetchingRef.current) return
     const nextPage = page + 1
     setPage(nextPage)
-    fetchMovimientos(nextPage, true)
-  }, [loading, hasMore, page, fetchMovimientos])
+    fetchMovimientosRef.current(nextPage, true)
+  }, [loading, hasMore, page])
 
   const createMovimiento = async (data: Partial<MovimientoConRelaciones>) => {
     try {
@@ -273,7 +298,7 @@ export function useMovimientos(
         creado_por: user.id,
       }
 
-      const { data: created, error } = await supabase
+      const { data: created, error } = await (supabase as any)
         .from("movimiento")
         .insert(payload)
         .select(
@@ -355,9 +380,11 @@ export function useMovimientos(
 
   const updateMovimiento = async (movimientoId: string, patch: Partial<MovimientoConRelaciones>) => {
     try {
-      const { error } = await supabase
+      // Strip relation fields — only send flat DB columns to .update()
+      const { cuenta, categoria, archivos, ...dbFields } = patch
+      const { error } = await (supabase as any)
         .from("movimiento")
-        .update(patch as any)
+        .update(dbFields)
         .eq("id", movimientoId)
       if (error) throw error
 
@@ -374,7 +401,7 @@ export function useMovimientos(
     if (movimientoIds.length === 0) return
 
     try {
-      const { error } = await supabase.from("movimiento").delete().in("id", movimientoIds)
+      const { error } = await (supabase as any).from("movimiento").delete().in("id", movimientoIds)
       if (error) throw error
 
       // Optimistically remove from local state
@@ -387,7 +414,7 @@ export function useMovimientos(
 
   const updateCategoria = async (movimientoId: string, categoriaId: string | null) => {
     try {
-      const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
+      const { error } = await (supabase as any).from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
       if (error) throw error
 
       // Optimistically update local state

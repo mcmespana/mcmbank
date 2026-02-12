@@ -1,6 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import { supabase } from "@/lib/supabase/client"
+
+// Minimum time (ms) the tab must be hidden before we trigger revalidation on refocus.
+// Prevents spurious revalidations from quick alt-tabs.
+const MIN_HIDDEN_MS = 2000
 
 // This is a simple event emitter for cross-hook communication.
 // It allows data hooks to subscribe to focus events without creating complex dependencies.
@@ -20,14 +25,15 @@ const appStatusEmitter = {
 export const useAppStatus = () => {
   const [isOnline, setIsOnline] = useState(true)
   const [isFocused, setIsFocused] = useState(true)
+  const hiddenAtRef = useRef<number>(0)
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
-    
+
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
-    
+
     // Set initial state
     if (typeof navigator !== "undefined") {
       setIsOnline(navigator.onLine)
@@ -43,10 +49,26 @@ export const useAppStatus = () => {
     const handleVisibilityChange = () => {
       const isNowFocused = !document.hidden
       setIsFocused(isNowFocused)
-      if (isNowFocused) {
-        console.log("✨ App is focused, notifying listeners to revalidate data.")
-        appStatusEmitter.emit()
+
+      if (!isNowFocused) {
+        // Record when the tab was hidden
+        hiddenAtRef.current = Date.now()
+        return
       }
+
+      // Tab is now focused — check if it was hidden long enough to warrant revalidation
+      const hiddenDuration = Date.now() - hiddenAtRef.current
+      if (hiddenAtRef.current > 0 && hiddenDuration < MIN_HIDDEN_MS) {
+        console.log(`✨ Tab hidden for only ${hiddenDuration}ms, skipping revalidation.`)
+        return
+      }
+
+      // Refresh session in background to ensure freshness, but don't block the UI update
+      // (runQuery already handles auth retries if token is expired)
+      supabase.auth.refreshSession().catch(e => console.error("Session refresh failed:", e))
+
+      console.log("✨ Tab visible, notifying listeners to revalidate data.")
+      appStatusEmitter.emit()
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)

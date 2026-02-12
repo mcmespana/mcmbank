@@ -13,7 +13,7 @@ interface UseCuentasOptions {
 }
 
 export function useCuentas(
-  delegacionId: string | null, 
+  delegacionId: string | null,
   options: UseCuentasOptions = {}
 ) {
   const { timeout = 10000, ttlMs = 30000 } = options
@@ -23,17 +23,17 @@ export function useCuentas(
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const forceRefreshRef = useRef<number>(0) // Para forzar refrescos
-  
+
   // DEBUG: Track excessive calls  
   useDebugCalls('useCuentas', [delegacionId])
-  
+
   // SIMPLIFIED: Just track the delegacionId
   const memoizedDelegacionId = useMemo(() => delegacionId, [delegacionId])
-  
+
   // Track last fetch for TTL-based revalidation
   const lastDelegacionIdRef = useRef<string | null>(null)
   const lastFetchAtRef = useRef<number>(0)
-  
+
   const fetchCuentas = useCallback(async (force = false) => {
     // TTL guard: if same delegacion and fetched recently, skip unless forced
     const now = Date.now()
@@ -54,7 +54,7 @@ export function useCuentas(
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
-    
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
@@ -126,7 +126,7 @@ export function useCuentas(
         console.log("Cuentas query was cancelled")
         return
       }
-      
+
       const errorMessage = err instanceof Error ? err.message : "Error desconocido"
       console.error("Error fetching cuentas:", errorMessage)
       setError(errorMessage)
@@ -147,12 +147,16 @@ export function useCuentas(
     fetchCuentas(true)
   }, [fetchCuentas])
 
+  // Ref to avoid effect cleanup aborting in-flight requests on callback identity change
+  const fetchCuentasRef = useRef(fetchCuentas)
+  fetchCuentasRef.current = fetchCuentas
+
   useEffect(() => {
     // Fetch if delegacionId changed OR if it's the first load
     if (memoizedDelegacionId !== lastDelegacionIdRef.current || cuentas.length === 0) {
-      fetchCuentas()
+      fetchCuentasRef.current()
     }
-    
+
     // Cleanup on unmount
     return () => {
       if (abortControllerRef.current) {
@@ -162,15 +166,16 @@ export function useCuentas(
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [memoizedDelegacionId, fetchCuentas, cuentas.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memoizedDelegacionId, cuentas.length])
 
   // Revalidate on focus (force = true to bypass skip guard)
-  useRevalidateOnFocusJitter(() => fetchCuentas(true), { minMs: 70, maxMs: 180 })
+  useRevalidateOnFocusJitter(() => fetchCuentasRef.current(true), { minMs: 70, maxMs: 180 })
 
-  return { 
-    cuentas, 
-    loading, 
-    error, 
+  return {
+    cuentas,
+    loading,
+    error,
     refetch: fetchCuentas,
     forceRefresh, // Nueva función para forzar refresh
     // Funciones para actualizaciones optimistas
@@ -178,7 +183,7 @@ export function useCuentas(
       setCuentas(prev => [cuenta, ...prev])
     },
     updateCuenta: (cuentaId: string, updates: Partial<CuentaConDelegacion>) => {
-      setCuentas(prev => prev.map(c => 
+      setCuentas(prev => prev.map(c =>
         c.id === cuentaId ? { ...c, ...updates } : c
       ))
     },

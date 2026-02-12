@@ -54,7 +54,7 @@ export function ProposalCommentsDialog({
     if (!open) return
     setLoading(true)
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("propuesta_mejora_comentario")
       .select("*")
       .eq("propuesta_id", proposal.id)
@@ -99,7 +99,7 @@ export function ProposalCommentsDialog({
         "Usuario"
 
       try {
-        const { data: perfil } = await supabase
+        const { data: perfil } = await (supabase as any)
           .from("perfil")
           .select("nombre_completo")
           .eq("usuario_id", user.id)
@@ -112,7 +112,7 @@ export function ProposalCommentsDialog({
         console.warn("No pudimos obtener el perfil del usuario para el comentario", profileError)
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("propuesta_mejora_comentario")
         .insert({
           propuesta_id: proposal.id,

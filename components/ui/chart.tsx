@@ -58,13 +58,13 @@ export function ChartTooltipContent({
   active,
   payload,
   label,
-}: TooltipProps<number, string>) {
+}: any) {
   const { config } = useChartContext()
   if (!active || !payload?.length) return null
   return (
     <div className="grid gap-2 rounded-md border bg-background p-2 text-xs shadow-md">
       <div className="font-medium">{label}</div>
-      {payload.map((item, index) => {
+      {payload.map((item: any, index: number) => {
         const key = item.dataKey as string
         const color = item.color ?? `var(--color-${key})`
         return (

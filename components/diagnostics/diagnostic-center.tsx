@@ -21,15 +21,15 @@ interface Status {
 
 export function DiagnosticCenter() {
   const { user } = useAuth()
-  
+
   // App status (online/focused)
   const { isFocused, isOnline } = useAppStatus()
   const [metrics, setMetrics] = useState(getMetrics())
-  
+
   const [status, setStatus] = useState<Status>({
     db: "No verificado",
     perfil: "No verificado",
-    membresia: "No verificado", 
+    membresia: "No verificado",
     delegacion: "No verificado",
     lastChecked: null,
     env: {
@@ -38,25 +38,73 @@ export function DiagnosticCenter() {
     },
   })
   const [checking, setChecking] = useState(false)
+  const [checkedSession, setCheckedSession] = useState<string>("No verificado")
+  const [checkedStorage, setCheckedStorage] = useState<string>("No verificado")
+  const [userAgent, setUserAgent] = useState<string>("")
+
+  useEffect(() => {
+    setUserAgent(navigator.userAgent)
+    checkStorage()
+  }, [])
+
+  const checkStorage = () => {
+    try {
+      localStorage.setItem("mcm_diag_test", "ok")
+      const val = localStorage.getItem("mcm_diag_test")
+      localStorage.removeItem("mcm_diag_test")
+      if (val === "ok") {
+        setCheckedStorage("✅ Disponible")
+      } else {
+        setCheckedStorage("⚠️ No funciona correctamente")
+      }
+    } catch (e) {
+      setCheckedStorage("❌ Bloqueado o error")
+    }
+  }
+
+  const checkSession = async () => {
+    setCheckedSession("⏳ Verificando...")
+    const start = Date.now()
+    try {
+      // Force refresh with timeout
+      const { error } = await Promise.race([
+        supabase.auth.refreshSession(),
+        new Promise<{ error: any }>((_, reject) => setTimeout(() => reject(new Error("Timeout > 5s")), 5000))
+      ])
+
+      const ms = Date.now() - start
+      if (error) {
+        setCheckedSession(`❌ Error: ${error.message} (${ms}ms)`)
+      } else {
+        setCheckedSession(`✅ OK (${ms}ms)`)
+      }
+    } catch (e: any) {
+      setCheckedSession(`❌ ${e.message}`)
+    }
+  }
 
   // Subscribe to query metrics
   useEffect(() => {
     const unsub = subscribe(() => setMetrics(getMetrics()))
-    return () => unsub()
+    return () => { unsub() }
   }, [])
 
   const checkConnection = async () => {
     setChecking(true)
+    checkSession()
+    checkStorage()
+    // ... existing logic ...
+
     const newStatus = { ...status, lastChecked: new Date().toLocaleString() }
-    
+
     try {
       // Test basic connection with movimiento table (with timeout)
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("Timeout después de 10 segundos")), 10000)
       })
-      
+
       try {
-        const queryPromise = supabase.from("movimiento").select("id").limit(1)
+        const queryPromise = (supabase as any).from("movimiento").select("id").limit(1)
         const { error: dbError } = await Promise.race([queryPromise, timeoutPromise])
         newStatus.db = dbError ? `❌ Error: ${dbError.message}` : "✅ Conectado"
       } catch (err) {
@@ -65,7 +113,7 @@ export function DiagnosticCenter() {
 
       // Test perfil table with timeout
       try {
-        const perfilPromise = supabase.from("perfil").select("usuario_id").limit(1)
+        const perfilPromise = (supabase as any).from("perfil").select("usuario_id").limit(1)
         const { error: perfilError } = await Promise.race([perfilPromise, timeoutPromise])
         newStatus.perfil = perfilError ? `❌ Error: ${perfilError.message}` : "✅ Conectado"
       } catch (err) {
@@ -75,7 +123,7 @@ export function DiagnosticCenter() {
       // Test membresia table for user permissions with timeout
       if (user) {
         try {
-          const membresiaPromise = supabase
+          const membresiaPromise = (supabase as any)
             .from("membresia")
             .select("delegacion_id")
             .eq("usuario_id", user.id)
@@ -91,7 +139,7 @@ export function DiagnosticCenter() {
 
       // Test delegacion table with timeout
       try {
-        const delegacionPromise = supabase.from("delegacion").select("id").limit(1)
+        const delegacionPromise = (supabase as any).from("delegacion").select("id").limit(1)
         const { error: delegacionError } = await Promise.race([delegacionPromise, timeoutPromise])
         newStatus.delegacion = delegacionError ? `❌ Error: ${delegacionError.message}` : "✅ Conectado"
       } catch (err) {
@@ -101,7 +149,7 @@ export function DiagnosticCenter() {
       // Test complex query that typically hangs (movimiento with JOINs)
       if (user) {
         try {
-          const complexPromise = supabase
+          const complexPromise = (supabase as any)
             .from("movimiento")
             .select(`
               id,
@@ -147,7 +195,7 @@ export function DiagnosticCenter() {
           <p className="text-sm text-muted-foreground">
             {user ? `${user.email} (${user.id})` : "No autenticado"}
           </p>
-          
+
           {/* Connection Status */}
           <div className="mt-3 p-3 bg-muted rounded-md">
             <h3 className="text-sm font-medium mb-2">Estado de Conexión</h3>
@@ -169,9 +217,18 @@ export function DiagnosticCenter() {
         </div>
 
         <div>
+          <h2 className="text-xl font-semibold mb-2">Entorno del Navegador</h2>
+          <div className="space-y-3 bg-muted p-4 rounded-md text-sm">
+            <p><strong>User Agent:</strong> {userAgent}</p>
+            <p><strong>LocalStorage:</strong> {checkedStorage}</p>
+            <p><strong>Refresco de Sesión (Supabase):</strong> {checkedSession}</p>
+          </div>
+        </div>
+
+        <div>
           <h2 className="text-xl font-semibold mb-2">Variables de Entorno</h2>
           <pre className="bg-muted p-4 rounded-md overflow-auto text-sm">
-{JSON.stringify(status.env, null, 2)}
+            {JSON.stringify(status.env, null, 2)}
           </pre>
         </div>
 

@@ -17,7 +17,12 @@ interface DelegationContextType {
 const DelegationContext = createContext<DelegationContextType | undefined>(undefined)
 
 export function DelegationProvider({ children }: { children: React.ReactNode }) {
-  const [selectedDelegation, setSelectedDelegationState] = useState<string | null>(null)
+  const [selectedDelegation, setSelectedDelegationState] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mcmbank-selected-delegation') || null
+    }
+    return null
+  })
   const { delegations, loading, error } = useDelegations()
 
   const setSelectedDelegation = useCallback((delegationId: string | null) => {
@@ -26,16 +31,20 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
     if (delegationId) {
       const newDelegation = delegations.find(d => d.id === delegationId)
       console.log(`🏢 DelegationContext: New delegation details:`, newDelegation)
+      localStorage.setItem('mcmbank-selected-delegation', delegationId)
+    } else {
+      localStorage.removeItem('mcmbank-selected-delegation')
     }
     setSelectedDelegationState(delegationId)
   }, [delegations, selectedDelegation])
 
-  // Auto-select first delegation when loaded
+  // Auto-select first delegation when loaded (only if no valid selection exists)
   useEffect(() => {
-    // Auto-selecciona la primera delegación si no hay ninguna seleccionada todavía
-    if (!selectedDelegation && delegations.length > 0) {
-      setSelectedDelegation(delegations[0].id)
-    }
+    if (delegations.length === 0) return
+    // If current selection is still valid in the list, keep it
+    if (selectedDelegation && delegations.some(d => d.id === selectedDelegation)) return
+    // Otherwise pick the first one
+    setSelectedDelegation(delegations[0].id)
   }, [delegations, selectedDelegation, setSelectedDelegation])
 
   const getCurrentDelegation = useCallback(() => {

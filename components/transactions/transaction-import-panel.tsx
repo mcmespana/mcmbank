@@ -63,7 +63,7 @@ export function TransactionImportPanel({
   // Obtener las categorías disponibles para matching
   // Por ahora usaremos un valor predeterminado, pero deberíamos obtener el organizacion_id del delegacionId
   const { categorias: availableCategories } = useCategorias(delegacionId)
-  
+
   const [source, setSource] = useState<SourceType | null>("manual")
   const [file, setFile] = useState<File | null>(null)
   const [accountId, setAccountId] = useState<string>("")
@@ -75,7 +75,7 @@ export function TransactionImportPanel({
   const [duplicateCount, setDuplicateCount] = useState(0)
   const [duplicateTransactions, setDuplicateTransactions] = useState<DuplicateTransaction[]>([])
   const [showDuplicates, setShowDuplicates] = useState(false)
-  
+
   // Ref para hacer scroll automático
   const sheetContentRef = useRef<HTMLDivElement>(null)
 
@@ -120,7 +120,7 @@ export function TransactionImportPanel({
       setErrorCode(null)
       return
     }
-    
+
     // Para Excel manual: permitir CSV, XLSX y XLS
     if (source === "manual") {
       if (!/\.(csv|xls[x]?)$/i.test(selectedFile.name)) {
@@ -138,7 +138,7 @@ export function TransactionImportPanel({
         return
       }
     }
-    
+
     setError(null)
     setErrorCode(null)
     setFile(selectedFile)
@@ -158,25 +158,25 @@ export function TransactionImportPanel({
 
   const parseEuropeanNumber = (value: string | number): number => {
     if (typeof value === 'number') return value
-    
+
     // Limpiar el valor: quitar espacios, símbolos de euro, paréntesis, etc.
     const cleanValue = String(value).trim()
       .replace(/\s/g, '')                    // Quitar espacios
       .replace(/€/g, '')                     // Quitar símbolo de euro
       .replace(/[\(\)]/g, '')                // Quitar paréntesis (para números negativos)
       .replace(/^[\+\-]\s*/, (match) => match.replace(/\s/g, '')) // Mantener signo pero sin espacios
-    
+
     // Si no tiene comas ni puntos, es un número entero
     if (!/[,.]/.test(cleanValue)) {
       return parseFloat(cleanValue)
     }
-    
+
     // Contar comas y puntos
     const commaCount = (cleanValue.match(/,/g) || []).length
     const dotCount = (cleanValue.match(/\./g) || []).length
-    
+
     let result: number
-    
+
     if (commaCount === 0 && dotCount === 1) {
       // Solo punto: puede ser decimal inglés (1234.56) o miles español (1.234)
       const parts = cleanValue.split('.')
@@ -206,7 +206,7 @@ export function TransactionImportPanel({
       // Formato ambiguo, usar la estrategia más común (europeo)
       result = parseFloat(cleanValue.replace(/\./g, '').replace(',', '.'))
     }
-    
+
     return result
   }
 
@@ -215,17 +215,17 @@ export function TransactionImportPanel({
     for (let i = 9; i < rows.length; i++) {
       const row = rows[i]
       if (!row || row.length === 0) continue
-      
+
       const dateStr = row[0]
       const conceptStr = row[1]
       const amountStr = row[3]
-      
+
       // Saltar filas vacías o incompletas
       if (!dateStr || !conceptStr || amountStr === undefined || amountStr === null) continue
-      
+
       // Verificar que no sean solo celdas vacías
       if (String(dateStr).trim() === '' || String(conceptStr).trim() === '' || String(amountStr).trim() === '') continue
-      
+
       // Manejar fechas de Excel - pueden ser números seriales o texto
       let date: Date
       if (typeof dateStr === 'number') {
@@ -241,14 +241,14 @@ export function TransactionImportPanel({
           date = new Date(dateString)
         }
       }
-      
+
       if (isNaN(date.getTime())) {
         const err: any = new Error(`Fecha inválida: "${dateStr}" (fila ${i + 1})`)
         err.row = i + 1
         err.code = "INVALID_DATE"
         throw err
       }
-      
+
       const importe = parseEuropeanNumber(amountStr)
       if (isNaN(importe)) {
         const err: any = new Error(`Importe inválido: "${amountStr}" (fila ${i + 1})`)
@@ -256,7 +256,7 @@ export function TransactionImportPanel({
         err.code = "INVALID_AMOUNT"
         throw err
       }
-      
+
       result.push({
         fecha: format(date, "yyyy-MM-dd"),
         concepto: formatConcept(String(conceptStr)),
@@ -272,20 +272,20 @@ export function TransactionImportPanel({
     for (let i = 3; i < rows.length; i++) {
       const row = rows[i]
       if (!row || row.length === 0) continue
-      
+
       const dateStr = row[0]
       const conceptStr = row[2]
       const descStr = row[3]
       const amountStr = row[4]
       const extra1 = row[5]
       const extra2 = row[6]
-      
+
       // Saltar filas vacías o incompletas
       if (!dateStr || !conceptStr || amountStr === undefined || amountStr === null) continue
-      
+
       // Verificar que no sean solo celdas vacías
       if (String(dateStr).trim() === '' || String(conceptStr).trim() === '' || String(amountStr).trim() === '') continue
-      
+
       // Manejar fechas de Excel - pueden ser números seriales o texto
       let date: Date
       if (typeof dateStr === 'number') {
@@ -301,14 +301,14 @@ export function TransactionImportPanel({
           date = new Date(dateString)
         }
       }
-      
+
       if (isNaN(date.getTime())) {
         const err: any = new Error(`Fecha inválida: "${dateStr}" (fila ${i + 1})`)
         err.row = i + 1
         err.code = "INVALID_DATE"
         throw err
       }
-      
+
       const importe = parseEuropeanNumber(amountStr)
       if (isNaN(importe)) {
         const err: any = new Error(`Importe inválido: "${amountStr}" (fila ${i + 1})`)
@@ -316,7 +316,7 @@ export function TransactionImportPanel({
         err.code = "INVALID_AMOUNT"
         throw err
       }
-      
+
       const extras = [extra1, extra2]
         .map((v) => (typeof v === "string" ? v.trim() : ""))
         .filter((v) => v !== "" && !/^\d+$/.test(v))
@@ -336,26 +336,26 @@ export function TransactionImportPanel({
     const skippedRows: number[] = []
     let categoriesFound = 0
     const categoriesNotFound: string[] = []
-    
+
     // Saltar la primera fila que contiene los headers
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i]
       if (!row || row.length === 0) continue
-      
+
       const dateStr = row[0]  // Fecha
       const conceptStr = row[1]  // Concepto
       const amountStr = row[2]  // Importe
       const descStr = row[3]  // Descripción (Opcional)
       const categoryStr = row[4]  // Categoría (Opcional)
       const contactStr = row[5]  // Contacto (Opcional)
-      
+
       // Verificar que tenemos fecha e importe (campos obligatorios)
-      if (!dateStr || !amountStr || 
-          String(dateStr).trim() === '' || String(amountStr).trim() === '') {
+      if (!dateStr || !amountStr ||
+        String(dateStr).trim() === '' || String(amountStr).trim() === '') {
         skippedRows.push(i + 1)
         continue
       }
-      
+
       // Manejar fechas de Excel - pueden ser números seriales o texto
       let date: Date
       if (typeof dateStr === 'number') {
@@ -371,38 +371,38 @@ export function TransactionImportPanel({
           date = new Date(dateString)
         }
       }
-      
+
       if (isNaN(date.getTime())) {
         skippedRows.push(i + 1)
         continue
       }
-      
+
       const importe = parseEuropeanNumber(amountStr)
       if (isNaN(importe)) {
         skippedRows.push(i + 1)
         continue
       }
-      
+
       // Si no hay concepto, usar "SIN NOMBRE"
-      const concepto = conceptStr && String(conceptStr).trim() !== '' 
-        ? formatConcept(String(conceptStr)) 
+      const concepto = conceptStr && String(conceptStr).trim() !== ''
+        ? formatConcept(String(conceptStr))
         : "SIN NOMBRE"
-      
+
       // Procesar contacto (contraparte)
-      const contraparte = contactStr && String(contactStr).trim() !== '' 
-        ? String(contactStr).trim() 
+      const contraparte = contactStr && String(contactStr).trim() !== ''
+        ? String(contactStr).trim()
         : null
-      
+
       // Procesar categoría - buscar coincidencia exacta por nombre
       let categoria_id: string | null = null
       let categoriaEnDescripcion: string | null = null
-      
+
       if (categoryStr && String(categoryStr).trim() !== '') {
         const categoryName = String(categoryStr).trim()
         const matchingCategory = availableCategories?.find(
           cat => cat.nombre.toLowerCase() === categoryName.toLowerCase()
         )
-        
+
         if (matchingCategory) {
           categoria_id = matchingCategory.id
           categoriesFound++
@@ -414,15 +414,15 @@ export function TransactionImportPanel({
           }
         }
       }
-      
+
       // Combinar descripción opcional con otros campos
       const extraFields = [
         descStr && String(descStr).trim() !== '' ? String(descStr).trim() : null,
         categoriaEnDescripcion,
       ].filter(Boolean)
-      
+
       const descripcion = extraFields.length > 0 ? extraFields.join('\n') : null
-      
+
       result.push({
         fecha: format(date, "yyyy-MM-dd"),
         concepto,
@@ -432,20 +432,20 @@ export function TransactionImportPanel({
         categoria_id,
       })
     }
-    
+
     // Mostrar información sobre el procesamiento
     if (skippedRows.length > 0) {
       console.log(`ℹ️ Se omitieron ${skippedRows.length} filas por falta de fecha o importe: ${skippedRows.join(', ')}`)
     }
-    
+
     if (categoriesFound > 0) {
       console.log(`✅ Se encontraron y asignaron ${categoriesFound} categorías automáticamente`)
     }
-    
+
     if (categoriesNotFound.length > 0) {
       console.log(`⚠️ Categorías no encontradas (se añadieron a descripción): ${categoriesNotFound.join(', ')}`)
     }
-    
+
     return result
   }
 
@@ -462,7 +462,7 @@ export function TransactionImportPanel({
       const accountDelegationId =
         accounts.find((a) => a.id === accountId)?.delegacion_id || delegacionId || null
       let rows: any[][]
-      
+
       // Manejar archivos CSV de manera diferente
       if (file.name.toLowerCase().endsWith('.csv')) {
         const text = await file.text()
@@ -473,7 +473,7 @@ export function TransactionImportPanel({
           const cells: string[] = []
           let currentCell = ''
           let inQuotes = false
-          
+
           for (let i = 0; i < line.length; i++) {
             const char = line[i]
             if (char === '"') {
@@ -491,14 +491,14 @@ export function TransactionImportPanel({
       } else {
         // Manejar archivos Excel (XLSX/XLS)
         const data = await file.arrayBuffer()
-        const workbook = XLSX.read(data, { 
+        const workbook = XLSX.read(data, {
           type: "array",
           cellDates: true,  // Importante: convertir números seriales a fechas
           cellNF: false,    // No aplicar formato numérico automáticamente
           cellText: false   // No convertir todo a texto
         })
         const sheet = workbook.Sheets[workbook.SheetNames[0]]
-        rows = XLSX.utils.sheet_to_json<any[]>(sheet, { 
+        rows = XLSX.utils.sheet_to_json<any[]>(sheet, {
           header: 1,
           raw: false,       // No usar valores raw, permitir conversión de tipos
           dateNF: 'dd/mm/yyyy' // Formato de fecha preferido
@@ -521,7 +521,7 @@ export function TransactionImportPanel({
       const toInsert: any[] = []
       let duplicates = 0
       const duplicateList: DuplicateTransaction[] = []
-      
+
       for (let i = 0; i < parsed.length; i++) {
         const trx = parsed[i]
         const insertData: any = {
@@ -534,7 +534,7 @@ export function TransactionImportPanel({
           ignorado: false,
           creado_por: user?.id || "",
         }
-        
+
         // Añadir contraparte y categoria_id solo para importación manual
         if (source === "manual") {
           if (trx.contraparte) {
@@ -544,14 +544,14 @@ export function TransactionImportPanel({
             insertData.categoria_id = trx.categoria_id
           }
         }
-        
+
         toInsert.push(insertData)
         setProgress(Math.round(((i + 1) / parsed.length) * 100))
       }
 
       if (toInsert.length > 0) {
         // Intentar insertar todas las transacciones de una vez
-        const { data: insertedData, error: insertError } = await supabase
+        const { data: insertedData, error: insertError } = await (supabase as any)
           .from("movimiento")
           .insert(toInsert)
           .select('id')
@@ -561,21 +561,21 @@ export function TransactionImportPanel({
           if (insertError.code === '23505' && insertError.message.includes('ux_mov_dedupe')) {
             let successCount = 0
             duplicates = 0
-            
+
             for (let i = 0; i < toInsert.length; i++) {
               const transaction = toInsert[i]
               const originalTrx = parsed[i]
-              
-              const { error: singleError } = await supabase
+
+              const { error: singleError } = await (supabase as any)
                 .from("movimiento")
                 .insert([transaction])
-              
+
               if (singleError) {
                 if (singleError.code === '23505' && singleError.message.includes('ux_mov_dedupe')) {
                   duplicates++
-                  
+
                   // Buscar el movimiento existente para mostrar detalles
-                  const { data: existingData } = await supabase
+                  const { data: existingData } = await (supabase as any)
                     .from("movimiento")
                     .select('*')
                     .eq('cuenta_id', accountId)
@@ -584,7 +584,7 @@ export function TransactionImportPanel({
                     .eq('concepto', originalTrx.concepto)
                     .eq('descripcion', originalTrx.descripcion || null)
                     .limit(1)
-                  
+
                   let conflictReason = "Transacción idéntica ya existe"
                   if (existingData && existingData.length > 0) {
                     const existing = existingData[0]
@@ -592,7 +592,7 @@ export function TransactionImportPanel({
                       conflictReason = `Descripción diferente: "${existing.descripcion}" vs "${originalTrx.descripcion}"`
                     }
                   }
-                  
+
                   duplicateList.push({
                     ...originalTrx,
                     originalIndex: i,
@@ -607,16 +607,16 @@ export function TransactionImportPanel({
                 successCount++
               }
             }
-            
+
             setDuplicateCount(duplicates)
             setDuplicateTransactions(duplicateList)
-            
+
             if (duplicates > 0) {
               setMessage(`Se han importado ${successCount} transacciones. ${duplicates} posibles duplicados detectados.`)
             } else {
               setMessage(`Se han importado ${successCount} transacciones`)
             }
-            
+
             // Llamar a onImported si se importaron transacciones exitosamente
             if (successCount > 0 && onImported) {
               console.log(`✅ Importación completada: ${successCount} transacciones`)
@@ -630,7 +630,7 @@ export function TransactionImportPanel({
           // Todas las transacciones se insertaron correctamente
           const insertCount = insertedData?.length || toInsert.length
           setMessage(`Se han importado ${insertCount} transacciones`)
-          
+
           // Llamar a onImported si se importaron transacciones exitosamente
           if (insertCount > 0 && onImported) {
             console.log(`✅ Importación masiva completada: ${insertCount} transacciones`)
@@ -679,8 +679,8 @@ export function TransactionImportPanel({
       if (transaction.categoria_id) {
         insertData.categoria_id = transaction.categoria_id
       }
-      
-      const { error } = await supabase.from("movimiento").insert([insertData])
+
+      const { error } = await (supabase as any).from("movimiento").insert([insertData])
 
       if (error) {
         setError(`Error al forzar inserción: ${error.message}`)
@@ -689,12 +689,12 @@ export function TransactionImportPanel({
         const newDuplicates = duplicateTransactions.filter((_, i) => i !== transactionIndex)
         setDuplicateTransactions(newDuplicates)
         setDuplicateCount(newDuplicates.length)
-        
+
         if (newDuplicates.length === 0) {
           setShowDuplicates(false)
           setMessage(message + " Todos los duplicados han sido procesados.")
         }
-        
+
         // Actualizar las transacciones en el fondo
         console.log(`✅ Duplicado forzado importado`)
         setTimeout(() => {
@@ -757,9 +757,8 @@ export function TransactionImportPanel({
               <button
                 type="button"
                 onClick={() => setSource("manual")}
-                className={`border rounded-md p-2 text-sm hover:bg-muted flex flex-col items-center gap-1 ${
-                  source === "manual" ? "border-primary bg-primary/5" : "border-muted"
-                }`}
+                className={`border rounded-md p-2 text-sm hover:bg-muted flex flex-col items-center gap-1 ${source === "manual" ? "border-primary bg-primary/5" : "border-muted"
+                  }`}
               >
                 <Image src="/bank-logos/excel.png" alt="Excel" width={32} height={32} />
                 <span>Excel manual</span>
@@ -767,9 +766,8 @@ export function TransactionImportPanel({
               <button
                 type="button"
                 onClick={() => setSource("sabadell")}
-                className={`border rounded-md p-2 text-sm hover:bg-muted flex flex-col items-center gap-1 ${
-                  source === "sabadell" ? "border-primary bg-primary/5" : "border-muted"
-                }`}
+                className={`border rounded-md p-2 text-sm hover:bg-muted flex flex-col items-center gap-1 ${source === "sabadell" ? "border-primary bg-primary/5" : "border-muted"
+                  }`}
               >
                 <Image
                   src="/bank-logos/sabadell.png"
@@ -783,9 +781,8 @@ export function TransactionImportPanel({
               <button
                 type="button"
                 onClick={() => setSource("caixabank")}
-                className={`border rounded-md p-2 text-sm hover:bg-muted flex flex-col items-center gap-1 ${
-                  source === "caixabank" ? "border-primary bg-primary/5" : "border-muted"
-                }`}
+                className={`border rounded-md p-2 text-sm hover:bg-muted flex flex-col items-center gap-1 ${source === "caixabank" ? "border-primary bg-primary/5" : "border-muted"
+                  }`}
               >
                 <Image
                   src="/bank-logos/caixabank.png"
@@ -837,7 +834,7 @@ export function TransactionImportPanel({
                 </Label>
               </div>
 
-              <FileDropzone 
+              <FileDropzone
                 onFileChange={handleFileChange}
                 accept={source === "manual" ? {
                   "text/csv": [".csv"],
@@ -928,7 +925,7 @@ export function TransactionImportPanel({
                   {showDuplicates ? 'Ocultar' : 'Ver'} duplicados
                 </Button>
               </div>
-              
+
               {showDuplicates && duplicateTransactions.length > 0 && (
                 <div className="space-y-2 mt-3 border-t border-amber-200 pt-3">
                   <p className="text-xs text-amber-700 font-medium">Transacciones duplicadas encontradas:</p>
@@ -946,14 +943,14 @@ export function TransactionImportPanel({
                         </div>
                         {dup.descripcion && (
                           <div className="col-span-2">
-                            <span className="font-medium">Descripción:</span> 
+                            <span className="font-medium">Descripción:</span>
                             <div className="text-xs text-gray-600 mt-1 p-2 bg-gray-50 rounded">
                               {dup.descripcion}
                             </div>
                           </div>
                         )}
                         <div className="col-span-2">
-                          <span className="font-medium text-amber-700">Conflicto:</span> 
+                          <span className="font-medium text-amber-700">Conflicto:</span>
                           <span className="text-amber-600 text-xs"> {dup.conflictReason}</span>
                         </div>
                       </div>

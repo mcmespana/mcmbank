@@ -46,7 +46,7 @@ export function useImprovementProposals() {
 
     if (userIds.length > 0) {
       try {
-        const { data: profiles, error: profilesError } = await supabase
+        const { data: profiles, error: profilesError } = await (supabase as any)
           .from("perfil")
           .select("usuario_id, nombre_completo")
           .in("usuario_id", userIds)
@@ -54,7 +54,7 @@ export function useImprovementProposals() {
         if (profilesError) {
           console.error("Error fetching profiles for proposals", profilesError)
         } else if (profiles) {
-          profilesMap = profiles.reduce<Record<string, string>>((acc, perfil) => {
+          profilesMap = (profiles as any[]).reduce((acc: Record<string, string>, perfil: any) => {
             if (perfil.nombre_completo && perfil.nombre_completo.trim()) {
               acc[perfil.usuario_id] = perfil.nombre_completo
             }
@@ -126,7 +126,7 @@ export function useImprovementProposals() {
         label: "fetch-improvement-proposals",
         table: "propuesta_mejora",
         build: async (signal) =>
-          await supabase
+          await (supabase as any)
             .from("propuesta_mejora")
             .select(
               "*, votos:propuesta_mejora_voto(count), comentarios:propuesta_mejora_comentario(count)",
@@ -140,7 +140,7 @@ export function useImprovementProposals() {
         console.error("Error fetching improvement proposals", fetchError)
         setError(
           fetchError?.message ||
-            "No pudimos cargar las propuestas de mejora. Intenta de nuevo más tarde.",
+          "No pudimos cargar las propuestas de mejora. Intenta de nuevo más tarde.",
         )
         return
       }
@@ -151,7 +151,7 @@ export function useImprovementProposals() {
 
       if (currentUserId) {
         try {
-          const { data: userVotes, error: votesError } = await supabase
+          const { data: userVotes, error: votesError } = await (supabase as any)
             .from("propuesta_mejora_voto")
             .select("propuesta_id")
             .eq("usuario_id", currentUserId)
@@ -159,7 +159,7 @@ export function useImprovementProposals() {
           if (votesError) {
             console.error("Error fetching user votes for proposals", votesError)
           } else if (userVotes) {
-            votedIds = new Set(userVotes.map((vote) => vote.propuesta_id))
+            votedIds = new Set((userVotes as any[]).map((vote: any) => vote.propuesta_id))
           }
         } catch (votesErr) {
           console.error("Unexpected error loading user votes", votesErr)
@@ -217,7 +217,7 @@ export function useImprovementProposals() {
       let authorName = user.email?.split("@")[0] || "Usuario"
 
       try {
-        const { data: perfil } = await supabase
+        const { data: perfil } = await (supabase as any)
           .from("perfil")
           .select("nombre_completo")
           .eq("usuario_id", user.id)
@@ -244,7 +244,7 @@ export function useImprovementProposals() {
         creado_por_email: user.email ?? null,
       }
 
-      const { data, error: insertError } = await supabase
+      const { data, error: insertError } = await (supabase as any)
         .from("propuesta_mejora")
         .insert(payload)
         .select("*")
@@ -273,7 +273,7 @@ export function useImprovementProposals() {
     async (id: string, status: ImprovementProposalStatus) => {
       if (!id) throw new Error("Identificador de propuesta no válido")
 
-      const { data, error: updateError } = await supabase
+      const { data, error: updateError } = await (supabase as any)
         .from("propuesta_mejora")
         .update({
           estado: status,
@@ -292,12 +292,12 @@ export function useImprovementProposals() {
         prev.map((proposal) =>
           proposal.id === id
             ? {
-                ...(data as ImprovementProposal),
-                authorName: proposal.authorName,
-                votesCount: proposal.votesCount,
-                commentsCount: proposal.commentsCount,
-                userHasVoted: proposal.userHasVoted,
-              }
+              ...(data as ImprovementProposal),
+              authorName: proposal.authorName,
+              votesCount: proposal.votesCount,
+              commentsCount: proposal.commentsCount,
+              userHasVoted: proposal.userHasVoted,
+            }
             : proposal,
         ),
       )
@@ -321,7 +321,7 @@ export function useImprovementProposals() {
 
       try {
         if (target.userHasVoted) {
-          const { error } = await supabase
+          const { error } = await (supabase as any)
             .from("propuesta_mejora_voto")
             .delete()
             .eq("propuesta_id", proposalId)
@@ -333,10 +333,10 @@ export function useImprovementProposals() {
             prev.map((proposal) =>
               proposal.id === proposalId
                 ? {
-                    ...proposal,
-                    votesCount: Math.max(0, proposal.votesCount - 1),
-                    userHasVoted: false,
-                  }
+                  ...proposal,
+                  votesCount: Math.max(0, proposal.votesCount - 1),
+                  userHasVoted: false,
+                }
                 : proposal,
             ),
           )
@@ -344,7 +344,7 @@ export function useImprovementProposals() {
             isIdea ? "Has retirado tu apoyo" : "Has retirado tu confirmación",
           )
         } else {
-          const { error } = await supabase
+          const { error } = await (supabase as any)
             .from("propuesta_mejora_voto")
             .insert({ propuesta_id: proposalId, usuario_id: currentUserId })
 
@@ -354,10 +354,10 @@ export function useImprovementProposals() {
             prev.map((proposal) =>
               proposal.id === proposalId
                 ? {
-                    ...proposal,
-                    votesCount: proposal.votesCount + 1,
-                    userHasVoted: true,
-                  }
+                  ...proposal,
+                  votesCount: proposal.votesCount + 1,
+                  userHasVoted: true,
+                }
                 : proposal,
             ),
           )
@@ -385,9 +385,9 @@ export function useImprovementProposals() {
       prev.map((proposal) =>
         proposal.id === proposalId
           ? {
-              ...proposal,
-              commentsCount: proposal.commentsCount + 1,
-            }
+            ...proposal,
+            commentsCount: proposal.commentsCount + 1,
+          }
           : proposal,
       ),
     )

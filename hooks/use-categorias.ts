@@ -60,15 +60,20 @@ export function useCategorias(
     }
   }, [delegacionId, includeGlobal, includeInactive])
 
+  // Ref to avoid effect cleanup aborting in-flight requests on callback identity change
+  const fetchCategoriasRef = useRef(fetchCategorias)
+  fetchCategoriasRef.current = fetchCategorias
+
   useEffect(() => {
-    fetchCategorias()
+    fetchCategoriasRef.current()
     return () => {
       if (abortRef.current) abortRef.current.abort()
     }
-  }, [fetchCategorias])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delegacionId, includeGlobal, includeInactive])
 
   // Revalidate on focus
-  useRevalidateOnFocusJitter(fetchCategorias, { minMs: 60, maxMs: 160 })
+  useRevalidateOnFocusJitter(() => fetchCategoriasRef.current(), { minMs: 60, maxMs: 160 })
 
   const updateCategoria = async (id: string, updates: Partial<CategoriaConOrdenEfectivo>) => {
     try {

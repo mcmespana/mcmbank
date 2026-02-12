@@ -28,7 +28,7 @@ export function useTransacciones({
   const [error, setError] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  
+
   // DEBUG: Track excessive calls
   useDebugCalls('useTransacciones', [delegacionId, fechaInicio, fechaFin, categoriaId, busqueda])
 
@@ -37,7 +37,7 @@ export function useTransacciones({
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
-    
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
@@ -130,19 +130,23 @@ export function useTransacciones({
       }
 
       // Process data to match expected type structure
-      const processedData = (data || []).map(item => ({
-        ...item,
-        cuenta: item.cuenta ? {
-          ...item.cuenta,
-          delegacion: {
-            id: '', // Will be populated if needed
-            organizacion_id: '',
-            codigo: '',
-            nombre: '',
-            creado_en: ''
-          }
-        } : null
-      })) as unknown as MovimientoConRelaciones[]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const processedData = ((data || []) as any[]).map(item => {
+        const cuenta = Array.isArray(item.cuenta) ? item.cuenta[0] : item.cuenta
+        return {
+          ...item,
+          cuenta: cuenta ? {
+            ...cuenta,
+            delegacion: {
+              id: '',
+              organizacion_id: '',
+              codigo: '',
+              nombre: '',
+              creado_en: ''
+            }
+          } : null
+        }
+      }) as unknown as MovimientoConRelaciones[]
 
       setTransacciones(processedData)
     } catch (err) {
@@ -150,7 +154,7 @@ export function useTransacciones({
         console.log("Query was cancelled")
         return
       }
-      
+
       const errorMessage = err instanceof Error ? err.message : "Error desconocido"
       console.error("Error fetching transactions:", errorMessage)
       setError(errorMessage)
@@ -165,9 +169,13 @@ export function useTransacciones({
     }
   }, [delegacionId, fechaInicio, fechaFin, categoriaId, busqueda, timeout])
 
+  // Ref to avoid effect cleanup aborting in-flight requests on callback identity change
+  const fetchTransaccionesRef = useRef(fetchTransacciones)
+  fetchTransaccionesRef.current = fetchTransacciones
+
   useEffect(() => {
-    fetchTransacciones()
-    
+    fetchTransaccionesRef.current()
+
     // Cleanup on unmount
     return () => {
       if (abortControllerRef.current) {
@@ -177,15 +185,16 @@ export function useTransacciones({
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [fetchTransacciones])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delegacionId, fechaInicio, fechaFin, categoriaId, busqueda, timeout])
 
   // Revalidate on focus
-  useRevalidateOnFocus(fetchTransacciones)
+  useRevalidateOnFocus(() => fetchTransaccionesRef.current())
 
-  return { 
-    transacciones, 
-    loading, 
-    error, 
+  return {
+    transacciones,
+    loading,
+    error,
     refetch: fetchTransacciones,
     cancel: () => {
       if (abortControllerRef.current) {

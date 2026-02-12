@@ -27,7 +27,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await supabase.auth.getSession()
 
         if (mounted) {
-          setUser(session?.user ?? null)
+          setUser(prev => {
+            if (prev?.id === session?.user?.id) return prev
+            return session?.user ?? null
+          })
           setLoading(false)
         }
       } catch (error) {
@@ -46,7 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (mounted) {
-        setUser(session?.user ?? null)
+        setUser(prev => {
+          if (prev?.id === session?.user?.id) return prev
+          return session?.user ?? null
+        })
         setLoading(false)
 
         if (event === "SIGNED_IN" && session?.user) {
@@ -59,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single()
 
             if (!profile) {
-              await supabase.from("perfil").insert({
+              await (supabase as any).from("perfil").insert({
                 usuario_id: session.user.id,
                 nombre_completo: session.user.email?.split("@")[0] || "Usuario",
               })

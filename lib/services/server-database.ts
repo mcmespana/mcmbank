@@ -71,7 +71,7 @@ function mapCategorias(
 
 export class ServerDatabaseService {
   private static getServerClient() {
-    return createClient()
+    return createClient() as any
   }
 
   // User and membership operations (server-side)
@@ -100,7 +100,7 @@ export class ServerDatabaseService {
       .eq("usuario_id", userId)
 
     if (error) throw error
-    return (data?.map((item) => item.delegacion).filter(Boolean) || []) as unknown as Delegacion[]
+    return ((data as any)?.map((item: any) => item.delegacion).filter(Boolean) || []) as unknown as Delegacion[]
   }
 
   // Delegacion operations (server-side)
@@ -237,7 +237,7 @@ export class ServerDatabaseService {
 
     const { data, error } = await supabase
       .from("categoria_orden_delegacion")
-      .update({ orden, actualizado_en: now })
+      .update({ orden, actualizado_en: now } as any)
       .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
       .select("categoria_id")
 
@@ -249,7 +249,7 @@ export class ServerDatabaseService {
         categoria_id: categoriaId,
         orden,
         esta_activa: true,
-      })
+      } as any)
 
       if (insertError) throw insertError
     }
@@ -266,7 +266,7 @@ export class ServerDatabaseService {
 
     const { data, error } = await supabase
       .from("categoria_orden_delegacion")
-      .update({ esta_activa: estaActiva, actualizado_en: now })
+      .update({ esta_activa: estaActiva, actualizado_en: now } as any)
       .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
       .select("categoria_id")
 
@@ -278,7 +278,7 @@ export class ServerDatabaseService {
         categoria_id: categoriaId,
         orden: ordenFallback,
         esta_activa: estaActiva,
-      })
+      } as any)
 
       if (insertError) throw insertError
     }

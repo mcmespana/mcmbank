@@ -27,9 +27,13 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
       }
 
       try {
-        await supabase.auth.refreshSession()
+        // Wrap refreshSession in a timeout to prevent hanging the entire query
+        await Promise.race([
+          supabase.auth.refreshSession(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 3000))
+        ])
       } catch {
-        // Ignore refresh errors
+        // Ignore refresh errors or timeouts
       }
 
       // Check again after refresh
@@ -39,7 +43,7 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
         return { data: null as T | null, error: new Error('Request aborted') }
       }
 
-      ;({ data, error } = await build(ac.signal))
+      ; ({ data, error } = await build(ac.signal))
     }
 
     const ms = Date.now() - started

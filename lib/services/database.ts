@@ -72,7 +72,7 @@ export class DatabaseService {
 
   // Movimiento operations (client-side only)
   static async updateMovimientoCategoria(movimientoId: string, categoriaId: string | null): Promise<void> {
-    const supabase = this.getClient()
+    const supabase = this.getClient() as any
     const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
 
     if (error) throw error
@@ -121,22 +121,22 @@ export class DatabaseService {
   static async createCategoria(
     categoria: Omit<Categoria, "id" | "creado_en">,
   ): Promise<Categoria> {
-    const supabase = this.getClient()
-    const { data, error } = await supabase.from("categoria").insert(categoria).select().single()
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase.from("categoria").insert(categoria as any).select().single()
 
     if (error) throw error
     return data
   }
 
   static async updateCategoria(id: string, updates: Partial<Categoria>): Promise<void> {
-    const supabase = this.getClient()
-    const { error } = await supabase.from("categoria").update(updates).eq("id", id)
+    const supabase = this.getClient() as any
+    const { error } = await supabase.from("categoria").update(updates as any).eq("id", id)
 
     if (error) throw error
   }
 
   static async deleteCategoria(id: string): Promise<void> {
-    const supabase = this.getClient()
+    const supabase = this.getClient() as any
     const { error } = await supabase.from("categoria").delete().eq("id", id)
 
     if (error) throw error
@@ -147,12 +147,12 @@ export class DatabaseService {
     categoriaId: string,
     orden: number,
   ): Promise<void> {
-    const supabase = this.getClient()
+    const supabase = this.getClient() as any
     const now = new Date().toISOString()
 
     const { data, error } = await supabase
       .from("categoria_orden_delegacion")
-      .update({ orden, actualizado_en: now })
+      .update({ orden, actualizado_en: now } as any)
       .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
       .select("categoria_id")
 
@@ -164,7 +164,7 @@ export class DatabaseService {
         categoria_id: categoriaId,
         orden,
         esta_activa: true,
-      })
+      } as any)
 
       if (insertError) throw insertError
     }
@@ -176,12 +176,12 @@ export class DatabaseService {
     estaActiva: boolean,
     ordenFallback: number,
   ): Promise<void> {
-    const supabase = this.getClient()
+    const supabase = this.getClient() as any
     const now = new Date().toISOString()
 
     const { data, error } = await supabase
       .from("categoria_orden_delegacion")
-      .update({ esta_activa: estaActiva, actualizado_en: now })
+      .update({ esta_activa: estaActiva, actualizado_en: now } as any)
       .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
       .select("categoria_id")
 
@@ -193,7 +193,7 @@ export class DatabaseService {
         categoria_id: categoriaId,
         orden: ordenFallback,
         esta_activa: estaActiva,
-      })
+      } as any)
 
       if (insertError) throw insertError
     }
@@ -203,7 +203,7 @@ export class DatabaseService {
     delegacionId: string,
     categoriaId: string,
   ): Promise<void> {
-    const supabase = this.getClient()
+    const supabase = this.getClient() as any
     const { error } = await supabase
       .from("categoria_orden_delegacion")
       .delete()

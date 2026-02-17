@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import SignUpForm from "@/components/auth/sign-up-form"
 
+export const dynamic = "force-dynamic"
+
 export default async function SignUpPage() {
   const supabase = createClient()
   const {

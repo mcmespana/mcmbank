@@ -46,7 +46,7 @@ export function TransactionRowIndicators({
                 </div>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-3" align="start">
+            <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3" align="start">
               <div className="space-y-2">
                 <h4 className="font-medium text-sm flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-gray-600" />
@@ -84,14 +84,14 @@ export function TransactionRowIndicators({
                         </div>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top" align="start" className="w-96 max-w-[32rem] p-3 whitespace-pre-wrap">
+                    <TooltipContent side="top" align="start" className="max-w-[calc(100vw-2rem)] sm:w-96 sm:max-w-[32rem] p-3 whitespace-pre-wrap">
                       {trimmedDescription}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
             </PopoverTrigger>
-            <PopoverContent className="w-96 max-w-[32rem] p-3" align="start">
+            <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 sm:max-w-[32rem] p-3" align="start">
               <div className="space-y-2">
                 <h4 className="font-medium text-sm flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-gray-600" />

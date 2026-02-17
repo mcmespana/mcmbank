@@ -753,7 +753,7 @@ export function TransactionImportPanel({
               </div>
               <Label className="text-base font-medium">Origen de los datos</Label>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setSource("manual")}

@@ -111,14 +111,14 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-2 lg:gap-4 border-b border-border/30 bg-background/80 backdrop-blur-2xl shadow-sm px-2 sm:px-4 lg:px-6 overflow-hidden">
+    <header className="sticky top-0 z-40 flex h-14 sm:h-16 items-center gap-1.5 sm:gap-2 lg:gap-4 border-b border-border/30 bg-background/80 backdrop-blur-2xl shadow-sm px-2 sm:px-4 lg:px-6 overflow-hidden">
       {/* Mobile menu button - fixed width */}
       <div className="flex-shrink-0">
         <Sidebar showDesktop={false} />
       </div>
 
       {/* Delegation selector - limited width */}
-      <div className="flex items-center min-w-0 overflow-hidden max-w-[280px] sm:max-w-[320px]">
+      <div className="flex items-center min-w-0 overflow-hidden max-w-[160px] sm:max-w-[280px] md:max-w-[320px]">
         <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
       </div>
 

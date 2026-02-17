@@ -78,8 +78,8 @@ export function TransactionTable({
         <p className="text-sm text-muted-foreground">{total} transacciones encontradas</p>
       </div>
 
-      <div className="rounded-lg border">
-        <Table>
+      <div className="rounded-lg border overflow-x-auto">
+        <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>
               <TableHead>Concepto</TableHead>
@@ -119,7 +119,7 @@ export function TransactionTable({
                           value={movement.categoria_id || "none"}
                           onValueChange={(value) => handleCategoryChange(movement.id, value)}
                         >
-                          <SelectTrigger className="h-8 w-[160px]">
+                          <SelectTrigger className="h-8 w-[130px] sm:w-[160px]">
                             <SelectValue placeholder="Sin categoría">
                               {category && (
                                 <div className="flex items-center gap-1">

@@ -111,7 +111,7 @@ export function FinancialSummary({ from, to }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
         {metrics.map((metric, index) => (
           <Card
             key={metric.title}
@@ -140,7 +140,7 @@ export function FinancialSummary({ from, to }: Props) {
             <CardContent className="pt-0 relative z-10">
               <div className="flex items-end justify-between">
                 <div className="min-w-0 flex-1">
-                  <div className="text-2xl lg:text-3xl font-extrabold truncate mb-1">{metric.value}</div>
+                  <div className="text-lg sm:text-2xl lg:text-3xl font-extrabold truncate mb-1">{metric.value}</div>
                   <p className="text-xs text-muted-foreground/80 truncate font-medium">{metric.description}</p>
                 </div>
                 {metric.trend && (

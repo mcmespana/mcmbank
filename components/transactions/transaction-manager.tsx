@@ -446,7 +446,7 @@ export function TransactionManager() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-8rem)] overflow-hidden">
       {/* Desktop Sidebar Filters */}
       <div
         className={`hidden lg:block border-r bg-card transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
@@ -594,7 +594,7 @@ export function TransactionManager() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -602,7 +602,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <Tag className="h-4 w-4" />
-                    <span>Editar categoría</span>
+                    <span className="hidden sm:inline">Editar categoría</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -611,7 +611,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <Type className="h-4 w-4" />
-                    <span>Unificar concepto</span>
+                    <span className="hidden sm:inline">Unificar concepto</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -620,7 +620,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <FilePlus className="h-4 w-4" />
-                    <span>Añadir nota</span>
+                    <span className="hidden sm:inline">Añadir nota</span>
                   </Button>
                   <Button
                     variant="destructive"
@@ -629,7 +629,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <Trash2 className="h-4 w-4" />
-                    <span>Eliminar</span>
+                    <span className="hidden sm:inline">Eliminar</span>
                   </Button>
                 </div>
               </div>
@@ -740,7 +740,7 @@ export function TransactionManager() {
           }
         }}
       >
-        <DialogContent className="max-w-4xl w-full p-0 overflow-hidden">
+        <DialogContent className="max-w-4xl w-[calc(100%-1rem)] sm:w-full p-0 overflow-hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>Seleccionar categoría en bloque</DialogTitle>
             <DialogDescription>

@@ -24,7 +24,7 @@ export function AccountTooltip({ account, children }: AccountTooltipProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-80 p-4" align="start">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-4" align="start">
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div

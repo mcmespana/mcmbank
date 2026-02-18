@@ -26,6 +26,7 @@ export function useCategorias(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const hasLoadedRef = useRef(false)
   const includeGlobal = options?.includeGlobal ?? true
   const includeInactive = options?.includeInactive ?? false
 
@@ -41,7 +42,10 @@ export function useCategorias(
         return
       }
 
-      setLoading(true)
+      // Only show loading on initial load, not on background revalidations
+      if (!hasLoadedRef.current) {
+        setLoading(true)
+      }
 
       const data = await DatabaseService.getCategoriasByDelegacion(delegacionId, {
         includeGlobal,
@@ -50,6 +54,7 @@ export function useCategorias(
       })
 
       setCategorias(data)
+      hasLoadedRef.current = true
       setError(null)
     } catch (err) {
       if (!ac.signal.aborted) {

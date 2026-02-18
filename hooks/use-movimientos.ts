@@ -33,6 +33,7 @@ export function useMovimientos(
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fetchingRef = useRef(false)
+  const hasLoadedRef = useRef(false)
   const lastFetchKeyRef = useRef<string>("")
 
   const serializedFilters = useMemo(() => {
@@ -78,13 +79,11 @@ export function useMovimientos(
         return
       }
 
-      // Prevent concurrent fetches
-      if (fetchingRef.current) {
-        console.log("[useMovimientos] Already fetching, skipping...")
-        return
-      }
-
-      // Cancel previous request and clear timeout
+      // Cancel any previous in-flight request.
+      // We abort + reset fetchingRef BEFORE checking it so that a revalidation
+      // that arrives while an old (possibly stale) request is pending will
+      // properly cancel the old one and start fresh — avoiding the deadlock
+      // where fetchingRef stays true from an aborted-but-not-yet-settled request.
       if (abortRef.current) {
         abortRef.current.abort()
       }
@@ -104,7 +103,10 @@ export function useMovimientos(
       }, timeoutMs)
 
       try {
-        setLoading(true)
+        // Only show loading on initial/fresh load, not background revalidations
+        if (!hasLoadedRef.current || isAppend) {
+          setLoading(true)
+        }
         setError(null)
 
         // Optimized query: removed delegacion JOIN and archivos JOIN
@@ -210,6 +212,7 @@ export function useMovimientos(
         }
 
         setHasMore(movimientosData.length === pageSize && (pageIndex + 1) * pageSize < totalCount)
+        hasLoadedRef.current = true
       } catch (err: any) {
         if (abortController.signal.aborted) {
           console.log("[useMovimientos] Caught aborted request")
@@ -243,6 +246,7 @@ export function useMovimientos(
     }
 
     lastFetchKeyRef.current = fetchKey
+    hasLoadedRef.current = false
 
     // Reset state
     setPage(0)
@@ -264,10 +268,10 @@ export function useMovimientos(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchKey])
 
-  // Revalidate on focus - with debouncing (only if not currently fetching)
+  // Revalidate on focus — fetchMovimientos now properly aborts any in-flight
+  // request, so we don't need the fetchingRef guard here (which caused deadlocks).
   const revalidate = useCallback(() => {
-    if (!fetchingRef.current && lastFetchKeyRef.current !== "") {
-      console.log("[useMovimientos] Revalidating on focus")
+    if (lastFetchKeyRef.current !== "") {
       setPage(0)
       setHasMore(true)
       fetchMovimientosRef.current(0, false)

@@ -81,10 +81,11 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   }
 
   const getUserDisplayName = () => {
-    if (loading) return "Cargando..."
+    // Show the profile name if available
     if (perfil?.nombre_completo && perfil.nombre_completo.trim()) {
       return perfil.nombre_completo
     }
+    // While loading, show email-derived name instead of "Cargando..." to avoid flicker
     if (user?.email) {
       return user.email
         .split("@")[0]
@@ -92,6 +93,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ")
     }
+    if (loading) return " " // invisible placeholder while loading
     return "Usuario"
   }
 

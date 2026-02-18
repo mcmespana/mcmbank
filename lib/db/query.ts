@@ -1,5 +1,5 @@
 import { addMetric } from "@/lib/db/telemetry"
-import { ensureSession } from "@/hooks/use-app-status"
+import { supabase } from "@/lib/supabase/client"
 
 export interface RunQueryOptions<T> {
   label: string
@@ -17,7 +17,9 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
   try {
     let { data, error } = await build(ac.signal)
 
-    // Retry logic with abort validation — uses centralized session refresh
+    // On auth error, let the Supabase client handle token refresh internally,
+    // then retry the query once. We do NOT manually call refreshSession() because
+    // it can stall when HTTP connections are being reestablished (e.g. after tab switch).
     if (error && retryOnAuth && shouldRetryAuth(error)) {
       if (ac.signal.aborted) {
         const ms = Date.now() - started
@@ -25,12 +27,17 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
         return { data: null as T | null, error: new Error('Request aborted') }
       }
 
-      // Use centralized session refresh (deduplicates with any other in-flight refresh)
-      await ensureSession()
+      // Quick session check — no network call, just reads from local storage/memory
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        const ms = Date.now() - started
+        addMetric({ at: Date.now(), label, table, ms, status: 'error', error: 'No session for retry' })
+        return { data: null as T | null, error: new Error('No session') }
+      }
 
       if (ac.signal.aborted) {
         const ms = Date.now() - started
-        addMetric({ at: Date.now(), label, table, ms, status: 'aborted', error: 'Request aborted after refresh' })
+        addMetric({ at: Date.now(), label, table, ms, status: 'aborted', error: 'Request aborted after session check' })
         return { data: null as T | null, error: new Error('Request aborted') }
       }
 

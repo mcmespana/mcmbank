@@ -15,6 +15,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const { user } = useAuth()
   const userRef = useRef(user)
   userRef.current = user
+  const hasLoadedRef = useRef(false)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -35,7 +36,10 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     abortControllerRef.current = abortController
 
     const attempt = async () => {
-      setLoading(true)
+      // Only show loading spinner on initial load, not on background revalidations
+      if (!hasLoadedRef.current) {
+        setLoading(true)
+      }
       setError(null)
 
       const { data, error } = await runQuery<{ delegacion_id: string; delegacion: any }[]>({
@@ -66,6 +70,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
         (a?.nombre || "").localeCompare(b?.nombre || "", "es", { sensitivity: "base" }),
       )
       setDelegations(sortedDelegations)
+      hasLoadedRef.current = true
     }
 
     try {
@@ -75,7 +80,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
         setLoading(false)
         return
       }
-      // runQuery already handles auth retry via ensureSession(), so no extra retry here
+      // runQuery already handles auth retry, so no extra retry here
       setError(err instanceof Error ? err.message : "Error cargando delegaciones")
     } finally {
       // Always clear loading state; a new fetch will set it to true again

@@ -7,37 +7,40 @@ import { supabase } from "@/lib/supabase/client"
 // Prevents spurious revalidations from quick alt-tabs.
 const MIN_HIDDEN_MS = 2000
 
-// Global flag to prevent multiple concurrent session refreshes across the entire app.
-// This is the single source of truth for "is a refresh in progress?"
-let sessionRefreshPromise: Promise<boolean> | null = null
+// Global flag to prevent multiple concurrent session checks across the entire app.
+let sessionCheckPromise: Promise<boolean> | null = null
 
 /**
- * Centralized session refresh. Returns true if session is valid after refresh.
- * Deduplicates concurrent calls — only one refresh runs at a time.
+ * Lightweight session check. Returns true if a valid session exists.
+ *
+ * IMPORTANT: We intentionally do NOT call refreshSession() here.
+ * The Supabase client auto-refreshes tokens internally via onAuthStateChange.
+ * Manually calling refreshSession() on tab focus:
+ *  1. Makes a blocking /token network request (50-300ms) that stalls while
+ *     the browser is still reestablishing HTTP connections after tab switch.
+ *  2. Fires TOKEN_REFRESHED which can trigger cascading re-renders.
+ *  3. Puts the client's internal auth state in a transitional state, causing
+ *     concurrent PostgREST queries to fail or hang.
+ *
+ * If the token IS expired, the Supabase client will auto-refresh it on the
+ * next API call. If that fails with 401, runQuery's retry logic handles it.
  */
 export async function ensureSession(): Promise<boolean> {
-  if (sessionRefreshPromise) return sessionRefreshPromise
+  if (sessionCheckPromise) return sessionCheckPromise
 
-  sessionRefreshPromise = (async () => {
+  sessionCheckPromise = (async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return false
-
-      const { error } = await supabase.auth.refreshSession()
-      if (error) {
-        console.warn("Session refresh error:", error.message)
-        return false
-      }
-      return true
+      return !!session
     } catch (e) {
-      console.error("Session refresh failed:", e)
+      console.error("Session check failed:", e)
       return false
     } finally {
-      sessionRefreshPromise = null
+      sessionCheckPromise = null
     }
   })()
 
-  return sessionRefreshPromise
+  return sessionCheckPromise
 }
 
 // This is a simple event emitter for cross-hook communication.
@@ -101,15 +104,16 @@ export const useAppStatus = () => {
       revalidatingRef.current = true
 
       try {
-        // AWAIT session refresh BEFORE notifying hooks.
-        // This is the single centralized refresh — hooks should NOT refresh on their own.
+        // Quick session existence check (no network call — reads from memory).
+        // If the session exists, we trust it. The Supabase client will auto-refresh
+        // expired tokens on the next API call. If it doesn't exist, skip revalidation.
         const ok = await ensureSession()
         if (!ok) {
-          console.warn("Session invalid after refresh, skipping data revalidation.")
+          console.warn("No session found, skipping data revalidation.")
           return
         }
 
-        // Session is fresh — now notify all hooks to refetch their data
+        // Session exists — notify all hooks to refetch their data
         appStatusEmitter.emit()
       } finally {
         revalidatingRef.current = false

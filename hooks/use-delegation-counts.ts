@@ -29,6 +29,7 @@ export function useDelegationCounts() {
 
   const requestRef = useRef(0)
   const lastDelegationRef = useRef<string | null>(null)
+  const hasLoadedRef = useRef(false)
 
   // getCurrentDelegation is now a stable ref-based callback, so it's safe in deps.
   // But we only need selectedDelegation to trigger re-fetches.
@@ -46,13 +47,19 @@ export function useDelegationCounts() {
       return
     }
 
-    if (lastDelegationRef.current !== delegationId) {
+    const isDelegationChange = lastDelegationRef.current !== delegationId
+    if (isDelegationChange) {
       lastDelegationRef.current = delegationId
+      hasLoadedRef.current = false
       setCounts(INITIAL_COUNTS)
     }
 
     const fetchId = ++requestRef.current
-    setLoading(true)
+    // Only show loading spinner on first load or delegation change.
+    // Background revalidations (tab focus) should NOT flash the UI to loading state.
+    if (isDelegationChange || !hasLoadedRef.current) {
+      setLoading(true)
+    }
     setError(null)
 
     const delegation = getCurrentDelegationRef.current()
@@ -133,6 +140,7 @@ export function useDelegationCounts() {
       }
 
       setCounts(nextCounts)
+      hasLoadedRef.current = true
     } catch (err) {
       if (requestRef.current !== fetchId) return
       console.error("❌ useDelegationCounts: unexpected error", err)

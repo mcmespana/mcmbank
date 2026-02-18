@@ -67,7 +67,11 @@ export function useCuentas(
     abortControllerRef.current = abortController
 
     try {
-      setLoading(true)
+      // Only show loading spinner when we have no data yet (initial load or delegation change).
+      // Background revalidations (tab focus) should NOT flash the UI.
+      if (!hasCuentasRef.current) {
+        setLoading(true)
+      }
       setError(null)
 
       // Set timeout

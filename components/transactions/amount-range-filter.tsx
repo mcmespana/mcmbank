@@ -75,7 +75,7 @@ export function AmountRangeFilter({ amountFrom, amountTo, onAmountRangeChange }:
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-4" align="start">
+        <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-4" align="start">
           <div className="space-y-4">
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Filtrar por importe</h4>

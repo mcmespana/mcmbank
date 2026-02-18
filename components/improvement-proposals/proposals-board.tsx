@@ -94,11 +94,11 @@ export function ProposalsBoard({
         </div>
       )}
 
-      <div className="overflow-x-auto pb-4">
+      <div className="overflow-x-auto pb-4 -mx-3 px-3 sm:mx-0 sm:px-0">
         <div
           className={cn(
-            "flex gap-6",
-            statusOrder.length >= 3 ? "min-w-[960px]" : "min-w-full",
+            "flex gap-4 sm:gap-6",
+            statusOrder.length >= 3 ? "min-w-[720px] sm:min-w-[960px]" : "min-w-full",
           )}
         >
           {grouped.map(({ status, proposals: columnProposals }) => {
@@ -107,7 +107,7 @@ export function ProposalsBoard({
             return (
               <div
                 key={status}
-                className="flex w-[260px] flex-shrink-0 flex-col gap-4 sm:w-[300px] lg:w-[340px] xl:w-[360px]"
+                className="flex w-[220px] flex-shrink-0 flex-col gap-4 sm:w-[300px] lg:w-[340px] xl:w-[360px]"
               >
                 <div
                   className={cn(

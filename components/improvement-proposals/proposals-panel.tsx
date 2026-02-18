@@ -123,35 +123,35 @@ export function ImprovementProposalsPanel() {
         <div className="pointer-events-none absolute -left-20 -top-16 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 right-0 h-64 w-64 rounded-full bg-sky-400/30 blur-3xl" />
 
-        <div className="relative grid gap-8 p-8 md:grid-cols-[2fr_1fr] md:p-10">
+        <div className="relative grid gap-6 p-5 sm:gap-8 sm:p-8 md:grid-cols-[2fr_1fr] md:p-10">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1 text-sm font-medium uppercase tracking-wide text-white/90">
               <Sparkles className="h-4 w-4" /> Propuestas de mejora
             </div>
             <div className="space-y-3">
-              <h1 className="text-3xl font-semibold leading-tight md:text-4xl">
+              <h1 className="text-2xl sm:text-3xl font-semibold leading-tight md:text-4xl">
                 ¿Por qué no mejoramos esto?
               </h1>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Button
                 type="button"
-                size="lg"
+                size="sm"
                 onClick={() => handleOpenDialog("idea")}
-                className="rounded-full bg-white text-indigo-700 shadow-lg shadow-indigo-900/20 transition hover:bg-white/90"
+                className="rounded-full bg-white text-indigo-700 shadow-lg shadow-indigo-900/20 transition hover:bg-white/90 sm:text-sm sm:px-4 sm:py-2"
               >
-                <PartyPopper className="mr-2 h-5 w-5" /> Compartir idea
+                <PartyPopper className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Compartir idea
               </Button>
 
               <Button
                 type="button"
-                size="lg"
+                size="sm"
                 variant="secondary"
                 onClick={() => handleOpenDialog("error")}
-                className="rounded-full border-white/30 bg-white/20 text-white hover:bg-white/30"
+                className="rounded-full border-white/30 bg-white/20 text-white hover:bg-white/30 sm:text-sm sm:px-4 sm:py-2"
               >
-                <Bug className="mr-2 h-5 w-5" /> Reportar error
+                <Bug className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Reportar error
               </Button>
 
               {showCelebratedToggle && (

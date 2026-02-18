@@ -93,7 +93,7 @@ export function EmojiPickerButton({ value = "📁", onChange, className, size = 
           <span className="text-2xl">{value}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="start">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 p-0" align="start">
         {!showFullPicker ? (
           // ... (vista de emojis recomendados sin cambios)
           <div className="p-4 space-y-4">
@@ -112,7 +112,7 @@ export function EmojiPickerButton({ value = "📁", onChange, className, size = 
               {emojiCategories.map((category, categoryIndex) => (
                 <div key={categoryIndex} className="space-y-2">
                   <h4 className="text-xs font-medium text-muted-foreground">{category.label}</h4>
-                  <div className="grid grid-cols-8 gap-0.5">
+                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-0.5">
                     {category.emojis.map((emoji, emojiIndex) => (
                       <Button
                         key={`${emoji}-${emojiIndex}`}

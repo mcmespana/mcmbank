@@ -302,7 +302,7 @@ export function TransactionDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:w-[560px] sm:max-w-[640px] overflow-y-auto p-0 z-[60]">
+      <SheetContent side="right" className="w-full sm:w-[480px] md:w-[560px] sm:max-w-[90vw] md:max-w-[640px] overflow-y-auto p-0 z-[60]">
         {!movement ? (
           <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 p-6 text-sm text-muted-foreground">
             <LoadingSpinner size="md" />

@@ -529,7 +529,7 @@ export function CuentasManager() {
                                         <Info className="h-3 w-3 sm:h-4 sm:w-4" />
                                       </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-80 p-3">
+                                    <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3">
                                       <div className="space-y-2">
                                         <h4 className="font-medium text-sm">Descripción</h4>
                                         <p className="text-sm text-muted-foreground">{cuenta.descripcion}</p>
@@ -560,7 +560,7 @@ export function CuentasManager() {
                                     </Badge>
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-80 p-3">
+                                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3">
                                   <div className="space-y-2">
                                     <h4 className="font-medium text-sm">Información del Saldo</h4>
                                     <p className="text-sm text-muted-foreground">
@@ -629,7 +629,7 @@ export function CuentasManager() {
                                     </div>
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-80 p-3">
+                                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3">
                                   <div className="space-y-2">
                                     <h4 className="font-medium text-sm">Personas Autorizadas</h4>
                                     <div className="space-y-1">

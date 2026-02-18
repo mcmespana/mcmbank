@@ -18,7 +18,10 @@ const INITIAL_COUNTS: DelegationCounts = {
   cuentas: null,
 }
 
-const QUERY_TIMEOUT_MS = 10000
+// Generous timeout to accommodate the Supabase client's Navigator Lock.
+// After a tab switch, the auth client may hold a lock for 1-8s while
+// refreshing the token, during which all queries block on getAccessToken().
+const QUERY_TIMEOUT_MS = 25000
 
 export function useDelegationCounts() {
   const { selectedDelegation, getCurrentDelegation } = useDelegationContext()

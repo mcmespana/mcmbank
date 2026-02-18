@@ -16,7 +16,7 @@ export function useCuentas(
   delegacionId: string | null,
   options: UseCuentasOptions = {}
 ) {
-  const { timeout = 10000, ttlMs = 30000 } = options
+  const { timeout = 25000, ttlMs = 30000 } = options
   const [cuentas, setCuentas] = useState<CuentaConDelegacion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

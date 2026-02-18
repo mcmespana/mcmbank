@@ -7,44 +7,8 @@ import { supabase } from "@/lib/supabase/client"
 // Prevents spurious revalidations from quick alt-tabs.
 const MIN_HIDDEN_MS = 2000
 
-// Global flag to prevent multiple concurrent session checks across the entire app.
-let sessionCheckPromise: Promise<boolean> | null = null
-
-/**
- * Lightweight session check. Returns true if a valid session exists.
- *
- * IMPORTANT: We intentionally do NOT call refreshSession() here.
- * The Supabase client auto-refreshes tokens internally via onAuthStateChange.
- * Manually calling refreshSession() on tab focus:
- *  1. Makes a blocking /token network request (50-300ms) that stalls while
- *     the browser is still reestablishing HTTP connections after tab switch.
- *  2. Fires TOKEN_REFRESHED which can trigger cascading re-renders.
- *  3. Puts the client's internal auth state in a transitional state, causing
- *     concurrent PostgREST queries to fail or hang.
- *
- * If the token IS expired, the Supabase client will auto-refresh it on the
- * next API call. If that fails with 401, runQuery's retry logic handles it.
- */
-export async function ensureSession(): Promise<boolean> {
-  if (sessionCheckPromise) return sessionCheckPromise
-
-  sessionCheckPromise = (async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      return !!session
-    } catch (e) {
-      console.error("Session check failed:", e)
-      return false
-    } finally {
-      sessionCheckPromise = null
-    }
-  })()
-
-  return sessionCheckPromise
-}
-
-// This is a simple event emitter for cross-hook communication.
-// It allows data hooks to subscribe to focus events without creating complex dependencies.
+// Simple event emitter for cross-hook communication.
+// Data hooks subscribe to get notified when the tab regains focus.
 const appStatusEmitter = {
   listeners: new Set<() => void>(),
   subscribe(callback: () => void) {
@@ -62,7 +26,7 @@ export const useAppStatus = () => {
   const [isOnline, setIsOnline] = useState(true)
   const [isFocused, setIsFocused] = useState(true)
   const hiddenAtRef = useRef<number>(0)
-  const revalidatingRef = useRef(false)
+  const revalidationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
@@ -83,13 +47,18 @@ export const useAppStatus = () => {
   }, [])
 
   useEffect(() => {
-    const handleVisibilityChange = async () => {
+    const handleVisibilityChange = () => {
       const isNowFocused = !document.hidden
       setIsFocused(isNowFocused)
 
       if (!isNowFocused) {
         // Record when the tab was hidden
         hiddenAtRef.current = Date.now()
+        // Cancel any pending revalidation if tab is hidden again
+        if (revalidationTimerRef.current) {
+          clearTimeout(revalidationTimerRef.current)
+          revalidationTimerRef.current = null
+        }
         return
       }
 
@@ -99,31 +68,65 @@ export const useAppStatus = () => {
         return
       }
 
-      // Prevent overlapping revalidation cycles
-      if (revalidatingRef.current) return
-      revalidatingRef.current = true
+      // Cancel any previous pending revalidation
+      if (revalidationTimerRef.current) {
+        clearTimeout(revalidationTimerRef.current)
+        revalidationTimerRef.current = null
+      }
 
-      try {
-        // Quick session existence check (no network call — reads from memory).
-        // If the session exists, we trust it. The Supabase client will auto-refresh
-        // expired tokens on the next API call. If it doesn't exist, skip revalidation.
-        const ok = await ensureSession()
-        if (!ok) {
-          console.warn("No session found, skipping data revalidation.")
-          return
+      // STRATEGY: Wait for the Supabase auth client to finish its internal
+      // token refresh before notifying data hooks.
+      //
+      // WHY: The Supabase JS client (v2) uses the Navigator LockManager API
+      // for ALL auth operations. When the tab regains focus, the client's own
+      // visibilitychange handler acquires an exclusive lock and refreshes the
+      // token if expired (network call, 1-5s). Every data query goes through
+      // fetchWithAuth() → getAccessToken() → getSession() which ALSO acquires
+      // this lock. If our hooks fire while the refresh is in progress, each
+      // query blocks on the lock for up to 10s, causing cascading timeouts.
+      //
+      // The fix: call getSession() ourselves to wait for the lock to be
+      // released. Once getSession() returns, the token is fresh and the lock
+      // is free. Then we emit to the hooks, whose queries can proceed without
+      // blocking. If getSession() takes too long (>8s), we emit anyway and
+      // let the hooks handle it — their queries will block briefly but the
+      // timeouts are generous enough.
+      const emitWithFallback = () => {
+        // Race: getSession() vs 8s timeout
+        let emitted = false
+        const doEmit = () => {
+          if (emitted) return
+          emitted = true
+          appStatusEmitter.emit()
         }
 
-        // Session exists — notify all hooks to refetch their data
-        appStatusEmitter.emit()
-      } finally {
-        revalidatingRef.current = false
+        // Fallback: if getSession() is still blocked after 8s, emit anyway
+        const fallbackTimer = setTimeout(doEmit, 8000)
+
+        supabase.auth.getSession()
+          .then(() => {
+            clearTimeout(fallbackTimer)
+            doEmit()
+          })
+          .catch(() => {
+            clearTimeout(fallbackTimer)
+            doEmit()
+          })
       }
+
+      // Small delay (300ms) to let the Supabase client's visibilitychange
+      // handler fire first and start its token refresh. Our getSession() call
+      // will then queue behind it.
+      revalidationTimerRef.current = setTimeout(emitWithFallback, 300)
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
+      if (revalidationTimerRef.current) {
+        clearTimeout(revalidationTimerRef.current)
+      }
     }
   }, [])
 
@@ -139,7 +142,6 @@ export const useRevalidateOnFocus = (revalidate: () => void) => {
 }
 
 // Hooks subscribe to revalidation with a small jitter to spread the load.
-// No global batching timer — the session refresh above already serializes the trigger.
 export const useRevalidateOnFocusJitter = (
   revalidate: () => void,
   { minMs = 40, maxMs = 160 }: { minMs?: number; maxMs?: number } = {}

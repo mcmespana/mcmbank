@@ -1,5 +1,4 @@
 import { addMetric } from "@/lib/db/telemetry"
-import { supabase } from "@/lib/supabase/client"
 
 export interface RunQueryOptions<T> {
   label: string
@@ -9,7 +8,7 @@ export interface RunQueryOptions<T> {
   retryOnAuth?: boolean
 }
 
-export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retryOnAuth = true }: RunQueryOptions<T>) {
+export async function runQuery<T>({ label, table, timeoutMs = 25000, build, retryOnAuth = true }: RunQueryOptions<T>) {
   const started = Date.now()
   const ac = new AbortController()
 
@@ -17,9 +16,18 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
   try {
     let { data, error } = await build(ac.signal)
 
-    // On auth error, let the Supabase client handle token refresh internally,
-    // then retry the query once. We do NOT manually call refreshSession() because
-    // it can stall when HTTP connections are being reestablished (e.g. after tab switch).
+    // On auth error (401/403), retry ONCE after a short delay.
+    //
+    // WHY a delay instead of getSession(): The Supabase JS client uses the
+    // Navigator LockManager API for auth operations. When the tab regains focus
+    // and the token is expired, the client's own visibilitychange handler
+    // acquires an exclusive lock and starts refreshing the token (network call
+    // to /auth/v1/token, 1-5s). Any call to getSession() during this time
+    // BLOCKS on the same lock for up to 10 seconds (lockAcquireTimeout).
+    //
+    // Instead, we wait 2 seconds for the Supabase client to finish its
+    // internal token refresh, then retry the query. The retry will use the
+    // fresh token automatically.
     if (error && retryOnAuth && shouldRetryAuth(error)) {
       if (ac.signal.aborted) {
         const ms = Date.now() - started
@@ -27,17 +35,15 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
         return { data: null as T | null, error: new Error('Request aborted') }
       }
 
-      // Quick session check — no network call, just reads from local storage/memory
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        const ms = Date.now() - started
-        addMetric({ at: Date.now(), label, table, ms, status: 'error', error: 'No session for retry' })
-        return { data: null as T | null, error: new Error('No session') }
-      }
+      // Wait for the Supabase client to finish its internal token refresh.
+      // The client's _onVisibilityChanged handler runs concurrently and will
+      // refresh the token + update storage. After this delay, the next query
+      // will automatically use the new token.
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
       if (ac.signal.aborted) {
         const ms = Date.now() - started
-        addMetric({ at: Date.now(), label, table, ms, status: 'aborted', error: 'Request aborted after session check' })
+        addMetric({ at: Date.now(), label, table, ms, status: 'aborted', error: 'Request aborted after auth wait' })
         return { data: null as T | null, error: new Error('Request aborted') }
       }
 

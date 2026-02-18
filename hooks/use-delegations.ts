@@ -8,7 +8,7 @@ import { useRevalidateOnFocusJitter } from "@/hooks/use-app-status"
 import { runQuery } from "@/lib/db/query"
 
 // Robust delegations hook with timeout, cancelation, and focus revalidation
-export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
+export function useDelegations({ timeout = 25000 }: { timeout?: number } = {}) {
   const [delegations, setDelegations] = useState<Delegacion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

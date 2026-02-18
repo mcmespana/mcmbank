@@ -95,8 +95,11 @@ export function useMovimientos(
       abortRef.current = abortController
       fetchingRef.current = true
 
-      // Set safety timeout
-      const timeoutMs = options.timeoutMs || 15000
+      // Set safety timeout. The timeout must be generous because after a tab
+      // switch, the Supabase client may hold a Navigator Lock for 1-8 seconds
+      // while refreshing the auth token. During that time, getAccessToken()
+      // (called internally by every Supabase query) blocks on the lock.
+      const timeoutMs = options.timeoutMs || 30000
       timeoutRef.current = setTimeout(() => {
         console.warn(`[useMovimientos] Request timed out after ${timeoutMs}ms`)
         abortController.abort()

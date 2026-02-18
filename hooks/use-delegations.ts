@@ -13,11 +13,14 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const userRef = useRef(user)
+  userRef.current = user
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchDelegations = useCallback(async () => {
+    const user = userRef.current
     if (!user) {
       setDelegations([])
       setLoading(false)
@@ -68,22 +71,12 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     try {
       await attempt()
     } catch (err) {
-      console.error("useDelegations: initial fetch failed", err)
       if (abortController.signal.aborted) {
-        // Mark as not loading to avoid spinners stuck on abort/timeout
         setLoading(false)
         return
       }
-      // Retry once after refreshing session in case token expired in background
-      try {
-        await Promise.race([
-          supabase.auth.refreshSession(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 3000))
-        ])
-        await attempt()
-      } catch (e2) {
-        setError(e2 instanceof Error ? e2.message : "Error cargando delegaciones")
-      }
+      // runQuery already handles auth retry via ensureSession(), so no extra retry here
+      setError(err instanceof Error ? err.message : "Error cargando delegaciones")
     } finally {
       // Always clear loading state; a new fetch will set it to true again
       setLoading(false)

@@ -16,12 +16,15 @@ export function useDelegationRole(delegationId?: string | null): DelegationRoleS
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Depend on user.id (primitive) to avoid re-fetching on User object reference changes
+  const userId = user?.id ?? null
+
   useEffect(() => {
     let isMounted = true
     const abortController = new AbortController()
 
     const fetchRole = async () => {
-      if (!user || !delegationId) {
+      if (!userId || !delegationId) {
         if (!isMounted) return
         setRole(null)
         setError(null)
@@ -36,7 +39,7 @@ export function useDelegationRole(delegationId?: string | null): DelegationRoleS
         const query = supabase
           .from("membresia")
           .select("rol")
-          .eq("usuario_id", user.id)
+          .eq("usuario_id", userId)
           .eq("delegacion_id", delegationId)
           .maybeSingle()
 
@@ -70,7 +73,7 @@ export function useDelegationRole(delegationId?: string | null): DelegationRoleS
       isMounted = false
       abortController.abort()
     }
-  }, [delegationId, user])
+  }, [delegationId, userId])
 
   return { role, loading, error }
 }

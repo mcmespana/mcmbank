@@ -8,10 +8,14 @@ export function useIsAdmin() {
   const { user } = useAuth()
   const [isAdmin, setIsAdmin] = useState(false)
 
+  // Depend on user.id (primitive) instead of user object to avoid re-fetching
+  // when session refresh creates a new User object with the same ID
+  const userId = user?.id ?? null
+
   useEffect(() => {
     let mounted = true
     const checkRole = async () => {
-      if (!user) {
+      if (!userId) {
         setIsAdmin(false)
         return
       }
@@ -19,7 +23,7 @@ export function useIsAdmin() {
         const { data, error } = await supabase
           .from("membresia")
           .select("rol")
-          .eq("usuario_id", user.id)
+          .eq("usuario_id", userId)
           .eq("rol", "gestor_central")
           .limit(1)
         if (!mounted) return
@@ -38,7 +42,7 @@ export function useIsAdmin() {
     return () => {
       mounted = false
     }
-  }, [user])
+  }, [userId])
 
   return isAdmin
 }

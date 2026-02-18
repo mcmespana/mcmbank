@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase/client"
 import { addMetric } from "@/lib/db/telemetry"
+import { ensureSession } from "@/hooks/use-app-status"
 
 export interface RunQueryOptions<T> {
   label: string
@@ -17,26 +17,17 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
   try {
     let { data, error } = await build(ac.signal)
 
-    // Retry logic with abort validation
+    // Retry logic with abort validation — uses centralized session refresh
     if (error && retryOnAuth && shouldRetryAuth(error)) {
-      // Check if request was aborted before retrying
       if (ac.signal.aborted) {
         const ms = Date.now() - started
         addMetric({ at: Date.now(), label, table, ms, status: 'aborted', error: 'Request aborted before retry' })
         return { data: null as T | null, error: new Error('Request aborted') }
       }
 
-      try {
-        // Wrap refreshSession in a timeout to prevent hanging the entire query
-        await Promise.race([
-          supabase.auth.refreshSession(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 3000))
-        ])
-      } catch {
-        // Ignore refresh errors or timeouts
-      }
+      // Use centralized session refresh (deduplicates with any other in-flight refresh)
+      await ensureSession()
 
-      // Check again after refresh
       if (ac.signal.aborted) {
         const ms = Date.now() - started
         addMetric({ at: Date.now(), label, table, ms, status: 'aborted', error: 'Request aborted after refresh' })

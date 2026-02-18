@@ -30,6 +30,11 @@ export function useDelegationCounts() {
   const requestRef = useRef(0)
   const lastDelegationRef = useRef<string | null>(null)
 
+  // getCurrentDelegation is now a stable ref-based callback, so it's safe in deps.
+  // But we only need selectedDelegation to trigger re-fetches.
+  const getCurrentDelegationRef = useRef(getCurrentDelegation)
+  getCurrentDelegationRef.current = getCurrentDelegation
+
   const fetchCounts = useCallback(async () => {
     const delegationId = selectedDelegation
 
@@ -50,7 +55,7 @@ export function useDelegationCounts() {
     setLoading(true)
     setError(null)
 
-    const delegation = getCurrentDelegation()
+    const delegation = getCurrentDelegationRef.current()
     const organizacionId = delegation?.organizacion_id ?? null
 
     try {
@@ -138,7 +143,7 @@ export function useDelegationCounts() {
         setLoading(false)
       }
     }
-  }, [selectedDelegation, getCurrentDelegation])
+  }, [selectedDelegation])
 
   useEffect(() => {
     fetchCounts()

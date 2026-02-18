@@ -34,12 +34,15 @@ export function useCuentas(
   const lastDelegacionIdRef = useRef<string | null>(null)
   const lastFetchAtRef = useRef<number>(0)
 
+  // Use a ref for TTL check to avoid cuentas.length in deps (which causes infinite callback recreation)
+  const hasCuentasRef = useRef(false)
+
   const fetchCuentas = useCallback(async (force = false) => {
     // TTL guard: if same delegacion and fetched recently, skip unless forced
     const now = Date.now()
     const isSameDelegacion = memoizedDelegacionId === lastDelegacionIdRef.current
     const isFresh = now - lastFetchAtRef.current < ttlMs
-    if (!force && isSameDelegacion && isFresh && cuentas.length > 0) {
+    if (!force && isSameDelegacion && isFresh && hasCuentasRef.current) {
       return
     }
 
@@ -120,6 +123,7 @@ export function useCuentas(
       })) as CuentaConDelegacion[]
 
       setCuentas(transformedData)
+      hasCuentasRef.current = transformedData.length > 0
       lastFetchAtRef.current = Date.now()
     } catch (err) {
       if (abortController.signal.aborted) {
@@ -139,7 +143,7 @@ export function useCuentas(
         timeoutRef.current = null
       }
     }
-  }, [memoizedDelegacionId, timeout, cuentas.length, delegacionId, ttlMs])
+  }, [memoizedDelegacionId, timeout, delegacionId, ttlMs])
 
   // Función para forzar un refresh completo
   const forceRefresh = useCallback(() => {
@@ -153,7 +157,7 @@ export function useCuentas(
 
   useEffect(() => {
     // Fetch if delegacionId changed OR if it's the first load
-    if (memoizedDelegacionId !== lastDelegacionIdRef.current || cuentas.length === 0) {
+    if (memoizedDelegacionId !== lastDelegacionIdRef.current || !hasCuentasRef.current) {
       fetchCuentasRef.current()
     }
 
@@ -167,7 +171,7 @@ export function useCuentas(
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memoizedDelegacionId, cuentas.length])
+  }, [memoizedDelegacionId])
 
   // Revalidate on focus (force = true to bypass skip guard)
   useRevalidateOnFocusJitter(() => fetchCuentasRef.current(true), { minMs: 70, maxMs: 180 })

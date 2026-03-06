@@ -141,6 +141,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                   <Input
                     value={conceptValue}
                     onChange={(e) => setConceptValue(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     onBlur={handleConceptSave}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleConceptSave()

@@ -297,6 +297,27 @@ export function CategorySelector({
               )}
             </div>
           </ScrollArea>
+          <div className="border-t p-3 space-y-2">
+            {allowMultiple && selectedCategories.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => {
+                  clearAll()
+                  setOpenState(false)
+                }}
+                className="h-9 w-full text-muted-foreground hover:text-foreground"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Limpiar selección ({selectedCategories.length})
+              </Button>
+            )}
+            <Button variant="outline" size="sm" className="h-9 w-full bg-transparent" type="button">
+              <Plus className="mr-2 h-4 w-4" />
+              Crear nueva categoría
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
 

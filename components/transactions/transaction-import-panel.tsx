@@ -62,9 +62,8 @@ export function TransactionImportPanel({
 }: TransactionImportPanelProps) {
   // Obtener las categorías disponibles para matching
   // Por ahora usaremos un valor predeterminado, pero deberíamos obtener el organizacion_id del delegacionId
-  const { categorias: availableCategories } = useCategorias(delegacionId)
-
-  const [source, setSource] = useState<SourceType | null>("manual")
+  const { categorias: availableCategories } = useCategorias(delegacionId)  
+  const [source, setSource] = useState<SourceType | null>("sabadell")
   const [file, setFile] = useState<File | null>(null)
   const [accountId, setAccountId] = useState<string>("")
   const [isImporting, setIsImporting] = useState(false)

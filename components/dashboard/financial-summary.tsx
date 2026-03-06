@@ -17,10 +17,15 @@ export function FinancialSummary({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
   const router = useRouter()
 
-  const { movimientos } = useMovimientos(selectedDelegation, {
-    fechaDesde: from,
-    fechaHasta: to,
-  })
+  // Dashboard needs ALL movements for accurate calculations, not just first 100
+  const { movimientos } = useMovimientos(
+    selectedDelegation,
+    {
+      fechaDesde: from,
+      fechaHasta: to,
+    },
+    { pageSize: 0 } // Disable pagination to load ALL movements
+  )
 
   const summary = useMemo(() => {
     if (!movimientos.length) return { ingresos: 0, gastos: 0, balance: 0, count: 0, uncategorized: 0 }
@@ -105,41 +110,43 @@ export function FinancialSummary({ from, to }: Props) {
   ]
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold flex items-center gap-2">
-        <div className="h-6 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full" />
-        Resumen Financiero
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {metrics.map((metric) => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        {metrics.map((metric, index) => (
           <Card
             key={metric.title}
-            className={`${metric.bgColor} ${metric.borderColor} border-2 transition-all duration-200 ${
-              metric.action ? "cursor-pointer hover:shadow-lg hover:scale-105" : ""
-            }`}
+            className={`${metric.bgColor} ${metric.borderColor} border-2 backdrop-blur-xl transition-all duration-300 ${
+              metric.action ? "cursor-pointer hover:shadow-2xl hover:scale-[1.05] hover:-translate-y-1" : "hover:shadow-xl"
+            } relative overflow-hidden group`}
             onClick={metric.action}
+            style={{ animationDelay: `${index * 100}ms` }}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium truncate pr-2">{metric.title}</CardTitle>
-              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            {/* Gradient overlay effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+              <CardTitle className="text-sm font-semibold truncate pr-2">{metric.title}</CardTitle>
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {metric.badge && (
-                  <Badge variant={metric.badgeVariant as any} className="text-xs hidden sm:inline-flex">
+                  <Badge variant={metric.badgeVariant as any} className="text-xs hidden sm:inline-flex shadow-sm">
                     {metric.badge}
                   </Badge>
                 )}
-                <div className="p-1.5 sm:p-2 rounded-lg bg-white/50 dark:bg-black/20">
-                  <metric.icon className={`h-3 w-3 sm:h-4 sm:w-4 ${metric.color}`} />
+                <div className="p-2 rounded-xl bg-white/60 dark:bg-black/30 backdrop-blur-sm shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <metric.icon className={`h-4 w-4 ${metric.color}`} />
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="pt-0 relative z-10">
               <div className="flex items-end justify-between">
                 <div className="min-w-0 flex-1">
-                  <div className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{metric.value}</div>
-                  <p className="text-xs text-muted-foreground truncate">{metric.description}</p>
+                  <div className="text-lg sm:text-2xl lg:text-3xl font-extrabold truncate mb-1">{metric.value}</div>
+                  <p className="text-xs text-muted-foreground/80 truncate font-medium">{metric.description}</p>
                 </div>
                 {metric.trend && (
-                  <metric.trend className={`h-3 w-3 sm:h-4 sm:w-4 ${metric.trendColor} flex-shrink-0`} />
+                  <div className="p-1.5 rounded-lg bg-white/50 dark:bg-black/20 backdrop-blur-sm">
+                    <metric.trend className={`h-4 w-4 ${metric.trendColor} flex-shrink-0`} />
+                  </div>
                 )}
               </div>
             </CardContent>

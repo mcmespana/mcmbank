@@ -214,7 +214,7 @@ export function CategorySelector({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[360px] p-0" align="start">
+        <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[360px] p-0" align="start">
           <div className="border-b p-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
@@ -236,7 +236,7 @@ export function CategorySelector({
               />
             </div>
           </div>
-          <ScrollArea className="max-h-[320px]">
+          <ScrollArea className="h-[480px]">
             <div className="space-y-3 p-3">
               {normalizedSearch ? (
                 filteredCategories.length === 0 ? (
@@ -397,9 +397,10 @@ function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCateg
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(var(--category-color-rgb),0.35)] bg-white text-[var(--category-color)] shadow-sm transition-colors",
-              "dark:bg-background",
-              isParentSelected && "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)]",
+              "flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(var(--category-color-rgb),0.25)] transition-colors shadow-sm",
+              isParentSelected
+                ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)]"
+                : "bg-[rgba(var(--category-color-rgb),0.1)] text-[var(--category-color)] dark:bg-[rgba(var(--category-color-rgb),0.2)]",
             )}
           >
             {isParentSelected ? (
@@ -460,7 +461,7 @@ function CategoryChipButton({ category, colorSource, selected, onSelect }: Categ
         "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2",
         selected
           ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)] shadow-sm"
-          : "border-transparent bg-[rgba(var(--category-color-rgb),0.14)] text-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.22)] dark:bg-[rgba(var(--category-color-rgb),0.18)] dark:hover:bg-[rgba(var(--category-color-rgb),0.26)]",
+          : "border-[rgba(var(--category-color-rgb),0.35)] bg-[rgba(var(--category-color-rgb),0.25)] text-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.35)] shadow-sm dark:bg-[rgba(var(--category-color-rgb),0.18)] dark:hover:bg-[rgba(var(--category-color-rgb),0.26)] dark:border-transparent dark:shadow-none",
       )}
       style={style}
     >
@@ -538,7 +539,7 @@ function SelectedCategoryBadge({ category, colorSource, onRemove }: SelectedCate
 
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-full border border-transparent bg-[rgba(var(--category-color-rgb),0.16)] px-3 py-1.5 text-xs font-medium text-[var(--category-color)] shadow-sm transition-colors duration-200 dark:bg-[rgba(var(--category-color-rgb),0.26)]"
+      className="inline-flex items-center gap-2 rounded-full border border-[rgba(var(--category-color-rgb),0.35)] px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors duration-200 bg-[rgba(var(--category-color-rgb),0.25)] text-[var(--category-color)] dark:bg-[rgba(var(--category-color-rgb),0.2)] dark:border-[rgba(var(--category-color-rgb),0.4)]"
       style={style}
     >
       {category.emoji && <span className="text-sm leading-none">{category.emoji}</span>}

@@ -45,11 +45,11 @@ export function ConfigurationManager() {
   }, [])
 
   async function fetchDelegaciones() {
-    const { data } = await supabase.from("delegacion").select("*")
+    const { data } = await (supabase as any).from("delegacion").select("*")
     const results: DelegacionWithCount[] = []
     if (data) {
       for (const d of data) {
-        const { count } = await supabase
+        const { count } = await (supabase as any)
           .from("movimiento")
           .select("*", { count: "exact", head: true })
           .eq("delegacion_id", d.id)
@@ -69,7 +69,7 @@ export function ConfigurationManager() {
       delegaciones: [],
       rol: null,
     }))
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("membresia")
       .select("usuario_id, rol, delegacion:delegacion_id (id, nombre)")
     baseUsers.forEach((u) => {
@@ -82,7 +82,7 @@ export function ConfigurationManager() {
 
   async function saveDelegacion(patch: { nombre: string; codigo: string | null }) {
     if (!editingDelegacion) return
-    await supabase.from("delegacion").update(patch).eq("id", editingDelegacion.id)
+    await (supabase as any).from("delegacion").update(patch).eq("id", editingDelegacion.id)
     await fetchDelegaciones()
     setEditingDelegacion(null)
   }
@@ -95,23 +95,23 @@ export function ConfigurationManager() {
         body: JSON.stringify({ password: updated.password }),
       })
     }
-    const { data: current } = await supabase
+    const { data: current } = await (supabase as any)
       .from("membresia")
       .select("delegacion_id")
       .eq("usuario_id", updated.id)
-    const currentIds = (current || []).map((m) => m.delegacion_id)
+    const currentIds = (current || []).map((m: any) => m.delegacion_id)
     const selectedIds = updated.delegaciones.map((d) => d.id)
-    const toRemove = currentIds.filter((id) => !selectedIds.includes(id))
+    const toRemove = currentIds.filter((id: any) => !selectedIds.includes(id))
     const toAdd = selectedIds.filter((id) => !currentIds.includes(id))
     if (toRemove.length) {
-      await supabase.from("membresia").delete().in("delegacion_id", toRemove).eq("usuario_id", updated.id)
+      await (supabase as any).from("membresia").delete().in("delegacion_id", toRemove).eq("usuario_id", updated.id)
     }
     for (const id of toAdd) {
-      await supabase
+      await (supabase as any)
         .from("membresia")
         .insert({ usuario_id: updated.id, delegacion_id: id, rol: updated.rol || "solo_lectura" })
     }
-    await supabase
+    await (supabase as any)
       .from("membresia")
       .update({ rol: updated.rol || "solo_lectura" })
       .in("delegacion_id", selectedIds)
@@ -122,7 +122,7 @@ export function ConfigurationManager() {
 
   async function deleteUser(user: UserInfo) {
     await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" })
-    await supabase.from("membresia").delete().eq("usuario_id", user.id)
+    await (supabase as any).from("membresia").delete().eq("usuario_id", user.id)
     await fetchUsers()
   }
 

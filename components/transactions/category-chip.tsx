@@ -3,6 +3,13 @@
 import { useState, type CSSProperties } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Plus, X } from "lucide-react"
 import { getCategoryColorTokens } from "@/lib/utils/category-colors"
 import type { Categoria, Movimiento, Cuenta } from "@/lib/types/database"
@@ -40,7 +47,7 @@ export function CategoryChip({
   }
 
   if (category) {
-    const { color, textColor, rgbValue } = getCategoryColorTokens(category)
+    const { color, textColor, rgbValue } = getCategoryColorTokens(category, categories)
     const badgeStyles: CSSProperties = {
       ["--category-color" as string]: color,
       ["--category-text-color" as string]: textColor,
@@ -51,14 +58,10 @@ export function CategoryChip({
       <div className="flex items-center gap-2">
         <Badge
           variant="outline"
-          className="group cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium inline-flex items-center gap-2 transition-all duration-200 border border-transparent shadow-sm hover:shadow-md hover:scale-105 bg-[var(--category-color)] text-[var(--category-text-color)] dark:bg-transparent dark:text-foreground dark:border-[var(--category-color)] dark:shadow-none dark:hover:bg-[rgba(var(--category-color-rgb),0.18)]"
+          className="group cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium inline-flex items-center gap-2 transition-all duration-200 border border-transparent shadow-sm hover:shadow-md hover:scale-105 bg-[var(--category-color)] text-[var(--category-text-color)] dark:bg-transparent dark:border-[var(--category-color)] dark:text-[var(--category-color)]"
           style={badgeStyles}
           onClick={openDialog}
         >
-          <span
-            aria-hidden
-            className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--category-color)] dark:inline-flex"
-          />
           {category.emoji && <span className="text-xs">{category.emoji}</span>}
           <span className="text-xs font-medium leading-none">{category.nombre}</span>
         </Badge>
@@ -76,26 +79,27 @@ export function CategoryChip({
           <X className="h-3 w-3" />
         </Button>
 
-        {open && (
-          <div
-            className="fixed inset-0 z-[90] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-            onClick={closeDialog}
-          >
-            <div onClick={(event) => event.stopPropagation()}>
-              <CategoryMegaSelector
-                categories={categories}
-                selectedCategoryId={category.id}
-                onSelect={(categoryId) => {
-                  onCategoryChange(categoryId)
-                }}
-                onClose={closeDialog}
-                movement={movement}
-                account={account}
-                onCreateCategory={onCreateCategory}
-              />
-            </div>
-          </div>
-        )}
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-3xl w-full p-0 overflow-hidden">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Cambiar categoría</DialogTitle>
+              <DialogDescription>
+                Selecciona una nueva categoría para esta transacción.
+              </DialogDescription>
+            </DialogHeader>
+            <CategoryMegaSelector
+              categories={categories}
+              selectedCategoryId={category.id}
+              onSelect={(categoryId) => {
+                onCategoryChange(categoryId)
+              }}
+              onClose={closeDialog}
+              movement={movement}
+              account={account}
+              onCreateCategory={onCreateCategory}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
@@ -111,27 +115,27 @@ export function CategoryChip({
         <Plus className="h-3 w-3 mr-1.5" />
         Etiquetar
       </Button>
-
-      {open && (
-        <div
-          className="fixed inset-0 z-[90] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-          onClick={closeDialog}
-        >
-          <div onClick={(event) => event.stopPropagation()}>
-            <CategoryMegaSelector
-              categories={categories}
-              selectedCategoryId={null}
-              onSelect={(categoryId) => {
-                onCategoryChange(categoryId)
-              }}
-              onClose={closeDialog}
-              movement={movement}
-              account={account}
-              onCreateCategory={onCreateCategory}
-            />
-          </div>
-        </div>
-      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl w-full p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Asignar categoría</DialogTitle>
+            <DialogDescription>
+              Busca y selecciona la mejor categoría para esta transacción.
+            </DialogDescription>
+          </DialogHeader>
+          <CategoryMegaSelector
+            categories={categories}
+            selectedCategoryId={null}
+            onSelect={(categoryId) => {
+              onCategoryChange(categoryId)
+            }}
+            onClose={closeDialog}
+            movement={movement}
+            account={account}
+            onCreateCategory={onCreateCategory}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

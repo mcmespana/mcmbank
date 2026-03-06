@@ -20,6 +20,7 @@ import { CategoryChip } from "./category-chip"
 import { BankAvatar } from "@/components/bank-avatar"
 import { TabWithCounter } from "./tab-with-counter"
 import { formatCurrency } from "@/lib/utils/format"
+import { formatIsoDateToInput, maskDateInput, parseDateInputToIso } from "@/lib/utils/date-input"
 import { TransactionFiles } from "./transaction-files"
 import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -56,6 +57,7 @@ export function TransactionDetail({
   const [showAmountConfirm, setShowAmountConfirm] = useState(false)
   const [pendingAmount, setPendingAmount] = useState<string>("")
   const [isAmountEditing, setIsAmountEditing] = useState(false)
+  const [dateInput, setDateInput] = useState("")
   const [activeTab, setActiveTab] = useState<"datos" | "archivos">(initialTab)
   const [fileCount, setFileCount] = useState(0)
 
@@ -92,6 +94,7 @@ export function TransactionDetail({
       setActiveTab("datos")
       setFileCount(0)
       setIsAmountEditing(false)
+      setDateInput("")
       setShowAmountConfirm(false)
       setPendingAmount("")
       setSaveStatus("idle")
@@ -102,6 +105,7 @@ export function TransactionDetail({
     }
 
     setFormData({ ...baselineData })
+    setDateInput(formatIsoDateToInput(baselineData.fecha))
     setFormMovementId(movement.id)
     setActiveTab(initialTab)
     setFileCount(0)
@@ -279,6 +283,7 @@ export function TransactionDetail({
     }
 
     const formattedDate = format(selectedDate, "yyyy-MM-dd")
+    setDateInput(formatIsoDateToInput(formattedDate))
 
     setFormData((prev) => {
       if (prev.fecha === formattedDate) {
@@ -297,7 +302,7 @@ export function TransactionDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:w-[560px] sm:max-w-[640px] overflow-y-auto p-0 z-[60]">
+      <SheetContent side="right" className="w-full sm:w-[480px] md:w-[560px] sm:max-w-[90vw] md:max-w-[640px] overflow-y-auto p-0 z-[60]">
         {!movement ? (
           <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 p-6 text-sm text-muted-foreground">
             <LoadingSpinner size="md" />
@@ -364,7 +369,7 @@ export function TransactionDetail({
                           className="mx-auto flex items-center gap-2 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
                         >
                           <CalendarIcon className="h-4 w-4" />
-                          {formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : "Sin fecha"}
+                          {formData.fecha ? formatIsoDateToInput(formData.fecha) : "Sin fecha"}
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 z-[80]" align="center" sideOffset={12}>
@@ -459,30 +464,64 @@ export function TransactionDetail({
                       <Label htmlFor="fecha" className="text-sm font-medium">
                         Fecha
                       </Label>
-                      <Popover open={isFormDateOpen} onOpenChange={setIsFormDateOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal h-9",
-                              !formData.fecha && "text-muted-foreground",
-                            )}
-                            type="button"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formData.fecha ? format(new Date(formData.fecha), "dd/MM/yyyy") : "Fecha"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-[80]" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={formData.fecha ? new Date(formData.fecha) : undefined}
-                            onSelect={(date) => handleDateSelection(date, () => setIsFormDateOpen(false))}
-                            locale={es}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <div className="flex gap-2">
+                        {/* Manual date input */}
+                        <Input
+                          id="fecha"
+                          type="text"
+                          value={dateInput}
+                          onChange={(e) => {
+                            const maskedValue = maskDateInput(e.target.value)
+                            setDateInput(maskedValue)
+
+                            const parsedDate = parseDateInputToIso(maskedValue)
+                            if (!parsedDate) {
+                              return
+                            }
+
+                            setFormData((prev) => {
+                              if (prev.fecha === parsedDate) {
+                                return prev
+                              }
+                              return {
+                                ...prev,
+                                fecha: parsedDate,
+                                descripcion: appendHistoryNote(prev, "date"),
+                              }
+                            })
+                          }}
+                          onBlur={() => {
+                            setDateInput(formatIsoDateToInput(formData.fecha))
+                          }}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="DD/MM/AAAA"
+                          className="flex-1 h-9"
+                        />
+                        {/* Calendar picker button */}
+                        <Popover open={isFormDateOpen} onOpenChange={setIsFormDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="flex-shrink-0 h-9 w-9"
+                              title="Abrir calendario"
+                            >
+                              <CalendarIcon className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 z-[80]" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={formData.fecha ? new Date(formData.fecha) : undefined}
+                              onSelect={(date) => handleDateSelection(date, () => setIsFormDateOpen(false))}
+                              locale={es}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                   </div>
 

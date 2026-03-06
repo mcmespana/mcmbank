@@ -14,12 +14,16 @@ import { cn } from "@/lib/utils"
 interface CategoryMegaSelectorProps {
   categories: Categoria[]
   selectedCategoryId?: string | null
-  onSelect: (categoryId: string) => void
+  selectedCategories?: string[]
+  onSelect?: (categoryId: string) => void
+  onSelectionChange?: (categoryIds: string[]) => void
   onClose: () => void
   movement?: Movimiento | null
   account?: Cuenta | null
   onCreateCategory?: () => void
   bulkSelectionLabel?: string
+  allowMultiple?: boolean
+  title?: string
 }
 
 interface CategoryGroup {
@@ -30,15 +34,24 @@ interface CategoryGroup {
 export function CategoryMegaSelector({
   categories,
   selectedCategoryId,
+  selectedCategories: selectedCategoriesProp = [],
   onSelect,
+  onSelectionChange,
   onClose,
   movement,
   account,
   onCreateCategory,
   bulkSelectionLabel,
+  allowMultiple = false,
+  title,
 }: CategoryMegaSelectorProps) {
   const [searchValue, setSearchValue] = useState("")
+  const [internalSelectedCategories, setInternalSelectedCategories] = useState<string[]>(selectedCategoriesProp)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const selectedCategories = allowMultiple ? internalSelectedCategories : []
+  const isSelected = (categoryId: string) =>
+    allowMultiple ? selectedCategories.includes(categoryId) : selectedCategoryId === categoryId
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => inputRef.current?.focus())
@@ -59,15 +72,15 @@ export function CategoryMegaSelector({
     })
 
     const sortedParents = [...parentCategories].sort((a, b) => {
-      const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-      const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+      const ordenA = "orden_efectivo" in a ? (a as any).orden_efectivo ?? a.orden : a.orden
+      const ordenB = "orden_efectivo" in b ? (b as any).orden_efectivo ?? b.orden : b.orden
       if (ordenA !== ordenB) return ordenA - ordenB
       return a.nombre.localeCompare(b.nombre)
     })
     const groups: CategoryGroup[] = sortedParents.map((parent) => {
       const children = (childMap.get(parent.id) || []).sort((a, b) => {
-        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        const ordenA = "orden_efectivo" in a ? (a as any).orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? (b as any).orden_efectivo ?? b.orden : b.orden
         if (ordenA !== ordenB) return ordenA - ordenB
         return a.nombre.localeCompare(b.nombre)
       })
@@ -83,8 +96,8 @@ export function CategoryMegaSelector({
     const orphans = categories
       .filter((cat) => cat.categoria_padre_id && !parentIds.has(cat.categoria_padre_id))
       .sort((a, b) => {
-        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        const ordenA = "orden_efectivo" in a ? (a as any).orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? (b as any).orden_efectivo ?? b.orden : b.orden
         if (ordenA !== ordenB) return ordenA - ordenB
         return a.nombre.localeCompare(b.nombre)
       })
@@ -114,20 +127,36 @@ export function CategoryMegaSelector({
         (category.emoji && category.emoji.includes(searchValue.trim())),
       )
       .sort((a, b) => {
-        const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-        const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+        const ordenA = "orden_efectivo" in a ? (a as any).orden_efectivo ?? a.orden : a.orden
+        const ordenB = "orden_efectivo" in b ? (b as any).orden_efectivo ?? b.orden : b.orden
         if (ordenA !== ordenB) return ordenA - ordenB
         return a.nombre.localeCompare(b.nombre)
       })
   }, [categories, normalizedSearch, searchValue])
 
   const handleSelect = (categoryId: string) => {
-    onSelect(categoryId)
+    if (allowMultiple) {
+      const newSelection = selectedCategories.includes(categoryId)
+        ? selectedCategories.filter((id) => id !== categoryId)
+        : [...selectedCategories, categoryId]
+      setInternalSelectedCategories(newSelection)
+    } else {
+      onSelect?.(categoryId)
+      onClose()
+    }
+  }
+
+  const handleApply = () => {
+    onSelectionChange?.(internalSelectedCategories)
     onClose()
   }
 
+  const handleClearAll = () => {
+    setInternalSelectedCategories([])
+  }
+
   return (
-    <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-full sm:h-auto max-h-screen sm:max-h-[calc(100vh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
+    <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-[calc(100vh-2rem)] sm:h-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
       <div className="border-b bg-muted/40 p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
           <div className="flex flex-1 items-start gap-3 sm:items-center">
@@ -161,10 +190,31 @@ export function CategoryMegaSelector({
                   </p>
                 </div>
               </div>
+            ) : title ? (
+              <div className="flex items-start gap-3">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-semibold leading-tight">{title}</h2>
+                  {allowMultiple && selectedCategories.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {selectedCategories.length} categoría{selectedCategories.length !== 1 ? "s" : ""} seleccionada{selectedCategories.length !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
             ) : null}
           </div>
 
-          <div className="flex items-start justify-between gap-2 sm:flex-col sm:items-end sm:justify-start">
+          <div className="flex items-center gap-2">
+            {allowMultiple && selectedCategories.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearAll}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Limpiar
+              </Button>
+            )}
             {movement && (
               <span
                 className={cn(
@@ -234,7 +284,7 @@ export function CategoryMegaSelector({
                         key={category.id}
                         category={category}
                         parent={parent}
-                        isSelected={selectedCategoryId === category.id}
+                        isSelected={isSelected(category.id)}
                         onSelect={() => handleSelect(category.id)}
                       />
                     )
@@ -247,7 +297,7 @@ export function CategoryMegaSelector({
                   <CategoryGroupSection
                     key={group.parent.id}
                     group={group}
-                    selectedCategoryId={selectedCategoryId}
+                    isSelected={isSelected}
                     onSelect={handleSelect}
                   />
                 ))}
@@ -261,7 +311,7 @@ export function CategoryMegaSelector({
                           key={category.id}
                           category={category}
                           size="sm"
-                          isSelected={selectedCategoryId === category.id}
+                          isSelected={isSelected(category.id)}
                           onClick={() => handleSelect(category.id)}
                         />
                       ))}
@@ -273,6 +323,21 @@ export function CategoryMegaSelector({
           </div>
         </div>
       </div>
+
+      {allowMultiple && (
+        <div className="border-t bg-muted/20 p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              {selectedCategories.length === 0
+                ? "Selecciona categorías para filtrar"
+                : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
+            </p>
+            <Button onClick={handleApply} disabled={selectedCategories.length === 0}>
+              Aplicar filtros
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -308,11 +373,11 @@ function CategoryResultRow({ category, parent, isSelected, onSelect }: CategoryR
 
 interface CategoryGroupSectionProps {
   group: CategoryGroup
-  selectedCategoryId?: string | null
+  isSelected: (categoryId: string) => boolean
   onSelect: (categoryId: string) => void
 }
 
-function CategoryGroupSection({ group, selectedCategoryId, onSelect }: CategoryGroupSectionProps) {
+function CategoryGroupSection({ group, isSelected, onSelect }: CategoryGroupSectionProps) {
   const { parent, children } = group
 
   return (
@@ -322,7 +387,7 @@ function CategoryGroupSection({ group, selectedCategoryId, onSelect }: CategoryG
           category={parent}
           size="lg"
           onClick={() => onSelect(parent.id)}
-          isSelected={selectedCategoryId === parent.id}
+          isSelected={isSelected(parent.id)}
         />
         {children.length > 0 && (
           <span className="text-xs text-muted-foreground">
@@ -338,7 +403,7 @@ function CategoryGroupSection({ group, selectedCategoryId, onSelect }: CategoryG
               category={child}
               size="sm"
               onClick={() => onSelect(child.id)}
-              isSelected={selectedCategoryId === child.id}
+              isSelected={isSelected(child.id)}
             />
           ))}
         </div>
@@ -377,9 +442,8 @@ function CategoryPill({ category, size = "md", isSelected = false, onClick }: Ca
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-2 rounded-full border border-transparent shadow-sm transition-all duration-200 bg-[var(--category-color)] text-[var(--category-text-color)] hover:shadow-md cursor-pointer",
-        isSelected && "ring-2 ring-offset-2 ring-primary",
+        isSelected && "ring-2 ring-primary",
         sizeClasses,
-        category.categoria_padre_id && size !== "lg" && "bg-[var(--category-color)]/90",
       )}
       style={badgeStyles}
     >

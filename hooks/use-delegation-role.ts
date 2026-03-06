@@ -33,13 +33,14 @@ export function useDelegationRole(delegationId?: string | null): DelegationRoleS
       setError(null)
 
       try {
-        const { data, error: queryError } = await supabase
+        const query = supabase
           .from("membresia")
           .select("rol")
           .eq("usuario_id", user.id)
           .eq("delegacion_id", delegationId)
           .maybeSingle()
-          .abortSignal(abortController.signal)
+
+        const { data, error: queryError } = await (query as any).abortSignal(abortController.signal)
 
         if (!isMounted) return
 

@@ -72,6 +72,8 @@ export function TransactionManager() {
   const [detailInitialTab, setDetailInitialTab] = useState<"datos" | "archivos">("datos")
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+
   const [createFormOpen, setCreateFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle")
@@ -112,6 +114,13 @@ export function TransactionManager() {
     amountTo: filters.amountTo,
     uncategorized: filters.uncategorized,
   })
+
+  // Notify on fetch error
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
 
   const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
@@ -208,9 +217,9 @@ export function TransactionManager() {
           handleMovementUpdate(movementId, { categoria_id: categoryId } as Partial<MovimientoConRelaciones>),
         ),
       )
-      toast.success(`Categoría actualizada en ${selectionCount} transacciones`)
+      toast.success(`Categoría actualizada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkCategoryOpen(false)
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error updating categories in bulk", error)
       toast.error("No se pudieron actualizar las categorías seleccionadas")
@@ -233,10 +242,10 @@ export function TransactionManager() {
           handleMovementUpdate(movementId, { concepto: nextConcept }),
         ),
       )
-      toast.success(`Concepto actualizado en ${selectionCount} transacciones`)
+      toast.success(`Concepto actualizado en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkConceptOpen(false)
       setBulkConceptValue("")
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error updating concept in bulk", error)
       toast.error("No se pudieron actualizar los conceptos seleccionados")
@@ -263,10 +272,10 @@ export function TransactionManager() {
           return handleMovementUpdate(movement.id, { descripcion: newDescription })
         }),
       )
-      toast.success(`Descripción ampliada en ${selectionCount} transacciones`)
+      toast.success(`Descripción ampliada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkDescriptionOpen(false)
       setBulkDescriptionValue("")
-      clearSelection()
+      // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error appending description in bulk", error)
       toast.error("No se pudieron actualizar las descripciones seleccionadas")
@@ -324,12 +333,12 @@ export function TransactionManager() {
         setSelectedMovementSnapshot((prev) =>
           prev
             ? {
-                ...prev,
-                ...movementPatch,
-                ...(categoriaIdForMovement !== undefined
-                  ? { categoria_id: categoriaIdForMovement }
-                  : {}),
-              }
+              ...prev,
+              ...movementPatch,
+              ...(categoriaIdForMovement !== undefined
+                ? { categoria_id: categoriaIdForMovement }
+                : {}),
+            }
             : prev,
         )
       }
@@ -437,12 +446,11 @@ export function TransactionManager() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-8rem)] overflow-hidden">
       {/* Desktop Sidebar Filters */}
       <div
-        className={`hidden lg:block border-r bg-card transition-all duration-300 ${
-          sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
-        }`}
+        className={`hidden lg:block border-r bg-card transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
+          }`}
       >
         {!sidebarCollapsed && (
           <div className="p-6 space-y-6">
@@ -471,27 +479,25 @@ export function TransactionManager() {
         )}
       </div>
 
-      {sidebarCollapsed && (
-        <div className="hidden lg:flex items-start p-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSidebarCollapsed(false)}
-            className="rotate-0"
-            title="Mostrar filtros"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Header with Date Filter and Actions */}
         <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
           <div className="flex items-center justify-between gap-2 min-h-[40px]">
-            {/* Date Filter - Responsive width */}
-            <div className="flex-shrink-0">
+            {/* Date Filter with show filters button - Responsive width */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Desktop Show Filters Button */}
+              {sidebarCollapsed && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSidebarCollapsed(false)}
+                  className="hidden lg:flex flex-shrink-0"
+                  title="Mostrar filtros"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
               <div className="w-[200px] sm:w-[240px] md:w-[280px] lg:w-[320px]">
                 <DateRangeFilter
                   dateFrom={filters.dateFrom}
@@ -508,19 +514,18 @@ export function TransactionManager() {
                 variant={hasActiveFilters ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFiltersOpen(!filtersOpen)}
-                className={`lg:hidden flex-shrink-0 relative ${
-                  hasActiveFilters ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
-                }`}
+                className={`lg:hidden flex-shrink-0 relative ${hasActiveFilters ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
+                  }`}
                 title="Filtros"
               >
                 <Filter className="h-4 w-4" />
-                <span className="hidden sm:ml-2 sm:inline">Filtros</span>
+                <span className="sr-only">Filtros</span>
                 {hasActiveFilters && (
                   <div className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
                 )}
               </Button>
 
-              {/* Add Button - Always show text on sm+ screens */}
+              {/* Add Button - Show text on md+ screens */}
               <Button
                 variant="outline"
                 size="sm"
@@ -529,10 +534,10 @@ export function TransactionManager() {
                 title="Añadir transacción"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:ml-2 sm:inline">Añadir</span>
+                <span className="hidden md:ml-2 md:inline">Añadir</span>
               </Button>
 
-              {/* Import Button - Hide text on smaller screens */}
+              {/* Import Button - Show text on md+ screens */}
               <Button
                 variant="outline"
                 size="sm"
@@ -541,18 +546,17 @@ export function TransactionManager() {
                 onClick={() => setImportOpen(true)}
               >
                 <Upload className="h-4 w-4" />
-                <span className="hidden lg:ml-2 lg:inline">Importar</span>
+                <span className="hidden md:ml-2 md:inline">Importar</span>
               </Button>
 
-              {/* Download Button - Hide text on smaller screens */}
+              {/* Download Button - Show text on md+ screens */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDownload}
                 disabled={downloadState === "downloading"}
-                className={`flex-shrink-0 bg-transparent ${
-                  downloadState === "success" ? "bg-green-500 hover:bg-green-600 text-white" : ""
-                }`}
+                className={`flex-shrink-0 bg-transparent ${downloadState === "success" ? "bg-green-500 hover:bg-green-600 text-white" : ""
+                  }`}
                 title="Descargar transacciones"
               >
                 {downloadState === "downloading" ? (
@@ -562,12 +566,12 @@ export function TransactionManager() {
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                <span className="hidden lg:ml-2 lg:inline">
+                <span className="hidden md:ml-2 md:inline">
                   {downloadState === "downloading"
                     ? "Descargando..."
                     : downloadState === "success"
-                    ? "Descargado"
-                    : "Descargar"}
+                      ? "Descargado"
+                      : "Descargar"}
                 </span>
               </Button>
             </div>
@@ -587,13 +591,10 @@ export function TransactionManager() {
                     <p className="text-sm font-semibold tracking-tight">
                       {selectionCount} transacciones seleccionadas
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Estas acciones aplican a las transacciones visibles, sin importar la cuenta de origen.
-                    </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -601,7 +602,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <Tag className="h-4 w-4" />
-                    <span>Editar categoría</span>
+                    <span className="hidden sm:inline">Editar categoría</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -610,7 +611,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <Type className="h-4 w-4" />
-                    <span>Unificar concepto</span>
+                    <span className="hidden sm:inline">Unificar concepto</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -619,7 +620,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <FilePlus className="h-4 w-4" />
-                    <span>Añadir nota</span>
+                    <span className="hidden sm:inline">Añadir nota</span>
                   </Button>
                   <Button
                     variant="destructive"
@@ -628,7 +629,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <Trash2 className="h-4 w-4" />
-                    <span>Eliminar</span>
+                    <span className="hidden sm:inline">Eliminar</span>
                   </Button>
                 </div>
               </div>
@@ -666,7 +667,7 @@ export function TransactionManager() {
 
         {/* Transaction List */}
         <div className="flex-1 overflow-auto">
-          
+
           <TransactionList
             movements={movements}
             accounts={accounts as unknown as Cuenta[]}
@@ -739,7 +740,13 @@ export function TransactionManager() {
           }
         }}
       >
-        <DialogContent className="max-w-4xl w-full p-0 overflow-hidden">
+        <DialogContent className="max-w-4xl w-[calc(100%-1rem)] sm:w-full p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Seleccionar categoría en bloque</DialogTitle>
+            <DialogDescription>
+              Selecciona la categoría que se aplicará a las {selectionCount} transacciones seleccionadas.
+            </DialogDescription>
+          </DialogHeader>
           <CategoryMegaSelector
             categories={categories as unknown as Categoria[]}
             selectedCategoryId={undefined}

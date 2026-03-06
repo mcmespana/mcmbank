@@ -111,12 +111,14 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
-      {/* Mobile menu button */}
-      <Sidebar showDesktop={false} />
+    <header className="sticky top-0 z-40 flex h-14 sm:h-16 items-center gap-1.5 sm:gap-2 lg:gap-4 border-b border-border/30 bg-background/80 backdrop-blur-2xl shadow-sm px-2 sm:px-4 lg:px-6 overflow-hidden">
+      {/* Mobile menu button - fixed width */}
+      <div className="flex-shrink-0">
+        <Sidebar showDesktop={false} />
+      </div>
 
-      {/* Delegation selector */}
-      <div className="flex items-center gap-4">
+      {/* Delegation selector - limited width */}
+      <div className="flex items-center min-w-0 overflow-hidden max-w-[160px] sm:max-w-[280px] md:max-w-[320px]">
         <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
       </div>
 
@@ -124,16 +126,16 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
       <div className="flex-1" />
 
       {/* Right side actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
         {/* Manual/Documentation button */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleManualClick}
-          className="hidden sm:inline-flex"
+          className="hidden sm:inline-flex gap-2 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-300"
         >
-          <BookOpen className="h-4 w-4 mr-2" />
-          Manual
+          <BookOpen className="h-4 w-4" />
+          <span>Manual</span>
         </Button>
 
         {/* Theme toggle */}
@@ -141,7 +143,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           <Button
             variant="ghost"
             size="sm"
-            className="w-9 h-9 p-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-110 flex-shrink-0"
             onClick={handleThemeCycle}
             title={`Cambiar tema (actual: ${currentThemeLabel})`}
           >
@@ -151,20 +153,20 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         )}
 
         {/* User info and logout */}
-        <div className="flex items-center gap-3 pl-2 border-l border-border">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
+        <div className="flex items-center gap-1 sm:gap-3 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border/30 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 bg-card/50 backdrop-blur-sm rounded-2xl px-2 sm:px-3 py-1.5 border border-border/30 shadow-sm">
+            <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-primary/20 ring-offset-0 sm:ring-offset-2 ring-offset-background flex-shrink-0">
               <AvatarImage src="" alt={getUserDisplayName()} />
-              <AvatarFallback className="text-xs font-medium">
+              <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
                 {getUserInitials(perfil?.nombre_completo, user?.email)}
               </AvatarFallback>
             </Avatar>
-            <div className="hidden sm:flex flex-col items-start text-sm">
-              <span className="font-medium text-foreground leading-none">
+            <div className="hidden sm:flex flex-col items-start text-sm min-w-0">
+              <span className="font-semibold text-foreground leading-none truncate max-w-[180px] text-sm">
                 {getUserDisplayName()}
               </span>
               {user?.email && (
-                <span className="text-xs text-muted-foreground mt-0.5">
+                <span className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">
                   {user.email}
                 </span>
               )}
@@ -176,7 +178,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
-            className="text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 w-9 h-9 p-0"
+            className="text-muted-foreground hover:text-red-600 hover:bg-red-500/10 w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl transition-all duration-300 hover:scale-110 flex-shrink-0"
             title="Cerrar sesión"
           >
             <LogOut className="h-4 w-4" />

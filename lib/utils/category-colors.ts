@@ -72,9 +72,19 @@ function relativeLuminance({ r, g, b }: RgbColor) {
   return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl
 }
 
-export function resolveCategoryColor(category: Pick<Categoria, "color" | "tipo">) {
+export function resolveCategoryColor(
+  category: Pick<Categoria, "id" | "color" | "tipo" | "categoria_padre_id">,
+  allCategories?: Pick<Categoria, "id" | "color" | "tipo" | "categoria_padre_id">[],
+): string {
   if (category.color && category.color.trim() !== "") {
     return category.color
+  }
+
+  if (category.categoria_padre_id && allCategories) {
+    const parent = allCategories.find((c) => c.id === category.categoria_padre_id)
+    if (parent) {
+      return resolveCategoryColor(parent, allCategories)
+    }
   }
 
   if (category.tipo && DEFAULT_CATEGORY_COLORS[category.tipo]) {
@@ -99,9 +109,10 @@ function formatRgbValue(rgb: RgbColor) {
 }
 
 export function getCategoryColorTokens(
-  category: Pick<Categoria, "color" | "tipo">
+  category: Pick<Categoria, "id" | "color" | "tipo" | "categoria_padre_id">,
+  allCategories?: Pick<Categoria, "id" | "color" | "tipo" | "categoria_padre_id">[],
 ): CategoryColorTokens {
-  const color = resolveCategoryColor(category)
+  const color = resolveCategoryColor(category, allCategories)
   const parsedColor = parseColor(color)
   const fallbackRgb = parseHexColor(FALLBACK_COLOR)!
 

@@ -304,14 +304,14 @@ export type Database = {
           impacto: string | null
           tipo: "idea" | "error"
           estado:
-            | "nueva_idea"
-            | "en_estudio"
-            | "lo_haremos"
-            | "en_desarrollo"
-            | "hechisimo"
-            | "error_detectado"
-            | "resolviendo"
-            | "resuelto"
+          | "nueva_idea"
+          | "en_estudio"
+          | "lo_haremos"
+          | "en_desarrollo"
+          | "hechisimo"
+          | "error_detectado"
+          | "resolviendo"
+          | "resuelto"
           creado_por: string
           creado_por_nombre: string | null
           creado_por_email: string | null
@@ -325,14 +325,14 @@ export type Database = {
           impacto?: string | null
           tipo?: "idea" | "error"
           estado?:
-            | "nueva_idea"
-            | "en_estudio"
-            | "lo_haremos"
-            | "en_desarrollo"
-            | "hechisimo"
-            | "error_detectado"
-            | "resolviendo"
-            | "resuelto"
+          | "nueva_idea"
+          | "en_estudio"
+          | "lo_haremos"
+          | "en_desarrollo"
+          | "hechisimo"
+          | "error_detectado"
+          | "resolviendo"
+          | "resuelto"
           creado_por: string
           creado_por_nombre?: string | null
           creado_por_email?: string | null
@@ -346,14 +346,14 @@ export type Database = {
           impacto?: string | null
           tipo?: "idea" | "error"
           estado?:
-            | "nueva_idea"
-            | "en_estudio"
-            | "lo_haremos"
-            | "en_desarrollo"
-            | "hechisimo"
-            | "error_detectado"
-            | "resolviendo"
-            | "resuelto"
+          | "nueva_idea"
+          | "en_estudio"
+          | "lo_haremos"
+          | "en_desarrollo"
+          | "hechisimo"
+          | "error_detectado"
+          | "resolviendo"
+          | "resuelto"
           creado_por?: string
           creado_por_nombre?: string | null
           creado_por_email?: string | null
@@ -410,6 +410,18 @@ export type Database = {
           creado_en?: string
         }
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }

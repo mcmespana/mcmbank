@@ -2,12 +2,12 @@
 
 import type React from "react"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
-import { SearchX, TrendingUp, TrendingDown, BarChart3, ArrowUpDown } from "lucide-react"
-import { CategorySelector } from "@/components/transactions/category-selector"
+import { SearchX, TrendingUp, TrendingDown, BarChart3, ArrowUpDown, Filter } from "lucide-react"
+import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
@@ -29,25 +29,81 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { formatCurrency } from "@/lib/utils/format"
 import { Table, TableHeader, TableHead, TableRow, TableCell, TableBody } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { buildExpandedCategoryIds } from "@/lib/utils/category-utils"
 interface Props {
   from: string
   to: string
+  resetToken?: number
 }
 
 type SortField = "category" | "income" | "expense" | "balance" | "default"
 
-export function CategoryAnalysisDashboard({ from, to }: Props) {
+export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   const { selectedDelegation } = useDelegationContext()
+  // State for initial local storage loading to prevent hydration mismatch
+  const [isLoaded, setIsLoaded] = useState(false)
+
   const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
   const [sortField, setSortField] = useState<SortField>("default")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  const [selectorOpen, setSelectorOpen] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
-  const { movimientos } = useMovimientos(selectedDelegation, {
-    fechaDesde: from,
-    fechaHasta: to,
-    categoriaIds: categoryIds.length ? categoryIds : undefined,
-  })
+  const expandedCategoryIds = useMemo(
+    () => buildExpandedCategoryIds(categoryIds, categorias),
+    [categoryIds, categorias],
+  )
+  // Dashboard needs ALL movements for accurate calculations
+  // Apply date and category filters at DB level for better performance
+  const { movimientos } = useMovimientos(
+    selectedDelegation,
+    {
+      fechaDesde: from,
+      fechaHasta: to,
+      categoriaIds: expandedCategoryIds.length ? expandedCategoryIds : undefined,
+    },
+    { pageSize: 0 } // Disable pagination to load ALL movements
+  )
+
+
+
+  // Load configuration from local storage on mount
+  useEffect(() => {
+    const loadFromStorage = () => {
+      try {
+        const stored = window.localStorage.getItem("mcmbank-dashboard-analysis-categories")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCategoryIds(parsed)
+          }
+        }
+      } catch (error) {
+        console.warn("Error loading categories from local storage", error)
+      } finally {
+        setIsLoaded(true)
+      }
+    }
+
+    loadFromStorage()
+  }, [setCategoryIds])
+
+  // Save configuration to local storage when it changes
+  useEffect(() => {
+    if (!isLoaded) return // Don't save empty state before loading
+
+    try {
+      window.localStorage.setItem("mcmbank-dashboard-analysis-categories", JSON.stringify(selectedCategories))
+    } catch (error) {
+      console.warn("Error saving categories to local storage", error)
+    }
+  }, [selectedCategories, isLoaded])
+
+  useEffect(() => {
+    if (!resetToken) return
+    setCategoryIds([])
+    // Local storage will be updated by the effect above
+  }, [resetToken, setCategoryIds])
 
   const aggregate = useMemo(() => {
     const ingresoMap = new Map<string, { id: string; name: string; value: number; emoji?: string }>()
@@ -56,7 +112,7 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
     movimientos.forEach((m) => {
       const id = m.categoria_id || "uncategorized"
       const name = m.categoria?.nombre || "Sin etiqueta"
-      const emoji = m.categoria?.emoji
+      const emoji = m.categoria?.emoji || undefined
       const map = m.importe > 0 ? ingresoMap : gastoMap
       const entry = map.get(id) || { id, name, value: 0, emoji }
       entry.value += Math.abs(m.importe)
@@ -138,7 +194,7 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
     }
   }
 
-  const PieTooltip = ({ active, payload, total }: TooltipProps<number, string> & { total: number }) => {
+  const PieTooltip = ({ active, payload, total }: any) => {
     if (!active || !payload?.length) return null
     const d = payload[0].payload as { name: string; value: number; id: string; emoji?: string; fill: string }
     const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0.0"
@@ -229,23 +285,43 @@ export function CategoryAnalysisDashboard({ from, to }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Para comprender los ingresos y los gastos de un periodo de tiempo (este mes, todo el curso...)
-        </div>
-        <div className="w-80">
-          <CategorySelector
+      <div className="text-sm text-muted-foreground mb-6">
+        Para comprender los ingresos y los gastos de un periodo de tiempo (este mes, todo el curso...)
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filtrar por Categorías</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2"
+            onClick={() => setSelectorOpen(true)}
+          >
+            <Filter className="h-4 w-4" />
+            {selectedCategories.length === 0
+              ? "Seleccionar categorías..."
+              : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
+          </Button>
+          {isPending && (
+            <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {selectorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <CategoryMegaSelector
             categories={categorias}
             selectedCategories={selectedCategories}
             onSelectionChange={setCategoryIds}
+            onClose={() => setSelectorOpen(false)}
             allowMultiple
-            placeholder="Filtrar categorías..."
+            title="Filtrar por Categorías"
           />
-          {isPending && (
-            <p className="text-xs text-muted-foreground mt-1">Aplicando filtros...</p>
-          )}
         </div>
-      </div>
+      )}
 
       {movimientos.length === 0 ? (
         <EmptyState

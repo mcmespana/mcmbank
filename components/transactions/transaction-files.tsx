@@ -27,7 +27,7 @@ export function TransactionFiles({ movementId, delegacionId, onCountChange }: Tr
       }
 
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("delegacion")
           .select("codigo")
           .eq("id", delegacionId)

@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect } from "react"
 import { signIn } from "@/lib/actions/auth"
 import { createClient } from "@/lib/supabase/client"
+import { getAuthCallbackUrl, getDebugAuthConfig } from "@/lib/supabase/redirect"
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -40,12 +41,18 @@ export default function LoginForm() {
   const [state, formAction] = useActionState(signIn, null)
 
   const supabase = createClient()
+  const debugAuthConfig = getDebugAuthConfig({ fallbackToWindow: true })
+  const shouldShowDebug = searchParams.get("debug") === "1"
 
   async function handleGoogleLogin() {
-    console.log("OAuth start", { provider: "google" })
-    const redirectTo =
-      process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-      `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback`
+    const redirectTo = getAuthCallbackUrl({ fallbackToWindow: true })
+    console.log("OAuth start", {
+      provider: "google",
+      redirectTo,
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+      devRedirectUrl: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL,
+      origin: window.location.origin,
+    })
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
@@ -73,15 +80,15 @@ export default function LoginForm() {
         <Cpu className="h-7 w-7 text-muted-foreground" />
       </div>
 
-      <Card className="backdrop-blur-sm bg-card/95 border-border/50 shadow-2xl transition-all duration-500 hover:shadow-3xl">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/5 transition-all duration-300 hover:bg-primary/10">
-            <Building2 className="h-8 w-8 text-primary" />
+      <Card className="backdrop-blur-2xl bg-card/90 border-2 border-border/30 shadow-2xl transition-all duration-500 hover:shadow-3xl">
+        <CardHeader className="space-y-2 text-center">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 hover:scale-110 hover:shadow-xl border border-primary/20">
+            <Building2 className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <CardTitle className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
             MCM Bank
           </CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
+          <CardDescription className="text-base text-muted-foreground/90">
             Bienvenido a la aplicación de tesorería del MCM
           </CardDescription>
         </CardHeader>
@@ -123,6 +130,24 @@ export default function LoginForm() {
             </svg>
             Entrar con Google
           </Button>
+          {shouldShowDebug && (
+            <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 text-xs text-muted-foreground">
+              <p className="font-semibold text-foreground">Depuración OAuth</p>
+              <ul className="mt-2 space-y-1">
+                <li>Base normalizada: {debugAuthConfig.normalizedBaseUrl || "No disponible"}</li>
+                <li>Callback OAuth: {debugAuthConfig.oauthCallbackUrl || "No disponible"}</li>
+                <li>NEXT_PUBLIC_SITE_URL: {debugAuthConfig.siteUrl || "No definida"}</li>
+                <li>NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL: {debugAuthConfig.devRedirectUrl || "No definida"}</li>
+                <li>Origin actual: {debugAuthConfig.origin || "No disponible"}</li>
+                <li>
+                  {debugAuthConfig.hasProtocol
+                    ? "✅ NEXT_PUBLIC_SITE_URL incluye protocolo."
+                    : "⚠️ NEXT_PUBLIC_SITE_URL sin protocolo. Usa https://..."}
+                </li>
+                <li>Tip: agrega ?debug=1 para ver este panel.</li>
+              </ul>
+            </div>
+          )}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

@@ -25,7 +25,7 @@ interface CacheEntry {
 
 interface MovimientosCacheContextType {
   getCachedData: (delegacionId: string | null, filters?: MovimientosFilters) => CacheEntry | undefined
-  fetchMovimientos: (delegacionId: string | null, filters?: MovimientosFilters, force?: boolean) => Promise<void>
+  fetchMovimientos: (delegacionId: string | null, filters?: MovimientosFilters, force?: boolean) => Promise<{ data: MovimientoConRelaciones[]; totalCount: number }>
   invalidateCache: (delegacionId?: string | null) => void
   updateMovimiento: (movimientoId: string, updates: Partial<MovimientoConRelaciones>) => void
   addMovimiento: (movimiento: MovimientoConRelaciones) => void
@@ -52,7 +52,7 @@ function getCacheKey(delegacionId: string | null, filters?: MovimientosFilters):
 
 export function MovimientosCacheProvider({ children }: { children: React.ReactNode }) {
   const cacheRef = useRef<Map<string, CacheEntry>>(new Map())
-  const pendingRequestsRef = useRef<Map<string, Promise<void>>>(new Map())
+  const pendingRequestsRef = useRef<Map<string, Promise<{ data: MovimientoConRelaciones[]; totalCount: number }>>>(new Map())
   const listenersRef = useRef<Set<() => void>>(new Set())
 
   const triggerUpdate = useCallback(() => {
@@ -104,7 +104,7 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
           // Build query
           // Optimized query: removed unnecessary delegacion JOIN (we already have delegacion_id)
           // and archivos JOIN (lazy loaded on demand)
-          let query = supabase
+          let query = (supabase as any)
             .from("movimiento")
             .select(
               `

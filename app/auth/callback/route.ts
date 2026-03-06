@@ -1,11 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
+import { getAppBaseUrl } from "@/lib/supabase/redirect"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
   // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get("next") ?? "/"
+  const nextParam = searchParams.get("next") ?? "/"
+  const next = nextParam.startsWith("/") ? nextParam : "/"
 
   if (code) {
     const supabase = createClient()
@@ -20,7 +22,7 @@ export async function GET(request: Request) {
           .select("usuario_id")
           .eq("usuario_id", user.id)
           .single()
-        const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+        const redirectUrl = getAppBaseUrl({ origin }) || origin
         if (!profile) {
           console.warn("OAuth unauthorized", { userId: user.id })
           await supabase.auth.signOut()
@@ -34,6 +36,9 @@ export async function GET(request: Request) {
         console.log("OAuth success", { userId: user.id })
         return NextResponse.redirect(`${redirectUrl}${next}`)
       }
+    }
+    if (error) {
+      console.error("OAuth exchange error", { message: error.message })
     }
   }
 

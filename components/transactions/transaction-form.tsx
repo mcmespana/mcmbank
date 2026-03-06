@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,18 +24,44 @@ interface TransactionFormProps {
   mode: "create" | "edit"
 }
 
+function getDefaultAccountId(accounts: Cuenta[]): string {
+  if (accounts.length === 1) {
+    return accounts[0].id
+  }
+
+  const oldestBankAccount = accounts
+    .filter((account) => account.tipo === "banco")
+    .sort((a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime())[0]
+
+  return oldestBankAccount?.id || ""
+}
+
 export function TransactionForm({ movement, accounts, categories, onSave, onCancel, mode }: TransactionFormProps) {
+  const defaultAccountId = movement?.cuenta_id || getDefaultAccountId(accounts)
   const [formData, setFormData] = useState({
     concepto: movement?.concepto || "",
     importe: movement?.importe || 0,
     fecha: movement?.fecha ? new Date(movement.fecha) : new Date(),
     categoria_id: movement?.categoria_id || "",
-    cuenta_id: movement?.cuenta_id || "",
+    cuenta_id: defaultAccountId,
     notas: movement?.notas || "",
     tipo: (movement && "tipo" in movement ? (movement as any).tipo : undefined) || "gasto",
   })
   const [loading, setLoading] = useState(false)
   const [dateOpen, setDateOpen] = useState(false)
+
+  useEffect(() => {
+    if (mode !== "create" || movement || formData.cuenta_id) {
+      return
+    }
+
+    const nextDefaultAccountId = getDefaultAccountId(accounts)
+    if (!nextDefaultAccountId) {
+      return
+    }
+
+    setFormData((prev) => ({ ...prev, cuenta_id: nextDefaultAccountId }))
+  }, [accounts, formData.cuenta_id, mode, movement])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,34 +153,64 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Fecha *</Label>
-              <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.fecha && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.fecha ? format(formData.fecha, "PPP", { locale: es }) : "Seleccionar fecha"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={formData.fecha}
-                    onSelect={(date) => {
-                      if (date) {
+              <div className="flex gap-2">
+                {/* Manual date input */}
+                <Input
+                  type="text"
+                  value={formData.fecha ? format(formData.fecha, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    // Allow typing in format yyyy-MM-dd
+                    if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                      const date = new Date(value)
+                      if (!isNaN(date.getTime())) {
                         setFormData({ ...formData, fecha: date })
-                        setDateOpen(false)
                       }
-                    }}
-                    locale={es}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+                    }
+                  }}
+                  onBlur={(e) => {
+                    // Validate on blur and fix if needed
+                    const value = e.target.value
+                    if (value && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                      const date = new Date(value)
+                      if (!isNaN(date.getTime())) {
+                        setFormData({ ...formData, fecha: date })
+                      }
+                    }
+                  }}
+                  placeholder="YYYY-MM-DD"
+                  className="flex-1"
+                  required
+                />
+                {/* Calendar picker button */}
+                <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="flex-shrink-0"
+                      title="Abrir calendario"
+                    >
+                      <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={formData.fecha}
+                      onSelect={(date) => {
+                        if (date) {
+                          setFormData({ ...formData, fecha: date })
+                          setDateOpen(false)
+                        }
+                      }}
+                      locale={es}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             <div className="space-y-2">

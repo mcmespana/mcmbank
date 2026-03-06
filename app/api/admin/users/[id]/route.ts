@@ -20,7 +20,7 @@ export async function PUT(
 
     // Optional: update profile name
     if (typeof name === "string") {
-      const { error: profileError } = await supabase
+      const { error: profileError } = await (supabase as any)
         .from("perfil")
         .upsert({ usuario_id: params.id, nombre_completo: name })
       if (profileError) return NextResponse.json({ error: profileError.message }, { status: 400 })
@@ -29,7 +29,7 @@ export async function PUT(
     // Optional: replace memberships with per-delegation roles
     if (Array.isArray(memberships)) {
       // Replace all memberships for the user
-      const { error: delError } = await supabase.from("membresia").delete().eq("usuario_id", params.id)
+      const { error: delError } = await (supabase as any).from("membresia").delete().eq("usuario_id", params.id)
       if (delError) return NextResponse.json({ error: delError.message }, { status: 400 })
 
       const rows = memberships
@@ -37,7 +37,7 @@ export async function PUT(
         .map((m: any) => ({ usuario_id: params.id, delegacion_id: m.delegacion_id, rol: m.rol }))
 
       if (rows.length) {
-        const { error: insError } = await supabase.from("membresia").insert(rows)
+        const { error: insError } = await (supabase as any).from("membresia").insert(rows)
         if (insError) return NextResponse.json({ error: insError.message }, { status: 400 })
       }
     }
@@ -56,8 +56,8 @@ export async function DELETE(
     const supabase = createAdminClient()
     const { error: authErr } = await supabase.auth.admin.deleteUser(params.id)
     if (authErr) return NextResponse.json({ error: authErr.message }, { status: 400 })
-    await supabase.from("membresia").delete().eq("usuario_id", params.id)
-    await supabase.from("perfil").delete().eq("usuario_id", params.id)
+    await (supabase as any).from("membresia").delete().eq("usuario_id", params.id)
+    await (supabase as any).from("perfil").delete().eq("usuario_id", params.id)
     return NextResponse.json({ ok: true })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 })

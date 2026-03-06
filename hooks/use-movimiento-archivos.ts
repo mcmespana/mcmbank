@@ -40,7 +40,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
         table: 'movimiento_archivo',
         timeoutMs: TIMEOUT_MS,
         build: async (signal) =>
-          await supabase
+          await (supabase as any)
             .from("movimiento_archivo")
             .select("*")
             .eq("movimiento_id", movimientoId)
@@ -66,7 +66,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
 
   // Subir archivo
   const uploadFile = async (
-    file: File, 
+    file: File,
     bucketType: 'facturas' | 'documentos',
     descripcion?: string
   ): Promise<MovimientoArchivo> => {
@@ -111,7 +111,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
         subido_por: user.user.id,
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("movimiento_archivo")
         .insert([archivoData])
         .select()
@@ -121,7 +121,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
 
       // Si es una factura, actualizar el campo adjunto_principal_url en movimiento
       if (bucketType === 'facturas') {
-        await supabase
+        await (supabase as any)
           .from("movimiento")
           .update({ adjunto_principal_url: uploadResult.url })
           .eq("id", movimientoId)
@@ -149,7 +149,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
       await FileService.deleteFile(archivo.path_storage, archivo.bucket as 'facturas' | 'documentos')
 
       // Eliminar metadata de la base de datos
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("movimiento_archivo")
         .delete()
         .eq("id", archivo.id)
@@ -158,13 +158,13 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
 
       // Si era una factura principal, limpiar el campo adjunto_principal_url
       if (archivo.es_factura && movimientoId) {
-        const otrasFacturas = archivos.filter(a => 
+        const otrasFacturas = archivos.filter(a =>
           a.id !== archivo.id && a.es_factura
         )
-        
+
         const nuevaFacturaPrincipal = otrasFacturas.length > 0 ? otrasFacturas[0].url_publica : null
-        
-        await supabase
+
+        await (supabase as any)
           .from("movimiento")
           .update({ adjunto_principal_url: nuevaFacturaPrincipal })
           .eq("id", movimientoId)
@@ -184,7 +184,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
     setError(null)
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("movimiento_archivo")
         .update({ descripcion })
         .eq("id", archivoId)
@@ -192,7 +192,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
       if (error) throw error
 
       // Actualizar la lista de archivos
-      setArchivos(prev => prev.map(a => 
+      setArchivos(prev => prev.map(a =>
         a.id === archivoId ? { ...a, descripcion } : a
       ))
     } catch (err) {

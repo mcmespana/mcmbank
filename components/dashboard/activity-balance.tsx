@@ -1,14 +1,14 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CategorySelector } from "@/components/transactions/category-selector"
+import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
-import { TrendingUp, TrendingDown, Wallet, BarChart3, PieChart } from "lucide-react"
+import { TrendingUp, TrendingDown, Wallet, BarChart3, PieChart, Filter } from "lucide-react"
 import {
   XAxis,
   YAxis,
@@ -20,7 +20,7 @@ import {
   Line,
   Pie,
   Tooltip as RechartsTooltip,
-  type TooltipProps,
+
 } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -37,42 +37,80 @@ import {
 import { es } from "date-fns/locale"
 import { formatCurrency } from "@/lib/utils/format"
 import { Badge } from "@/components/ui/badge"
+import { buildExpandedCategoryIds } from "@/lib/utils/category-utils"
 
 interface Props {
   from: string
   to: string
+  resetToken?: number
 }
 
-export function ActivityBalanceDashboard({ from, to }: Props) {
+
+
+export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
   const { selectedDelegation } = useDelegationContext()
+  // State for initial local storage loading to prevent hydration mismatch
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Initialize with empty array, will be populated from localStorage on client side
   const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
+  const [selectorOpen, setSelectorOpen] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
+  const expandedCategoryIds = useMemo(
+    () => buildExpandedCategoryIds(categoryIds, categorias),
+    [categoryIds, categorias],
+  )
 
-  // Fetch all movimientos for historical data (without date filters)
-  const { movimientos: allMovimientos } = useMovimientos(selectedDelegation)
+  // Dashboard needs ALL movements for accurate calculations
+  // Apply date filters at DB level for better performance
+  const { movimientos } = useMovimientos(
+    selectedDelegation,
+    {
+      fechaDesde: from,
+      fechaHasta: to,
+      categoriaIds: expandedCategoryIds.length > 0 ? expandedCategoryIds : undefined,
+    },
+    { pageSize: 0 } // Disable pagination to load ALL movements
+  )
 
-  // Filter locally for the current period and categories
-  const movimientos = useMemo(() => {
-    let filtered = allMovimientos
-
-    // Apply date range filter
-    if (from || to) {
-      filtered = filtered.filter((m) => {
-        if (from && m.fecha < from) return false
-        if (to && m.fecha > to) return false
-        return true
-      })
+  // Load configuration from local storage on mount
+  useEffect(() => {
+    const loadFromStorage = () => {
+      try {
+        const stored = window.localStorage.getItem("mcmbank-dashboard-balance-categories")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCategoryIds(parsed)
+          }
+        }
+      } catch (error) {
+        console.warn("Error loading categories from local storage", error)
+      } finally {
+        setIsLoaded(true)
+      }
     }
 
-    // Apply category filter
-    if (categoryIds.length > 0) {
-      const categorySet = new Set(categoryIds)
-      filtered = filtered.filter((m) => m.categoria_id && categorySet.has(m.categoria_id))
-    }
+    loadFromStorage()
+  }, [setCategoryIds])
 
-    return filtered
-  }, [allMovimientos, from, to, categoryIds])
+  // Save configuration to local storage when it changes
+  useEffect(() => {
+    if (!isLoaded) return // Don't save empty state before loading
+
+    try {
+      window.localStorage.setItem("mcmbank-dashboard-balance-categories", JSON.stringify(selectedCategories))
+    } catch (error) {
+      console.warn("Error saving categories to local storage", error)
+    }
+  }, [selectedCategories, isLoaded])
+
+  useEffect(() => {
+    if (!resetToken) return
+    setCategoryIds([])
+    // Local storage will be updated by the effect above
+  }, [resetToken, setCategoryIds])
 
   const summary = useMemo(() => {
     let ingresos = 0
@@ -89,7 +127,7 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
     { name: "Gastos", value: summary.gastos, fill: "#ef4444" },
   ]
 
-  const DonutTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+  const DonutTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
     if (!active || !payload?.length) return null
     const data = payload[0].payload as { name: string; value: number; fill: string }
     const total = summary.ingresos + summary.gastos
@@ -112,12 +150,12 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
   }
 
   const monthlyData = useMemo(() => {
-    if (allMovimientos.length === 0) return []
+    if (movimientos.length === 0) return []
 
-    const firstTransaction = allMovimientos.reduce((earliest, current) =>
+    const firstTransaction = movimientos.reduce((earliest, current) =>
       current.fecha < earliest.fecha ? current : earliest,
     )
-    const lastTransaction = allMovimientos.reduce((latest, current) =>
+    const lastTransaction = movimientos.reduce((latest, current) =>
       current.fecha > latest.fecha ? current : latest,
     )
 
@@ -153,7 +191,7 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
       const nextInterval = intervals[intervals.indexOf(interval) + 1]
       const intervalEnd = nextInterval ? nextInterval.toISOString().split("T")[0] : endDate.toISOString().split("T")[0]
 
-      const intervalMovimientos = allMovimientos.filter((m) => m.fecha >= intervalStart && m.fecha < intervalEnd)
+      const intervalMovimientos = movimientos.filter((m) => m.fecha >= intervalStart && m.fecha < intervalEnd)
 
       let ingresos = 0
       let gastos = 0
@@ -170,7 +208,7 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
         balance: ingresos - gastos,
       }
     })
-  }, [allMovimientos])
+  }, [movimientos])
 
   const chartConfig = {
     ingresos: { label: "Ingresos", color: "hsl(var(--chart-1))" },
@@ -212,11 +250,10 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
         </Card>
 
         <Card
-          className={`${
-            summary.balance >= 0
-              ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200 dark:border-blue-800"
-              : "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 border-orange-200 dark:border-orange-800"
-          }`}
+          className={`${summary.balance >= 0
+            ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200 dark:border-blue-800"
+            : "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 border-orange-200 dark:border-orange-800"
+            }`}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Balance</CardTitle>
@@ -273,19 +310,35 @@ export function ActivityBalanceDashboard({ from, to }: Props) {
             <CardTitle>Filtrar por Categorías</CardTitle>
           </CardHeader>
           <CardContent>
-            <CategorySelector
-              categories={categorias}
-              selectedCategories={selectedCategories}
-              onSelectionChange={setCategoryIds}
-              allowMultiple
-              placeholder="Seleccionar categorías..."
-            />
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => setSelectorOpen(true)}
+            >
+              <Filter className="h-4 w-4" />
+              {selectedCategories.length === 0
+                ? "Seleccionar categorías..."
+                : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
+            </Button>
             {isPending && (
               <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {selectorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <CategoryMegaSelector
+            categories={categorias}
+            selectedCategories={selectedCategories}
+            onSelectionChange={setCategoryIds}
+            onClose={() => setSelectorOpen(false)}
+            allowMultiple
+            title="Filtrar por Categorías"
+          />
+        </div>
+      )}
 
       {monthlyData.length > 0 && hasFilteredMovements && (
         <Card>

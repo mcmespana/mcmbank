@@ -76,7 +76,10 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
       }
       // Retry once after refreshing session in case token expired in background
       try {
-        await supabase.auth.refreshSession()
+        await Promise.race([
+          supabase.auth.refreshSession(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 3000))
+        ])
         await attempt()
       } catch (e2) {
         setError(e2 instanceof Error ? e2.message : "Error cargando delegaciones")
@@ -89,18 +92,23 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
         timeoutRef.current = null
       }
     }
-  }, [user, timeout])
+  }, [user?.id, timeout])
+
+  // Ref to avoid effect cleanup aborting in-flight requests on callback identity change
+  const fetchDelegationsRef = useRef(fetchDelegations)
+  fetchDelegationsRef.current = fetchDelegations
 
   useEffect(() => {
-    fetchDelegations()
+    fetchDelegationsRef.current()
     return () => {
       if (abortControllerRef.current) abortControllerRef.current.abort()
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [fetchDelegations])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   // Revalidate on tab focus
-  useRevalidateOnFocusJitter(fetchDelegations, { minMs: 40, maxMs: 140 })
+  useRevalidateOnFocusJitter(() => fetchDelegationsRef.current(), { minMs: 40, maxMs: 140 })
 
   return { delegations, loading, error, refetch: fetchDelegations }
 }

@@ -65,7 +65,7 @@ export function ColorPicker({ value = "#4ECDC4", onChange, className }: ColorPic
           <Palette className="h-4 w-4 text-white" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-4" align="start">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-4" align="start">
         <div className="space-y-4">
           <Label>Seleccionar color</Label>
           

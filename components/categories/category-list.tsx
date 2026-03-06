@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { CategoryEditForm } from "./category-edit-form"
 import { DateRangeFilter } from "@/components/transactions/date-range-filter"
 import { useCategorias } from "@/hooks/use-categorias"
@@ -35,12 +36,13 @@ import {
   Eye,
   ChevronUp,
   ChevronDown,
+  HelpCircle,
 } from "lucide-react"
 import { AmountDisplay } from "@/components/amount-display"
 import autoAnimate from "@formkit/auto-animate"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
-import type { CategoriaConOrdenEfectivo } from "@/lib/types/database"
+import type { Categoria, CategoriaConOrdenEfectivo } from "@/lib/types/database"
 
 interface CategoryCardProps {
   category: CategoriaConOrdenEfectivo
@@ -66,6 +68,7 @@ interface CategoryCardProps {
   canMoveDown: boolean
   onToggleActive?: (category: CategoriaConOrdenEfectivo) => void
   canToggleActive: boolean
+  canHideGlobal: boolean
   isInactive: boolean
   isRecentlyMoved?: boolean
 }
@@ -85,8 +88,8 @@ function buildChildrenMap(items: CategoriaConOrdenEfectivo[]) {
 
   map.forEach((list) => {
     list.sort((a, b) => {
-      const ordenA = "orden_efectivo" in a ? a.orden_efectivo ?? a.orden : a.orden
-      const ordenB = "orden_efectivo" in b ? b.orden_efectivo ?? b.orden : b.orden
+      const ordenA = a.orden_efectivo
+      const ordenB = b.orden_efectivo
       if (ordenA !== ordenB) return ordenA - ordenB
       return a.nombre.localeCompare(b.nombre)
     })
@@ -119,6 +122,7 @@ function CategoryCard({
   canMoveDown,
   onToggleActive,
   canToggleActive,
+  canHideGlobal,
   isInactive,
   isRecentlyMoved = false,
 }: CategoryCardProps) {
@@ -130,7 +134,11 @@ function CategoryCard({
       : category.es_global
         ? "Solo el gestor central o la tesorería pueden añadir subcategorías globales"
         : "No puedes añadir subcategorías en este momento"
-  const toggleTitle = isInactive ? "Mostrar categoría" : "Ocultar categoría"
+
+  // Título del botón de toggle más descriptivo
+  const toggleTitle = canHideGlobal
+    ? (isInactive ? "Mostrar esta categoría global en tu delegación" : "Ocultar esta categoría global en tu delegación")
+    : (isInactive ? "Activar categoría" : "Desactivar categoría")
 
   return (
     <Draggable draggableId={category.id} index={index} isDragDisabled={isDragDisabled}>
@@ -172,47 +180,47 @@ function CategoryCard({
                 isRecentlyMoved && "ring-2 ring-primary/40 shadow-lg shadow-primary/10",
               )}
             >
-              <CardContent className="px-3 py-2.5 sm:px-3.5 sm:py-3">
-                <div className="flex items-start gap-2 sm:gap-2.5">
-                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground"
+                      className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground p-0"
                       onClick={() => onMoveUp?.(category)}
                       disabled={!canMoveUp}
                       title={canMoveUp ? "Mover hacia arriba" : "No se puede mover más arriba"}
                     >
-                      <ChevronUp className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <ChevronUp className="h-3 w-3" />
                     </Button>
                     <div
                       {...(provided.dragHandleProps ?? {})}
                       className={cn(
-                        "flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md border border-dashed text-muted-foreground",
+                        "flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md border border-dashed text-muted-foreground",
                         isDragDisabled
                           ? "cursor-not-allowed border-transparent opacity-40"
                           : "cursor-grab border-transparent bg-muted/40 hover:bg-muted/70 active:cursor-grabbing",
                       )}
                       title={dragHint}
                     >
-                      <GripVertical className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <GripVertical className="h-3 w-3" />
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground"
+                      className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground p-0"
                       onClick={() => onMoveDown?.(category)}
                       disabled={!canMoveDown}
                       title={canMoveDown ? "Mover hacia abajo" : "No se puede mover más abajo"}
                     >
-                      <ChevronDown className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <ChevronDown className="h-3 w-3" />
                     </Button>
                   </div>
 
                   <div
                     className={cn(
-                      "flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg text-lg sm:text-xl shadow flex-shrink-0",
-                      depth > 0 && "h-8 w-8 sm:h-9 sm:w-9 text-sm sm:text-base",
+                      "flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg text-lg sm:text-xl shadow flex-shrink-0",
+                      depth > 0 && "h-7 w-7 sm:h-8 sm:w-8 text-sm sm:text-base",
                     )}
                     style={{ backgroundColor: category.color || "#e5e7eb" }}
                   >
@@ -233,12 +241,19 @@ function CategoryCard({
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Oculta</span>
                       )}
                       {isGlobal && (
-                        <span
-                          className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-blue-500 dark:text-blue-200"
-                          title="Categoría global"
-                        >
-                          <Globe2 className="h-3 w-3" />
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-blue-500 dark:text-blue-200 cursor-help">
+                              <Globe2 className="h-3 w-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-center">
+                              <div className="font-medium">Categoría global</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">No puedes modificar algunos aspectos</div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                     <div className="mt-0.5 text-[11px] text-muted-foreground">
@@ -246,58 +261,58 @@ function CategoryCard({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                      className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 p-0"
                       onClick={() => onSearch(category)}
                       title="Buscar transacciones"
                     >
-                      <Search className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <Search className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                      className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 p-0"
                       onClick={() => onAddSubcategory?.(category)}
                       title={addSubcategoryTitle}
                       disabled={!canAddSubcategory}
                     >
-                      <PlusCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <PlusCircle className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 sm:h-8 sm:w-8 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/30"
+                      className="h-6 w-6 sm:h-7 sm:w-7 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/30 p-0"
                       onClick={() => onEdit(category)}
                       title={canEdit ? "Editar categoría" : "Solo el gestor central puede editar categorías globales"}
                       disabled={!canEdit}
                     >
-                      <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <Edit className="h-3 w-3" />
                     </Button>
-                    {canToggleActive ? (
+                    {(canToggleActive || canHideGlobal) && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                        className="h-6 w-6 sm:h-7 sm:w-7 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 p-0"
                         onClick={() => onToggleActive?.(category)}
                         title={toggleTitle}
                       >
                         {isInactive ? (
-                          <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                          <Eye className="h-3 w-3" />
                         ) : (
-                          <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                          <EyeOff className="h-3 w-3" />
                         )}
                       </Button>
-                    ) : (
+                    )}
+                    {canDelete && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        className="h-6 w-6 sm:h-7 sm:w-7 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 p-0"
                         onClick={() => onDelete(category)}
-                        title={canDelete ? "Eliminar categoría" : "Solo el gestor central puede eliminar categorías globales"}
-                        disabled={!canDelete}
+                        title="Eliminar categoría"
                       >
                         <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       </Button>
@@ -323,6 +338,7 @@ export function CategoryList() {
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [creatingParent, setCreatingParent] = useState<CategoriaConOrdenEfectivo | null>(null)
+  const [newCategoryDraft, setNewCategoryDraft] = useState<Categoria | null>(null)
   const [viewingCategory, setViewingCategory] = useState<CategoriaConOrdenEfectivo | null>(null)
   const [activeDropParentId, setActiveDropParentId] = useState<string | null>(null)
   const [dropPreview, setDropPreview] = useState<
@@ -378,12 +394,36 @@ export function CategoryList() {
     if (searchParams.get("panel") === "create") {
       setEditingCategory(null)
       setCreatingParent(null)
+      setNewCategoryDraft({
+        id: "",
+        organizacion_id: organizacionId || "",
+        delegacion_id: selectedDelegation || null,
+        nombre: "",
+        tipo: "mixto",
+        emoji: "📁",
+        color: "#4ECDC4",
+        orden: 0,
+        categoria_padre_id: null,
+        creado_en: "",
+        es_global: false,
+        esta_activa: true,
+      })
       setCreateSheetOpen(true)
     }
-  }, [searchParams])
+  }, [searchParams, organizacionId, selectedDelegation])
 
   const getCategoryBalance = (categoryId: string) => {
-    let filteredMovements = movimientos.filter((mov) => mov.categoria_id === categoryId)
+    const relatedCategoryIds = new Set([categoryId])
+
+    for (const category of categories) {
+      if (category.categoria_padre_id === categoryId) {
+        relatedCategoryIds.add(category.id)
+      }
+    }
+
+    let filteredMovements = movimientos.filter(
+      (mov) => mov.categoria_id && relatedCategoryIds.has(mov.categoria_id),
+    )
 
     if (dateFrom) {
       filteredMovements = filteredMovements.filter((mov) => mov.fecha >= dateFrom)
@@ -400,11 +440,63 @@ export function CategoryList() {
     setDateTo(newDateTo)
   }
 
-  const canEditCategory = (category: CategoriaConOrdenEfectivo) => !category.es_global || isCentralManager
-  const canDeleteCategory = (category: CategoriaConOrdenEfectivo) => !category.es_global || isCentralManager
-  const canToggleCategoryVisibility = (category: CategoriaConOrdenEfectivo) =>
-    !isCentralManager && !!selectedDelegation && category.es_global
+  // ============================================================================
+  // LÓGICA DE PERMISOS MEJORADA
+  // ============================================================================
+
+  /**
+   * Puede EDITAR (nombre, emoji, color) una categoría
+   * - Gestor MCM: puede editar cualquier categoría (global o local)
+   * - Tesorero: solo puede editar categorías locales de su delegación
+   */
+  const canEditCategory = (category: CategoriaConOrdenEfectivo) => {
+    if (isCentralManager) return true
+    if (!selectedDelegation) return false
+    // Tesoreros solo pueden editar categorías locales de su delegación
+    return !category.es_global && category.delegacion_id === selectedDelegation
+  }
+
+  /**
+   * Puede ELIMINAR una categoría (borrado físico)
+   * - Gestor MCM: puede eliminar cualquier categoría
+   * - Tesorero: solo puede eliminar categorías locales de su delegación
+   */
+  const canDeleteCategory = (category: CategoriaConOrdenEfectivo) => {
+    if (isCentralManager) return true
+    if (!selectedDelegation) return false
+    // Tesoreros solo pueden eliminar categorías locales de su delegación
+    return !category.es_global && category.delegacion_id === selectedDelegation
+  }
+
+  /**
+   * Puede ACTIVAR/DESACTIVAR una categoría (cambiar esta_activa)
+   * - Gestor MCM: puede activar/desactivar categorías globales
+   * - Tesorero: puede activar/desactivar categorías locales de su delegación
+   */
+  const canToggleCategoryActive = (category: CategoriaConOrdenEfectivo) => {
+    if (isCentralManager) {
+      // Gestor MCM solo activa/desactiva globales (las locales las elimina directamente)
+      return category.es_global
+    }
+    if (!selectedDelegation) return false
+    // Tesoreros pueden activar/desactivar sus categorías locales
+    return !category.es_global && category.delegacion_id === selectedDelegation
+  }
+
+  /**
+   * Puede OCULTAR/MOSTRAR una categoría global en su delegación (override local)
+   * - Solo tesoreros pueden ocultar categorías globales en su delegación
+   * - Gestor MCM no necesita ocultar, puede desactivar directamente
+   */
+  const canHideGlobalCategory = (category: CategoriaConOrdenEfectivo) => {
+    if (isCentralManager) return false
+    if (!selectedDelegation) return false
+    // Solo para categorías globales
+    return category.es_global
+  }
+
   const canReorderCategory = () => true
+
   const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) => {
     if (category.categoria_padre_id !== null) return false
     if (!category.es_global) return true
@@ -420,6 +512,20 @@ export function CategoryList() {
   const handleCreate = () => {
     setEditingCategory(null)
     setCreatingParent(null)
+    setNewCategoryDraft({
+      id: "",
+      organizacion_id: organizacionId || "",
+      delegacion_id: selectedDelegation || null,
+      nombre: "",
+      tipo: "mixto",
+      emoji: "📁",
+      color: "#4ECDC4",
+      orden: 0,
+      categoria_padre_id: null,
+      creado_en: "",
+      es_global: false,
+      esta_activa: true,
+    })
     setCreateSheetOpen(true)
   }
 
@@ -427,6 +533,20 @@ export function CategoryList() {
     if (!canCreateSubcategory(category)) return
     setCreatingParent(category)
     setEditingCategory(null)
+    setNewCategoryDraft({
+      id: "",
+      organizacion_id: organizacionId || "",
+      delegacion_id: category.delegacion_id,
+      nombre: "",
+      tipo: "mixto",
+      emoji: "📁",
+      color: category.color || "#4ECDC4",
+      orden: 0,
+      categoria_padre_id: category.id,
+      creado_en: "",
+      es_global: category.es_global,
+      esta_activa: true,
+    })
     setCreateSheetOpen(true)
   }
 
@@ -441,7 +561,8 @@ export function CategoryList() {
 
   const handleToggleActive = async (category: CategoriaConOrdenEfectivo) => {
     try {
-      if (category.es_global && !isCentralManager) {
+      // Caso 1: Ocultar/Mostrar categoría global (tesoreros)
+      if (canHideGlobalCategory(category)) {
         if (!selectedDelegation) {
           alert("Selecciona una delegación para gestionar la visibilidad")
           return
@@ -450,6 +571,7 @@ export function CategoryList() {
         const nextActive = !category.esta_activa_efectiva
 
         if (!nextActive) {
+          // Ocultar categoría global en esta delegación
           await DatabaseService.setDelegacionCategoryVisibility(
             selectedDelegation,
             category.id,
@@ -457,8 +579,10 @@ export function CategoryList() {
             category.orden_override ?? category.orden,
           )
         } else if (category.orden_override === null && category.has_override) {
+          // Si solo tiene override de visibilidad, eliminar el override
           await DatabaseService.clearDelegacionCategoryOrder(selectedDelegation, category.id)
         } else {
+          // Mostrar categoría global en esta delegación
           await DatabaseService.setDelegacionCategoryVisibility(
             selectedDelegation,
             category.id,
@@ -466,7 +590,9 @@ export function CategoryList() {
             category.orden_override ?? category.orden,
           )
         }
-      } else {
+      }
+      // Caso 2: Activar/Desactivar categoría (gestor MCM para globales, tesoreros para locales)
+      else if (canToggleCategoryActive(category)) {
         await updateCategoria(category.id, { esta_activa: !category.esta_activa })
       }
 
@@ -535,17 +661,32 @@ export function CategoryList() {
 
         const parentCategory = creatingParent
         const parentId = parentCategory?.id ?? patch.categoria_padre_id ?? null
-        const targetIsGlobal = parentCategory ? parentCategory.es_global : !!patch.es_global
-        const isGlobalSubcategory = Boolean(parentCategory?.es_global)
+        const isCreatingSubcategoryOfGlobal = Boolean(parentCategory?.es_global)
 
+        // Determinar si la nueva categoría será global
+        // - Si hay parent y es global: solo gestor MCM puede crear subcategorías globales
+        // - Tesoreros siempre crean categorías locales (incluso si el padre es global)
+        let targetIsGlobal = false
+        if (!parentCategory) {
+          // Creando categoría principal: usar el valor del form
+          targetIsGlobal = !!patch.es_global
+        } else if (parentCategory.es_global) {
+          // Creando subcategoría de global: solo global si es gestor MCM
+          targetIsGlobal = isCentralManager && !!patch.es_global
+        } else {
+          // Creando subcategoría de local: siempre local
+          targetIsGlobal = false
+        }
+
+        // Validación de permisos
         if (targetIsGlobal && !isCentralManager) {
-          const canTreasurerCreateGlobalSubcategory =
-            isDelegationTreasurer && isGlobalSubcategory && !!selectedDelegation
+          alert("Solo el gestor central puede crear categorías globales")
+          return
+        }
 
-          if (!canTreasurerCreateGlobalSubcategory) {
-            alert("Solo el gestor central puede crear categorías globales")
-            return
-          }
+        if (isCreatingSubcategoryOfGlobal && !isCentralManager && !isDelegationTreasurer) {
+          alert("Solo el gestor central o tesoreros pueden crear subcategorías de categorías globales")
+          return
         }
 
         if (!targetIsGlobal && !selectedDelegation) {
@@ -579,6 +720,7 @@ export function CategoryList() {
       setCreateSheetOpen(false)
       setEditingCategory(null)
       setCreatingParent(null)
+      setNewCategoryDraft(null)
     } catch (err) {
       console.error("Error saving category:", err)
       alert("Error al guardar la categoría")
@@ -596,6 +738,11 @@ export function CategoryList() {
   const categoryMap = useMemo(() => new Map(categories.map((cat) => [cat.id, cat])), [categories])
   const allChildrenMap = useMemo(() => buildChildrenMap(categories), [categories])
   const childrenMap = useMemo(() => buildChildrenMap(displayedCategories), [displayedCategories])
+
+  const editingParentCategory = useMemo(() => {
+    if (!editingCategory?.categoria_padre_id) return undefined
+    return categories.find((c) => c.id === editingCategory.categoria_padre_id)
+  }, [editingCategory?.categoria_padre_id, categories])
 
   const isFiltering = searchTerm.trim().length > 0
 
@@ -1124,7 +1271,8 @@ export function CategoryList() {
                     canMoveUp={canMoveUp}
                     canMoveDown={canMoveDown}
                     onToggleActive={handleToggleActive}
-                    canToggleActive={canToggleCategoryVisibility(category)}
+                    canToggleActive={canToggleCategoryActive(category)}
+                    canHideGlobal={canHideGlobalCategory(category)}
                     isInactive={isInactive}
                     isRecentlyMoved={recentlyMovedId === category.id}
                   />
@@ -1162,27 +1310,51 @@ export function CategoryList() {
   const showNoResults = hasAnyCategory && !hasVisibleCategories
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Categorías</h2>
-          <p className="text-muted-foreground mt-0.5 text-sm">
-            {totalCount} categorías en total ({globalCount} globales). Usa las flechas para reordenar y arrastra una tarjeta
-            sobre otra para anidar subcategorías; las globales solo cambian de jerarquía con permisos centrales.
+    <TooltipProvider>
+      <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-2 bg-gradient-to-b from-primary via-primary/70 to-primary/40 rounded-full shadow-lg shadow-primary/30" />
+            <h2 className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
+              Categorías
+            </h2>
+          </div>
+          <p className="text-muted-foreground ml-6 pl-4 text-base">
+            {totalCount} categorías en total ({globalCount} globales).
           </p>
         </div>
-        <Button onClick={handleCreate} size="sm" className="w-full sm:w-auto" disabled={!organizacionId}>
-          <Plus className="h-3.5 w-3.5 mr-2" />
-          Añadir categoría
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button onClick={handleCreate} className="flex-1 sm:flex-none" disabled={!organizacionId}>
+            <Plus className="h-4 w-4 mr-2" />
+            Añadir categoría
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="flex-1 sm:flex-none sm:w-auto"
+            asChild
+            title="¿Qué añado en cada categoría?"
+          >
+            <a
+              href="https://docs.movimientoconsolacion.com/mcmespana/tesoreria/mcm-bank-guia/3.-categorias#que-pongo-en-cada-categoria"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">¿Qué añado en cada categoría?</span>
+            </a>
+          </Button>
+        </div>
       </div>
 
-      <div className="flex gap-3 flex-col sm:flex-row">
-        <div className="flex-1 sm:flex-1">
+      <div className="flex gap-2 sm:gap-3 flex-wrap sm:flex-row items-center">
+        <div className="flex-1 min-w-[200px]">
           <DateRangeFilter dateFrom={dateFrom} dateTo={dateTo} onDateRangeChange={handleDateRangeChange} />
         </div>
 
-        <div className="w-auto sm:flex-1">
+        <div className="flex-shrink-0 sm:flex-1">
           <div className="sm:hidden">
             {searchOpen ? (
               <div className="relative flex items-center gap-2">
@@ -1192,14 +1364,14 @@ export function CategoryList() {
                     placeholder="Filtrar categorías..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10"
+                    className="pl-10 h-9"
                     autoFocus
                   />
                 </div>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-10 w-10 flex-shrink-0"
+                  className="h-9 w-9 flex-shrink-0"
                   onClick={() => {
                     setSearchOpen(false)
                     setSearchTerm("")
@@ -1209,7 +1381,7 @@ export function CategoryList() {
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => setSearchOpen(true)}>
+              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setSearchOpen(true)}>
                 <Search className="h-4 w-4" />
               </Button>
             )}
@@ -1221,7 +1393,7 @@ export function CategoryList() {
               placeholder="Filtrar por nombre de la categoría..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10"
+              className="pl-10 h-9 sm:h-10"
             />
           </div>
         </div>
@@ -1251,12 +1423,6 @@ export function CategoryList() {
             </div>
           )}
 
-          <div className="space-y-2.5 text-xs text-muted-foreground">
-            <p>
-              Usa las flechas de cada tarjeta para cambiar el orden y arrastra una tarjeta sobre otra para crear
-              subcategorías (máximo un nivel). El icono de globo identifica las globales.
-            </p>
-          </div>
           <DragDropContext onDragEnd={handleDragEnd} onDragUpdate={handleDragUpdate}>
             <div className="mt-3.5">{renderCategoryTree(null, 0)}</div>
           </DragDropContext>
@@ -1303,7 +1469,7 @@ export function CategoryList() {
           {editingCategory && (
             <CategoryEditForm
               category={editingCategory}
-              parentCategory={categories.find((c) => c.id === editingCategory.categoria_padre_id)}
+              parentCategory={editingParentCategory}
               onSave={handleSaveCategory}
               onCancel={() => setEditSheetOpen(false)}
               canManageGlobal={isCentralManager}
@@ -1316,7 +1482,10 @@ export function CategoryList() {
         open={createSheetOpen}
         onOpenChange={(open) => {
           setCreateSheetOpen(open)
-          if (!open) setCreatingParent(null)
+          if (!open) {
+            setCreatingParent(null)
+            setNewCategoryDraft(null)
+          }
         }}
       >
         <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto">
@@ -1325,31 +1494,19 @@ export function CategoryList() {
               {creatingParent ? `Añadir subcategoría a ${creatingParent.nombre}` : "Crear categoría"}
             </SheetTitle>
           </SheetHeader>
-          <CategoryEditForm
-            category={{
-              id: "",
-              organizacion_id: organizacionId || "",
-              delegacion_id: creatingParent
-                ? creatingParent.delegacion_id
-                : selectedDelegation || null,
-              nombre: "",
-              tipo: "mixto",
-              emoji: "📁",
-              color: creatingParent?.color || "#4ECDC4",
-              orden: 0,
-              categoria_padre_id: creatingParent?.id ?? null,
-              creado_en: "",
-              es_global: creatingParent ? creatingParent.es_global : false,
-              esta_activa: true,
-            }}
-            parentCategory={creatingParent ?? undefined}
-            onSave={handleSaveCategory}
-            onCancel={() => {
-              setCreateSheetOpen(false)
-              setCreatingParent(null)
-            }}
-            canManageGlobal={isCentralManager}
-          />
+          {newCategoryDraft && (
+            <CategoryEditForm
+              category={newCategoryDraft}
+              parentCategory={creatingParent ?? undefined}
+              onSave={handleSaveCategory}
+              onCancel={() => {
+                setCreateSheetOpen(false)
+                setCreatingParent(null)
+                setNewCategoryDraft(null)
+              }}
+              canManageGlobal={isCentralManager}
+            />
+          )}
         </SheetContent>
       </Sheet>
 
@@ -1360,6 +1517,7 @@ export function CategoryList() {
           if (!open) setViewingCategory(null)
         }}
       />
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }

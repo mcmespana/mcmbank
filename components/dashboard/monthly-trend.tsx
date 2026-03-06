@@ -16,10 +16,15 @@ interface Props {
 
 export function MonthlyTrend({ from, to }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  const { movimientos } = useMovimientos(selectedDelegation, {
-    fechaDesde: from,
-    fechaHasta: to,
-  })
+  // Dashboard needs ALL movements for accurate calculations
+  const { movimientos } = useMovimientos(
+    selectedDelegation,
+    {
+      fechaDesde: from,
+      fechaHasta: to,
+    },
+    { pageSize: 0 } // Disable pagination to load ALL movements
+  )
 
   const chartData = useMemo(() => {
     if (!movimientos.length) return []

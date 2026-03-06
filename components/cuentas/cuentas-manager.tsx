@@ -40,6 +40,7 @@ export function CuentasManager() {
     [cuentasWithDelegacion],
   )
   const [searchTerm, setSearchTerm] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
   const [editingCuenta, setEditingCuenta] = useState<Cuenta | null>(null)
   const [deletingCuenta, setDeletingCuenta] = useState<Cuenta | null>(null)
@@ -77,7 +78,7 @@ export function CuentasManager() {
     async function fetchBalances() {
       const entries = await Promise.all(
         cuentas.map(async (c) => {
-          const { data, error } = await supabase
+          const { data, error } = await (supabase as any)
             .from("movimiento")
             .select("importe")
             .eq("cuenta_id", c.id)
@@ -87,7 +88,7 @@ export function CuentasManager() {
             return [c.id, 0]
           }
 
-          const balance = (data || []).reduce((sum, m) => sum + m.importe, 0)
+          const balance = (data || []).reduce((sum: number, m: any) => sum + m.importe, 0)
           return [c.id, balance]
         }),
       )
@@ -120,9 +121,9 @@ export function CuentasManager() {
     if (!selectedDelegation) return
 
     console.log("handleCreateCuenta: Attempting to create account", cuentaData)
-    
+
     try {
-      const { data, error } = await supabase.from("cuenta").insert({
+      const { data, error } = await (supabase as any).from("cuenta").insert({
         delegacion_id: selectedDelegation,
         nombre: cuentaData.nombre || "",
         tipo: cuentaData.tipo,
@@ -152,10 +153,10 @@ export function CuentasManager() {
           }
         }
         addCuenta(newCuenta)
-        
+
         // Marcar como en proceso de creación
         setOperationState(newCuenta.id, 'creating')
-        
+
         // Limpiar el estado después de 1.5 segundos
         clearOperationStateAfterDelay(newCuenta.id, 1500)
       }
@@ -172,15 +173,15 @@ export function CuentasManager() {
     if (!editingCuenta) return
 
     console.log("handleUpdateCuenta: Attempting to update account", cuentaData)
-    
+
     // Marcar como en proceso de actualización
     setOperationState(editingCuenta.id, 'updating')
-    
+
     // Aplicar actualización optimista inmediatamente
     updateCuenta(editingCuenta.id, cuentaData)
-    
+
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("cuenta")
         .update(cuentaData)
         .eq("id", editingCuenta.id)
@@ -206,15 +207,15 @@ export function CuentasManager() {
 
   const handleDeleteCuenta = async (cuentaId: string) => {
     console.log("handleDeleteCuenta: Attempting to delete account", cuentaId)
-    
+
     // Marcar como en proceso de eliminación
     setOperationState(cuentaId, 'deleting')
-    
+
     // Aplicar eliminación optimista inmediatamente
     removeCuenta(cuentaId)
-    
+
     try {
-      const { error } = await supabase.from("cuenta").delete().eq("id", cuentaId)
+      const { error } = await (supabase as any).from("cuenta").delete().eq("id", cuentaId)
       if (error) {
         console.error("handleDeleteCuenta: Error deleting account", error)
         // Revertir eliminación optimista en caso de error
@@ -273,7 +274,7 @@ export function CuentasManager() {
         document.execCommand('copy')
         document.body.removeChild(textArea)
       }
-      
+
       setCopiedIban(text)
       setTimeout(() => setCopiedIban(null), 2000)
     } catch (err) {
@@ -321,30 +322,53 @@ export function CuentasManager() {
   const bancosCount = cuentas.filter((c) => c.tipo === "banco").length
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:gap-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-sm order-2 sm:order-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Buscar cuentas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10 sm:h-11 bg-background border-border"
-            />
+        {searchOpen ? (
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Buscar cuentas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10"
+                autoFocus
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchOpen(false)
+                setSearchTerm("")
+              }}
+              className="h-10"
+            >
+              Cerrar
+            </Button>
           </div>
-
-          <Button 
-            onClick={() => setIsCreateSheetOpen(true)} 
-            className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-6 order-1 sm:order-2" 
-            size="default"
-            disabled={Object.values(operationStates).some(state => state === 'creating')}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Cuenta
-          </Button>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setSearchOpen(true)}
+              className="h-10"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Buscar
+            </Button>
+            <Button
+              onClick={() => setIsCreateSheetOpen(true)}
+              className="h-10"
+              size="default"
+              disabled={Object.values(operationStates).some(state => state === 'creating')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Cuenta
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
@@ -358,7 +382,7 @@ export function CuentasManager() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 p-4 rounded-xl border border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
@@ -372,7 +396,7 @@ export function CuentasManager() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-4 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
@@ -419,11 +443,10 @@ export function CuentasManager() {
               return (
                 <Card
                   key={cuenta.id}
-                  className={`group hover:shadow-lg transition-all duration-200 border-border bg-card ${
-                    isCreating ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20' :
+                  className={`group hover:shadow-lg transition-all duration-200 border-border bg-card ${isCreating ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20' :
                     isUpdating ? 'ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
-                    isDeleting ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''
-                  }`}
+                      isDeleting ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''
+                    }`}
                 >
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col gap-4">
@@ -432,16 +455,15 @@ export function CuentasManager() {
                         {/* Account Icon */}
                         <div className="relative flex-shrink-0">
                           <div
-                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 overflow-hidden ${
-                              isCreating ? 'animate-pulse' :
+                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 overflow-hidden ${isCreating ? 'animate-pulse' :
                               isUpdating ? 'animate-pulse' :
-                              isDeleting ? 'animate-pulse' : ''
-                            }`}
+                                isDeleting ? 'animate-pulse' : ''
+                              }`}
                             style={{ backgroundColor: bankColor }}
                           >
-                            <BankAvatar 
-                              account={cuenta} 
-                              size="lg" 
+                            <BankAvatar
+                              account={cuenta}
+                              size="lg"
                               accountColor={bankColor}
                             />
                           </div>
@@ -507,7 +529,7 @@ export function CuentasManager() {
                                         <Info className="h-3 w-3 sm:h-4 sm:w-4" />
                                       </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-80 p-3">
+                                    <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3">
                                       <div className="space-y-2">
                                         <h4 className="font-medium text-sm">Descripción</h4>
                                         <p className="text-sm text-muted-foreground">{cuenta.descripcion}</p>
@@ -528,18 +550,17 @@ export function CuentasManager() {
                                   <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
                                     <Badge
                                       variant="secondary"
-                                      className={`text-sm sm:text-lg font-semibold px-2 sm:px-4 py-1 sm:py-2 cursor-pointer hover:opacity-80 transition-opacity ${
-                                        balance >= 0
-                                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                                      }`}
+                                      className={`text-sm sm:text-lg font-semibold px-2 sm:px-4 py-1 sm:py-2 cursor-pointer hover:opacity-80 transition-opacity ${balance >= 0
+                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                                        }`}
                                     >
                                       {balance >= 0 ? "+" : ""}
                                       {formatCurrency(balance).replace("€", "").trim()}
                                     </Badge>
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-80 p-3">
+                                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3">
                                   <div className="space-y-2">
                                     <h4 className="font-medium text-sm">Información del Saldo</h4>
                                     <p className="text-sm text-muted-foreground">
@@ -568,11 +589,10 @@ export function CuentasManager() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => copyToClipboard(cuenta.iban!)}
-                                  className={`h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-muted flex-shrink-0 transition-all duration-200 ${
-                                    copiedIban === cuenta.iban
-                                      ? "bg-green-100 hover:bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
-                                      : "hover:bg-muted"
-                                  }`}
+                                  className={`h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-muted flex-shrink-0 transition-all duration-200 ${copiedIban === cuenta.iban
+                                    ? "bg-green-100 hover:bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
+                                    : "hover:bg-muted"
+                                    }`}
                                 >
                                   {copiedIban === cuenta.iban ? (
                                     <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -609,7 +629,7 @@ export function CuentasManager() {
                                     </div>
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-80 p-3">
+                                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3">
                                   <div className="space-y-2">
                                     <h4 className="font-medium text-sm">Personas Autorizadas</h4>
                                     <div className="space-y-1">

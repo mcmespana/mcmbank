@@ -28,6 +28,7 @@ export function useTransacciones({
   const [error, setError] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isRevalidatingRef = useRef(false)
 
   // DEBUG: Track excessive calls
   useDebugCalls('useTransacciones', [delegacionId, fechaInicio, fechaFin, categoriaId, busqueda])
@@ -46,8 +47,14 @@ export function useTransacciones({
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
+    const t0 = performance.now()
+    const silent = isRevalidatingRef.current
+    console.log(`[MCM:Net:transacciones] → Fetching${silent ? ' (stale-while-revalidate)' : ''}`)
+
     try {
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       setError(null)
 
       // Set timeout
@@ -159,8 +166,10 @@ export function useTransacciones({
       console.error("Error fetching transactions:", errorMessage)
       setError(errorMessage)
     } finally {
-      // Always clear loading to avoid spinner lock; next fetch will set true
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
+      isRevalidatingRef.current = false
       // Cleanup
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -189,7 +198,10 @@ export function useTransacciones({
   }, [delegacionId, fechaInicio, fechaFin, categoriaId, busqueda, timeout])
 
   // Revalidate on focus
-  useRevalidateOnFocus(() => fetchTransaccionesRef.current())
+  useRevalidateOnFocus(() => {
+    isRevalidatingRef.current = true
+    fetchTransaccionesRef.current()
+  })
 
   return {
     transacciones,

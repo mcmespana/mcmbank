@@ -90,9 +90,6 @@ export function TransactionManager() {
   const [bulkDescriptionLoading, setBulkDescriptionLoading] = useState(false)
   const searchParams = useSearchParams()
 
-  const currentDelegation = getCurrentDelegation()
-  console.log(`🏢 TransactionManager: selectedDelegation = ${selectedDelegation}, currentDelegation = ${currentDelegation?.nombre}`)
-
   const {
     movimientos: movements,
     loading,
@@ -124,6 +121,11 @@ export function TransactionManager() {
 
   const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
+
+  // Debug: log meaningful state changes (not on every render)
+  useEffect(() => {
+    console.log(`[MCM:Render:TransactionManager] delegation=${selectedDelegation?.slice(0, 8)}, movements=${movements.length}, loading=${loading}`)
+  }, [selectedDelegation, movements.length, loading])
 
   useEffect(() => {
     if (movements.length === 0) {

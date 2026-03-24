@@ -12,6 +12,7 @@ export interface RunQueryOptions<T> {
 export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retryOnAuth = true }: RunQueryOptions<T>) {
   const started = Date.now()
   const ac = new AbortController()
+  console.log(`[MCM:Net:query] → ${label} (timeout=${timeoutMs}ms)`)
 
   const timeout = setTimeout(() => ac.abort(), timeoutMs)
   try {
@@ -19,6 +20,7 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
 
     // Retry logic with abort validation
     if (error && retryOnAuth && shouldRetryAuth(error)) {
+      console.log(`[MCM:Net:query] 🔄 ${label} retrying after auth error`)
       // Check if request was aborted before retrying
       if (ac.signal.aborted) {
         const ms = Date.now() - started
@@ -48,11 +50,13 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
 
     const ms = Date.now() - started
     addMetric({ at: Date.now(), label, table, ms, status: error ? 'error' : 'ok', error: error?.message })
+    console.log(`[MCM:Net:query] ← ${label} ${error ? '❌ ' + error.message : '✅'} in ${ms}ms`)
     return { data, error }
   } catch (err: any) {
     const ms = Date.now() - started
     const status: 'timeout' | 'aborted' | 'error' = ac.signal.aborted ? 'timeout' : 'error'
     addMetric({ at: Date.now(), label, table, ms, status, error: err?.message || String(err) })
+    console.log(`[MCM:Net:query] ← ${label} ${status === 'timeout' ? '⏱️ timeout' : '❌ ' + (err?.message || err)} in ${ms}ms`)
     return { data: null as T | null, error: err }
   } finally {
     clearTimeout(timeout)

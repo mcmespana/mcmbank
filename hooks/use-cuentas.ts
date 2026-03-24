@@ -23,6 +23,7 @@ export function useCuentas(
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const forceRefreshRef = useRef<number>(0) // Para forzar refrescos
+  const isRevalidatingRef = useRef(false)
 
   // DEBUG: Track excessive calls  
   useDebugCalls('useCuentas', [delegacionId])
@@ -63,8 +64,14 @@ export function useCuentas(
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
+    const t0 = performance.now()
+    const silent = isRevalidatingRef.current
+    console.log(`[MCM:Net:cuentas] → Fetching${silent ? ' (stale-while-revalidate)' : ''}`)
+
     try {
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       setError(null)
 
       // Set timeout
@@ -121,6 +128,7 @@ export function useCuentas(
 
       setCuentas(transformedData)
       lastFetchAtRef.current = Date.now()
+      console.log(`[MCM:Net:cuentas] ← ${transformedData.length} accounts in ${(performance.now() - t0).toFixed(0)}ms${silent ? ' (silent)' : ''}`)
     } catch (err) {
       if (abortController.signal.aborted) {
         console.log("Cuentas query was cancelled")
@@ -131,8 +139,10 @@ export function useCuentas(
       console.error("Error fetching cuentas:", errorMessage)
       setError(errorMessage)
     } finally {
-      // Always clear loading to avoid spinner lock; next fetch will set true
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
+      isRevalidatingRef.current = false
       // Cleanup
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -170,7 +180,10 @@ export function useCuentas(
   }, [memoizedDelegacionId, cuentas.length])
 
   // Revalidate on focus (force = true to bypass skip guard)
-  useRevalidateOnFocusJitter(() => fetchCuentasRef.current(true), { minMs: 70, maxMs: 180 })
+  useRevalidateOnFocusJitter(() => {
+    isRevalidatingRef.current = true
+    fetchCuentasRef.current(true)
+  }, { minMs: 70, maxMs: 180 })
 
   return {
     cuentas,

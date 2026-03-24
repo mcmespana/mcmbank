@@ -33,6 +33,7 @@ export function useMovimientos(
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fetchingRef = useRef(false)
+  const isRevalidatingRef = useRef(false)
   const lastFetchKeyRef = useRef<string>("")
 
   const serializedFilters = useMemo(() => {
@@ -99,12 +100,18 @@ export function useMovimientos(
       // Set safety timeout
       const timeoutMs = options.timeoutMs || 15000
       timeoutRef.current = setTimeout(() => {
-        console.warn(`[useMovimientos] Request timed out after ${timeoutMs}ms`)
+        console.warn(`[MCM:Net:movimientos] ⏱️ Request timed out after ${timeoutMs}ms`)
         abortController.abort()
       }, timeoutMs)
 
+      const t0 = performance.now()
+      const silent = isRevalidatingRef.current
+      console.log(`[MCM:Net:movimientos] → Fetching page=${pageIndex}${silent ? ' (stale-while-revalidate)' : ''}`)
+
       try {
-        setLoading(true)
+        if (!silent) {
+          setLoading(true)
+        }
         setError(null)
 
         // Optimized query: removed delegacion JOIN and archivos JOIN
@@ -219,12 +226,16 @@ export function useMovimientos(
         console.error("[useMovimientos] Error:", errorMessage)
         setError(errorMessage)
       } finally {
-        setLoading(false)
+        if (!silent) {
+          setLoading(false)
+        }
         fetchingRef.current = false
+        isRevalidatingRef.current = false
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
           timeoutRef.current = null
         }
+        console.log(`[MCM:Net:movimientos] ← Completed in ${(performance.now() - t0).toFixed(0)}ms${silent ? ' (silent)' : ''}`)
       }
     },
     [delegacionId, memoizedFilters, pageSize]
@@ -267,7 +278,8 @@ export function useMovimientos(
   // Revalidate on focus - with debouncing (only if not currently fetching)
   const revalidate = useCallback(() => {
     if (!fetchingRef.current && lastFetchKeyRef.current !== "") {
-      console.log("[useMovimientos] Revalidating on focus")
+      console.log("[MCM:Net:movimientos] 🔄 Revalidating on focus (stale-while-revalidate)")
+      isRevalidatingRef.current = true
       setPage(0)
       setHasMore(true)
       fetchMovimientosRef.current(0, false)

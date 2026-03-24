@@ -26,6 +26,7 @@ export function useCategorias(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const isRevalidatingRef = useRef(false)
   const includeGlobal = options?.includeGlobal ?? true
   const includeInactive = options?.includeInactive ?? false
 
@@ -41,7 +42,13 @@ export function useCategorias(
         return
       }
 
-      setLoading(true)
+      const t0 = performance.now()
+      const silent = isRevalidatingRef.current
+      console.log(`[MCM:Net:categorias] → Fetching${silent ? ' (stale-while-revalidate)' : ''}`)
+
+      if (!silent) {
+        setLoading(true)
+      }
 
       const data = await DatabaseService.getCategoriasByDelegacion(delegacionId, {
         includeGlobal,
@@ -51,12 +58,16 @@ export function useCategorias(
 
       setCategorias(data)
       setError(null)
+      console.log(`[MCM:Net:categorias] ← ${data.length} categories in ${(performance.now() - t0).toFixed(0)}ms${silent ? ' (silent)' : ''}`)
     } catch (err) {
       if (!ac.signal.aborted) {
         setError(err instanceof Error ? err.message : "Error desconocido")
       }
     } finally {
-      setLoading(false)
+      if (!isRevalidatingRef.current) {
+        setLoading(false)
+      }
+      isRevalidatingRef.current = false
     }
   }, [delegacionId, includeGlobal, includeInactive])
 
@@ -73,7 +84,10 @@ export function useCategorias(
   }, [delegacionId, includeGlobal, includeInactive])
 
   // Revalidate on focus
-  useRevalidateOnFocusJitter(() => fetchCategoriasRef.current(), { minMs: 60, maxMs: 160 })
+  useRevalidateOnFocusJitter(() => {
+    isRevalidatingRef.current = true
+    fetchCategoriasRef.current()
+  }, { minMs: 60, maxMs: 160 })
 
   const updateCategoria = async (id: string, updates: Partial<CategoriaConOrdenEfectivo>) => {
     try {

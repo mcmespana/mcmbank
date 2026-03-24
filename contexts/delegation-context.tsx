@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react"
 import { useDelegations } from "@/hooks/use-delegations"
 import type { Delegacion } from "@/lib/types/database"
 
@@ -25,22 +25,18 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
   })
   const { delegations, loading, error } = useDelegations()
 
-  // Use ref to avoid callback recreation when delegations refetch (prevents context cascade)
-  const delegationsRef = useRef(delegations)
-  delegationsRef.current = delegations
-
   const setSelectedDelegation = useCallback((delegationId: string | null) => {
     if (delegationId === selectedDelegation) return
-    console.log(`[MCM:State:delegation] Changing from ${selectedDelegation?.slice(0, 8) ?? 'null'} to ${delegationId?.slice(0, 8) ?? 'null'}`)
+    console.log(`🏢 DelegationContext: Changing delegation from ${selectedDelegation} to ${delegationId}`)
     if (delegationId) {
-      const newDelegation = delegationsRef.current.find(d => d.id === delegationId)
-      console.log(`[MCM:State:delegation] New delegation: ${newDelegation?.nombre}`)
+      const newDelegation = delegations.find(d => d.id === delegationId)
+      console.log(`🏢 DelegationContext: New delegation details:`, newDelegation)
       localStorage.setItem('mcmbank-selected-delegation', delegationId)
     } else {
       localStorage.removeItem('mcmbank-selected-delegation')
     }
     setSelectedDelegationState(delegationId)
-  }, [selectedDelegation])
+  }, [delegations, selectedDelegation])
 
   // Auto-select first delegation when loaded (only if no valid selection exists)
   useEffect(() => {

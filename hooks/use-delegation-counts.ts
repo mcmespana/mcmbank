@@ -29,7 +29,6 @@ export function useDelegationCounts() {
 
   const requestRef = useRef(0)
   const lastDelegationRef = useRef<string | null>(null)
-  const isRevalidatingRef = useRef(false)
 
   const fetchCounts = useCallback(async () => {
     const delegationId = selectedDelegation
@@ -48,12 +47,7 @@ export function useDelegationCounts() {
     }
 
     const fetchId = ++requestRef.current
-    const t0 = performance.now()
-    const silent = isRevalidatingRef.current
-    console.log(`[MCM:Net:counts] → Fetching${silent ? ' (stale-while-revalidate)' : ''}`)
-    if (!silent) {
-      setLoading(true)
-    }
+    setLoading(true)
     setError(null)
 
     const delegation = getCurrentDelegation()
@@ -134,17 +128,15 @@ export function useDelegationCounts() {
       }
 
       setCounts(nextCounts)
-      console.log(`[MCM:Net:counts] ← Done in ${(performance.now() - t0).toFixed(0)}ms${silent ? ' (silent)' : ''}`, nextCounts)
     } catch (err) {
       if (requestRef.current !== fetchId) return
       console.error("❌ useDelegationCounts: unexpected error", err)
       setCounts(INITIAL_COUNTS)
       setError(err instanceof Error ? err.message : "No se pudieron cargar los totales")
     } finally {
-      if (requestRef.current === fetchId && !silent) {
+      if (requestRef.current === fetchId) {
         setLoading(false)
       }
-      isRevalidatingRef.current = false
     }
   }, [selectedDelegation, getCurrentDelegation])
 
@@ -152,10 +144,7 @@ export function useDelegationCounts() {
     fetchCounts()
   }, [fetchCounts])
 
-  useRevalidateOnFocusJitter(() => {
-    isRevalidatingRef.current = true
-    fetchCounts()
-  }, { minMs: 80, maxMs: 180 })
+  useRevalidateOnFocusJitter(fetchCounts, { minMs: 80, maxMs: 180 })
 
   return {
     counts,

@@ -17,7 +17,6 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const TIMEOUT_MS = 10000
-  const isRevalidatingRef = useRef(false)
 
   const fetchArchivos = useCallback(async () => {
     if (!movimientoId) {
@@ -31,12 +30,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
     const ac = new AbortController()
     abortRef.current = ac
 
-    const t0 = performance.now()
-    const silent = isRevalidatingRef.current
-    console.log(`[MCM:Net:archivos] → Fetching${silent ? ' (stale-while-revalidate)' : ''}`)
-    if (!silent) {
-      setLoading(true)
-    }
+    setLoading(true)
     setError(null)
 
     try {
@@ -62,11 +56,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
         setError(err instanceof Error ? err.message : "Error al cargar archivos")
       }
     } finally {
-      if (!silent) {
-        setLoading(false)
-      }
-      isRevalidatingRef.current = false
-      console.log(`[MCM:Net:archivos] ← Done in ${(performance.now() - t0).toFixed(0)}ms${silent ? ' (silent)' : ''}`)
+      setLoading(false)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
@@ -224,10 +214,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
     }
   }, [fetchArchivos])
 
-  useRevalidateOnFocusJitter(() => {
-    isRevalidatingRef.current = true
-    fetchArchivos()
-  }, { minMs: 80, maxMs: 180 })
+  useRevalidateOnFocusJitter(fetchArchivos, { minMs: 80, maxMs: 180 })
 
   return {
     archivos,

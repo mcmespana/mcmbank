@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useDelegations } from "@/hooks/use-delegations"
 import type { Delegacion } from "@/lib/types/database"
 
@@ -25,18 +25,20 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
   })
   const { delegations, loading, error } = useDelegations()
 
+  // Ref avoids recreating setSelectedDelegation when delegations refetch
+  // (which would cascade through the entire context consumer tree).
+  const delegationsRef = useRef(delegations)
+  delegationsRef.current = delegations
+
   const setSelectedDelegation = useCallback((delegationId: string | null) => {
     if (delegationId === selectedDelegation) return
-    console.log(`🏢 DelegationContext: Changing delegation from ${selectedDelegation} to ${delegationId}`)
     if (delegationId) {
-      const newDelegation = delegations.find(d => d.id === delegationId)
-      console.log(`🏢 DelegationContext: New delegation details:`, newDelegation)
       localStorage.setItem('mcmbank-selected-delegation', delegationId)
     } else {
       localStorage.removeItem('mcmbank-selected-delegation')
     }
     setSelectedDelegationState(delegationId)
-  }, [delegations, selectedDelegation])
+  }, [selectedDelegation])
 
   // Auto-select first delegation when loaded (only if no valid selection exists)
   useEffect(() => {
@@ -49,8 +51,8 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
 
   const getCurrentDelegation = useCallback(() => {
     if (!selectedDelegation) return null
-    return delegations.find((d) => d.id === selectedDelegation) || null
-  }, [delegations, selectedDelegation])
+    return delegationsRef.current.find((d) => d.id === selectedDelegation) || null
+  }, [selectedDelegation])
 
   const value = useMemo<DelegationContextType>(() => ({
     selectedDelegation,

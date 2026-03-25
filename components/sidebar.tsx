@@ -12,7 +12,6 @@ import {
   Banknote,
   Settings,
   Users,
-  Activity,
   Menu,
   ChevronLeft,
   ChevronRight,
@@ -103,13 +102,6 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
         },
       ]
       : []),
-    {
-      name: "Diagnóstico",
-      href: "/diagnostico",
-      icon: Activity,
-      count: null,
-      enabled: true,
-    },
     {
       name: "Propuestas",
       href: "/propuestas",

@@ -91,7 +91,6 @@ export function TransactionManager() {
   const searchParams = useSearchParams()
 
   const currentDelegation = getCurrentDelegation()
-  console.log(`🏢 TransactionManager: selectedDelegation = ${selectedDelegation}, currentDelegation = ${currentDelegation?.nombre}`)
 
   const {
     movimientos: movements,

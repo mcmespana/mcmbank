@@ -34,6 +34,7 @@ export function useMovimientos(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fetchingRef = useRef(false)
   const lastFetchKeyRef = useRef<string>("")
+  const isRevalidatingRef = useRef(false)
 
   const serializedFilters = useMemo(() => {
     if (!filters) return "__no_filters__"
@@ -104,7 +105,9 @@ export function useMovimientos(
       }, timeoutMs)
 
       try {
-        setLoading(true)
+        if (!isRevalidatingRef.current) {
+          setLoading(true)
+        }
         setError(null)
 
         // Optimized query: removed delegacion JOIN and archivos JOIN
@@ -219,7 +222,10 @@ export function useMovimientos(
         console.error("[useMovimientos] Error:", errorMessage)
         setError(errorMessage)
       } finally {
-        setLoading(false)
+        if (!isRevalidatingRef.current) {
+          setLoading(false)
+        }
+        isRevalidatingRef.current = false
         fetchingRef.current = false
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
@@ -251,9 +257,12 @@ export function useMovimientos(
     // Fetch using ref to avoid stale closure
     fetchMovimientosRef.current(0, false)
 
-    // Cleanup: only abort if unmounting (not on fetchKey change — abort is
-    // already handled inside fetchMovimientos itself)
+    // Cleanup: reset refs so the next mount (including React Strict Mode's
+    // double-invoke) will re-fetch instead of skipping.
     return () => {
+      lastFetchKeyRef.current = ""
+      fetchingRef.current = false
+      isRevalidatingRef.current = false
       if (abortRef.current) {
         abortRef.current.abort()
       }
@@ -267,7 +276,7 @@ export function useMovimientos(
   // Revalidate on focus - with debouncing (only if not currently fetching)
   const revalidate = useCallback(() => {
     if (!fetchingRef.current && lastFetchKeyRef.current !== "") {
-      console.log("[useMovimientos] Revalidating on focus")
+      isRevalidatingRef.current = true
       setPage(0)
       setHasMore(true)
       fetchMovimientosRef.current(0, false)

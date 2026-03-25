@@ -4,11 +4,11 @@ import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
 
 // Minimum time (ms) the tab must be hidden before we trigger revalidation on refocus.
-// Prevents spurious revalidations from quick alt-tabs.
 const MIN_HIDDEN_MS = 2000
 
-// This is a simple event emitter for cross-hook communication.
-// It allows data hooks to subscribe to focus events without creating complex dependencies.
+// Simple event emitter for cross-hook revalidation.
+// All listeners fire synchronously inside emit() so React 18 can batch
+// their state updates into a single render pass.
 const appStatusEmitter = {
   listeners: new Set<() => void>(),
   subscribe(callback: () => void) {
@@ -22,6 +22,10 @@ const appStatusEmitter = {
   },
 }
 
+// Guard: prevent overlapping revalidation cycles (e.g. Chrome firing
+// queued visibilitychange events when unfreezing a tab).
+let revalidationInFlight = false
+
 export const useAppStatus = () => {
   const [isOnline, setIsOnline] = useState(true)
   const [isFocused, setIsFocused] = useState(true)
@@ -34,7 +38,6 @@ export const useAppStatus = () => {
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
 
-    // Set initial state
     if (typeof navigator !== "undefined") {
       setIsOnline(navigator.onLine)
     }
@@ -46,29 +49,45 @@ export const useAppStatus = () => {
   }, [])
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       const isNowFocused = !document.hidden
       setIsFocused(isNowFocused)
 
       if (!isNowFocused) {
-        // Record when the tab was hidden
         hiddenAtRef.current = Date.now()
         return
       }
 
-      // Tab is now focused — check if it was hidden long enough to warrant revalidation
+      // Skip if hidden too briefly
       const hiddenDuration = Date.now() - hiddenAtRef.current
       if (hiddenAtRef.current > 0 && hiddenDuration < MIN_HIDDEN_MS) {
-        console.log(`✨ Tab hidden for only ${hiddenDuration}ms, skipping revalidation.`)
         return
       }
 
-      // Refresh session in background to ensure freshness, but don't block the UI update
-      // (runQuery already handles auth retries if token is expired)
-      supabase.auth.refreshSession().catch(e => console.error("Session refresh failed:", e))
+      // Prevent overlapping cycles (Chrome can queue multiple visibilitychange events)
+      if (revalidationInFlight) return
+      revalidationInFlight = true
 
-      console.log("✨ Tab visible, notifying listeners to revalidate data.")
+      try {
+        // CRITICAL: refresh the auth token BEFORE any hooks fire queries.
+        // Without this, 7 hooks hit Supabase with a stale token simultaneously,
+        // each triggers its own refreshSession() retry via runQuery, and
+        // navigator.locks contention + render cascade freezes the UI.
+        await supabase.auth.refreshSession()
+      } catch {
+        // If refresh fails, hooks will handle auth errors individually
+      }
+
+      // Bail if tab was hidden again while we were refreshing
+      if (document.hidden) {
+        revalidationInFlight = false
+        return
+      }
+
+      // Fire ALL listeners synchronously — React 18 batches all resulting
+      // setState calls into a single render pass.
       appStatusEmitter.emit()
+      revalidationInFlight = false
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -81,73 +100,31 @@ export const useAppStatus = () => {
   return { isOnline, isFocused }
 }
 
-// Custom hook for data-fetching components to revalidate on focus.
+// Revalidate on tab focus. Uses a ref so the subscription is stable
+// (no re-subscribe on every render when the callback identity changes).
 export const useRevalidateOnFocus = (revalidate: () => void) => {
+  const ref = useRef(revalidate)
+  ref.current = revalidate
+
   useEffect(() => {
-    const unsubscribe = appStatusEmitter.subscribe(revalidate)
+    const handler = () => ref.current()
+    const unsubscribe = appStatusEmitter.subscribe(handler)
     return () => { unsubscribe() }
-  }, [revalidate])
+  }, [])
 }
 
-// Global debouncing for revalidations to avoid thundering herd
-const REVALIDATION_WINDOW = 500 // ms
-const pendingRevalidations = new Set<() => void>()
-let revalidationTimer: NodeJS.Timeout | null = null
-
-function scheduleRevalidation(callback: () => void) {
-  pendingRevalidations.add(callback)
-
-  if (revalidationTimer) {
-    clearTimeout(revalidationTimer)
-  }
-
-  revalidationTimer = setTimeout(() => {
-    const callbacks = Array.from(pendingRevalidations)
-    pendingRevalidations.clear()
-
-    // Execute with staggered timing to reduce load spike
-    callbacks.forEach((cb, index) => {
-      setTimeout(cb, index * 50)
-    })
-
-    revalidationTimer = null
-  }, REVALIDATION_WINDOW)
-}
-
-// Same as above but adds a small jitter to avoid thundering herd on focus
-// Now also includes global debouncing to batch revalidations
+// Backward-compatible alias — jitter/scheduling removed.
+// All listeners now fire synchronously so React 18 can batch state updates.
 export const useRevalidateOnFocusJitter = (
   revalidate: () => void,
-  { minMs = 40, maxMs = 160 }: { minMs?: number; maxMs?: number } = {}
+  _opts?: { minMs?: number; maxMs?: number }
 ) => {
+  const ref = useRef(revalidate)
+  ref.current = revalidate
+
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null = null
-
-    const handler = () => {
-      // Clear any existing timeout before creating a new one
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId)
-      }
-
-      const jitter = Math.floor(minMs + Math.random() * (maxMs - minMs))
-      timeoutId = setTimeout(() => {
-        // Use global debouncing scheduler
-        scheduleRevalidation(revalidate)
-        timeoutId = null
-      }, jitter)
-    }
-
+    const handler = () => ref.current()
     const unsubscribe = appStatusEmitter.subscribe(handler)
-
-    return () => {
-      unsubscribe()
-      // Clean up timeout on unmount
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId)
-        timeoutId = null
-      }
-      // Remove from pending revalidations
-      pendingRevalidations.delete(revalidate)
-    }
-  }, [revalidate, minMs, maxMs])
+    return () => { unsubscribe() }
+  }, [])
 }

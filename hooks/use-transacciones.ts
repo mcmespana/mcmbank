@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { MovimientoConRelaciones } from "@/lib/types/database"
-import { useDebugCalls } from "./use-debug-calls"
 import { useRevalidateOnFocus } from "./use-app-status"
 
 interface UseTransaccionesProps {
@@ -28,9 +27,6 @@ export function useTransacciones({
   const [error, setError] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  // DEBUG: Track excessive calls
-  useDebugCalls('useTransacciones', [delegacionId, fechaInicio, fechaFin, categoriaId, busqueda])
 
   const fetchTransacciones = useCallback(async () => {
     // Cancel previous request if still pending

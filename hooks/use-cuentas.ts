@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { CuentaConDelegacion } from "@/lib/types/database"
-import { useDebugCalls } from "./use-debug-calls"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { runQuery } from "@/lib/db/query"
 
@@ -23,9 +22,6 @@ export function useCuentas(
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const forceRefreshRef = useRef<number>(0) // Para forzar refrescos
-
-  // DEBUG: Track excessive calls  
-  useDebugCalls('useCuentas', [delegacionId])
 
   // SIMPLIFIED: Just track the delegacionId
   const memoizedDelegacionId = useMemo(() => delegacionId, [delegacionId])

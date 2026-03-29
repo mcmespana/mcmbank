@@ -30,17 +30,25 @@ import { formatCurrency } from "@/lib/utils/format"
 import { Table, TableHeader, TableHead, TableRow, TableCell, TableBody } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { buildExpandedCategoryIds } from "@/lib/utils/category-utils"
+import { GridStackDashboard } from "./gridstack-dashboard"
+import { GridStackWidget } from "./gridstack-widget"
+import { ANALYSIS_DEFAULT_LAYOUT } from "@/lib/config/dashboard-layouts"
+
 interface Props {
   from: string
   to: string
   resetToken?: number
+  locked: boolean
 }
 
 type SortField = "category" | "income" | "expense" | "balance" | "default"
 
-export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
+function getWidgetConfig(id: string) {
+  return ANALYSIS_DEFAULT_LAYOUT.find((w) => w.id === id)!
+}
+
+export function CategoryAnalysisDashboard({ from, to, resetToken, locked }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  // State for initial local storage loading to prevent hydration mismatch
   const [isLoaded, setIsLoaded] = useState(false)
 
   const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
@@ -53,8 +61,6 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     () => buildExpandedCategoryIds(categoryIds, categorias),
     [categoryIds, categorias],
   )
-  // Dashboard needs ALL movements for accurate calculations
-  // Apply date and category filters at DB level for better performance
   const { movimientos } = useMovimientos(
     selectedDelegation,
     {
@@ -62,12 +68,9 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
       fechaHasta: to,
       categoriaIds: expandedCategoryIds.length ? expandedCategoryIds : undefined,
     },
-    { pageSize: 0 } // Disable pagination to load ALL movements
+    { pageSize: 0 }
   )
 
-
-
-  // Load configuration from local storage on mount
   useEffect(() => {
     const loadFromStorage = () => {
       try {
@@ -88,9 +91,8 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     loadFromStorage()
   }, [setCategoryIds])
 
-  // Save configuration to local storage when it changes
   useEffect(() => {
-    if (!isLoaded) return // Don't save empty state before loading
+    if (!isLoaded) return
 
     try {
       window.localStorage.setItem("mcmbank-dashboard-analysis-categories", JSON.stringify(selectedCategories))
@@ -102,7 +104,6 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   useEffect(() => {
     if (!resetToken) return
     setCategoryIds([])
-    // Local storage will be updated by the effect above
   }, [resetToken, setCategoryIds])
 
   const aggregate = useMemo(() => {
@@ -215,7 +216,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     )
   }
 
-  const renderPie = (
+  const renderPieContent = (
     data: { id: string; name: string; value: number; emoji?: string }[],
     title: string,
     icon: React.ReactNode,
@@ -225,18 +226,9 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
       if (categoria?.color) {
         return categoria.color
       }
-      // Colores vibrantes como fallback
       const colors = [
-        "#3b82f6", // blue
-        "#ef4444", // red
-        "#10b981", // emerald
-        "#f59e0b", // amber
-        "#8b5cf6", // violet
-        "#06b6d4", // cyan
-        "#84cc16", // lime
-        "#f97316", // orange
-        "#ec4899", // pink
-        "#6366f1", // indigo
+        "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
+        "#06b6d4", "#84cc16", "#f97316", "#ec4899", "#6366f1",
       ]
       return colors[index % colors.length]
     }
@@ -249,7 +241,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     const config = buildConfig(data)
     const total = data.reduce((sum, d) => sum + d.value, 0)
     return (
-      <Card>
+      <Card className="h-full border-0 shadow-none">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {icon}
@@ -257,15 +249,15 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={config} className="h-[300px]">
+          <ChartContainer config={config} className="h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <RechartsPieChart>
                 <Pie
                   data={dataWithColors}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={60}
-                  outerRadius={120}
+                  innerRadius={50}
+                  outerRadius={100}
                   paddingAngle={2}
                   stroke="#ffffff"
                   strokeWidth={2}
@@ -283,84 +275,102 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     )
   }
 
+  const hasData = movimientos.length > 0
+
   return (
-    <div className="space-y-6">
+    <>
       <div className="text-sm text-muted-foreground mb-6">
         Para comprender los ingresos y los gastos de un periodo de tiempo (este mes, todo el curso...)
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filtrar por Categorías</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-2"
-            onClick={() => setSelectorOpen(true)}
-          >
-            <Filter className="h-4 w-4" />
-            {selectedCategories.length === 0
-              ? "Seleccionar categorías..."
-              : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
-          </Button>
-          {isPending && (
-            <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {selectorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <CategoryMegaSelector
-            categories={categorias}
-            selectedCategories={selectedCategories}
-            onSelectionChange={setCategoryIds}
-            onClose={() => setSelectorOpen(false)}
-            allowMultiple
-            title="Filtrar por Categorías"
-          />
-        </div>
-      )}
-
-      {movimientos.length === 0 ? (
-        <EmptyState
-          title="No se han encontrado movimientos"
-          description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."
-          icon={<SearchX className="h-6 w-6" />}
-        >
-          <Button variant="outline" onClick={clearFilters}>
-            Limpiar filtros
-          </Button>
-        </EmptyState>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {aggregate.ingresos.length > 0 &&
-              renderPie(
-                aggregate.ingresos,
-                "Distribución de Ingresos",
-                <TrendingUp className="h-5 w-5 text-green-600" />,
+      <GridStackDashboard tabId="categorias" locked={locked}>
+        <GridStackWidget config={getWidgetConfig("filter-panel")} locked={locked}>
+          <Card className="h-full border-0 shadow-none">
+            <CardHeader>
+              <CardTitle>Filtrar por Categorías</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={() => setSelectorOpen(true)}
+              >
+                <Filter className="h-4 w-4" />
+                {selectedCategories.length === 0
+                  ? "Seleccionar categorías..."
+                  : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
+              </Button>
+              {isPending && (
+                <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
               )}
-            {aggregate.gastos.length > 0 &&
-              renderPie(aggregate.gastos, "Distribución de Gastos", <TrendingDown className="h-5 w-5 text-red-600" />)}
-          </div>
+            </CardContent>
+          </Card>
+        </GridStackWidget>
 
-          {summary.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Comparativa por Categoría
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+        <GridStackWidget config={getWidgetConfig("income-pie")} locked={locked}>
+          {!hasData ? (
+            <EmptyState
+              title="No se han encontrado movimientos"
+              description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."
+              icon={<SearchX className="h-6 w-6" />}
+            >
+              <Button variant="outline" onClick={clearFilters}>
+                Limpiar filtros
+              </Button>
+            </EmptyState>
+          ) : aggregate.ingresos.length > 0 ? (
+            renderPieContent(
+              aggregate.ingresos,
+              "Distribución de Ingresos",
+              <TrendingUp className="h-5 w-5 text-green-600" />,
+            )
+          ) : (
+            <EmptyState
+              title="Sin ingresos"
+              description="No hay ingresos en el periodo seleccionado."
+              icon={<TrendingUp className="h-6 w-6" />}
+            />
+          )}
+        </GridStackWidget>
+
+        <GridStackWidget config={getWidgetConfig("expense-pie")} locked={locked}>
+          {!hasData ? (
+            <EmptyState
+              title="No se han encontrado movimientos"
+              description="Prueba con otro periodo de tiempo."
+              icon={<SearchX className="h-6 w-6" />}
+            />
+          ) : aggregate.gastos.length > 0 ? (
+            renderPieContent(
+              aggregate.gastos,
+              "Distribución de Gastos",
+              <TrendingDown className="h-5 w-5 text-red-600" />,
+            )
+          ) : (
+            <EmptyState
+              title="Sin gastos"
+              description="No hay gastos en el periodo seleccionado."
+              icon={<TrendingDown className="h-6 w-6" />}
+            />
+          )}
+        </GridStackWidget>
+
+        <GridStackWidget config={getWidgetConfig("comparison-bar")} locked={locked}>
+          <Card className="h-full border-0 shadow-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Comparativa por Categoría
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {summary.length > 0 ? (
                 <ChartContainer
                   config={{
                     income: { label: "Ingresos", color: "hsl(var(--chart-1))" },
                     expense: { label: "Gastos", color: "hsl(var(--chart-2))" },
                   }}
-                  className="h-[400px]"
+                  className="h-[300px]"
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={summary} layout="vertical" margin={{ left: 100 }}>
@@ -379,19 +389,27 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <EmptyState
+                  title="Sin datos"
+                  description="No hay datos para mostrar la comparativa."
+                  icon={<BarChart3 className="h-6 w-6" />}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </GridStackWidget>
 
-          {summary.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Resumen Detallado por Categoría
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+        <GridStackWidget config={getWidgetConfig("summary-table")} locked={locked}>
+          <Card className="h-full border-0 shadow-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Resumen Detallado por Categoría
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {summary.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -467,11 +485,30 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                     ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          )}
-        </>
+              ) : (
+                <EmptyState
+                  title="Sin datos"
+                  description="No hay datos para mostrar el resumen."
+                  icon={<BarChart3 className="h-6 w-6" />}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </GridStackWidget>
+      </GridStackDashboard>
+
+      {selectorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <CategoryMegaSelector
+            categories={categorias}
+            selectedCategories={selectedCategories}
+            onSelectionChange={setCategoryIds}
+            onClose={() => setSelectorOpen(false)}
+            allowMultiple
+            title="Filtrar por Categorías"
+          />
+        </div>
       )}
-    </div>
+    </>
   )
 }

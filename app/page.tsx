@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useCallback } from "react"
 import { AppLayout } from "@/components/app-layout"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TimeframeFilter, type Timeframe, getTimeframeRange } from "@/components/dashboard/timeframe-filter"
@@ -9,7 +9,14 @@ import { CategoryAnalysisDashboard } from "@/components/dashboard/category-analy
 import { OverviewDashboard } from "@/components/dashboard/overview-dashboard"
 import { Button } from "@/components/ui/button"
 import { useLocalStorageState } from "@/hooks/use-local-storage"
-import { TrendingUp, PieChart, Home, RotateCcw } from "lucide-react"
+import { TrendingUp, PieChart, Home, RotateCcw, Lock, Unlock, LayoutGrid } from "lucide-react"
+import { clearSavedLayout } from "@/lib/config/dashboard-layouts"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type DashboardTab = "overview" | "actividad" | "categorias"
 
@@ -30,6 +37,7 @@ export default function HomePage() {
     DEFAULT_TIMEFRAME,
   )
   const [resetToken, setResetToken] = useState(0)
+  const [layoutLocked, setLayoutLocked] = useLocalStorageState<boolean>("mcmbank-dashboard-layout-locked", true)
 
   const overviewRange = useMemo(() => getTimeframeRange(overviewTimeframe), [overviewTimeframe])
   const balanceRange = useMemo(() => getTimeframeRange(balanceTimeframe), [balanceTimeframe])
@@ -59,6 +67,16 @@ export default function HomePage() {
     setResetToken((prev) => prev + 1)
   }
 
+  const handleResetLayout = useCallback(() => {
+    clearSavedLayout(activeTab)
+    // Force re-mount of the grid by bumping reset token
+    setResetToken((prev) => prev + 1)
+  }, [activeTab])
+
+  const handleToggleLock = useCallback(() => {
+    setLayoutLocked(!layoutLocked)
+  }, [layoutLocked, setLayoutLocked])
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -72,12 +90,52 @@ export default function HomePage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <TimeframeFilter value={activeTimeframe} onChange={handleTimeframeChange} />
+
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={layoutLocked ? "outline" : "default"}
+                    size="icon"
+                    onClick={handleToggleLock}
+                    className="h-9 w-9"
+                  >
+                    {layoutLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {layoutLocked ? "Desbloquear layout para mover y redimensionar paneles" : "Bloquear layout"}
+                </TooltipContent>
+              </Tooltip>
+
+              {!layoutLocked && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handleResetLayout} className="h-9 w-9">
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Restaurar layout por defecto</TooltipContent>
+                </Tooltip>
+              )}
+            </TooltipProvider>
+
             <Button variant="outline" onClick={handleResetAll} className="gap-2">
               <RotateCcw className="h-4 w-4" />
-              Eliminar todos los filtros
+              <span className="hidden sm:inline">Eliminar todos los filtros</span>
             </Button>
           </div>
         </div>
+
+        {!layoutLocked && (
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-muted-foreground">
+            <Unlock className="h-4 w-4 text-primary" />
+            <span>
+              Modo edición activo: arrastra los paneles por el icono <strong>&#8942;&#8942;</strong> superior y
+              redimensiona desde la esquina inferior derecha.
+            </span>
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as DashboardTab)} className="space-y-8">
@@ -97,7 +155,7 @@ export default function HomePage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-8">
-            <OverviewDashboard from={overviewRange.from} to={overviewRange.to} />
+            <OverviewDashboard from={overviewRange.from} to={overviewRange.to} locked={layoutLocked} />
           </TabsContent>
 
           <TabsContent value="actividad" className="space-y-8">
@@ -105,6 +163,7 @@ export default function HomePage() {
               from={balanceRange.from}
               to={balanceRange.to}
               resetToken={resetToken}
+              locked={layoutLocked}
             />
           </TabsContent>
 
@@ -113,6 +172,7 @@ export default function HomePage() {
               from={analysisRange.from}
               to={analysisRange.to}
               resetToken={resetToken}
+              locked={layoutLocked}
             />
           </TabsContent>
         </Tabs>

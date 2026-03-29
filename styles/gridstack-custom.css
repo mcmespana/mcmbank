@@ -1,0 +1,164 @@
+/* GridStack custom theme for MCM Bank dashboard */
+
+/* Base grid spacing */
+.grid-stack {
+  min-height: 200px;
+}
+
+/* Widget content wrapper */
+.gs-widget-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.gs-widget-content:hover {
+  border-color: hsl(var(--border) / 0.8);
+}
+
+/* Drag handle bar */
+.gs-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  cursor: grab;
+  color: hsl(var(--muted-foreground) / 0.3);
+  transition: color 0.2s ease, background-color 0.2s ease;
+  border-bottom: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.gs-drag-handle:hover {
+  color: hsl(var(--muted-foreground) / 0.7);
+  background-color: hsl(var(--muted) / 0.5);
+  border-bottom-color: hsl(var(--border) / 0.5);
+}
+
+.gs-drag-handle:active {
+  cursor: grabbing;
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--muted));
+}
+
+/* Widget body takes remaining space */
+.gs-widget-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* Resize handle - modern diagonal icon */
+.grid-stack-item > .ui-resizable-se {
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>');
+  background-size: 12px 12px;
+  background-repeat: no-repeat;
+  background-position: center;
+  transform: none !important;
+  z-index: 10;
+}
+
+.grid-stack-item:hover > .ui-resizable-se {
+  opacity: 0.5;
+}
+
+.grid-stack-item > .ui-resizable-se:hover {
+  opacity: 1;
+}
+
+/* Hide all resize handles except SE */
+.grid-stack-item > .ui-resizable-handle:not(.ui-resizable-se) {
+  display: none !important;
+}
+
+/* Dragging state */
+.grid-stack-item.ui-draggable-dragging > .gs-widget-content {
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 10px -6px rgba(0, 0, 0, 0.1);
+  border-color: hsl(var(--primary) / 0.3);
+  opacity: 0.95;
+}
+
+/* Resizing state */
+.grid-stack-item.ui-resizable-resizing > .gs-widget-content {
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.1);
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+/* Placeholder during drag */
+.grid-stack-placeholder > .placeholder-content {
+  background-color: hsl(var(--primary) / 0.08) !important;
+  border: 2px dashed hsl(var(--primary) / 0.3) !important;
+  border-radius: 0.75rem;
+}
+
+/* Override default gridstack shadows */
+.ui-draggable-dragging > .grid-stack-item-content,
+.ui-resizable-resizing > .grid-stack-item-content {
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/* Locked state - hide all interactive elements */
+.grid-stack-locked .gs-drag-handle {
+  display: none;
+}
+
+.grid-stack-locked .ui-resizable-handle {
+  display: none !important;
+}
+
+/* Dark mode adjustments */
+.dark .gs-widget-content {
+  background: hsl(var(--card));
+}
+
+.dark .grid-stack-item > .ui-resizable-se {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>');
+}
+
+.dark .grid-stack-placeholder > .placeholder-content {
+  background-color: hsl(var(--primary) / 0.12) !important;
+  border-color: hsl(var(--primary) / 0.4) !important;
+}
+
+/* Responsive: single column on mobile, no drag/resize */
+@media (max-width: 768px) {
+  .grid-stack > .grid-stack-item {
+    position: relative !important;
+    left: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    margin-bottom: 8px;
+  }
+
+  .grid-stack > .grid-stack-item > .grid-stack-item-content {
+    position: relative !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+  }
+
+  .grid-stack {
+    height: auto !important;
+  }
+
+  .gs-drag-handle {
+    display: none !important;
+  }
+
+  .grid-stack-item > .ui-resizable-handle {
+    display: none !important;
+  }
+}

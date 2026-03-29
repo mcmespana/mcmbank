@@ -38,21 +38,25 @@ import { es } from "date-fns/locale"
 import { formatCurrency } from "@/lib/utils/format"
 import { Badge } from "@/components/ui/badge"
 import { buildExpandedCategoryIds } from "@/lib/utils/category-utils"
+import { GridStackDashboard } from "./gridstack-dashboard"
+import { GridStackWidget } from "./gridstack-widget"
+import { ACTIVITY_DEFAULT_LAYOUT } from "@/lib/config/dashboard-layouts"
 
 interface Props {
   from: string
   to: string
   resetToken?: number
+  locked: boolean
 }
 
+function getWidgetConfig(id: string) {
+  return ACTIVITY_DEFAULT_LAYOUT.find((w) => w.id === id)!
+}
 
-
-export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
+export function ActivityBalanceDashboard({ from, to, resetToken, locked }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  // State for initial local storage loading to prevent hydration mismatch
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Initialize with empty array, will be populated from localStorage on client side
   const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
   const [selectorOpen, setSelectorOpen] = useState(false)
 
@@ -62,8 +66,6 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
     [categoryIds, categorias],
   )
 
-  // Dashboard needs ALL movements for accurate calculations
-  // Apply date filters at DB level for better performance
   const { movimientos } = useMovimientos(
     selectedDelegation,
     {
@@ -71,10 +73,9 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
       fechaHasta: to,
       categoriaIds: expandedCategoryIds.length > 0 ? expandedCategoryIds : undefined,
     },
-    { pageSize: 0 } // Disable pagination to load ALL movements
+    { pageSize: 0 }
   )
 
-  // Load configuration from local storage on mount
   useEffect(() => {
     const loadFromStorage = () => {
       try {
@@ -95,9 +96,8 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
     loadFromStorage()
   }, [setCategoryIds])
 
-  // Save configuration to local storage when it changes
   useEffect(() => {
-    if (!isLoaded) return // Don't save empty state before loading
+    if (!isLoaded) return
 
     try {
       window.localStorage.setItem("mcmbank-dashboard-balance-categories", JSON.stringify(selectedCategories))
@@ -109,7 +109,6 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
   useEffect(() => {
     if (!resetToken) return
     setCategoryIds([])
-    // Local storage will be updated by the effect above
   }, [resetToken, setCategoryIds])
 
   const summary = useMemo(() => {
@@ -169,19 +168,15 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
     let formatPattern: string
 
     if (yearsDiff > 5) {
-      // Más de 5 años: cada año
       intervals = eachYearOfInterval({ start: startDate, end: endDate })
       formatPattern = "yyyy"
     } else if (monthsDiff > 6) {
-      // Más de 6 meses: cada mes
       intervals = eachMonthOfInterval({ start: startDate, end: endDate })
       formatPattern = "MMM yyyy"
     } else if (monthsDiff > 2) {
-      // Más de 2 meses: cada 15 días
       intervals = eachWeekOfInterval({ start: startDate, end: endDate }, { step: 2 })
       formatPattern = "dd MMM"
     } else {
-      // Menos de 2 meses: cada 7 días
       intervals = eachWeekOfInterval({ start: startDate, end: endDate })
       formatPattern = "dd MMM"
     }
@@ -223,109 +218,149 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
   const hasFilteredMovements = movimientos.length > 0
 
   return (
-    <div className="space-y-6">
+    <>
       <div className="text-sm text-muted-foreground">
         Haz un balance entre ingresos y gastos de una actividad concreta
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 border-green-200 dark:border-green-800">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-700 dark:text-green-300">€{summary.ingresos.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+      <GridStackDashboard tabId="actividad" locked={locked}>
+        <GridStackWidget config={getWidgetConfig("summary-cards")} locked={locked}>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 p-4">
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 border-green-200 dark:border-green-800">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-300">{formatCurrency(summary.ingresos)}</div>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/50 dark:to-rose-950/50 border-red-200 dark:border-red-800">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gastos</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-700 dark:text-red-300">€{summary.gastos.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+            <Card className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/50 dark:to-rose-950/50 border-red-200 dark:border-red-800">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Gastos</CardTitle>
+                <TrendingDown className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-700 dark:text-red-300">{formatCurrency(summary.gastos)}</div>
+              </CardContent>
+            </Card>
 
-        <Card
-          className={`${summary.balance >= 0
-            ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200 dark:border-blue-800"
-            : "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 border-orange-200 dark:border-orange-800"
-            }`}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Balance</CardTitle>
-            <Wallet className={`h-4 w-4 ${summary.balance >= 0 ? "text-blue-600" : "text-orange-600"}`} />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${summary.balance >= 0 ? "text-blue-700 dark:text-blue-300" : "text-orange-700 dark:text-orange-300"}`}
+            <Card
+              className={`${summary.balance >= 0
+                ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200 dark:border-blue-800"
+                : "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 border-orange-200 dark:border-orange-800"
+                }`}
             >
-              €{summary.balance.toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Balance</CardTitle>
+                <Wallet className={`h-4 w-4 ${summary.balance >= 0 ? "text-blue-600" : "text-orange-600"}`} />
+              </CardHeader>
+              <CardContent>
+                <div
+                  className={`text-2xl font-bold ${summary.balance >= 0 ? "text-blue-700 dark:text-blue-300" : "text-orange-700 dark:text-orange-300"}`}
+                >
+                  {formatCurrency(summary.balance)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </GridStackWidget>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChart className="h-5 w-5" />
-              Distribución Ingresos vs Gastos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!hasFilteredMovements ? (
-              <EmptyState
-                title="No se han encontrado movimientos"
-                description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."
-                icon={<SearchX className="h-6 w-6" />}
+        <GridStackWidget config={getWidgetConfig("distribution-chart")} locked={locked}>
+          <Card className="h-full border-0 shadow-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="h-5 w-5" />
+                Distribución Ingresos vs Gastos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!hasFilteredMovements ? (
+                <EmptyState
+                  title="No se han encontrado movimientos"
+                  description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."
+                  icon={<SearchX className="h-6 w-6" />}
+                >
+                  <Button variant="outline" onClick={clearFilters}>
+                    Limpiar filtros
+                  </Button>
+                </EmptyState>
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie data={donutData} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value">
+                        {donutData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip content={<DonutTooltip />} />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+        </GridStackWidget>
+
+        <GridStackWidget config={getWidgetConfig("category-filter")} locked={locked}>
+          <Card className="h-full border-0 shadow-none">
+            <CardHeader>
+              <CardTitle>Filtrar por Categorías</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={() => setSelectorOpen(true)}
               >
-                <Button variant="outline" onClick={clearFilters}>
-                  Limpiar filtros
-                </Button>
-              </EmptyState>
-            ) : (
-              <ChartContainer config={chartConfig} className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsPieChart>
-                    <Pie data={donutData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value">
-                      {donutData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip content={<DonutTooltip />} />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
+                <Filter className="h-4 w-4" />
+                {selectedCategories.length === 0
+                  ? "Seleccionar categorías..."
+                  : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
+              </Button>
+              {isPending && (
+                <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
+              )}
+            </CardContent>
+          </Card>
+        </GridStackWidget>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Filtrar por Categorías</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={() => setSelectorOpen(true)}
-            >
-              <Filter className="h-4 w-4" />
-              {selectedCategories.length === 0
-                ? "Seleccionar categorías..."
-                : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
-            </Button>
-            {isPending && (
-              <p className="text-xs text-muted-foreground mt-2">Aplicando filtros...</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        <GridStackWidget config={getWidgetConfig("evolution-chart")} locked={locked}>
+          <Card className="h-full border-0 shadow-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Evolución Histórica
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {monthlyData.length > 0 && hasFilteredMovements ? (
+                <ChartContainer config={chartConfig} className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="period" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="ingresos" stroke="var(--color-ingresos)" strokeWidth={2} />
+                      <Line type="monotone" dataKey="gastos" stroke="var(--color-gastos)" strokeWidth={2} />
+                      <Line type="monotone" dataKey="balance" stroke="var(--color-balance)" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                <EmptyState
+                  title="Sin datos de evolución"
+                  description="No hay suficientes movimientos para mostrar la evolución histórica."
+                  icon={<BarChart3 className="h-6 w-6" />}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </GridStackWidget>
+      </GridStackDashboard>
 
       {selectorOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -339,32 +374,6 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
           />
         </div>
       )}
-
-      {monthlyData.length > 0 && hasFilteredMovements && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Evolución Histórica
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="ingresos" stroke="var(--color-ingresos)" strokeWidth={2} />
-                  <Line type="monotone" dataKey="gastos" stroke="var(--color-gastos)" strokeWidth={2} />
-                  <Line type="monotone" dataKey="balance" stroke="var(--color-balance)" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    </>
   )
 }

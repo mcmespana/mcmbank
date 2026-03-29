@@ -51,6 +51,7 @@
     "embla-carousel-react": "8.5.1",
     "frimousse": "latest",
     "geist": "latest",
+    "gridstack": "^12.4.2",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "^16.1.6",
@@ -68,7 +69,7 @@
     "tailwindcss-animate": "^1.0.7",
     "url": "latest",
     "vaul": "1.1.2",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {

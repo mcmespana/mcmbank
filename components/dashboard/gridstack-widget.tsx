@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef, useEffect } from "react"
 import type { GridStackWidgetConfig } from "@/lib/config/dashboard-layouts"
 import { GripVertical } from "lucide-react"
 
@@ -10,17 +11,23 @@ interface GridStackWidgetProps {
 }
 
 export function GridStackWidget({ config, locked, children }: GridStackWidgetProps) {
+  const itemRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = itemRef.current
+    if (!el) return
+    // Set GridStack attributes via DOM (React doesn't support custom gs-* attributes)
+    el.setAttribute("gs-id", config.id)
+    el.setAttribute("gs-x", String(config.x))
+    el.setAttribute("gs-y", String(config.y))
+    el.setAttribute("gs-w", String(config.w))
+    el.setAttribute("gs-h", String(config.h))
+    if (config.minW) el.setAttribute("gs-min-w", String(config.minW))
+    if (config.minH) el.setAttribute("gs-min-h", String(config.minH))
+  }, [config])
+
   return (
-    <div
-      className="grid-stack-item"
-      gs-id={config.id}
-      gs-x={config.x}
-      gs-y={config.y}
-      gs-w={config.w}
-      gs-h={config.h}
-      gs-min-w={config.minW}
-      gs-min-h={config.minH}
-    >
+    <div ref={itemRef} className="grid-stack-item">
       <div className="grid-stack-item-content gs-widget-content">
         {!locked && (
           <div className="gs-drag-handle">

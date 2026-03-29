@@ -18,7 +18,7 @@
 }
 
 .gs-widget-content:hover {
-  border-color: hsl(var(--border) / 0.8);
+  border-color: hsl(var(--primary) / 0.15);
 }
 
 /* Drag handle bar */

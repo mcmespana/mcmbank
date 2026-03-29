@@ -16,6 +16,9 @@ export function GridStackDashboard({ tabId, locked, children }: GridStackDashboa
   const gridRef = useRef<HTMLDivElement>(null)
   const gridInstanceRef = useRef<any>(null)
   const [ready, setReady] = useState(false)
+  // Keep a stable ref to tabId for event handlers
+  const tabIdRef = useRef(tabId)
+  tabIdRef.current = tabId
 
   const handleLayoutChange = useCallback(() => {
     const grid = gridInstanceRef.current
@@ -36,13 +39,11 @@ export function GridStackDashboard({ tabId, locked, children }: GridStackDashboa
       })
       .filter(Boolean)
 
-    saveLayout(tabId, widgets)
-  }, [tabId])
+    saveLayout(tabIdRef.current, widgets)
+  }, [])
 
   useEffect(() => {
     if (!gridRef.current) return
-
-    let grid: any = null
 
     const initGrid = async () => {
       const { GridStack } = await import("gridstack")
@@ -53,7 +54,7 @@ export function GridStackDashboard({ tabId, locked, children }: GridStackDashboa
       const defaultLayout = getDefaultLayout(tabId)
       const layout = savedLayout || defaultLayout
 
-      grid = GridStack.init(
+      const grid = GridStack.init(
         {
           column: 12,
           cellHeight: 70,
@@ -111,7 +112,7 @@ export function GridStackDashboard({ tabId, locked, children }: GridStackDashboa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabId])
 
-  // Update lock state
+  // Update lock state dynamically
   useEffect(() => {
     const grid = gridInstanceRef.current
     if (!grid) return

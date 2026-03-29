@@ -37,6 +37,7 @@ export default function HomePage() {
     DEFAULT_TIMEFRAME,
   )
   const [resetToken, setResetToken] = useState(0)
+  const [layoutResetKey, setLayoutResetKey] = useState(0)
   const [layoutLocked, setLayoutLocked] = useLocalStorageState<boolean>("mcmbank-dashboard-layout-locked", true)
 
   const overviewRange = useMemo(() => getTimeframeRange(overviewTimeframe), [overviewTimeframe])
@@ -69,8 +70,8 @@ export default function HomePage() {
 
   const handleResetLayout = useCallback(() => {
     clearSavedLayout(activeTab)
-    // Force re-mount of the grid by bumping reset token
-    setResetToken((prev) => prev + 1)
+    // Force re-mount of the grid with a separate key to avoid resetting filters
+    setLayoutResetKey((prev) => prev + 1)
   }, [activeTab])
 
   const handleToggleLock = useCallback(() => {
@@ -155,11 +156,12 @@ export default function HomePage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-8">
-            <OverviewDashboard from={overviewRange.from} to={overviewRange.to} locked={layoutLocked} />
+            <OverviewDashboard key={`overview-${layoutResetKey}`} from={overviewRange.from} to={overviewRange.to} locked={layoutLocked} />
           </TabsContent>
 
           <TabsContent value="actividad" className="space-y-8">
             <ActivityBalanceDashboard
+              key={`actividad-${layoutResetKey}`}
               from={balanceRange.from}
               to={balanceRange.to}
               resetToken={resetToken}
@@ -169,6 +171,7 @@ export default function HomePage() {
 
           <TabsContent value="categorias" className="space-y-8">
             <CategoryAnalysisDashboard
+              key={`categorias-${layoutResetKey}`}
               from={analysisRange.from}
               to={analysisRange.to}
               resetToken={resetToken}

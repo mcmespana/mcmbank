@@ -2,9 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Wallet, Target, Tag, ArrowUpRight, ArrowDownRight } from "lucide-react"
-import { useDelegationContext } from "@/contexts/delegation-context"
-import { useMovimientos } from "@/hooks/use-movimientos"
-import { useMemo } from "react"
+import { useFinancialSummary } from "@/hooks/use-financial-summary"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 
@@ -14,38 +12,8 @@ interface Props {
 }
 
 export function FinancialSummary({ from, to }: Props) {
-  const { selectedDelegation } = useDelegationContext()
   const router = useRouter()
-
-  // Dashboard needs ALL movements for accurate calculations, not just first 100
-  const { movimientos } = useMovimientos(
-    selectedDelegation,
-    {
-      fechaDesde: from,
-      fechaHasta: to,
-    },
-    { pageSize: 0 } // Disable pagination to load ALL movements
-  )
-
-  const summary = useMemo(() => {
-    if (!movimientos.length) return { ingresos: 0, gastos: 0, balance: 0, count: 0, uncategorized: 0 }
-
-    const ingresos = movimientos.filter((m) => m.importe > 0).reduce((sum, m) => sum + m.importe, 0)
-
-    const gastos = movimientos.filter((m) => m.importe < 0).reduce((sum, m) => sum + Math.abs(m.importe), 0)
-
-    const uncategorized = movimientos.filter((m) => !m.categoria_id).length
-
-    const balance = ingresos - gastos
-
-    return {
-      ingresos,
-      gastos,
-      balance,
-      count: movimientos.length,
-      uncategorized,
-    }
-  }, [movimientos])
+  const { summary } = useFinancialSummary(from, to)
 
   const metrics = [
     {
@@ -87,7 +55,7 @@ export function FinancialSummary({ from, to }: Props) {
     },
     {
       title: "Transacciones",
-      value: summary.count.toString(),
+      value: summary.total_movimientos.toString(),
       description: "En el periodo",
       icon: Target,
       color: "text-purple-600 dark:text-purple-400",
@@ -97,15 +65,15 @@ export function FinancialSummary({ from, to }: Props) {
     },
     {
       title: "Sin categorizar",
-      value: summary.uncategorized.toString(),
+      value: summary.sin_categoria.toString(),
       description: "Transacciones",
       icon: Tag,
       color: "text-amber-600 dark:text-amber-400",
       bgColor: "bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/50 dark:to-yellow-950/50",
       borderColor: "border-amber-200 dark:border-amber-800",
       action: () => router.push("/transacciones?uncategorized=1"),
-      badge: summary.uncategorized > 0 ? "Pendiente" : "Completo",
-      badgeVariant: summary.uncategorized > 0 ? "secondary" : "default",
+      badge: summary.sin_categoria > 0 ? "Pendiente" : "Completo",
+      badgeVariant: summary.sin_categoria > 0 ? "secondary" : "default",
     },
   ]
 

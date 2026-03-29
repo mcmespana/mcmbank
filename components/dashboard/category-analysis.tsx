@@ -10,14 +10,13 @@ import { SearchX, TrendingUp, TrendingDown, BarChart3, ArrowUpDown, Filter } fro
 import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
-import { useMovimientos } from "@/hooks/use-movimientos"
+import { useCategoryBreakdown } from "@/hooks/use-category-breakdown"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
 import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
   Tooltip as RechartsTooltip,
-  type TooltipProps,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -30,6 +29,7 @@ import { formatCurrency } from "@/lib/utils/format"
 import { Table, TableHeader, TableHead, TableRow, TableCell, TableBody } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { buildExpandedCategoryIds } from "@/lib/utils/category-utils"
+
 interface Props {
   from: string
   to: string
@@ -40,7 +40,6 @@ type SortField = "category" | "income" | "expense" | "balance" | "default"
 
 export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   const { selectedDelegation } = useDelegationContext()
-  // State for initial local storage loading to prevent hydration mismatch
   const [isLoaded, setIsLoaded] = useState(false)
 
   const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
@@ -53,19 +52,17 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     () => buildExpandedCategoryIds(categoryIds, categorias),
     [categoryIds, categorias],
   )
-  // Dashboard needs ALL movements for accurate calculations
-  // Apply date and category filters at DB level for better performance
-  const { movimientos } = useMovimientos(
-    selectedDelegation,
-    {
-      fechaDesde: from,
-      fechaHasta: to,
-      categoriaIds: expandedCategoryIds.length ? expandedCategoryIds : undefined,
-    },
-    { pageSize: 0 } // Disable pagination to load ALL movements
-  )
 
+  // Fetch full category breakdown from DB — one row per category, no full table scan
+  const { breakdown } = useCategoryBreakdown(from, to)
 
+  // Filter client-side when category filter is active (cheap: one row per category)
+  const filteredBreakdown = useMemo(() => {
+    if (expandedCategoryIds.length === 0) return breakdown
+    return breakdown.filter(
+      (row) => row.categoria_id !== null && expandedCategoryIds.includes(row.categoria_id),
+    )
+  }, [breakdown, expandedCategoryIds])
 
   // Load configuration from local storage on mount
   useEffect(() => {
@@ -90,8 +87,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
 
   // Save configuration to local storage when it changes
   useEffect(() => {
-    if (!isLoaded) return // Don't save empty state before loading
-
+    if (!isLoaded) return
     try {
       window.localStorage.setItem("mcmbank-dashboard-analysis-categories", JSON.stringify(selectedCategories))
     } catch (error) {
@@ -102,50 +98,45 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   useEffect(() => {
     if (!resetToken) return
     setCategoryIds([])
-    // Local storage will be updated by the effect above
   }, [resetToken, setCategoryIds])
 
+  // Build separate ingresos/gastos arrays for pie charts
   const aggregate = useMemo(() => {
-    const ingresoMap = new Map<string, { id: string; name: string; value: number; emoji?: string }>()
-    const gastoMap = new Map<string, { id: string; name: string; value: number; emoji?: string }>()
+    const ingresos = filteredBreakdown
+      .filter((row) => row.ingresos > 0)
+      .map((row) => ({
+        id: row.categoria_id ?? "uncategorized",
+        name: row.categoria_nombre ?? "Sin etiqueta",
+        value: row.ingresos,
+        emoji: row.categoria_emoji ?? undefined,
+      }))
 
-    movimientos.forEach((m) => {
-      const id = m.categoria_id || "uncategorized"
-      const name = m.categoria?.nombre || "Sin etiqueta"
-      const emoji = m.categoria?.emoji || undefined
-      const map = m.importe > 0 ? ingresoMap : gastoMap
-      const entry = map.get(id) || { id, name, value: 0, emoji }
-      entry.value += Math.abs(m.importe)
-      map.set(id, entry)
-    })
+    const gastos = filteredBreakdown
+      .filter((row) => row.gastos > 0)
+      .map((row) => ({
+        id: row.categoria_id ?? "uncategorized",
+        name: row.categoria_nombre ?? "Sin etiqueta",
+        value: row.gastos,
+        emoji: row.categoria_emoji ?? undefined,
+      }))
 
-    return {
-      ingresos: Array.from(ingresoMap.values()),
-      gastos: Array.from(gastoMap.values()),
-    }
-  }, [movimientos])
+    return { ingresos, gastos }
+  }, [filteredBreakdown])
 
+  // Build summary table rows, merging ingresos/gastos per category
   const summary = useMemo(() => {
-    const map = new Map<
-      string,
-      { id: string; name: string; income: number; expense: number; emoji?: string; order?: number }
-    >()
-
-    aggregate.ingresos.forEach((i) => {
-      const categoria = categorias.find((c) => c.id === i.id)
-      map.set(i.id, { id: i.id, name: i.name, income: i.value, expense: 0, emoji: i.emoji, order: categoria?.orden })
-    })
-    aggregate.gastos.forEach((g) => {
-      const existing = map.get(g.id)
-      const categoria = categorias.find((c) => c.id === g.id)
-      if (existing) {
-        existing.expense = g.value
-      } else {
-        map.set(g.id, { id: g.id, name: g.name, income: 0, expense: g.value, emoji: g.emoji, order: categoria?.orden })
+    const result = filteredBreakdown.map((row) => {
+      const id = row.categoria_id ?? "uncategorized"
+      const categoria = categorias.find((c) => c.id === id)
+      return {
+        id,
+        name: row.categoria_nombre ?? "Sin etiqueta",
+        income: row.ingresos,
+        expense: row.gastos,
+        emoji: row.categoria_emoji ?? undefined,
+        order: categoria?.orden,
       }
     })
-
-    const result = Array.from(map.values())
 
     if (sortField === "default") {
       result.sort((a, b) => (a.order || 999) - (b.order || 999))
@@ -172,7 +163,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     }
 
     return result
-  }, [aggregate, categorias, sortField, sortDirection])
+  }, [filteredBreakdown, categorias, sortField, sortDirection])
 
   const buildConfig = (data: { id: string; name: string; value: number }[]): ChartConfig => {
     const colors = [1, 2, 3, 4, 5]
@@ -225,18 +216,9 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
       if (categoria?.color) {
         return categoria.color
       }
-      // Colores vibrantes como fallback
       const colors = [
-        "#3b82f6", // blue
-        "#ef4444", // red
-        "#10b981", // emerald
-        "#f59e0b", // amber
-        "#8b5cf6", // violet
-        "#06b6d4", // cyan
-        "#84cc16", // lime
-        "#f97316", // orange
-        "#ec4899", // pink
-        "#6366f1", // indigo
+        "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
+        "#06b6d4", "#84cc16", "#f97316", "#ec4899", "#6366f1",
       ]
       return colors[index % colors.length]
     }
@@ -323,7 +305,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
         </div>
       )}
 
-      {movimientos.length === 0 ? (
+      {filteredBreakdown.length === 0 ? (
         <EmptyState
           title="No se han encontrado movimientos"
           description="Prueba con otro periodo de tiempo o limpia los filtros de categorías."

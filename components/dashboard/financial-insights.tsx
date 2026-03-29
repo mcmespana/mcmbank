@@ -2,9 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, CheckCircle, Target, Calendar } from "lucide-react"
-import { useDelegationContext } from "@/contexts/delegation-context"
-import { useMovimientos } from "@/hooks/use-movimientos"
-import { useMemo } from "react"
+import { useFinancialSummary } from "@/hooks/use-financial-summary"
 import { Badge } from "@/components/ui/badge"
 
 interface Props {
@@ -13,71 +11,53 @@ interface Props {
 }
 
 export function FinancialInsights({ from, to }: Props) {
-  const { selectedDelegation } = useDelegationContext()
-  // Dashboard needs ALL movements for accurate calculations
-  const { movimientos } = useMovimientos(
-    selectedDelegation,
-    {
-      fechaDesde: from,
-      fechaHasta: to,
-    },
-    { pageSize: 0 } // Disable pagination to load ALL movements
-  )
+  const { summary } = useFinancialSummary(from, to)
 
-  const insights = useMemo(() => {
-    if (!movimientos.length) return []
+  const { ingresos, gastos, balance, total_movimientos, sin_categoria } = summary
+  const avgTransaction = total_movimientos > 0 ? (ingresos + gastos) / total_movimientos : 0
 
-    const totalIngresos = movimientos.filter((m) => m.importe > 0).reduce((sum, m) => sum + m.importe, 0)
-    const totalGastos = movimientos.filter((m) => m.importe < 0).reduce((sum, m) => sum + Math.abs(m.importe), 0)
-    const balance = totalIngresos - totalGastos
-    const uncategorized = movimientos.filter((m) => !m.categoria_id).length
-    const avgTransaction = movimientos.length > 0 ? (totalIngresos + totalGastos) / movimientos.length : 0
+  const insights = []
 
-    const insights = []
+  if (total_movimientos === 0) return null
 
-    // Balance insight
-    if (balance > 0) {
-      insights.push({
-        type: "positive" as const,
-        icon: CheckCircle,
-        title: "Balance Positivo",
-        description: `Superávit de €${balance.toFixed(2)}`,
-        badge: "Excelente",
-      })
-    } else if (balance < 0) {
-      insights.push({
-        type: "warning" as const,
-        icon: AlertTriangle,
-        title: "Balance Negativo",
-        description: `Déficit de €${Math.abs(balance).toFixed(2)}`,
-        badge: "Atención",
-      })
-    }
+  // Balance insight
+  if (balance > 0) {
+    insights.push({
+      type: "positive" as const,
+      icon: CheckCircle,
+      title: "Balance Positivo",
+      description: `Superávit de €${balance.toFixed(2)}`,
+      badge: "Excelente",
+    })
+  } else if (balance < 0) {
+    insights.push({
+      type: "warning" as const,
+      icon: AlertTriangle,
+      title: "Balance Negativo",
+      description: `Déficit de €${Math.abs(balance).toFixed(2)}`,
+      badge: "Atención",
+    })
+  }
 
-    // Uncategorized insight
-    if (uncategorized > 0) {
-      insights.push({
-        type: "info" as const,
-        icon: Target,
-        title: "Transacciones sin categorizar",
-        description: `${uncategorized} transacciones pendientes de etiquetar`,
-        badge: "Pendiente",
-      })
-    }
+  // Uncategorized insight
+  if (sin_categoria > 0) {
+    insights.push({
+      type: "info" as const,
+      icon: Target,
+      title: "Transacciones sin categorizar",
+      description: `${sin_categoria} transacciones pendientes de etiquetar`,
+      badge: "Pendiente",
+    })
+  }
 
-    // Activity insight
-    if (movimientos.length > 0) {
-      insights.push({
-        type: "info" as const,
-        icon: Calendar,
-        title: "Actividad del período",
-        description: `${movimientos.length} transacciones • Promedio €${avgTransaction.toFixed(2)}`,
-        badge: "Activo",
-      })
-    }
-
-    return insights
-  }, [movimientos])
+  // Activity insight
+  insights.push({
+    type: "info" as const,
+    icon: Calendar,
+    title: "Actividad del período",
+    description: `${total_movimientos} transacciones • Promedio €${avgTransaction.toFixed(2)}`,
+    badge: "Activo",
+  })
 
   if (insights.length === 0) return null
 

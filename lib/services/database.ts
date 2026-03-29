@@ -1,8 +1,11 @@
 import { supabase } from "@/lib/supabase/client"
 import type {
   Categoria,
+  CategoryBreakdownRow,
   CategoriaConOrdenEfectivo,
   CategoriaOrdenDelegacion,
+  FinancialSummary,
+  MonthlyTrendRow,
 } from "@/lib/types/database"
 
 type CategoriaWithOverrides = Categoria & {
@@ -210,5 +213,82 @@ export class DatabaseService {
       .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
 
     if (error) throw error
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dashboard aggregations (RPC — computed in database, not in JS)
+  // ---------------------------------------------------------------------------
+
+  static async getFinancialSummary(
+    delegacionId: string,
+    desde: string,
+    hasta: string,
+    signal?: AbortSignal,
+  ): Promise<FinancialSummary> {
+    const client = this.getClient() as any
+    let query = client.rpc("get_financial_summary", {
+      p_delegacion_id: delegacionId,
+      p_desde: desde,
+      p_hasta: hasta,
+    })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    // rpc returns an array of rows; we want the first (and only) row
+    const row = Array.isArray(data) ? data[0] : data
+    return {
+      ingresos: Number(row?.ingresos ?? 0),
+      gastos: Number(row?.gastos ?? 0),
+      balance: Number(row?.balance ?? 0),
+      total_movimientos: Number(row?.total_movimientos ?? 0),
+      sin_categoria: Number(row?.sin_categoria ?? 0),
+    }
+  }
+
+  static async getMonthlyTrend(
+    delegacionId: string,
+    desde: string,
+    hasta: string,
+    signal?: AbortSignal,
+  ): Promise<MonthlyTrendRow[]> {
+    const client = this.getClient() as any
+    let query = client.rpc("get_monthly_trend", {
+      p_delegacion_id: delegacionId,
+      p_desde: desde,
+      p_hasta: hasta,
+    })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    return ((data as any[]) ?? []).map((row) => ({
+      mes: String(row.mes),
+      ingresos: Number(row.ingresos ?? 0),
+      gastos: Number(row.gastos ?? 0),
+    }))
+  }
+
+  static async getCategoryBreakdown(
+    delegacionId: string,
+    desde: string,
+    hasta: string,
+    signal?: AbortSignal,
+  ): Promise<CategoryBreakdownRow[]> {
+    const client = this.getClient() as any
+    let query = client.rpc("get_category_breakdown", {
+      p_delegacion_id: delegacionId,
+      p_desde: desde,
+      p_hasta: hasta,
+    })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    return ((data as any[]) ?? []).map((row) => ({
+      categoria_id: row.categoria_id ?? null,
+      categoria_nombre: row.categoria_nombre ?? null,
+      categoria_emoji: row.categoria_emoji ?? null,
+      categoria_color: row.categoria_color ?? null,
+      ingresos: Number(row.ingresos ?? 0),
+      gastos: Number(row.gastos ?? 0),
+    }))
   }
 }

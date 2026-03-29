@@ -457,3 +457,27 @@ export type MovimientoConRelaciones = Movimiento & {
 export type CuentaConDelegacion = Cuenta & {
   delegacion: Delegacion
 }
+
+// RPC return types for dashboard aggregations
+export type FinancialSummary = {
+  ingresos: number
+  gastos: number
+  balance: number
+  total_movimientos: number
+  sin_categoria: number
+}
+
+export type MonthlyTrendRow = {
+  mes: string // 'YYYY-MM'
+  ingresos: number
+  gastos: number
+}
+
+export type CategoryBreakdownRow = {
+  categoria_id: string | null
+  categoria_nombre: string | null
+  categoria_emoji: string | null
+  categoria_color: string | null
+  ingresos: number
+  gastos: number
+}

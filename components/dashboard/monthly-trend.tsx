@@ -1,12 +1,11 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useDelegationContext } from "@/contexts/delegation-context"
-import { useMovimientos } from "@/hooks/use-movimientos"
+import { useMonthlyTrendData } from "@/hooks/use-monthly-trend-data"
 import { useMemo } from "react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, parseISO } from "date-fns"
+import { parse, format } from "date-fns"
 import { es } from "date-fns/locale"
 
 interface Props {
@@ -15,46 +14,17 @@ interface Props {
 }
 
 export function MonthlyTrend({ from, to }: Props) {
-  const { selectedDelegation } = useDelegationContext()
-  // Dashboard needs ALL movements for accurate calculations
-  const { movimientos } = useMovimientos(
-    selectedDelegation,
-    {
-      fechaDesde: from,
-      fechaHasta: to,
-    },
-    { pageSize: 0 } // Disable pagination to load ALL movements
-  )
+  const { trend } = useMonthlyTrendData(from, to)
 
   const chartData = useMemo(() => {
-    if (!movimientos.length) return []
-
-    const months = eachMonthOfInterval({
-      start: parseISO(from),
-      end: parseISO(to),
-    })
-
-    return months.map((month) => {
-      const monthStart = startOfMonth(month)
-      const monthEnd = endOfMonth(month)
-
-      const monthMovimientos = movimientos.filter((m) => {
-        const fecha = parseISO(m.fecha)
-        return fecha >= monthStart && fecha <= monthEnd
-      })
-
-      const ingresos = monthMovimientos.filter((m) => m.importe > 0).reduce((sum, m) => sum + m.importe, 0)
-
-      const gastos = monthMovimientos.filter((m) => m.importe < 0).reduce((sum, m) => sum + Math.abs(m.importe), 0)
-
-      return {
-        month: format(month, "MMM yyyy", { locale: es }),
-        ingresos,
-        gastos,
-        balance: ingresos - gastos,
-      }
-    })
-  }, [movimientos, from, to])
+    return trend.map((row) => ({
+      // Convert YYYY-MM to display format (e.g. "ene 2025")
+      month: format(parse(row.mes, "yyyy-MM", new Date()), "MMM yyyy", { locale: es }),
+      ingresos: row.ingresos,
+      gastos: row.gastos,
+      balance: row.ingresos - row.gastos,
+    }))
+  }, [trend])
 
   const chartConfig = {
     ingresos: { label: "Ingresos", color: "hsl(var(--chart-1))" },

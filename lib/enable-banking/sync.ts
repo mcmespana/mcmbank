@@ -3,8 +3,11 @@ import type { Database, BancoSyncLogStep } from "@/lib/types/database"
 import { enableBanking, EnableBankingError } from "./client"
 import { mapTransactionToMovimiento } from "./dedup"
 
-const SYNC_OVERLAP_DAYS = 10 // Re-leemos los últimos 10 días en cada corrida
-const DEFAULT_INITIAL_DAYS = 90 // Primera sync: 90 días atrás por defecto
+const SYNC_OVERLAP_DAYS = 10 // En cada corrida incremental, re-leemos los últimos 10 días
+// Primera sync: intentamos ir lo más atrás posible. PSD2 limita el histórico persistente
+// a 90 días en la mayoría de bancos; algunos permiten más con consentimientos especiales.
+// Probamos en orden descendente hasta que el ASPSP acepte.
+const INITIAL_WINDOWS_DAYS = [730, 365, 180, 90] as const
 const DEFAULT_MAX_PAGES = 50
 
 type AdminClient = SupabaseClient<Database>
@@ -108,17 +111,30 @@ export async function syncCuenta(
 
   // 2. Ventana de fechas
   const dateTo = iso(new Date())
+  const isFirstSync = !cuenta.last_sync_at
   let dateFrom: string
+  // Lista ordenada de ventanas a probar. En sync incremental hay una sola (last_sync_at - 10d).
+  // En primera sync probamos 2 años → 1 año → 6 meses → 90 días.
+  let candidateWindows: string[]
   if (cuenta.last_sync_at) {
     const overlap = new Date(cuenta.last_sync_at)
     overlap.setUTCDate(overlap.getUTCDate() - SYNC_OVERLAP_DAYS)
     dateFrom = iso(overlap)
+    candidateWindows = [dateFrom]
   } else if (cuenta.sync_desde_fecha) {
     dateFrom = cuenta.sync_desde_fecha
+    // Si el usuario ha pedido una fecha concreta, la respetamos sin fallback automático.
+    candidateWindows = [dateFrom]
   } else {
-    dateFrom = iso(daysAgo(DEFAULT_INITIAL_DAYS))
+    candidateWindows = INITIAL_WINDOWS_DAYS.map((d) => iso(daysAgo(d)))
+    dateFrom = candidateWindows[0]
   }
-  logger.info("Ventana de sync", { date_from: dateFrom, date_to: dateTo })
+  logger.info("Ventana de sync", {
+    date_from: dateFrom,
+    date_to: dateTo,
+    primera_sync: isFirstSync,
+    candidatas: candidateWindows.length > 1 ? candidateWindows : undefined,
+  })
 
   // 3. Crear log row
   const { data: logRow, error: logErr } = await admin
@@ -168,24 +184,62 @@ export async function syncCuenta(
       throw err
     }
 
-    // 5. Paginar transacciones
-    const pages = await enableBanking.getAllTransactions(
-      cuenta.external_account_uid,
-      { date_from: dateFrom, date_to: dateTo, transaction_status: "BOOK" },
-      {
-        maxPages: DEFAULT_MAX_PAGES,
-        onPage: (page, i) => {
-          logger.info(`Página ${i} recibida`, {
-            transacciones: page.transactions.length,
-            tiene_continuation_key: !!page.continuation_key,
+    // 5. Paginar transacciones con fallback de ventana
+    // Intentamos en orden las fechas candidatas. Si el ASPSP rechaza la más antigua
+    // (típicamente 400 por date_from fuera del histórico permitido), probamos la siguiente.
+    let pages: Awaited<ReturnType<typeof enableBanking.getAllTransactions>> = []
+    let ventanaUsada = dateFrom
+    let ventanaLimitada = false
+    let ultimoErrorVentana: EnableBankingError | null = null
+
+    for (let wi = 0; wi < candidateWindows.length; wi++) {
+      const cand = candidateWindows[wi]
+      try {
+        logger.info(`Intento ${wi + 1}/${candidateWindows.length} con ventana desde ${cand}`)
+        pages = await enableBanking.getAllTransactions(
+          cuenta.external_account_uid,
+          { date_from: cand, date_to: dateTo, transaction_status: "BOOK" },
+          {
+            maxPages: DEFAULT_MAX_PAGES,
+            onPage: (page, i) => {
+              logger.info(`Página ${i} recibida`, {
+                transacciones: page.transactions.length,
+                tiene_continuation_key: !!page.continuation_key,
+              })
+            },
+          },
+        )
+        ventanaUsada = cand
+        ventanaLimitada = wi > 0
+        break
+      } catch (err) {
+        if (err instanceof EnableBankingError && err.status === 400) {
+          logger.warn(`El banco rechazó la ventana desde ${cand} (400). Probamos ventana más corta.`, {
+            status: err.status,
+            body: err.body,
           })
-        },
-      },
-    )
+          ultimoErrorVentana = err
+          continue
+        }
+        throw err
+      }
+    }
+
+    if (pages.length === 0 && ultimoErrorVentana) {
+      throw ultimoErrorVentana
+    }
+
+    dateFrom = ventanaUsada
+    if (ventanaLimitada) {
+      logger.warn(
+        `El banco limitó el histórico a partir de ${ventanaUsada}. Para movimientos anteriores, impórtalos manualmente desde Excel (pestaña "Importar" en Transacciones).`,
+        { ventana_solicitada: candidateWindows[0], ventana_obtenida: ventanaUsada },
+      )
+    }
 
     const allTx = pages.flatMap((p) => p.transactions)
     recibidas = allTx.length
-    logger.info(`Total transacciones recibidas: ${recibidas}`)
+    logger.info(`Total transacciones recibidas: ${recibidas}`, { desde: ventanaUsada, hasta: dateTo })
 
     if (allTx.length === 0) {
       logger.info("Sin transacciones nuevas en la ventana")
@@ -257,6 +311,8 @@ export async function syncCuenta(
       .update({
         finished_at: finishedAt.toISOString(),
         duracion_ms: finishedAt.getTime() - startedAt.getTime(),
+        date_from: dateFrom,
+        date_to: dateTo,
         transacciones_recibidas: recibidas,
         transacciones_insertadas: insertadas,
         transacciones_duplicadas: duplicadas,

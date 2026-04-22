@@ -9,7 +9,7 @@ Este documento describe la integración de **Enable Banking (PSD2 AIS)** con MCM
 1. El usuario marca una cuenta como **"Conectada"** y pulsa **"Conectar con el banco"**.
 2. Se redirige al banco, el usuario aprueba con SCA (biometría / SMS), y vuelve a MCM Bank.
 3. A las **06:00 UTC cada día** (≈ 07:00 España invierno / 08:00 verano), un cron en Supabase dispara la sincronización de todas las cuentas activas.
-4. Cada cuenta con `sync_enabled=true` y consentimiento vivo recibe sus movimientos nuevos de los últimos ~10 días, ya des-duplicados por `transaction_id` / `entry_reference` / hash compuesto.
+4. Cada cuenta con `sync_enabled=true` y consentimiento vivo recibe sus movimientos nuevos desde la última sincronización (con un margen de 10 días hacia atrás para capturar asientos con fecha retroactiva), ya des-duplicados por `transaction_id` / `entry_reference` / hash compuesto. En la **primera** sincronización intentamos traer hasta 2 años de histórico; si el banco no permite tanto, probamos ventanas más cortas (1 año → 6 meses → 90 días) y avisamos en el log para que el histórico anterior se importe manualmente desde Excel.
 5. El usuario puede **forzar una sincronización manual** desde la página `/cuentas` con un botón y ver en pantalla **todos los pasos del proceso** (log detallado).
 6. Cuando el consentimiento caduca (90–180 días según banco), la cuenta se marca `expirada` y hay que volver a pulsar "Conectar" para renovar.
 
@@ -41,7 +41,11 @@ Parcial para no afectar a movimientos manuales sin external_id.
 2. **`entry_reference`** como fallback estable.
 3. **Hash compuesto** SHA-256 de `booking_date | value_date | amount | currency | counterparty_iban | remittance_info | credit_debit`. Cubre el caso "5 pagos el mismo día por el mismo importe" porque el hash incluye contraparte + remittance, que suelen diferenciar pagos iguales.
 
-Cada sync **relee los últimos 10 días** para absorber transacciones que el banco publica con booking_date retroactivo. El índice único se encarga del descarte.
+Cada sync incremental **relee los últimos 10 días** (desde `last_sync_at - 10d`) para absorber transacciones que el banco publica con `booking_date` retroactivo. El índice único se encarga del descarte de duplicados.
+
+**Primera sincronización de una cuenta**: probamos, en orden, ventanas de `[730, 365, 180, 90]` días hacia atrás. El primer banco que no rechace la llamada fija la ventana real. La PSD2 impone 90 días como mínimo obligatorio; algunos bancos (BBVA, Santander Empresa, etc.) permiten hasta 2 años si el consentimiento lo admite. Si quieres forzar una fecha concreta para la primera sync, pon `cuenta.sync_desde_fecha = 'YYYY-MM-DD'` antes de sincronizar — se respeta sin fallback.
+
+Cuando el banco limita el histórico, el log muestra una advertencia visible y explícita: **"Para movimientos anteriores a YYYY-MM-DD, impórtalos manualmente desde Excel."** El usuario puede seguir el flujo habitual de importación en la pestaña Transacciones para cargar el histórico antiguo.
 
 ### Rutas API
 
@@ -238,6 +242,7 @@ WHERE sync_enabled = true;
 3. **Múltiples cuentas en una sola autorización**: si el banco devuelve varias cuentas y la cuenta de MCM Bank no tiene IBAN ni hay match de 1:1, el callback retorna un error pidiendo que pongas el IBAN. Mejora futura: UI para elegir cuenta manualmente.
 4. **Timeout de Vercel**: el cron agrupa todas las cuentas en una sola request. Si la delegación tiene muchas cuentas con histórico grande y Vercel devuelve 504, la solución es partirlo (un `net.http_post` por cuenta desde pg_cron). No implementado todavía.
 5. **Solo transacciones booked**: ignoramos PDNG (pendientes) porque cambian de `transaction_id` al confirmarse y generan ruido.
+7. **Histórico previo limitado por el banco**: por mucho que intentemos ir 2 años atrás, el ASPSP puede limitar la ventana a 90 días. Esto es una restricción de PSD2 / del propio banco, no nuestra. Cuando ocurre, el log lo deja claro y el usuario debe importar el histórico antiguo desde Excel.
 6. **Autorización tiene que iniciarse desde MCM Bank**: no podemos reaprovechar sesiones pre-existentes del dashboard de EB — el `session_id` solo se devuelve en la llamada a `/sessions` tras el callback.
 
 ---

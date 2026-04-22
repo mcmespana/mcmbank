@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check, User } from "lucide-react"
+import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check, User, Link2, RefreshCw, Unlink } from "lucide-react"
 import { BankAvatar } from "@/components/bank-avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,12 +11,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CuentaEditForm } from "./cuenta-edit-form"
 import { DeleteAccountDialog } from "./delete-account-dialog"
+import { CuentaSyncDialog } from "./cuenta-sync-dialog"
+import { CuentaConnectDialog } from "./cuenta-connect-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import type { Cuenta } from "@/lib/types/database"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { supabase } from "@/lib/supabase/client"
 import { formatCurrency } from "@/lib/utils/format"
+import { toast } from "sonner"
 
 export function CuentasManager() {
   const { selectedDelegation } = useDelegationContext()
@@ -48,6 +51,8 @@ export function CuentasManager() {
   const [balances, setBalances] = useState<Record<string, number>>({})
   const [operationStates, setOperationStates] = useState<Record<string, 'creating' | 'updating' | 'deleting'>>({})
   const [viewingAccount, setViewingAccount] = useState<Cuenta | null>(null)
+  const [connectingCuenta, setConnectingCuenta] = useState<Cuenta | null>(null)
+  const [syncingCuenta, setSyncingCuenta] = useState<Cuenta | null>(null)
 
   // Función para actualizar el estado de una operación
   const setOperationState = useCallback((cuentaId: string, state: 'creating' | 'updating' | 'deleting' | null) => {
@@ -116,6 +121,52 @@ export function CuentasManager() {
       setOperationStates({})
     }
   }, [])
+
+  // Mostrar feedback de callback de Enable Banking
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const ok = params.get("bank_sync_ok")
+    const err = params.get("bank_sync_error")
+    if (ok) {
+      toast.success("Cuenta conectada con el banco correctamente")
+      forceRefresh()
+      const url = new URL(window.location.href)
+      url.search = ""
+      window.history.replaceState({}, "", url.toString())
+    } else if (err) {
+      toast.error("Error al conectar con el banco: " + err)
+      const url = new URL(window.location.href)
+      url.search = ""
+      window.history.replaceState({}, "", url.toString())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleDisconnect = async (cuenta: Cuenta) => {
+    if (!confirm(`¿Desconectar "${cuenta.nombre}" del banco? Los movimientos ya importados se mantienen.`)) {
+      return
+    }
+    try {
+      const res = await fetch("/api/bank-sync/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cuenta_id: cuenta.id, revoke_consent: true }),
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        toast.error("Error al desconectar: " + (body.error || body.detalle || res.status))
+        return
+      }
+      toast.success("Cuenta desconectada")
+      if (body.revocation_error) {
+        toast.warning("El consentimiento puede no haberse revocado en el banco: " + body.revocation_error)
+      }
+      forceRefresh()
+    } catch (e) {
+      toast.error("Error al desconectar: " + (e instanceof Error ? e.message : String(e)))
+    }
+  }
 
   const handleCreateCuenta = async (cuentaData: Partial<Cuenta>) => {
     if (!selectedDelegation) return
@@ -650,7 +701,7 @@ export function CuentasManager() {
                           </div>
 
                           {/* Action Buttons */}
-                          <div className="flex gap-2 flex-shrink-0">
+                          <div className="flex gap-2 flex-shrink-0 flex-wrap">
                             <Button
                               variant="outline"
                               size="sm"
@@ -661,6 +712,51 @@ export function CuentasManager() {
                             >
                               <Search className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
+
+                            {/* Enable Banking: Conectar (si origen=conectada y aún no está sync) */}
+                            {cuenta.tipo === "banco" && cuenta.origen === "conectada" && !cuenta.sync_enabled && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setConnectingCuenta(cuenta)}
+                                disabled={isCreating || isUpdating || isDeleting}
+                                className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 hover:border-indigo-200 dark:hover:bg-indigo-950"
+                                title="Conectar con el banco"
+                              >
+                                <Link2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            )}
+
+                            {/* Enable Banking: Forzar sincronización (si ya conectada) */}
+                            {cuenta.sync_enabled && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSyncingCuenta(cuenta)}
+                                  disabled={isCreating || isUpdating || isDeleting}
+                                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-200 dark:hover:bg-green-950"
+                                  title={
+                                    cuenta.last_sync_at
+                                      ? `Sincronizar (última: ${new Date(cuenta.last_sync_at).toLocaleString("es-ES")})`
+                                      : "Sincronizar ahora"
+                                  }
+                                >
+                                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDisconnect(cuenta)}
+                                  disabled={isCreating || isUpdating || isDeleting}
+                                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50 hover:border-orange-200 dark:hover:bg-orange-950"
+                                  title="Desconectar del banco"
+                                >
+                                  <Unlink className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              </>
+                            )}
+
                             <Button
                               variant="outline"
                               size="sm"
@@ -722,6 +818,14 @@ export function CuentasManager() {
                   personas_autorizadas: null,
                   descripcion: null,
                   creado_en: "",
+                  banco_conexion_id: null,
+                  external_account_uid: null,
+                  external_account_hash: null,
+                  sync_enabled: false,
+                  last_sync_at: null,
+                  last_sync_status: null,
+                  last_sync_error: null,
+                  sync_desde_fecha: null,
                 }
               }
               onSave={editingCuenta ? handleUpdateCuenta : handleCreateCuenta}
@@ -740,6 +844,27 @@ export function CuentasManager() {
           cuenta={deletingCuenta}
           onConfirm={() => handleDeleteCuenta(deletingCuenta.id)}
           onCancel={() => setDeletingCuenta(null)}
+        />
+      )}
+
+      {/* Connect to bank dialog */}
+      {connectingCuenta && (
+        <CuentaConnectDialog
+          open={!!connectingCuenta}
+          onOpenChange={(o) => !o && setConnectingCuenta(null)}
+          cuentaId={connectingCuenta.id}
+          cuentaNombre={connectingCuenta.nombre}
+        />
+      )}
+
+      {/* Force-sync dialog with debug log */}
+      {syncingCuenta && (
+        <CuentaSyncDialog
+          open={!!syncingCuenta}
+          onOpenChange={(o) => !o && setSyncingCuenta(null)}
+          cuentaId={syncingCuenta.id}
+          cuentaNombre={syncingCuenta.nombre}
+          onCompleted={() => forceRefresh()}
         />
       )}
 

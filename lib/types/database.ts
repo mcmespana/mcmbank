@@ -57,6 +57,14 @@ export type Database = {
           personas_autorizadas: string | null
           descripcion: string | null
           creado_en: string
+          banco_conexion_id: string | null
+          external_account_uid: string | null
+          external_account_hash: string | null
+          sync_enabled: boolean
+          last_sync_at: string | null
+          last_sync_status: string | null
+          last_sync_error: string | null
+          sync_desde_fecha: string | null
         }
         Insert: {
           id?: string
@@ -70,6 +78,14 @@ export type Database = {
           personas_autorizadas?: string | null
           descripcion?: string | null
           creado_en?: string
+          banco_conexion_id?: string | null
+          external_account_uid?: string | null
+          external_account_hash?: string | null
+          sync_enabled?: boolean
+          last_sync_at?: string | null
+          last_sync_status?: string | null
+          last_sync_error?: string | null
+          sync_desde_fecha?: string | null
         }
         Update: {
           id?: string
@@ -83,6 +99,14 @@ export type Database = {
           personas_autorizadas?: string | null
           descripcion?: string | null
           creado_en?: string
+          banco_conexion_id?: string | null
+          external_account_uid?: string | null
+          external_account_hash?: string | null
+          sync_enabled?: boolean
+          last_sync_at?: string | null
+          last_sync_status?: string | null
+          last_sync_error?: string | null
+          sync_desde_fecha?: string | null
         }
       }
       movimiento: {
@@ -105,6 +129,11 @@ export type Database = {
           creado_por: string
           creado_en: string
           concepto_hash: string | null
+          external_id: string | null
+          external_id_source: "transaction_id" | "entry_reference" | "composite_hash" | null
+          booking_date: string | null
+          value_date: string | null
+          origen_sync: "manual" | "import_excel" | "enablebanking" | null
         }
         Insert: {
           id?: string
@@ -125,6 +154,11 @@ export type Database = {
           creado_por: string
           creado_en?: string
           concepto_hash?: string | null
+          external_id?: string | null
+          external_id_source?: "transaction_id" | "entry_reference" | "composite_hash" | null
+          booking_date?: string | null
+          value_date?: string | null
+          origen_sync?: "manual" | "import_excel" | "enablebanking" | null
         }
         Update: {
           id?: string
@@ -145,6 +179,11 @@ export type Database = {
           creado_por?: string
           creado_en?: string
           concepto_hash?: string | null
+          external_id?: string | null
+          external_id_source?: "transaction_id" | "entry_reference" | "composite_hash" | null
+          booking_date?: string | null
+          value_date?: string | null
+          origen_sync?: "manual" | "import_excel" | "enablebanking" | null
         }
       }
       categoria: {
@@ -294,6 +333,118 @@ export type Database = {
           descripcion?: string | null
           subido_por?: string
           subido_en?: string
+        }
+      }
+      banco_conexion: {
+        Row: {
+          id: string
+          delegacion_id: string
+          proveedor: string
+          aspsp_name: string
+          aspsp_country: string
+          psu_type: string
+          authorization_id: string | null
+          session_id: string | null
+          psu_id_hash: string | null
+          consent_valid_until: string
+          estado: "pendiente" | "autorizada" | "expirada" | "revocada" | "error"
+          ultimo_error: string | null
+          creado_por: string
+          creado_en: string
+          actualizado_en: string
+        }
+        Insert: {
+          id?: string
+          delegacion_id: string
+          proveedor?: string
+          aspsp_name: string
+          aspsp_country: string
+          psu_type?: string
+          authorization_id?: string | null
+          session_id?: string | null
+          psu_id_hash?: string | null
+          consent_valid_until: string
+          estado?: "pendiente" | "autorizada" | "expirada" | "revocada" | "error"
+          ultimo_error?: string | null
+          creado_por: string
+          creado_en?: string
+          actualizado_en?: string
+        }
+        Update: {
+          id?: string
+          delegacion_id?: string
+          proveedor?: string
+          aspsp_name?: string
+          aspsp_country?: string
+          psu_type?: string
+          authorization_id?: string | null
+          session_id?: string | null
+          psu_id_hash?: string | null
+          consent_valid_until?: string
+          estado?: "pendiente" | "autorizada" | "expirada" | "revocada" | "error"
+          ultimo_error?: string | null
+          creado_por?: string
+          creado_en?: string
+          actualizado_en?: string
+        }
+      }
+      banco_sync_log: {
+        Row: {
+          id: string
+          cuenta_id: string | null
+          banco_conexion_id: string | null
+          trigger: "cron" | "manual"
+          iniciado_por: string | null
+          started_at: string
+          finished_at: string | null
+          duracion_ms: number | null
+          date_from: string | null
+          date_to: string | null
+          transacciones_recibidas: number
+          transacciones_insertadas: number
+          transacciones_duplicadas: number
+          transacciones_error: number
+          estado: "en_curso" | "ok" | "error" | "parcial"
+          error_mensaje: string | null
+          log: unknown
+        }
+        Insert: {
+          id?: string
+          cuenta_id?: string | null
+          banco_conexion_id?: string | null
+          trigger: "cron" | "manual"
+          iniciado_por?: string | null
+          started_at?: string
+          finished_at?: string | null
+          duracion_ms?: number | null
+          date_from?: string | null
+          date_to?: string | null
+          transacciones_recibidas?: number
+          transacciones_insertadas?: number
+          transacciones_duplicadas?: number
+          transacciones_error?: number
+          estado?: "en_curso" | "ok" | "error" | "parcial"
+          error_mensaje?: string | null
+          log?: unknown
+        }
+        Update: {
+          id?: string
+          cuenta_id?: string | null
+          banco_conexion_id?: string | null
+          trigger?: "cron" | "manual"
+          iniciado_por?: string | null
+          started_at?: string
+          finished_at?: string | null
+          duracion_ms?: number | null
+          date_from?: string | null
+          date_to?: string | null
+          transacciones_recibidas?: number
+          transacciones_insertadas?: number
+          transacciones_duplicadas?: number
+          transacciones_error?: number
+          estado?: "en_curso" | "ok" | "error" | "parcial"
+          error_mensaje?: string | null
+          log?: unknown
         }
       }
       propuesta_mejora: {
@@ -446,6 +597,15 @@ export type MovimientoArchivo = Database["public"]["Tables"]["movimiento_archivo
 export type PropuestaMejora = Database["public"]["Tables"]["propuesta_mejora"]["Row"]
 export type PropuestaMejoraComentario = Database["public"]["Tables"]["propuesta_mejora_comentario"]["Row"]
 export type PropuestaMejoraVoto = Database["public"]["Tables"]["propuesta_mejora_voto"]["Row"]
+export type BancoConexion = Database["public"]["Tables"]["banco_conexion"]["Row"]
+export type BancoSyncLog = Database["public"]["Tables"]["banco_sync_log"]["Row"]
+
+export type BancoSyncLogStep = {
+  t: string
+  level: "info" | "warn" | "error" | "debug"
+  msg: string
+  data?: Record<string, unknown>
+}
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {

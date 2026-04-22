@@ -286,7 +286,7 @@ Si hay duplicados, probablemente es el fallback de hash compuesto con una transa
 
 - **Clave privada PEM**: solo en env de Vercel (encriptada). Nunca en código o commits.
 - **CRON_SECRET**: mismo criterio. Rotable regenerando con `openssl rand -hex 32` y actualizando tanto Vercel env como `app.mcmbank_cron_key` en Supabase.
-- **RLS**: `banco_conexion` y `banco_sync_log` tienen políticas para que un usuario solo vea/edite los de sus delegaciones con rol `admin` o `editor`.
+- **RLS**: `banco_conexion` y `banco_sync_log` tienen políticas para que un usuario solo vea/edite los de sus delegaciones con rol `gestor_central` o `tesorero`.
 - **Service role**: solo se usa en API routes server-side. No se expone al cliente.
 - **PII**: los logs en `banco_sync_log` pueden contener previews de transacciones (contraparte, importe). Si compartes un log para debug, revisa antes.
 

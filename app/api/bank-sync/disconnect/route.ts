@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     .eq("delegacion_id", cuenta.delegacion_id)
     .eq("usuario_id", user.id)
     .maybeSingle()
-  if (!membresia || !["admin", "editor"].includes(membresia.rol)) {
+  if (!membresia || !["gestor_central", "tesorero"].includes(membresia.rol)) {
     return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
   }
 

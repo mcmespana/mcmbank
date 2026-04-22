@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient()
 
-  // 1. Cargar cuenta y verificar que el usuario tiene acceso + rol editor/admin
+  // 1. Cargar cuenta y verificar que el usuario tiene acceso + rol gestor_central/tesorero
   const { data: cuenta, error: cuentaErr } = await admin
     .from("cuenta")
     .select("id, delegacion_id, nombre, tipo")
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     .eq("usuario_id", user.id)
     .maybeSingle()
 
-  if (!membresia || !["admin", "editor"].includes(membresia.rol)) {
+  if (!membresia || !["gestor_central", "tesorero"].includes(membresia.rol)) {
     return NextResponse.json({ error: "Sin permisos para conectar esta cuenta" }, { status: 403 })
   }
 

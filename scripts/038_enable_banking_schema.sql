@@ -69,13 +69,13 @@ CREATE POLICY "Users manage bank connections of their delegations"
         SELECT 1 FROM public.membresia m
         WHERE m.delegacion_id = banco_conexion.delegacion_id
           AND m.usuario_id = auth.uid()
-          AND m.rol IN ('admin', 'editor')
+          AND m.rol IN ('gestor_central', 'tesorero')
     ))
     WITH CHECK (EXISTS (
         SELECT 1 FROM public.membresia m
         WHERE m.delegacion_id = banco_conexion.delegacion_id
           AND m.usuario_id = auth.uid()
-          AND m.rol IN ('admin', 'editor')
+          AND m.rol IN ('gestor_central', 'tesorero')
     ));
 
 

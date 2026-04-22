@@ -12,7 +12,7 @@ export const maxDuration = 300 // Pro: hasta 300s
  * Modos:
  *   A) Cron  → Authorization: Bearer CRON_SECRET. Sincroniza todas las cuentas.
  *   B) Manual → sesión de usuario autenticado + cuenta_id. Un usuario solo puede
- *              forzar el sync de cuentas de sus delegaciones con rol editor/admin.
+ *              forzar el sync de cuentas de sus delegaciones con rol gestor_central/tesorero.
  *              Devuelve el log completo para mostrarlo en el UI.
  *
  * Query / body:
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     .eq("delegacion_id", cuenta.delegacion_id)
     .eq("usuario_id", user.id)
     .maybeSingle()
-  if (!membresia || !["admin", "editor"].includes(membresia.rol)) {
+  if (!membresia || !["gestor_central", "tesorero"].includes(membresia.rol)) {
     return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
   }
 

@@ -99,19 +99,23 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT
-    m.categoria_id,
-    c.nombre                                                               AS categoria_nombre,
-    c.emoji                                                                AS categoria_emoji,
-    c.color                                                                AS categoria_color,
-    COALESCE(SUM(CASE WHEN m.importe > 0 THEN m.importe ELSE 0 END), 0)   AS ingresos,
-    COALESCE(SUM(CASE WHEN m.importe < 0 THEN ABS(m.importe) ELSE 0 END), 0) AS gastos
-  FROM movimiento m
-  LEFT JOIN categoria c ON c.id = m.categoria_id
-  WHERE m.delegacion_id = p_delegacion_id
-    AND m.ignorado = false
-    AND m.fecha BETWEEN p_desde AND p_hasta
-  GROUP BY m.categoria_id, c.nombre, c.emoji, c.color
+  -- Subquery needed so ORDER BY can reference the aliases ingresos/gastos.
+  -- PostgreSQL resolves aliases in ORDER BY only for simple names, not expressions.
+  SELECT * FROM (
+    SELECT
+      m.categoria_id,
+      c.nombre                                                               AS categoria_nombre,
+      c.emoji                                                                AS categoria_emoji,
+      c.color                                                                AS categoria_color,
+      COALESCE(SUM(CASE WHEN m.importe > 0 THEN m.importe ELSE 0 END), 0)   AS ingresos,
+      COALESCE(SUM(CASE WHEN m.importe < 0 THEN ABS(m.importe) ELSE 0 END), 0) AS gastos
+    FROM movimiento m
+    LEFT JOIN categoria c ON c.id = m.categoria_id
+    WHERE m.delegacion_id = p_delegacion_id
+      AND m.ignorado = false
+      AND m.fecha BETWEEN p_desde AND p_hasta
+    GROUP BY m.categoria_id, c.nombre, c.emoji, c.color
+  ) sub
   ORDER BY (ingresos + gastos) DESC;
 $$;
 

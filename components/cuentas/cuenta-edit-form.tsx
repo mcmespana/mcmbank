@@ -201,13 +201,13 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="manual">Manual</SelectItem>
-              <SelectItem value="conectada" disabled>
-                Conectada (Próximamente)
-              </SelectItem>
+              <SelectItem value="conectada">Conectada (Enable Banking)</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-sm text-gray-500">
-            Por ahora solo se permiten cuentas manuale, tú debes subir los movimientos importándolos del banco
+            {formData.origen === "conectada"
+              ? "Guarda la cuenta y después pulsa \"Conectar con el banco\" para autorizar la sincronización automática."
+              : "Manual: subes los movimientos importándolos desde Excel o los creas a mano."}
           </p>
         </div>
       )}

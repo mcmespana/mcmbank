@@ -96,9 +96,9 @@ NEXT_PUBLIC_SUPABASE_URL="https://<proyecto>.supabase.co"
 
 **Importante sobre `ENABLE_BANKING_PRIVATE_KEY`**: Vercel guarda secretos multilínea con `\n` literal. El código ya normaliza ambas formas (reemplaza `\n` por saltos reales).
 
-### 3.3 Aplicar la migración de schema (036)
+### 3.3 Aplicar la migración de schema (038)
 
-En Supabase → **SQL Editor** → pega el contenido de `scripts/036_enable_banking_schema.sql` y ejecútalo.
+En Supabase → **SQL Editor** → pega el contenido de `scripts/038_enable_banking_schema.sql` y ejecútalo.
 
 Qué hace: crea `banco_conexion`, `banco_sync_log`, amplía `cuenta` y `movimiento`, crea índices y políticas RLS.
 
@@ -123,9 +123,9 @@ alter database postgres set app.mcmbank_cron_key = '<mismo-valor-que-CRON_SECRET
 
 **Nota**: estos `ALTER DATABASE SET` solo aplican a conexiones nuevas. No afecta a sesiones abiertas. El cron los lee cada ejecución, así que funciona.
 
-### 3.6 Programar el cron (037)
+### 3.6 Programar el cron (039)
 
-En Supabase → **SQL Editor** → pega y ejecuta `scripts/037_enable_banking_cron.sql`.
+En Supabase → **SQL Editor** → pega y ejecuta `scripts/039_enable_banking_cron.sql`.
 
 Crea la función `trigger_bank_sync_cron()` y programa el job `mcmbank_bank_sync_daily` a las **06:00 UTC diario**.
 

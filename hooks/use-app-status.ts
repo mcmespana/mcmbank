@@ -91,6 +91,19 @@ export const useAppStatus = () => {
         return
       }
 
+      // refreshSession() internally dispatches onAuthStateChange which queues a
+      // React setUser() call — but that update hasn't been flushed yet when we
+      // return here. Hooks that guard on `user` would read stale null and bail.
+      // Waiting one event-loop turn (setTimeout 0 → React flushes the microtask
+      // queue) plus a small extra margin reliably gets us past the flush.
+      await new Promise<void>((resolve) => setTimeout(resolve, 150))
+
+      // Bail again in case the tab was hidden during the wait
+      if (document.hidden) {
+        revalidationInFlight = false
+        return
+      }
+
       // Fire ALL listeners synchronously — React 18 batches all resulting
       // setState calls into a single render pass.
       appStatusEmitter.emit()

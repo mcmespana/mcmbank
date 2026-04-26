@@ -56,7 +56,10 @@ export function useCategorias(
         setError(err instanceof Error ? err.message : "Error desconocido")
       }
     } finally {
-      setLoading(false)
+      // Only clear loading if this request wasn't superseded: a newer call
+      // already set loading=true on a fresh AbortController; firing
+      // setLoading(false) from the aborted one would produce a false "done" flash.
+      if (!ac.signal.aborted) setLoading(false)
     }
   }, [delegacionId, includeGlobal, includeInactive])
 

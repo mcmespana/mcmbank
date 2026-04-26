@@ -19,7 +19,10 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
 
   const fetchDelegations = useCallback(async () => {
     if (!user) {
-      setDelegations([])
+      // Don't wipe delegations on a temporary auth null — the session may
+      // recover in milliseconds (tab-focus token refresh race). Keeping stale
+      // data visible prevents the delegation selector from going blank.
+      // Genuine sign-out is handled by routing redirecting to /auth/login.
       setLoading(false)
       return
     }

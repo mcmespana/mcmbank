@@ -1,25 +1,34 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useSyncExternalStore } from "react"
 import { supabase } from "@/lib/supabase/client"
 
 // Minimum time (ms) the tab must be hidden before we trigger revalidation on refocus.
 const MIN_HIDDEN_MS = 2000
 
-// Simple event emitter for cross-hook revalidation.
-// All listeners fire synchronously inside emit() so React 18 can batch
-// their state updates into a single render pass.
-const appStatusEmitter = {
-  listeners: new Set<() => void>(),
-  subscribe(callback: () => void) {
-    this.listeners.add(callback)
-    return () => this.listeners.delete(callback)
-  },
-  emit() {
-    for (const listener of this.listeners) {
-      listener()
-    }
-  },
+// --- Focus version store ---
+// Module-level integer bumped on each successful tab-focus revalidation cycle.
+// useSyncExternalStore wires it into React so every useEffect([..., focusVersion])
+// dep fires *after* React re-renders with the latest auth/user state.
+// This avoids the race in the old emitter approach where callbacks fired
+// synchronously before React had flushed the setUser() from onAuthStateChange.
+let _focusVersion = 0
+const _focusListeners = new Set<() => void>()
+
+function _bumpFocusVersion() {
+  _focusVersion++
+  _focusListeners.forEach((l) => l())
+}
+
+export function useFocusVersion(): number {
+  return useSyncExternalStore(
+    (callback) => {
+      _focusListeners.add(callback)
+      return () => _focusListeners.delete(callback)
+    },
+    () => _focusVersion,
+    () => _focusVersion,
+  )
 }
 
 // Guard: prevent overlapping revalidation cycles (e.g. Chrome firing
@@ -64,50 +73,43 @@ export const useAppStatus = () => {
         return
       }
 
-      // Prevent overlapping cycles (Chrome can queue multiple visibilitychange events)
+      // Prevent overlapping cycles
       if (revalidationInFlight) return
       revalidationInFlight = true
 
       try {
-        // CRITICAL: refresh the auth token BEFORE any hooks fire queries.
-        // Without this, 7 hooks hit Supabase with a stale token simultaneously,
-        // each triggers its own refreshSession() retry via runQuery, and
-        // navigator.locks contention + render cascade freezes the UI.
-        //
-        // The 6 s timeout is a safety net: lockWithFallback in client.ts already
-        // breaks navigator.locks deadlocks within 5 s, but we guard here too so
-        // revalidationInFlight never gets stuck if refreshSession hangs for any reason.
-        await Promise.race([
-          supabase.auth.refreshSession(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("refresh-timeout")), 6000)),
-        ])
-      } catch {
-        // If refresh fails or times out, hooks will handle auth errors individually
-      }
+        // Refresh the auth token before signalling hooks to revalidate.
+        // The 6 s timeout is a safety net; lockWithFallback in client.ts already
+        // breaks navigator.locks deadlocks within 5 s.
+        try {
+          await Promise.race([
+            supabase.auth.refreshSession(),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("refresh-timeout")), 6000),
+            ),
+          ])
+        } catch {
+          // If refresh fails or times out, hooks handle auth errors individually.
+        }
 
-      // Bail if tab was hidden again while we were refreshing
-      if (document.hidden) {
+        // Bail if tab was hidden again while we were refreshing
+        if (document.hidden) return
+
+        // Give React 150 ms to flush the setUser() call that onAuthStateChange
+        // queued inside refreshSession(). Without this, hooks would still read
+        // stale user=null when their useEffect([focusVersion]) fired.
+        await new Promise<void>((resolve) => setTimeout(resolve, 150))
+
+        if (document.hidden) return
+
+        // Bump the version — useSyncExternalStore notifies all subscribers,
+        // React queues re-renders, then useEffect([..., focusVersion]) fires
+        // after the render with fully-updated auth state.
+        _bumpFocusVersion()
+      } finally {
+        // Always release the guard — even if _bumpFocusVersion throws.
         revalidationInFlight = false
-        return
       }
-
-      // refreshSession() internally dispatches onAuthStateChange which queues a
-      // React setUser() call — but that update hasn't been flushed yet when we
-      // return here. Hooks that guard on `user` would read stale null and bail.
-      // Waiting one event-loop turn (setTimeout 0 → React flushes the microtask
-      // queue) plus a small extra margin reliably gets us past the flush.
-      await new Promise<void>((resolve) => setTimeout(resolve, 150))
-
-      // Bail again in case the tab was hidden during the wait
-      if (document.hidden) {
-        revalidationInFlight = false
-        return
-      }
-
-      // Fire ALL listeners synchronously — React 18 batches all resulting
-      // setState calls into a single render pass.
-      appStatusEmitter.emit()
-      revalidationInFlight = false
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -120,31 +122,29 @@ export const useAppStatus = () => {
   return { isOnline, isFocused }
 }
 
-// Revalidate on tab focus. Uses a ref so the subscription is stable
-// (no re-subscribe on every render when the callback identity changes).
+// Revalidate on tab focus. Uses useFocusVersion so the callback fires inside
+// a useEffect — after React renders with the latest state — instead of being
+// called synchronously from the visibilitychange handler.
 export const useRevalidateOnFocus = (revalidate: () => void) => {
+  const focusVersion = useFocusVersion()
   const ref = useRef(revalidate)
   ref.current = revalidate
+  const mounted = useRef(false)
 
   useEffect(() => {
-    const handler = () => ref.current()
-    const unsubscribe = appStatusEmitter.subscribe(handler)
-    return () => { unsubscribe() }
-  }, [])
+    if (!mounted.current) {
+      // Skip the initial mount; only fire on subsequent version bumps.
+      mounted.current = true
+      return
+    }
+    ref.current()
+  }, [focusVersion])
 }
 
-// Backward-compatible alias — jitter/scheduling removed.
-// All listeners now fire synchronously so React 18 can batch state updates.
+// Backward-compatible alias (jitter/scheduling was already a no-op).
 export const useRevalidateOnFocusJitter = (
   revalidate: () => void,
-  _opts?: { minMs?: number; maxMs?: number }
+  _opts?: { minMs?: number; maxMs?: number },
 ) => {
-  const ref = useRef(revalidate)
-  ref.current = revalidate
-
-  useEffect(() => {
-    const handler = () => ref.current()
-    const unsubscribe = appStatusEmitter.subscribe(handler)
-    return () => { unsubscribe() }
-  }, [])
+  useRevalidateOnFocus(revalidate)
 }

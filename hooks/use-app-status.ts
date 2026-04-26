@@ -73,9 +73,16 @@ export const useAppStatus = () => {
         // Without this, 7 hooks hit Supabase with a stale token simultaneously,
         // each triggers its own refreshSession() retry via runQuery, and
         // navigator.locks contention + render cascade freezes the UI.
-        await supabase.auth.refreshSession()
+        //
+        // The 6 s timeout is a safety net: lockWithFallback in client.ts already
+        // breaks navigator.locks deadlocks within 5 s, but we guard here too so
+        // revalidationInFlight never gets stuck if refreshSession hangs for any reason.
+        await Promise.race([
+          supabase.auth.refreshSession(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("refresh-timeout")), 6000)),
+        ])
       } catch {
-        // If refresh fails, hooks will handle auth errors individually
+        // If refresh fails or times out, hooks will handle auth errors individually
       }
 
       // Bail if tab was hidden again while we were refreshing

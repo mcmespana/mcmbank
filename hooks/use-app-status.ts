@@ -1,12 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useSyncExternalStore } from "react"
-import { supabase } from "@/lib/supabase/client"
 import { abortAllInFlight } from "@/lib/db/in-flight"
-
-// Minimum hidden time (ms) before we bother refreshing the auth token.
-// Zombie fetch cleanup (abortAllInFlight) always fires regardless of this.
-const MIN_HIDDEN_MS_FOR_AUTH_REFRESH = 2000
 
 // --- Focus version store ---
 // Module-level counter bumped on each tab-focus revalidation.
@@ -40,33 +35,15 @@ export async function forceConnectionReset(): Promise<void> {
   console.debug("[forceConnectionReset] starting")
   const { abortAllInFlight } = await import("@/lib/db/in-flight")
 
-  // Step 1: kill zombie fetches
+  // Just abort + bump. Calling refreshSession() here was hanging when the
+  // network was in a zombie state post tab-suspend, defeating the recovery.
+  // Hooks will retry their fetches on the focus bump; if auth is genuinely
+  // stale the queries will 401 and runQuery's auth retry will handle refresh.
   abortAllInFlight()
-
-  // Step 2: best-effort refresh (3 s timeout — lockWithFallback already times
-  // out at 2 s so this is a small margin on top). If it fails, just continue
-  // and bump version; the banner shows up if recovery doesn't take.
-  try {
-    await Promise.race([
-      supabase.auth.refreshSession(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("reset-refresh-timeout")), 3000),
-      ),
-    ])
-    console.debug("[forceConnectionReset] refresh ok")
-  } catch (e) {
-    console.warn("[forceConnectionReset] refreshSession failed:", e)
-  }
-
-  // Step 3: let React flush any setUser() queued by onAuthStateChange
-  await new Promise<void>((r) => setTimeout(r, 200))
-
-  // Step 4: bump focus version → all hooks re-fetch
+  await new Promise<void>((r) => setTimeout(r, 50))
   _bumpFocusVersion()
   console.debug("[forceConnectionReset] done — focus version bumped")
 }
-
-let revalidationInFlight = false
 
 export const useAppStatus = () => {
   const [isOnline, setIsOnline] = useState(true)
@@ -95,71 +72,19 @@ export const useAppStatus = () => {
         return
       }
 
-      // ── Step 1: Kill zombie fetches immediately ──────────────────────────
-      // Chrome can suspend JS mid-fetch; those promises never resolve.
-      // Aborting forces hooks into a clean state so they restart on bump.
+      // Kill zombie fetches immediately. Chrome suspends JS mid-fetch and
+      // those promises never resolve; aborting forces hooks into a clean
+      // state so they restart on the version bump.
       abortAllInFlight()
 
-      const hiddenMs = hiddenAtRef.current > 0 ? Date.now() - hiddenAtRef.current : 0
-      const needsAuthRefresh = hiddenMs >= MIN_HIDDEN_MS_FOR_AUTH_REFRESH
-
-      if (!needsAuthRefresh) {
-        // Short hide: zombie fetches killed. Bump version to restart them.
-        // No auth refresh needed — token is still fresh.
-        await new Promise<void>((r) => setTimeout(r, 50))
-        if (!document.hidden) _bumpFocusVersion()
-        return
-      }
-
-      // Long hide: refresh auth token before restarting hooks.
-      // revalidationInFlight prevents parallel refresh cycles.
-      if (revalidationInFlight) return
-      revalidationInFlight = true
-
-      try {
-        // Smart refresh: only call refreshSession() if the token is close to
-        // expiry. Otherwise getSession() suffices and avoids navigator.locks
-        // contention with Supabase's autoRefreshToken timer that may also be
-        // firing right after Chrome resume — the two paralle refreshSession
-        // calls were the main "sincronizar a la vez" source of cuelgues.
-        try {
-          const sessionResult = await Promise.race([
-            supabase.auth.getSession(),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("getSession-timeout")), 4000),
-            ),
-          ])
-
-          const session = (sessionResult as any)?.data?.session
-          const expiresAt: number | undefined = session?.expires_at
-          const nowSec = Math.floor(Date.now() / 1000)
-          const expiresInSec = expiresAt ? expiresAt - nowSec : 0
-          const REFRESH_THRESHOLD_SEC = 300 // 5 min
-
-          if (session && expiresInSec < REFRESH_THRESHOLD_SEC) {
-            await Promise.race([
-              supabase.auth.refreshSession(),
-              new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("refresh-timeout")), 6000),
-              ),
-            ])
-          }
-        } catch {
-          // Failure is non-fatal; individual hooks retry on auth error.
-        }
-
-        if (document.hidden) return
-
-        // 150 ms: let React flush setUser() from onAuthStateChange so hooks
-        // read the updated auth state when their useEffect([focusVersion]) fires.
-        await new Promise<void>((r) => setTimeout(r, 150))
-
-        if (document.hidden) return
-
-        _bumpFocusVersion()
-      } finally {
-        revalidationInFlight = false
-      }
+      // Don't call refreshSession() here. Empirically refreshSession() hangs
+      // when the network is in a zombie state right after tab resume — the
+      // POST /auth/v1/token never completes, leaving every other hook stuck
+      // waiting on auth. Trust runQuery's auth-error retry path: if a hook's
+      // query gets 401, runQuery refreshes the session inline. By that time
+      // the network has unstuck itself.
+      await new Promise<void>((r) => setTimeout(r, 50))
+      if (!document.hidden) _bumpFocusVersion()
     }
 
     // pageshow with persisted=true fires when Chrome restores the tab from

@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { forceConnectionReset } from "@/hooks/use-app-status"
+import { nukeSupabaseStorageAndReload } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { AlertTriangle, RefreshCw } from "lucide-react"
+import { AlertTriangle, RefreshCw, Trash2 } from "lucide-react"
 
 // Detects when the app is stuck in a non-recoverable state and offers manual
 // recovery. "Stuck" means: AuthProvider finished loading but user is still
@@ -86,6 +87,20 @@ export function StuckRecoveryBanner() {
           className="border-yellow-950 text-yellow-950 hover:bg-yellow-600"
         >
           Recargar página
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (confirm("Esto cerrará tu sesión y te pedirá iniciar sesión de nuevo. ¿Continuar?")) {
+              nukeSupabaseStorageAndReload()
+            }
+          }}
+          className="border-red-700 bg-red-100 text-red-900 hover:bg-red-200"
+          title="Borra credenciales y recarga (último recurso)"
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Sesión limpia
         </Button>
       </div>
     </div>

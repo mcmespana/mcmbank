@@ -8,6 +8,7 @@ let installed = false
 export function installFetchLogger(): void {
   if (installed || typeof window === "undefined") return
   installed = true
+  console.log("[fetch-logger] installed")
 
   const original = window.fetch.bind(window)
 
@@ -23,20 +24,26 @@ export function installFetchLogger(): void {
       }
     } catch {}
 
+    // Log all non-internal URLs briefly so we can verify the interceptor is
+    // alive even when no Supabase request is fired (the bug).
     const isSupabase = url.includes("supabase.co")
-    if (!isSupabase) return original(input as any, init)
+    const isInternal = url.includes("/_next/") || url.includes("/_vercel/") || url.endsWith(".js") || url.endsWith(".css")
+    if (!isSupabase) {
+      if (!isInternal) console.log(`[fetch] (non-supabase) ${method} ${url.split("?")[0]}`)
+      return original(input as any, init)
+    }
 
     const tag = `[fetch] ${method} ${url.split("?")[0].split("supabase.co")[1] || url}`
     const startedAt = Date.now()
-    console.debug(`${tag} → start`)
+    console.log(`${tag} → start`)
 
     return original(input as any, init).then(
       (res) => {
-        console.debug(`${tag} ← ${res.status} (${Date.now() - startedAt}ms)`)
+        console.log(`${tag} ← ${res.status} (${Date.now() - startedAt}ms)`)
         return res
       },
       (err) => {
-        console.debug(`${tag} ✗ ${err?.name || "error"} (${Date.now() - startedAt}ms): ${err?.message}`)
+        console.log(`${tag} ✗ ${err?.name || "error"} (${Date.now() - startedAt}ms): ${err?.message}`)
         throw err
       },
     )

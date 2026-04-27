@@ -36,7 +36,7 @@ export function useCategorias(
 
   const fetchCategorias = useCallback(async () => {
     const tag = `[useCategorias]`
-    console.debug(`${tag} fetchCategorias() called`, { delegacionId, includeGlobal })
+    console.log(`${tag} fetchCategorias() called`, { delegacionId, includeGlobal })
 
     // Abort previous in-flight request
     if (abortRef.current) {
@@ -51,7 +51,7 @@ export function useCategorias(
 
     try {
       if (!delegacionId && !includeGlobal) {
-        console.debug(`${tag} bail: no delegacionId and !includeGlobal`)
+        console.log(`${tag} bail: no delegacionId and !includeGlobal`)
         setCategorias([])
         setLoading(false)
         return
@@ -61,7 +61,7 @@ export function useCategorias(
         setLoading(true)
       }
 
-      console.debug(`${tag} querying Supabase…`)
+      console.log(`${tag} querying Supabase…`)
       const data = await Promise.race([
         DatabaseService.getCategoriasByDelegacion(delegacionId, {
           includeGlobal,
@@ -74,16 +74,16 @@ export function useCategorias(
       ])
 
       if (ac.signal.aborted) {
-        console.debug(`${tag} aborted after ${Date.now() - startedAt}ms`)
+        console.log(`${tag} aborted after ${Date.now() - startedAt}ms`)
         return
       }
 
-      console.debug(`${tag} success ${Date.now() - startedAt}ms, ${data?.length ?? 0} categorias`)
+      console.log(`${tag} success ${Date.now() - startedAt}ms, ${data?.length ?? 0} categorias`)
       setCategorias(data)
       setError(null)
     } catch (err) {
       if (ac.signal.aborted) {
-        console.debug(`${tag} caught after abort (${Date.now() - startedAt}ms):`, (err as any)?.message)
+        console.log(`${tag} caught after abort (${Date.now() - startedAt}ms):`, (err as any)?.message)
         return
       }
       console.error(`${tag} error after ${Date.now() - startedAt}ms:`, err)

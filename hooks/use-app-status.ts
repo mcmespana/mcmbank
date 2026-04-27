@@ -12,7 +12,7 @@ const _focusListeners = new Set<() => void>()
 
 function _bumpFocusVersion() {
   _focusVersion++
-  console.debug(`[focus] bumpFocusVersion → v${_focusVersion} (${_focusListeners.size} subscribers)`)
+  console.log(`[focus] bumpFocusVersion → v${_focusVersion} (${_focusListeners.size} subscribers)`)
   _focusListeners.forEach((l) => l())
 }
 
@@ -33,7 +33,7 @@ export function useFocusVersion(): number {
 // re-init auth state first via refreshSession(), which fires onAuthStateChange
 // → AuthProvider's setUser() → React re-renders → hooks no longer bail.
 export async function forceConnectionReset(): Promise<void> {
-  console.debug("[forceConnectionReset] starting")
+  console.log("[forceConnectionReset] starting")
   const { abortAllInFlight } = await import("@/lib/db/in-flight")
 
   // Just abort + bump. Calling refreshSession() here was hanging when the
@@ -43,7 +43,7 @@ export async function forceConnectionReset(): Promise<void> {
   abortAllInFlight()
   await new Promise<void>((r) => setTimeout(r, 50))
   _bumpFocusVersion()
-  console.debug("[forceConnectionReset] done — focus version bumped")
+  console.log("[forceConnectionReset] done — focus version bumped")
 }
 
 export const useAppStatus = () => {
@@ -66,7 +66,7 @@ export const useAppStatus = () => {
   useEffect(() => {
     const handleVisibilityChange = async () => {
       const isNowFocused = !document.hidden
-      console.debug(`[visibility] change → focused=${isNowFocused}, hidden_for=${hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0}ms`)
+      console.log(`[visibility] change → focused=${isNowFocused}, hidden_for=${hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0}ms`)
       setIsFocused(isNowFocused)
 
       if (!isNowFocused) {

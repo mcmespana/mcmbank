@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true
     const mountedAt = Date.now()
     let initialEventReceived = false
-    console.debug("[auth] AuthProvider mounted at", new Date(mountedAt).toISOString())
+    console.log("[auth] AuthProvider mounted at", new Date(mountedAt).toISOString())
 
     // We do NOT call supabase.auth.getSession() directly. HAR + console traces
     // showed it hanging 8+ seconds (getInitialSession-timeout) due to a
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.debug("[auth] onAuthStateChange:", event, {
+      console.log("[auth] onAuthStateChange:", event, {
         userId: session?.user?.id,
         elapsedMs: Date.now() - mountedAt,
       })

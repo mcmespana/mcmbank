@@ -111,7 +111,13 @@ export class DatabaseService {
       query = query.abortSignal(options.signal)
     }
 
+    console.log("[DatabaseService.getCategoriasByDelegacion] awaiting query…")
+    const startedAt = Date.now()
     const { data, error } = await query
+    console.log(
+      `[DatabaseService.getCategoriasByDelegacion] resolved in ${Date.now() - startedAt}ms`,
+      { rows: data?.length ?? 0, error: error?.message },
+    )
 
     if (error) throw error
     const mapped = mapCategorias(data as CategoriaWithOverrides[] | null, delegacionId)

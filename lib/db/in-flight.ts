@@ -15,7 +15,7 @@ export function unregisterAC(ac: AbortController): void {
 
 export function abortAllInFlight(): void {
   const n = registry.size
-  console.debug(`[in-flight] abortAllInFlight aborting ${n} AbortControllers`)
+  console.log(`[in-flight] abortAllInFlight aborting ${n} AbortControllers`)
   for (const ac of registry) {
     try {
       ac.abort(new Error("tab-focus-reset"))

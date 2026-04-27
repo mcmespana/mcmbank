@@ -6,9 +6,11 @@ import { useAuth } from "@/contexts/auth-context"
 import { usePerfil } from "@/hooks/use-perfil"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { LogOut, BookOpen, Moon, Sun, Monitor } from "lucide-react"
+import { LogOut, BookOpen, Moon, Sun, Monitor, RefreshCw } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useEffect, useMemo, useState } from "react"
+import { forceConnectionReset } from "@/hooks/use-app-status"
+import { toast } from "sonner"
 
 interface TopbarProps {
   selectedDelegation?: string | null
@@ -103,6 +105,21 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
     }
   }
 
+  const [reconnecting, setReconnecting] = useState(false)
+  const handleReconnect = async () => {
+    if (reconnecting) return
+    setReconnecting(true)
+    try {
+      await forceConnectionReset()
+      toast.success("Conexión reiniciada")
+    } catch (e) {
+      toast.error("Error al reiniciar conexión")
+      console.error(e)
+    } finally {
+      setTimeout(() => setReconnecting(false), 800)
+    }
+  }
+
   const handleManualClick = () => {
     const manualUrl = process.env.NEXT_PUBLIC_URL_MANUAL || process.env.URL_MANUAL
     if (manualUrl) {
@@ -136,6 +153,19 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         >
           <BookOpen className="h-4 w-4" />
           <span>Manual</span>
+        </Button>
+
+        {/* Reconnect button — forces abortAllInFlight + focusVersion bump */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleReconnect}
+          disabled={reconnecting}
+          className="w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-110 flex-shrink-0"
+          title="Reiniciar conexión (si la app se queda colgada)"
+        >
+          <RefreshCw className={`h-4 w-4 ${reconnecting ? "animate-spin" : ""}`} />
+          <span className="sr-only">Reiniciar conexión</span>
         </Button>
 
         {/* Theme toggle */}

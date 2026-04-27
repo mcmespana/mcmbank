@@ -31,6 +31,17 @@ export function useFocusVersion(): number {
   )
 }
 
+// Manual recovery trigger — exposed so a topbar button can force a full
+// connection reset when the user notices the app is stuck.
+// Aborts every in-flight fetch and bumps focusVersion so all hooks restart.
+export async function forceConnectionReset(): Promise<void> {
+  const { abortAllInFlight } = await import("@/lib/db/in-flight")
+  abortAllInFlight()
+  // Small delay so React processes any state changes from aborted fetches
+  await new Promise<void>((r) => setTimeout(r, 100))
+  _bumpFocusVersion()
+}
+
 let revalidationInFlight = false
 
 export const useAppStatus = () => {

@@ -12,6 +12,7 @@ const _focusListeners = new Set<() => void>()
 
 function _bumpFocusVersion() {
   _focusVersion++
+  console.debug(`[focus] bumpFocusVersion → v${_focusVersion} (${_focusListeners.size} subscribers)`)
   _focusListeners.forEach((l) => l())
 }
 
@@ -65,6 +66,7 @@ export const useAppStatus = () => {
   useEffect(() => {
     const handleVisibilityChange = async () => {
       const isNowFocused = !document.hidden
+      console.debug(`[visibility] change → focused=${isNowFocused}, hidden_for=${hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0}ms`)
       setIsFocused(isNowFocused)
 
       if (!isNowFocused) {
@@ -72,17 +74,7 @@ export const useAppStatus = () => {
         return
       }
 
-      // Kill zombie fetches immediately. Chrome suspends JS mid-fetch and
-      // those promises never resolve; aborting forces hooks into a clean
-      // state so they restart on the version bump.
       abortAllInFlight()
-
-      // Don't call refreshSession() here. Empirically refreshSession() hangs
-      // when the network is in a zombie state right after tab resume — the
-      // POST /auth/v1/token never completes, leaving every other hook stuck
-      // waiting on auth. Trust runQuery's auth-error retry path: if a hook's
-      // query gets 401, runQuery refreshes the session inline. By that time
-      // the network has unstuck itself.
       await new Promise<void>((r) => setTimeout(r, 50))
       if (!document.hidden) _bumpFocusVersion()
     }

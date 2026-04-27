@@ -28,7 +28,15 @@ async function noLock<R>(
 }
 
 export const supabase = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: { lock: noLock },
+  auth: {
+    lock: noLock,
+    // Disable Supabase's internal autoRefreshToken timer. After Chrome resumes
+    // a suspended tab, all throttled intervals fire at once → multiple parallel
+    // refreshSession() calls + queued auth ops were observed to wedge the
+    // client's internal state machine, blocking subsequent /rest/v1/* queries.
+    // We refresh on demand via runQuery's auth-error retry path instead.
+    autoRefreshToken: false,
+  },
 })
 
 export function createClient() {

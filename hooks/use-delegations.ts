@@ -14,14 +14,17 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
+  // Ref so attempt() reads latest delegations without needing them in useCallback deps
+  const delegationsRef = useRef<Delegacion[]>(delegations)
+  delegationsRef.current = delegations
+
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchDelegations = useCallback(async () => {
     if (!user) {
-      // Don't wipe delegations on a temporary auth null — the session may
-      // recover in milliseconds (tab-focus token refresh race). Keeping stale
-      // data visible prevents the delegation selector from going blank.
+      // Don't wipe delegations on a temporary auth null — session may recover
+      // in ms. Keeping stale data visible prevents the selector going blank.
       // Genuine sign-out is handled by routing redirecting to /auth/login.
       setLoading(false)
       return
@@ -35,7 +38,9 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     abortControllerRef.current = abortController
 
     const attempt = async () => {
-      setLoading(true)
+      // Stale-while-revalidate: only show spinner on first load.
+      // If we already have data, keep it visible while refresh runs silently.
+      if (delegationsRef.current.length === 0) setLoading(true)
       setError(null)
 
       const { data, error } = await runQuery<{ delegacion_id: string; delegacion: any }[]>({

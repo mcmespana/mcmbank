@@ -24,16 +24,19 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const fetchDelegations = useCallback(async () => {
     let userId = user?.id
 
-    // Self-heal: if React user state went null due to a tab-switch glitch but
-    // Supabase still has a valid session in storage, use that. Without this
-    // the hook bails forever and the user sees no network calls even after
-    // pressing "Reiniciar conexión".
+    // Self-heal with hard timeout: getSession() has been observed hanging due
+    // to navigator.locks deadlock; cap at 2 s so the hook never freezes here.
     if (!userId) {
       try {
-        const { data } = await supabase.auth.getSession()
-        userId = data?.session?.user?.id
-      } catch {
-        // ignore; treat as no session below
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("self-heal-getSession-timeout")), 2000),
+          ),
+        ])
+        userId = (result as any)?.data?.session?.user?.id
+      } catch (e) {
+        console.warn("[useDelegations] self-heal getSession failed:", e)
       }
     }
 

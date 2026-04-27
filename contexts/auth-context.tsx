@@ -20,54 +20,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true
     const mountedAt = Date.now()
+    let initialEventReceived = false
     console.debug("[auth] AuthProvider mounted at", new Date(mountedAt).toISOString())
 
-    const getInitialSession = async () => {
-      try {
-        // Hard timeout: if navigator.locks is contended (e.g. autoRefreshToken
-        // timer firing on tab resume), getSession() can hang indefinitely.
-        // Cap at 8 s; onAuthStateChange will fire later and update user anyway.
-        const sessionPromise = supabase.auth.getSession()
-        const result = await Promise.race([
-          sessionPromise,
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("getInitialSession-timeout")), 8000),
-          ),
-        ])
-
-        const session = (result as any)?.data?.session
-        console.debug("[auth] getInitialSession resolved", {
-          hasSession: !!session,
-          userId: session?.user?.id,
-          elapsedMs: Date.now() - mountedAt,
-        })
-        if (mounted) {
-          setUser(prev => {
-            if (prev?.id === session?.user?.id) return prev
-            return session?.user ?? null
-          })
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error("[auth] getInitialSession failed:", error)
-        if (mounted) {
-          // Don't force user=null on timeout — onAuthStateChange may still fire
-          // with a valid session. Just unblock the loading flag so other hooks
-          // proceed with whatever user value is set (initial null is fine; they
-          // re-fetch when user updates).
-          setLoading(false)
-        }
-      }
-    }
-
-    getInitialSession()
+    // We do NOT call supabase.auth.getSession() directly. HAR + console traces
+    // showed it hanging 8+ seconds (getInitialSession-timeout) due to a
+    // navigator.locks/BroadcastChannel deadlock that survives cross-page-load.
+    // Instead we rely on onAuthStateChange firing INITIAL_SESSION on subscribe,
+    // which delivers the current session via the same internal mechanism but
+    // through an event channel that's more resilient to lock contention.
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.debug("[auth] onAuthStateChange:", event, { userId: session?.user?.id })
+      console.debug("[auth] onAuthStateChange:", event, {
+        userId: session?.user?.id,
+        elapsedMs: Date.now() - mountedAt,
+      })
       if (mounted) {
+        initialEventReceived = true
         setUser(prev => {
           if (prev?.id === session?.user?.id) return prev
           return session?.user ?? null
@@ -98,8 +70,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
+    // Safety net: if onAuthStateChange's INITIAL_SESSION event doesn't fire
+    // within 6 s (which would mean the lock is wedged even for event delivery),
+    // unblock the loading flag so the StuckRecoveryBanner can take over.
+    const safetyTimer = setTimeout(() => {
+      if (mounted && !initialEventReceived) {
+        console.warn("[auth] no INITIAL_SESSION within 6s — forcing loading=false")
+        setLoading(false)
+      }
+    }, 6000)
+
     return () => {
       mounted = false
+      clearTimeout(safetyTimer)
       subscription.unsubscribe()
     }
   }, [])

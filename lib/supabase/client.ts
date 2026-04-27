@@ -27,8 +27,10 @@ async function lockWithFallback<R>(
     return fn()
   }
 
+  // 2 s is aggressive but consistent with reality: any auth op that legitimately
+  // needs cross-tab coordination resolves in ms. If we wait, lock is wedged.
   const ac = new AbortController()
-  const timer = setTimeout(() => ac.abort(), 5000)
+  const timer = setTimeout(() => ac.abort(), 2000)
 
   try {
     return await navigator.locks.request(name, { mode: "exclusive", signal: ac.signal }, async () => {

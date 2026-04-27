@@ -37,30 +37,33 @@ export function useFocusVersion(): number {
 // re-init auth state first via refreshSession(), which fires onAuthStateChange
 // → AuthProvider's setUser() → React re-renders → hooks no longer bail.
 export async function forceConnectionReset(): Promise<void> {
+  console.debug("[forceConnectionReset] starting")
   const { abortAllInFlight } = await import("@/lib/db/in-flight")
 
   // Step 1: kill zombie fetches
   abortAllInFlight()
 
-  // Step 2: force re-init of auth state. refreshSession() fires onAuthStateChange
-  // (TOKEN_REFRESHED or SIGNED_OUT) which AuthProvider listens to and updates
-  // the React user state. With timeout so we don't hang here forever.
+  // Step 2: best-effort refresh (3 s timeout — lockWithFallback already times
+  // out at 2 s so this is a small margin on top). If it fails, just continue
+  // and bump version; the banner shows up if recovery doesn't take.
   try {
     await Promise.race([
       supabase.auth.refreshSession(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("reset-refresh-timeout")), 5000),
+        setTimeout(() => reject(new Error("reset-refresh-timeout")), 3000),
       ),
     ])
+    console.debug("[forceConnectionReset] refresh ok")
   } catch (e) {
     console.warn("[forceConnectionReset] refreshSession failed:", e)
   }
 
-  // Step 3: let React flush the setUser() call queued by onAuthStateChange
+  // Step 3: let React flush any setUser() queued by onAuthStateChange
   await new Promise<void>((r) => setTimeout(r, 200))
 
-  // Step 4: bump focus version → all hooks re-fetch (now with valid user)
+  // Step 4: bump focus version → all hooks re-fetch
   _bumpFocusVersion()
+  console.debug("[forceConnectionReset] done — focus version bumped")
 }
 
 let revalidationInFlight = false

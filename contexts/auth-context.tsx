@@ -19,6 +19,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    const mountedAt = Date.now()
+    console.debug("[auth] AuthProvider mounted at", new Date(mountedAt).toISOString())
 
     const getInitialSession = async () => {
       try {
@@ -34,6 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ])
 
         const session = (result as any)?.data?.session
+        console.debug("[auth] getInitialSession resolved", {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          elapsedMs: Date.now() - mountedAt,
+        })
         if (mounted) {
           setUser(prev => {
             if (prev?.id === session?.user?.id) return prev
@@ -42,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false)
         }
       } catch (error) {
-        console.error("Error getting initial session:", error)
+        console.error("[auth] getInitialSession failed:", error)
         if (mounted) {
           // Don't force user=null on timeout — onAuthStateChange may still fire
           // with a valid session. Just unblock the loading flag so other hooks
@@ -59,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.debug("[auth] onAuthStateChange:", event, { userId: session?.user?.id })
       if (mounted) {
         setUser(prev => {
           if (prev?.id === session?.user?.id) return prev

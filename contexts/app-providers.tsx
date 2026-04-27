@@ -7,6 +7,7 @@ import { MovimientosCacheProvider } from "./movimientos-cache-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeStateWatcher } from "@/components/theme-state-watcher"
 import { ConnectionMonitor } from "@/components/connection-monitor"
+import { StuckRecoveryBanner } from "@/components/stuck-recovery-banner"
 import { Toaster } from "sonner"
 
 interface AppProvidersProps {
@@ -26,6 +27,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         <DelegationProvider>
           <MovimientosCacheProvider>
             <ConnectionMonitor />
+            <StuckRecoveryBanner />
             {children}
             <Toaster richColors />
           </MovimientosCacheProvider>

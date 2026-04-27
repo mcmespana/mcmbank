@@ -1,5 +1,9 @@
 import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/lib/types/database"
+import { installFetchLogger } from "./fetch-logger"
+
+// Mount the fetch logger as soon as this module is imported on the client.
+installFetchLogger()
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

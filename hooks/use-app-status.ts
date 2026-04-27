@@ -31,14 +31,35 @@ export function useFocusVersion(): number {
   )
 }
 
-// Manual recovery trigger — exposed so a topbar button can force a full
-// connection reset when the user notices the app is stuck.
-// Aborts every in-flight fetch and bumps focusVersion so all hooks restart.
+// Manual recovery trigger — topbar button calls this when the app gets stuck.
+// HAR analysis showed that when stuck, hooks bail on !user (React state went
+// null) so just bumping focusVersion produces zero network calls. We must
+// re-init auth state first via refreshSession(), which fires onAuthStateChange
+// → AuthProvider's setUser() → React re-renders → hooks no longer bail.
 export async function forceConnectionReset(): Promise<void> {
   const { abortAllInFlight } = await import("@/lib/db/in-flight")
+
+  // Step 1: kill zombie fetches
   abortAllInFlight()
-  // Small delay so React processes any state changes from aborted fetches
-  await new Promise<void>((r) => setTimeout(r, 100))
+
+  // Step 2: force re-init of auth state. refreshSession() fires onAuthStateChange
+  // (TOKEN_REFRESHED or SIGNED_OUT) which AuthProvider listens to and updates
+  // the React user state. With timeout so we don't hang here forever.
+  try {
+    await Promise.race([
+      supabase.auth.refreshSession(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("reset-refresh-timeout")), 5000),
+      ),
+    ])
+  } catch (e) {
+    console.warn("[forceConnectionReset] refreshSession failed:", e)
+  }
+
+  // Step 3: let React flush the setUser() call queued by onAuthStateChange
+  await new Promise<void>((r) => setTimeout(r, 200))
+
+  // Step 4: bump focus version → all hooks re-fetch (now with valid user)
   _bumpFocusVersion()
 }
 

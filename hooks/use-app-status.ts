@@ -82,17 +82,35 @@ export const useAppStatus = () => {
       revalidationInFlight = true
 
       try {
-        // The 6 s timeout guards against navigator.locks deadlock (lockWithFallback
-        // in client.ts also handles this within 5 s, so this is a belt-and-braces).
+        // Smart refresh: only call refreshSession() if the token is close to
+        // expiry. Otherwise getSession() suffices and avoids navigator.locks
+        // contention with Supabase's autoRefreshToken timer that may also be
+        // firing right after Chrome resume — the two paralle refreshSession
+        // calls were the main "sincronizar a la vez" source of cuelgues.
         try {
-          await Promise.race([
-            supabase.auth.refreshSession(),
+          const sessionResult = await Promise.race([
+            supabase.auth.getSession(),
             new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("refresh-timeout")), 6000),
+              setTimeout(() => reject(new Error("getSession-timeout")), 4000),
             ),
           ])
+
+          const session = (sessionResult as any)?.data?.session
+          const expiresAt: number | undefined = session?.expires_at
+          const nowSec = Math.floor(Date.now() / 1000)
+          const expiresInSec = expiresAt ? expiresAt - nowSec : 0
+          const REFRESH_THRESHOLD_SEC = 300 // 5 min
+
+          if (session && expiresInSec < REFRESH_THRESHOLD_SEC) {
+            await Promise.race([
+              supabase.auth.refreshSession(),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("refresh-timeout")), 6000),
+              ),
+            ])
+          }
         } catch {
-          // Refresh failure is non-fatal; individual hooks retry on auth error.
+          // Failure is non-fatal; individual hooks retry on auth error.
         }
 
         if (document.hidden) return
@@ -109,8 +127,27 @@ export const useAppStatus = () => {
       }
     }
 
+    // pageshow with persisted=true fires when Chrome restores the tab from
+    // BFCache (back/forward cache). visibilitychange may not fire reliably
+    // in that flow. Triggering the same handler covers both cases.
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) handleVisibilityChange()
+    }
+    // online fires when network connectivity returns after a drop —
+    // good moment to abort zombie fetches and restart queries.
+    const handleOnline = () => {
+      if (!document.hidden) handleVisibilityChange()
+    }
+
     document.addEventListener("visibilitychange", handleVisibilityChange)
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("pageshow", handlePageShow)
+    window.addEventListener("online", handleOnline)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("pageshow", handlePageShow)
+      window.removeEventListener("online", handleOnline)
+    }
   }, [])
 
   return { isOnline, isFocused }

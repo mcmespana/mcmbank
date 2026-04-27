@@ -22,10 +22,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const getInitialSession = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
+        // Hard timeout: if navigator.locks is contended (e.g. autoRefreshToken
+        // timer firing on tab resume), getSession() can hang indefinitely.
+        // Cap at 8 s; onAuthStateChange will fire later and update user anyway.
+        const sessionPromise = supabase.auth.getSession()
+        const result = await Promise.race([
+          sessionPromise,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("getInitialSession-timeout")), 8000),
+          ),
+        ])
 
+        const session = (result as any)?.data?.session
         if (mounted) {
           setUser(prev => {
             if (prev?.id === session?.user?.id) return prev
@@ -36,7 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("Error getting initial session:", error)
         if (mounted) {
-          setUser(null)
+          // Don't force user=null on timeout — onAuthStateChange may still fire
+          // with a valid session. Just unblock the loading flag so other hooks
+          // proceed with whatever user value is set (initial null is fine; they
+          // re-fetch when user updates).
           setLoading(false)
         }
       }

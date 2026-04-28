@@ -4,10 +4,13 @@ import { useState, useEffect, useRef, useSyncExternalStore } from "react"
 import { abortAllInFlight } from "@/lib/db/in-flight"
 import { addOurVisibilityListener } from "@/lib/supabase/client"
 
-// --- Focus version store ---
-// Module-level counter bumped on each tab-focus revalidation.
-// useSyncExternalStore wires it into React so useEffect([..., focusVersion])
-// deps fire *after* React renders with the latest state — no timing races.
+// ─────────────────────────────────────────────────────────────────────────────
+// Focus-version store
+// ─────────────────────────────────────────────────────────────────────────────
+// Module-level counter bumped on each tab-focus revalidation. useSyncExternalStore
+// wires it into React so useEffect([..., focusVersion]) deps fire after React
+// renders with the latest state (no timing races against auth state updates).
+
 let _focusVersion = 0
 const _focusListeners = new Set<() => void>()
 
@@ -27,22 +30,19 @@ export function useFocusVersion(): number {
   )
 }
 
-// Manual recovery trigger — used by StuckRecoveryBanner. Just abort + bump:
-// calling refreshSession() here was hanging when network was in zombie state
-// post tab-suspend, defeating recovery. Hooks retry their fetches on bump;
-// if auth is genuinely stale the queries 401 and runQuery's auth retry
-// path handles refresh inline (when network is no longer wedged).
-export async function forceConnectionReset(): Promise<void> {
-  const { abortAllInFlight } = await import("@/lib/db/in-flight")
-  abortAllInFlight()
-  await new Promise<void>((r) => setTimeout(r, 50))
-  _bumpFocusVersion()
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// useAppStatus — registers visibility / online listeners
+// ─────────────────────────────────────────────────────────────────────────────
+// On tab focus we abort any zombie fetches Chrome left mid-flight and bump
+// the focus version, which causes every hook subscribed via useRevalidateOnFocus
+// to re-run its query. We register the visibility listener via
+// addOurVisibilityListener so the global block in lib/supabase/client.ts (which
+// suppresses Supabase's internal recovery listener — see TAB_SWITCH_HANG_FIX.md)
+// lets ours through.
 
 export const useAppStatus = () => {
   const [isOnline, setIsOnline] = useState(true)
   const [isFocused, setIsFocused] = useState(true)
-  const hiddenAtRef = useRef<number>(0)
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
@@ -60,44 +60,28 @@ export const useAppStatus = () => {
     const handleVisibilityChange = async () => {
       const isNowFocused = !document.hidden
       setIsFocused(isNowFocused)
-
-      if (!isNowFocused) {
-        hiddenAtRef.current = Date.now()
-        return
-      }
+      if (!isNowFocused) return
 
       abortAllInFlight()
+      // tiny delay so abort propagates before bump triggers re-render
       await new Promise<void>((r) => setTimeout(r, 50))
       if (!document.hidden) _bumpFocusVersion()
     }
 
-    const handlePageShow = (e: Event) => {
-      if ((e as PageTransitionEvent).persisted) handleVisibilityChange()
-    }
-    const handleOnline = () => {
-      if (!document.hidden) handleVisibilityChange()
-    }
-
-    // Register through addOurVisibilityListener so the global block in
-    // lib/supabase/client.ts (which suppresses Supabase's internal listeners)
-    // lets our own listeners through.
-    const unsubVis = addOurVisibilityListener("visibilitychange", handleVisibilityChange, "document")
-    const unsubShow = addOurVisibilityListener("pageshow", handlePageShow, "window")
-    window.addEventListener("online", handleOnline)
-
-    return () => {
-      unsubVis()
-      unsubShow()
-      window.removeEventListener("online", handleOnline)
-    }
+    const unsub = addOurVisibilityListener("visibilitychange", handleVisibilityChange, "document")
+    return unsub
   }, [])
 
   return { isOnline, isFocused }
 }
 
-// Revalidate on tab focus. Uses useFocusVersion so the callback fires inside
-// useEffect — after React renders with the latest state — not synchronously
-// from the event handler.
+// ─────────────────────────────────────────────────────────────────────────────
+// useRevalidateOnFocus — subscribe to focus-version bumps
+// ─────────────────────────────────────────────────────────────────────────────
+// Calls revalidate() inside a useEffect (after React render with latest state),
+// not synchronously from the event handler — avoids timing races where the
+// callback would read stale closures.
+
 export const useRevalidateOnFocus = (revalidate: () => void) => {
   const focusVersion = useFocusVersion()
   const ref = useRef(revalidate)
@@ -113,7 +97,7 @@ export const useRevalidateOnFocus = (revalidate: () => void) => {
   }, [focusVersion])
 }
 
-// Backward-compatible alias (jitter was already a no-op).
+// Backward-compatible alias (jitter behaviour was already a no-op).
 export const useRevalidateOnFocusJitter = (
   revalidate: () => void,
   _opts?: { minMs?: number; maxMs?: number },

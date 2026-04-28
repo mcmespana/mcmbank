@@ -22,29 +22,14 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchDelegations = useCallback(async () => {
-    let userId = user?.id
-
-    // Self-heal with hard timeout: getSession() has been observed hanging due
-    // to navigator.locks deadlock; cap at 2 s so the hook never freezes here.
-    if (!userId) {
-      try {
-        const result = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("self-heal-getSession-timeout")), 2000),
-          ),
-        ])
-        userId = (result as any)?.data?.session?.user?.id
-      } catch (e) {
-        console.warn("[useDelegations] self-heal getSession failed:", e)
-      }
-    }
-
-    if (!userId) {
-      console.warn("[useDelegations] no user available — bailing")
+    if (!user) {
+      // Don't wipe delegations on a transient null user — selector stays
+      // populated through brief auth-state glitches. Genuine sign-out is
+      // handled by routing redirecting to /auth/login.
       setLoading(false)
       return
     }
+    const userId = user.id
 
     // Cancel previous pending request (if any)
     if (abortControllerRef.current) abortControllerRef.current.abort()
@@ -76,7 +61,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
                 creado_en
               )
             `)
-            .eq("usuario_id", userId!)
+            .eq("usuario_id", userId)
             .abortSignal(signal),
       })
 

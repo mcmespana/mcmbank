@@ -5,15 +5,6 @@ import { Analytics } from "@vercel/analytics/next"
 import { AppProviders } from "@/contexts/app-providers"
 import "./globals.css"
 
-// Force dynamic rendering. HAR analysis showed the root HTML was returned with
-// x-vercel-cache: HIT, meaning Vercel CDN was serving cached HTML. After a new
-// deploy the cached HTML's embedded RSC payload could reference outdated chunk
-// hashes, leading to silent JS init failure (F5 looked broken; Ctrl+F5
-// eventually missed the cache and loaded fresh HTML — that's why the user
-// "needed to clear cache many times until by chance it worked").
-export const dynamic = "force-dynamic"
-export const revalidate = 0
-
 const geist = Geist({
   subsets: ["latin"],
   display: "swap",

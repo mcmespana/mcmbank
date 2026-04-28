@@ -153,21 +153,16 @@ Nuestro `handleVisibilityChange` se encarga de:
 
 ## Cambios secundarios (defensa en profundidad)
 
-Aunque el bloqueo del listener arregla la causa raíz, mantenemos varias
-defensas que ayudan en casos raros:
-
 | Cambio | Archivo | Razón |
 |--------|---------|-------|
-| `noLock` (identity) en `auth.lock` | `lib/supabase/client.ts` | Elimina contención de `navigator.locks` |
-| `autoRefreshToken: false` | `lib/supabase/client.ts` | Sin refresh paralelo en cascada al resumir |
-| Sin `getSession()` inicial | `contexts/auth-context.tsx` | Solo `onAuthStateChange` (canal de eventos) |
 | `addEventListener` block permanente | `lib/supabase/client.ts` | **Causa raíz** |
+| `noLock` (identity) en `auth.lock` | `lib/supabase/client.ts` | Elimina contención de `navigator.locks` (el lock no aporta en single-tab y sí causaba deadlocks) |
+| `autoRefreshToken: false` | `lib/supabase/client.ts` | Sin refresh paralelo en cascada al resumir; refresh on-demand vía `runQuery` retry |
+| Sin `getSession()` inicial | `contexts/auth-context.tsx` | Solo `onAuthStateChange` (canal de eventos resiliente) |
 | `abortAllInFlight()` global | `lib/db/in-flight.ts` | Mata fetches zombie en visibility change |
-| `useFocusVersion` con `useSyncExternalStore` | `hooks/use-app-status.ts` | Hooks reaccionan via React render, no callbacks externos |
+| `useFocusVersion` con `useSyncExternalStore` | `hooks/use-app-status.ts` | Hooks reaccionan vía React render, no callbacks externos |
 | Stale-while-revalidate | `useDelegations`, `useCategorias` | Datos viejos visibles mientras refresca |
-| Self-heal en `useDelegations` | `hooks/use-delegations.ts` | Si React `user=null`, lee userId de Supabase storage |
-| `force-dynamic` en root layout | `app/layout.tsx` | Evita HTML cacheado por Vercel CDN |
-| Banner de recuperación | `components/stuck-recovery-banner.tsx` | Última línea: botones manuales si todo falla |
+| Timeout duro en queries clave | `useCategorias`, `useMovimientos` | Si algo cuelga pese a todo, cae solo |
 
 ## Validación
 
@@ -204,33 +199,10 @@ Datos cargan normal. Persisten al cambiar de pestaña múltiples veces.
 lib/supabase/client.ts                 ← bloqueo + cliente Supabase
 hooks/use-app-status.ts                ← visibility handler propio + focus version
 lib/db/in-flight.ts                    ← registro global de AbortControllers
+lib/db/query.ts                        ← runQuery registra AC en in-flight
 hooks/use-categorias.ts                ← timeout duro + stale-while-revalidate
-hooks/use-delegations.ts               ← self-heal con timeout
+hooks/use-delegations.ts               ← stale-while-revalidate
 hooks/use-movimientos.ts               ← registra AC en in-flight
 contexts/auth-context.tsx              ← solo onAuthStateChange, sin getSession()
 contexts/movimientos-cache-context.tsx ← AC + timeout en cache provider
-components/stuck-recovery-banner.tsx   ← UI de último recurso
-app/layout.tsx                         ← force-dynamic
-next.config.mjs                        ← Cache-Control: no-store en HTML
 ```
-
-## Historial de la rama
-
-Branch: `test-reiniciar-conexion`. Commits relevantes (más reciente arriba):
-
-1. `chore: clean up diagnostic logs`
-2. `fix(auth): block Supabase's visibilitychange listener globally` ← **fix definitivo**
-3. `diag: switch all diagnostic logs to console.log`
-4. `diag: install fetch interceptor`
-5. `diag: comprehensive logging + disable Supabase autoRefreshToken`
-6. `fix(auth): drop refreshSession on tab focus + register movimientos AC`
-7. `fix(auth): identity lock + nuclear storage reset`
-8. `fix(auth): drop getSession() init`
-9. `fix(cache): force-dynamic root + stuck-state recovery banner`
-10. `fix(auth): forceConnectionReset re-inits auth + useDelegations self-heals`
-11. `feat(ui): add manual reconnect button` (revertido)
-12. `fix(auth): eliminate refresh collision + BFCache/online recovery`
-13. `fix(auth): kill zombie fetches + stale-while-revalidate`
-14. `fix(auth): replace emitter with useSyncExternalStore`
-15. `fix(auth): tab-focus infinite loading after session recovery`
-16. `fix(auth): mount useAppStatus in ConnectionMonitor`

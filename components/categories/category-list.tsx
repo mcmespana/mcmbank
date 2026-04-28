@@ -383,7 +383,11 @@ export function CategoryList() {
     fetchCategorias,
     saveCategoriaOrdenes,
   } = useCategorias(selectedDelegation, { includeInactive: showInactive })
-  const { movimientos } = useMovimientos(selectedDelegation || null)
+  const { movimientos } = useMovimientos(
+    selectedDelegation || null,
+    { fechaDesde: dateFrom, fechaHasta: dateTo },
+    { pageSize: 0 },
+  )
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -421,16 +425,9 @@ export function CategoryList() {
       }
     }
 
-    let filteredMovements = movimientos.filter(
+    const filteredMovements = movimientos.filter(
       (mov) => mov.categoria_id && relatedCategoryIds.has(mov.categoria_id),
     )
-
-    if (dateFrom) {
-      filteredMovements = filteredMovements.filter((mov) => mov.fecha >= dateFrom)
-    }
-    if (dateTo) {
-      filteredMovements = filteredMovements.filter((mov) => mov.fecha <= dateTo)
-    }
 
     return filteredMovements.reduce((sum, mov) => sum + mov.importe, 0)
   }

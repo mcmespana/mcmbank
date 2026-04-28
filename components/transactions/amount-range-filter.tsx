@@ -80,7 +80,7 @@ export function AmountRangeFilter({ amountFrom, amountTo, onAmountRangeChange }:
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Filtrar por importe</h4>
               <p className="text-xs text-muted-foreground">
-                Define un rango de importes para filtrar las transacciones
+                Usa valores positivos. Incluye ingresos y gastos del mismo importe.
               </p>
             </div>
 

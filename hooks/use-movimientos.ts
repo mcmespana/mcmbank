@@ -181,11 +181,19 @@ export function useMovimientos(
             const term = memoizedFilters.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
             query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%`)
           }
-          if (memoizedFilters.amountFrom !== undefined) {
-            query = query.gte("importe", memoizedFilters.amountFrom)
-          }
-          if (memoizedFilters.amountTo !== undefined) {
-            query = query.lte("importe", memoizedFilters.amountTo)
+          // Filter by absolute amount value so -45 matches range [40, 50]
+          if (memoizedFilters.amountFrom !== undefined && memoizedFilters.amountTo !== undefined) {
+            const from = memoizedFilters.amountFrom
+            const to = memoizedFilters.amountTo
+            query = query.or(
+              `and(importe.gte.${from},importe.lte.${to}),and(importe.lte.${-from},importe.gte.${-to})`
+            )
+          } else if (memoizedFilters.amountFrom !== undefined) {
+            const from = memoizedFilters.amountFrom
+            query = query.or(`importe.gte.${from},importe.lte.${-from}`)
+          } else if (memoizedFilters.amountTo !== undefined) {
+            const to = memoizedFilters.amountTo
+            query = query.lte("importe", to).gte("importe", -to)
           }
           if (memoizedFilters.uncategorized) {
             query = query.is("categoria_id", null)

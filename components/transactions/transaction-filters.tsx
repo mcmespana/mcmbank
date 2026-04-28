@@ -160,8 +160,7 @@ export function TransactionFiltersComponent({
           amountFrom={filters.amountFrom}
           amountTo={filters.amountTo}
           onAmountRangeChange={(amountFrom, amountTo) => {
-            updateFilter("amountFrom", amountFrom)
-            updateFilter("amountTo", amountTo)
+            onFiltersChange({ ...filters, amountFrom, amountTo })
           }}
         />
       </div>

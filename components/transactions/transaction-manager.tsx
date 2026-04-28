@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
@@ -8,6 +8,7 @@ import { TransactionDetail } from "./transaction-detail"
 import { TransactionCreatePanel } from "./transaction-create-panel"
 import { DateRangeFilter } from "./date-range-filter"
 import { CategoryMegaSelector } from "./category-mega-selector"
+import { supabase } from "@/lib/supabase/client"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
@@ -256,6 +257,7 @@ export function TransactionManager() {
         ),
       )
       toast.success(`Categoría actualizada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
+      refreshUncategorizedCount()
       setBulkCategoryOpen(false)
       // Mantener selección para permitir acciones adicionales
     } catch (error) {
@@ -361,6 +363,7 @@ export function TransactionManager() {
 
       if (categoriaIdForMovement !== undefined) {
         await updateCategoria(movementId, categoriaIdForMovement)
+        refreshUncategorizedCount()
       }
 
       if (Object.keys(movementPatch).length > 0) {
@@ -414,7 +417,26 @@ export function TransactionManager() {
     setFilters({})
   }
 
-  const uncategorizedCount = movements.filter((m) => !m.categoria_id).length
+  const [uncategorizedCount, setUncategorizedCount] = useState(0)
+  const [uncategorizedCountRevision, setUncategorizedCountRevision] = useState(0)
+
+  const refreshUncategorizedCount = useCallback(() => {
+    setUncategorizedCountRevision((r) => r + 1)
+  }, [])
+
+  useEffect(() => {
+    if (!selectedDelegation) {
+      setUncategorizedCount(0)
+      return
+    }
+    supabase
+      .from("movimiento")
+      .select("id", { count: "exact", head: true })
+      .eq("delegacion_id", selectedDelegation)
+      .eq("ignorado", false)
+      .is("categoria_id", null)
+      .then(({ count }) => setUncategorizedCount(count ?? 0))
+  }, [selectedDelegation, uncategorizedCountRevision])
 
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
     if (key === "dateFrom" || key === "dateTo") return false

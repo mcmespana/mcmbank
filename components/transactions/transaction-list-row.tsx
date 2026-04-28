@@ -11,8 +11,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Pencil } from "lucide-react"
+import { Check, Pencil } from "lucide-react"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListRowProps {
@@ -25,7 +24,7 @@ interface TransactionListRowProps {
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
   isSelected: boolean
   selectionActive: boolean
-  onSelectionChange: (selected: boolean) => void
+  onSelectionChange: (selected: boolean, rangeFromAnchor?: boolean) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -76,12 +75,21 @@ export const TransactionListRow = memo(function TransactionListRow({
     setEditing(false)
   }
 
+  const handleSelectionClick = (event: React.MouseEvent | React.KeyboardEvent) => {
+    event.stopPropagation()
+    if ("preventDefault" in event) event.preventDefault()
+    const rangeFromAnchor =
+      "shiftKey" in event && (event.shiftKey || event.metaKey || event.ctrlKey)
+    onSelectionChange(!isSelected, rangeFromAnchor)
+  }
+
   return (
     <div className="relative" data-testid="transaction-row">
       <div
         className={cn(
           "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md",
-          !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10"
+          !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10",
+          isSelected && "border-primary/60 bg-primary/5 ring-1 ring-primary/40 hover:bg-primary/10",
         )}
         onClick={(e) => onClick(movement, e)}
         data-account-id={movement.cuenta_id}
@@ -107,31 +115,50 @@ export const TransactionListRow = memo(function TransactionListRow({
               </div>
             </AccountTooltip>
 
-            <div
-              className={cn(
-                "absolute inset-0 flex items-center justify-center transition-all duration-200",
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={isSelected}
+              aria-label={
                 isSelected
-                  ? "opacity-100 scale-100"
+                  ? "Quitar de la selección. Mantén Shift para seleccionar un rango."
+                  : "Seleccionar transacción. Mantén Shift para seleccionar un rango."
+              }
+              title={
+                isSelected
+                  ? "Click para deseleccionar · Shift+Click para seleccionar un rango"
+                  : "Click para seleccionar · Shift+Click para seleccionar un rango"
+              }
+              data-testid="transaction-selection-toggle"
+              onClick={handleSelectionClick}
+              onPointerDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === " " || event.key === "Enter") {
+                  handleSelectionClick(event)
+                }
+              }}
+              className={cn(
+                "absolute -inset-2 sm:-inset-2.5 flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                isSelected
+                  ? "opacity-100 pointer-events-auto bg-primary/5 hover:bg-primary/10"
                   : selectionActive
-                  ? "opacity-90 scale-100 pointer-events-auto"
-                  : "pointer-events-none opacity-0 scale-75 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:scale-100",
+                  ? "opacity-100 pointer-events-auto hover:bg-primary/10"
+                  : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-hover:bg-primary/5",
               )}
             >
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={(checked) => {
-                  const isChecked = checked === true
-                  onSelectionChange(isChecked)
-                }}
+              <span
                 className={cn(
-                  "h-6 w-6 border-2 text-base", // enlarge for better hit area
-                  isSelected ? "shadow-lg" : "shadow-sm",
+                  "h-9 w-9 rounded-full border-2 flex items-center justify-center transition-all shadow-md",
+                  isSelected
+                    ? "bg-primary border-primary text-primary-foreground shadow-lg"
+                    : "bg-background border-input text-transparent",
                 )}
-                onClick={(event) => event.stopPropagation()}
-                onPointerDown={(event) => event.stopPropagation()}
-                aria-label={isSelected ? "Quitar de la selección" : "Añadir a la selección"}
-              />
-            </div>
+                aria-hidden="true"
+              >
+                <Check className="h-5 w-5" strokeWidth={3} />
+              </span>
+            </button>
           </div>
 
           <div className="flex-1 min-w-0">

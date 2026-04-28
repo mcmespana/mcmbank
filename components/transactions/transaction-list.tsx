@@ -6,7 +6,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { TransactionListRow } from "./transaction-list-row"
 import { EmptyState } from "@/components/ui/empty-state"
-import { SearchX } from "lucide-react"
+import { MousePointerClick, SearchX } from "lucide-react"
 import type {
   Movimiento,
   Cuenta,
@@ -27,7 +27,7 @@ interface TransactionListProps {
   hasMore?: boolean
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
   selectedMovementIds: string[]
-  onMovementSelectionChange: (movementId: string, selected: boolean) => void
+  onMovementSelectionChange: (movementId: string, selected: boolean, rangeFromAnchor?: boolean) => void
 }
 
 export function TransactionList({
@@ -106,10 +106,22 @@ export function TransactionList({
     )
   }
 
+  const selectionActive = selectedMovementIds.length > 0
+
   return (
     <div className="space-y-1 p-2 sm:p-4">
-      <div className="flex items-center justify-between mb-3 px-1 sm:px-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-1 sm:px-0">
         <p className="text-sm text-muted-foreground font-medium">{total} transacciones encontradas</p>
+        {!selectionActive && movements.length > 1 && (
+          <p className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MousePointerClick className="h-3.5 w-3.5" />
+            <span>
+              Click sobre el círculo para seleccionar varias ·{" "}
+              <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Shift</kbd>+Click para un
+              rango
+            </span>
+          </p>
+        )}
       </div>
 
       {movements.map((movement) => (
@@ -123,8 +135,10 @@ export function TransactionList({
           onClick={(item, event) => onMovementClick(item, event)}
           onOpenFiles={onOpenFiles}
           isSelected={selectedMovementIds.includes(movement.id)}
-          selectionActive={selectedMovementIds.length > 0}
-          onSelectionChange={(selected) => onMovementSelectionChange(movement.id, selected)}
+          selectionActive={selectionActive}
+          onSelectionChange={(selected, rangeFromAnchor) =>
+            onMovementSelectionChange(movement.id, selected, rangeFromAnchor)
+          }
         />
       ))}
       {hasMore && (

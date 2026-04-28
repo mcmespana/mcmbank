@@ -28,6 +28,7 @@ import {
   Type,
   FilePlus,
   AlertTriangle,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -78,6 +79,7 @@ export function TransactionManager() {
   const [importOpen, setImportOpen] = useState(false)
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle")
   const [selectedMovementIds, setSelectedMovementIds] = useState<string[]>([])
+  const [selectionAnchorId, setSelectionAnchorId] = useState<string | null>(null)
   const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkConceptOpen, setBulkConceptOpen] = useState(false)
@@ -127,6 +129,7 @@ export function TransactionManager() {
   useEffect(() => {
     if (movements.length === 0) {
       setSelectedMovementIds((prev) => (prev.length === 0 ? prev : []))
+      setSelectionAnchorId(null)
       return
     }
 
@@ -135,6 +138,7 @@ export function TransactionManager() {
       const filtered = prev.filter((id) => availableIds.has(id))
       return filtered.length === prev.length ? prev : filtered
     })
+    setSelectionAnchorId((prev) => (prev && availableIds.has(prev) ? prev : null))
   }, [movements])
 
   const selectedMovements = useMemo(
@@ -159,9 +163,38 @@ export function TransactionManager() {
 
   const selectionActive = selectionCount > 0
 
-  const clearSelection = () => setSelectedMovementIds([])
+  const clearSelection = () => {
+    setSelectedMovementIds([])
+    setSelectionAnchorId(null)
+  }
 
-  const handleMovementSelectionChange = (movementId: string, selected: boolean) => {
+  const handleMovementSelectionChange = (
+    movementId: string,
+    selected: boolean,
+    rangeFromAnchor: boolean = false,
+  ) => {
+    if (
+      rangeFromAnchor &&
+      selectionAnchorId &&
+      selectionAnchorId !== movementId &&
+      movements.length > 0
+    ) {
+      const anchorIndex = movements.findIndex((m) => m.id === selectionAnchorId)
+      const currentIndex = movements.findIndex((m) => m.id === movementId)
+      if (anchorIndex !== -1 && currentIndex !== -1) {
+        const start = Math.min(anchorIndex, currentIndex)
+        const end = Math.max(anchorIndex, currentIndex)
+        const rangeIds = movements.slice(start, end + 1).map((m) => m.id)
+        setSelectedMovementIds((prev) => {
+          const merged = new Set(prev)
+          rangeIds.forEach((id) => merged.add(id))
+          return Array.from(merged)
+        })
+        toast.success(`Has seleccionado ${rangeIds.length} transacciones del rango.`)
+        return
+      }
+    }
+
     setSelectedMovementIds((prev) => {
       if (selected) {
         if (prev.includes(movementId)) {
@@ -171,6 +204,11 @@ export function TransactionManager() {
       }
       return prev.filter((id) => id !== movementId)
     })
+    if (selected) {
+      setSelectionAnchorId(movementId)
+    } else if (selectionAnchorId === movementId) {
+      setSelectionAnchorId(null)
+    }
   }
 
   const handleToggleSelectAllVisible = () => {
@@ -178,6 +216,7 @@ export function TransactionManager() {
       clearSelection()
     } else {
       setSelectedMovementIds(allVisibleMovementIds)
+      setSelectionAnchorId(allVisibleMovementIds[0] ?? null)
     }
   }
 
@@ -590,6 +629,10 @@ export function TransactionManager() {
                     <p className="text-sm font-semibold tracking-tight">
                       {selectionCount} transacciones seleccionadas
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      <kbd className="rounded border bg-background/80 px-1 py-0.5 font-mono text-[10px]">Shift</kbd>
+                      +Click sobre otro círculo para seleccionar todo el rango.
+                    </p>
                   </div>
                 </div>
 
@@ -629,6 +672,16 @@ export function TransactionManager() {
                   >
                     <Trash2 className="h-4 w-4" />
                     <span className="hidden sm:inline">Eliminar</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    className="flex items-center gap-1"
+                    title="Limpiar selección"
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="hidden sm:inline">Limpiar</span>
                   </Button>
                 </div>
               </div>

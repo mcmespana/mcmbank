@@ -14,15 +14,22 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
+  // Ref so attempt() reads latest delegations without needing them in useCallback deps
+  const delegationsRef = useRef<Delegacion[]>(delegations)
+  delegationsRef.current = delegations
+
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchDelegations = useCallback(async () => {
     if (!user) {
-      setDelegations([])
+      // Don't wipe delegations on a transient null user — selector stays
+      // populated through brief auth-state glitches. Genuine sign-out is
+      // handled by routing redirecting to /auth/login.
       setLoading(false)
       return
     }
+    const userId = user.id
 
     // Cancel previous pending request (if any)
     if (abortControllerRef.current) abortControllerRef.current.abort()
@@ -32,7 +39,9 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
     abortControllerRef.current = abortController
 
     const attempt = async () => {
-      setLoading(true)
+      // Stale-while-revalidate: only show spinner on first load.
+      // If we already have data, keep it visible while refresh runs silently.
+      if (delegationsRef.current.length === 0) setLoading(true)
       setError(null)
 
       const { data, error } = await runQuery<{ delegacion_id: string; delegacion: any }[]>({
@@ -52,7 +61,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
                 creado_en
               )
             `)
-            .eq("usuario_id", user.id)
+            .eq("usuario_id", userId)
             .abortSignal(signal),
       })
 

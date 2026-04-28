@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client"
 import { addMetric } from "@/lib/db/telemetry"
+import { registerAC, unregisterAC } from "@/lib/db/in-flight"
 
 export interface RunQueryOptions<T> {
   label: string
@@ -12,6 +13,7 @@ export interface RunQueryOptions<T> {
 export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retryOnAuth = true }: RunQueryOptions<T>) {
   const started = Date.now()
   const ac = new AbortController()
+  registerAC(ac)
 
   const timeout = setTimeout(() => ac.abort(), timeoutMs)
   try {
@@ -56,6 +58,7 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
     return { data: null as T | null, error: err }
   } finally {
     clearTimeout(timeout)
+    unregisterAC(ac)
   }
 }
 

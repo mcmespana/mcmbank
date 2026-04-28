@@ -3,7 +3,10 @@
 import type React from "react"
 import { createContext, useContext, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
+import { registerAC, unregisterAC } from "@/lib/db/in-flight"
 import type { MovimientoConRelaciones } from "@/lib/types/database"
+
+const FETCH_TIMEOUT_MS = 15000
 
 interface MovimientosFilters {
   fechaDesde?: string
@@ -98,6 +101,12 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
       })
       triggerUpdate()
 
+      // AbortController so abortAllInFlight() (called on tab focus) can kill
+      // zombie fetches that Chrome suspended mid-flight.
+      const ac = new AbortController()
+      registerAC(ac)
+      const timeoutId = setTimeout(() => ac.abort(new Error("movimientos-timeout")), FETCH_TIMEOUT_MS)
+
       // Create and store the request promise
       const requestPromise = (async () => {
         try {
@@ -182,7 +191,7 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
             }
           }
 
-          const { data, error } = await query
+          const { data, error } = await query.abortSignal(ac.signal)
 
           if (error) throw error
 
@@ -208,6 +217,8 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
           triggerUpdate()
           throw error
         } finally {
+          clearTimeout(timeoutId)
+          unregisterAC(ac)
           pendingRequestsRef.current.delete(cacheKey)
         }
       })()

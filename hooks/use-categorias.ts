@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import type { CategoriaConOrdenEfectivo } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { DatabaseService } from "@/lib/services/database"
+import { registerAC, unregisterAC } from "@/lib/db/in-flight"
 
 type CategoriaOrdenChange = {
   categoriaId: string
@@ -18,6 +19,8 @@ const sortCategorias = (categorias: CategoriaConOrdenEfectivo[]) =>
     return a.nombre.localeCompare(b.nombre)
   })
 
+const QUERY_TIMEOUT_MS = 12000
+
 export function useCategorias(
   delegacionId?: string | null,
   options?: { includeGlobal?: boolean; includeInactive?: boolean },
@@ -26,14 +29,21 @@ export function useCategorias(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const categoriasRef = useRef(categorias)
+  categoriasRef.current = categorias
   const includeGlobal = options?.includeGlobal ?? true
   const includeInactive = options?.includeInactive ?? false
 
   const fetchCategorias = useCallback(async () => {
-    if (abortRef.current) abortRef.current.abort()
+    if (abortRef.current) {
+      abortRef.current.abort()
+      unregisterAC(abortRef.current)
+    }
 
     const ac = new AbortController()
     abortRef.current = ac
+    registerAC(ac)
+
     try {
       if (!delegacionId && !includeGlobal) {
         setCategorias([])
@@ -41,38 +51,50 @@ export function useCategorias(
         return
       }
 
-      setLoading(true)
+      // Stale-while-revalidate: only show full spinner on first load.
+      if (categoriasRef.current.length === 0) {
+        setLoading(true)
+      }
 
-      const data = await DatabaseService.getCategoriasByDelegacion(delegacionId, {
-        includeGlobal,
-        includeInactive,
-        signal: ac.signal,
-      })
+      // Hard timeout so a wedged request resolves instead of hanging forever.
+      const data = await Promise.race([
+        DatabaseService.getCategoriasByDelegacion(delegacionId, {
+          includeGlobal,
+          includeInactive,
+          signal: ac.signal,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`categorias timeout after ${QUERY_TIMEOUT_MS}ms`)), QUERY_TIMEOUT_MS),
+        ),
+      ])
+
+      if (ac.signal.aborted) return
 
       setCategorias(data)
       setError(null)
     } catch (err) {
-      if (!ac.signal.aborted) {
-        setError(err instanceof Error ? err.message : "Error desconocido")
-      }
+      if (ac.signal.aborted) return
+      setError(err instanceof Error ? err.message : "Error desconocido")
     } finally {
-      setLoading(false)
+      unregisterAC(ac)
+      if (!ac.signal.aborted) setLoading(false)
     }
   }, [delegacionId, includeGlobal, includeInactive])
 
-  // Ref to avoid effect cleanup aborting in-flight requests on callback identity change
   const fetchCategoriasRef = useRef(fetchCategorias)
   fetchCategoriasRef.current = fetchCategorias
 
   useEffect(() => {
     fetchCategoriasRef.current()
     return () => {
-      if (abortRef.current) abortRef.current.abort()
+      if (abortRef.current) {
+        abortRef.current.abort()
+        unregisterAC(abortRef.current)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [delegacionId, includeGlobal, includeInactive])
 
-  // Revalidate on focus
   useRevalidateOnFocusJitter(() => fetchCategoriasRef.current(), { minMs: 60, maxMs: 160 })
 
   const updateCategoria = async (id: string, updates: Partial<CategoriaConOrdenEfectivo>) => {

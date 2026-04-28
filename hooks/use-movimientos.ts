@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { Database, MovimientoConRelaciones } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
+import { registerAC, unregisterAC } from "@/lib/db/in-flight"
 
 interface MovimientosFilters {
   fechaDesde?: string
@@ -88,6 +89,7 @@ export function useMovimientos(
       // Cancel previous request and clear timeout
       if (abortRef.current) {
         abortRef.current.abort()
+        unregisterAC(abortRef.current)
       }
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -95,6 +97,7 @@ export function useMovimientos(
 
       const abortController = new AbortController()
       abortRef.current = abortController
+      registerAC(abortController)
       fetchingRef.current = true
 
       // Set safety timeout
@@ -196,10 +199,7 @@ export function useMovimientos(
 
         const { data, count, error } = await query.abortSignal(abortController.signal)
 
-        if (abortController.signal.aborted) {
-          console.log("[useMovimientos] Request aborted")
-          return
-        }
+        if (abortController.signal.aborted) return
 
         if (error) throw error
 
@@ -222,6 +222,7 @@ export function useMovimientos(
         console.error("[useMovimientos] Error:", errorMessage)
         setError(errorMessage)
       } finally {
+        unregisterAC(abortController)
         if (!isRevalidatingRef.current) {
           setLoading(false)
         }

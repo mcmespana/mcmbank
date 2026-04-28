@@ -19,36 +19,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    let initialEventReceived = false
 
-    const getInitialSession = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
-        if (mounted) {
-          setUser(prev => {
-            if (prev?.id === session?.user?.id) return prev
-            return session?.user ?? null
-          })
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error("Error getting initial session:", error)
-        if (mounted) {
-          setUser(null)
-          setLoading(false)
-        }
-      }
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
+    // We do NOT call supabase.auth.getSession() directly. Console traces showed
+    // it hanging 8+ seconds (navigator.locks/BroadcastChannel deadlock that
+    // survives across page loads). Instead we rely on onAuthStateChange firing
+    // INITIAL_SESSION on subscribe — same effect via an event channel that's
+    // more resilient. See docs/TAB_SWITCH_HANG_FIX.md.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (mounted) {
+        initialEventReceived = true
         setUser(prev => {
           if (prev?.id === session?.user?.id) return prev
           return session?.user ?? null
@@ -79,8 +61,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
+    // Safety net: if onAuthStateChange's INITIAL_SESSION event doesn't fire
+    // within 6 s, unblock the loading flag so the rest of the app can render
+    // (and either recover or show its own error state).
+    const safetyTimer = setTimeout(() => {
+      if (mounted && !initialEventReceived) {
+        console.warn("[auth] no INITIAL_SESSION within 6s — forcing loading=false")
+        setLoading(false)
+      }
+    }, 6000)
+
     return () => {
       mounted = false
+      clearTimeout(safetyTimer)
       subscription.unsubscribe()
     }
   }, [])

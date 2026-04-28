@@ -35,10 +35,6 @@ export function useCategorias(
   const includeInactive = options?.includeInactive ?? false
 
   const fetchCategorias = useCallback(async () => {
-    const tag = `[useCategorias]`
-    console.log(`${tag} fetchCategorias() called`, { delegacionId, includeGlobal })
-
-    // Abort previous in-flight request
     if (abortRef.current) {
       abortRef.current.abort()
       unregisterAC(abortRef.current)
@@ -47,21 +43,20 @@ export function useCategorias(
     const ac = new AbortController()
     abortRef.current = ac
     registerAC(ac)
-    const startedAt = Date.now()
 
     try {
       if (!delegacionId && !includeGlobal) {
-        console.log(`${tag} bail: no delegacionId and !includeGlobal`)
         setCategorias([])
         setLoading(false)
         return
       }
 
+      // Stale-while-revalidate: only show full spinner on first load.
       if (categoriasRef.current.length === 0) {
         setLoading(true)
       }
 
-      console.log(`${tag} querying Supabase…`)
+      // Hard timeout so a wedged request resolves instead of hanging forever.
       const data = await Promise.race([
         DatabaseService.getCategoriasByDelegacion(delegacionId, {
           includeGlobal,
@@ -73,20 +68,12 @@ export function useCategorias(
         ),
       ])
 
-      if (ac.signal.aborted) {
-        console.log(`${tag} aborted after ${Date.now() - startedAt}ms`)
-        return
-      }
+      if (ac.signal.aborted) return
 
-      console.log(`${tag} success ${Date.now() - startedAt}ms, ${data?.length ?? 0} categorias`)
       setCategorias(data)
       setError(null)
     } catch (err) {
-      if (ac.signal.aborted) {
-        console.log(`${tag} caught after abort (${Date.now() - startedAt}ms):`, (err as any)?.message)
-        return
-      }
-      console.error(`${tag} error after ${Date.now() - startedAt}ms:`, err)
+      if (ac.signal.aborted) return
       setError(err instanceof Error ? err.message : "Error desconocido")
     } finally {
       unregisterAC(ac)

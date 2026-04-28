@@ -99,8 +99,6 @@ export function useMovimientos(
       abortRef.current = abortController
       registerAC(abortController)
       fetchingRef.current = true
-      const startedAt = Date.now()
-      console.log("[useMovimientos] fetch start", { delegacionId, pageIndex })
 
       // Set safety timeout
       const timeoutMs = options.timeoutMs || 15000
@@ -200,16 +198,8 @@ export function useMovimientos(
         }
 
         const { data, count, error } = await query.abortSignal(abortController.signal)
-        console.log(`[useMovimientos] response ${Date.now() - startedAt}ms`, {
-          rows: data?.length ?? 0,
-          error: error?.message,
-          aborted: abortController.signal.aborted,
-        })
 
-        if (abortController.signal.aborted) {
-          console.log("[useMovimientos] Request aborted")
-          return
-        }
+        if (abortController.signal.aborted) return
 
         if (error) throw error
 

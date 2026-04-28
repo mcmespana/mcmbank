@@ -1,21 +1,22 @@
 import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/lib/types/database"
-import { installFetchLogger } from "./fetch-logger"
 
-// Mount the fetch logger as soon as this module is imported on the client.
-installFetchLogger()
-
-// ── Block Supabase's visibility-change listener (PERMANENT) ─────────────────
-// User logs proved Supabase's @supabase/auth-js attaches its own
-// visibilitychange listener that fires _recoverAndRefresh on tab focus.
-// That internal flow wedges _getAccessToken(), so all .from(...).select(...)
-// calls queue waiting for the never-resolving auth recovery and never reach
-// window.fetch. Symptoms: queries hang full timeout, no network entry, F5 fixes.
+// ─────────────────────────────────────────────────────────────────────────────
+// Block Supabase's visibilitychange listener (PERMANENT, page-lifetime patch)
+// ─────────────────────────────────────────────────────────────────────────────
+// @supabase/auth-js attaches its own document.visibilitychange listener that
+// fires _recoverAndRefresh() on tab focus. That internal flow wedges
+// _getAccessToken(), so any subsequent .from(...).select(...) queues forever
+// waiting for the never-resolving auth promise and never reaches window.fetch.
 //
-// Supabase attaches the listener LAZILY (on first onAuthStateChange call or
-// auth API use), not at constructor time, so a temporary block during create()
-// doesn't catch it. The patch below stays installed for the lifetime of the
-// page and allows our own visibility listener through via addOurVisibilityListener.
+// Supabase registers the listener lazily (on first auth API call), so a
+// temporary block during createBrowserClient() doesn't catch it. We install a
+// permanent monkey-patch on document/window addEventListener that drops every
+// visibilitychange / pageshow / focus registration unless our internal flag
+// is flipped — then expose addOurVisibilityListener() so useAppStatus can
+// still register its own.
+//
+// See docs/TAB_SWITCH_HANG_FIX.md for full diagnosis and reasoning.
 let _allowOurVisibilityRegistration = false
 
 function installVisibilityBlock() {
@@ -25,15 +26,14 @@ function installVisibilityBlock() {
   const origWinAdd = window.addEventListener.bind(window)
 
   ;(document as any).addEventListener = function (type: string, listener: any, options?: any) {
-    if (type === "visibilitychange" && !_allowOurVisibilityRegistration) {
-      console.log("[block] suppressed visibilitychange listener")
-      return
-    }
+    if (type === "visibilitychange" && !_allowOurVisibilityRegistration) return
     return origDocAdd(type, listener, options)
   }
   ;(window as any).addEventListener = function (type: string, listener: any, options?: any) {
-    if ((type === "visibilitychange" || type === "pageshow" || type === "focus") && !_allowOurVisibilityRegistration) {
-      console.log(`[block] suppressed ${type} listener`)
+    if (
+      (type === "visibilitychange" || type === "pageshow" || type === "focus") &&
+      !_allowOurVisibilityRegistration
+    ) {
       return
     }
     return origWinAdd(type, listener, options)

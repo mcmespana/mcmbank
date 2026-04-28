@@ -19,25 +19,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    const mountedAt = Date.now()
     let initialEventReceived = false
-    console.log("[auth] AuthProvider mounted at", new Date(mountedAt).toISOString())
 
-    // We do NOT call supabase.auth.getSession() directly. HAR + console traces
-    // showed it hanging 8+ seconds (getInitialSession-timeout) due to a
-    // navigator.locks/BroadcastChannel deadlock that survives cross-page-load.
-    // Instead we rely on onAuthStateChange firing INITIAL_SESSION on subscribe,
-    // which delivers the current session via the same internal mechanism but
-    // through an event channel that's more resilient to lock contention.
-
-    // Listen for auth changes
+    // We do NOT call supabase.auth.getSession() directly. Console traces showed
+    // it hanging 8+ seconds (navigator.locks/BroadcastChannel deadlock that
+    // survives across page loads). Instead we rely on onAuthStateChange firing
+    // INITIAL_SESSION on subscribe — same effect via an event channel that's
+    // more resilient. See docs/TAB_SWITCH_HANG_FIX.md.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[auth] onAuthStateChange:", event, {
-        userId: session?.user?.id,
-        elapsedMs: Date.now() - mountedAt,
-      })
       if (mounted) {
         initialEventReceived = true
         setUser(prev => {

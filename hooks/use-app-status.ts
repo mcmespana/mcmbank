@@ -13,7 +13,6 @@ const _focusListeners = new Set<() => void>()
 
 function _bumpFocusVersion() {
   _focusVersion++
-  console.log(`[focus] bumpFocusVersion → v${_focusVersion} (${_focusListeners.size} subscribers)`)
   _focusListeners.forEach((l) => l())
 }
 
@@ -28,23 +27,16 @@ export function useFocusVersion(): number {
   )
 }
 
-// Manual recovery trigger — topbar button calls this when the app gets stuck.
-// HAR analysis showed that when stuck, hooks bail on !user (React state went
-// null) so just bumping focusVersion produces zero network calls. We must
-// re-init auth state first via refreshSession(), which fires onAuthStateChange
-// → AuthProvider's setUser() → React re-renders → hooks no longer bail.
+// Manual recovery trigger — used by StuckRecoveryBanner. Just abort + bump:
+// calling refreshSession() here was hanging when network was in zombie state
+// post tab-suspend, defeating recovery. Hooks retry their fetches on bump;
+// if auth is genuinely stale the queries 401 and runQuery's auth retry
+// path handles refresh inline (when network is no longer wedged).
 export async function forceConnectionReset(): Promise<void> {
-  console.log("[forceConnectionReset] starting")
   const { abortAllInFlight } = await import("@/lib/db/in-flight")
-
-  // Just abort + bump. Calling refreshSession() here was hanging when the
-  // network was in a zombie state post tab-suspend, defeating the recovery.
-  // Hooks will retry their fetches on the focus bump; if auth is genuinely
-  // stale the queries will 401 and runQuery's auth retry will handle refresh.
   abortAllInFlight()
   await new Promise<void>((r) => setTimeout(r, 50))
   _bumpFocusVersion()
-  console.log("[forceConnectionReset] done — focus version bumped")
 }
 
 export const useAppStatus = () => {
@@ -67,7 +59,6 @@ export const useAppStatus = () => {
   useEffect(() => {
     const handleVisibilityChange = async () => {
       const isNowFocused = !document.hidden
-      console.log(`[visibility] change → focused=${isNowFocused}, hidden_for=${hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0}ms`)
       setIsFocused(isNowFocused)
 
       if (!isNowFocused) {

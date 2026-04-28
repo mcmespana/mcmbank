@@ -28,36 +28,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // more resilient. See docs/TAB_SWITCH_HANG_FIX.md.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (mounted) {
-        initialEventReceived = true
-        setUser(prev => {
-          if (prev?.id === session?.user?.id) return prev
-          return session?.user ?? null
-        })
-        setLoading(false)
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return
+      initialEventReceived = true
+      setUser(prev => {
+        if (prev?.id === session?.user?.id) return prev
+        return session?.user ?? null
+      })
+      setLoading(false)
 
-        if (event === "SIGNED_IN" && session?.user) {
+      // Profile bootstrap: fire-and-forget so we never block the auth event
+      // dispatcher. Awaiting here was observed to wedge subsequent /rest/v1/*
+      // queries right after Google OAuth login (post-SIGNED_IN flow).
+      if (event === "SIGNED_IN" && session?.user) {
+        const userId = session.user.id
+        const fallbackName = session.user.email?.split("@")[0] || "Usuario"
+        ;(async () => {
           try {
-            // Check if profile exists, create if not
             const { data: profile } = await supabase
               .from("perfil")
               .select("usuario_id")
-              .eq("usuario_id", session.user.id)
+              .eq("usuario_id", userId)
               .single()
-
             if (!profile) {
               await (supabase as any).from("perfil").insert({
-                usuario_id: session.user.id,
-                nombre_completo: session.user.email?.split("@")[0] || "Usuario",
+                usuario_id: userId,
+                nombre_completo: fallbackName,
               })
             }
           } catch (error) {
-            // Silently fail if profile creation fails (e.g., table doesn't exist yet or RLS issues)
-            // This ensures the user can still log in even if profile setup has issues
             console.warn("Profile creation/check failed:", error)
           }
-        }
+        })()
       }
     })
 

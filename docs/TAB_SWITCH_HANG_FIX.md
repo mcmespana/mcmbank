@@ -164,6 +164,36 @@ Nuestro `handleVisibilityChange` se encarga de:
 | Stale-while-revalidate | `useDelegations`, `useCategorias` | Datos viejos visibles mientras refresca |
 | Timeout duro en queries clave | `useCategorias`, `useMovimientos` | Si algo cuelga pese a todo, cae solo |
 
+## Caso relacionado: post-login con OAuth Google
+
+Mismo patrón de wedge tras login con Google: `POST /auth/v1/token` 200 OK
+pero **0 calls a `/rest/v1/*`**, perfil y delegación se quedan cargando
+infinito.
+
+Causa: el callback de `onAuthStateChange` en `auth-context.tsx` hacía
+`await supabase.from("perfil")...` para bootstrap del perfil. Supabase JS
+**serializa los callbacks** del event dispatcher — mientras un callback
+esté en `await`, no procesa siguientes eventos ni libera el mutex de auth
+que necesitan otras queries (`_getAccessToken`).
+
+Fix: convertir el bootstrap del perfil en fire-and-forget — la IIFE se
+lanza pero el callback retorna `void` inmediatamente. El dispatcher de
+Supabase queda libre y los demás hooks pueden hacer queries.
+
+```typescript
+supabase.auth.onAuthStateChange((event, session) => {
+  if (!mounted) return
+  setUser(...)
+  setLoading(false)
+
+  if (event === "SIGNED_IN") {
+    ;(async () => {
+      // perfil bootstrap, sin bloquear callback
+    })()
+  }
+})
+```
+
 ## Validación
 
 Después del fix, en consola al cargar app:

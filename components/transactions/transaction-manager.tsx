@@ -10,7 +10,7 @@ import { DateRangeFilter } from "./date-range-filter"
 import { CategoryMegaSelector } from "./category-mega-selector"
 import { supabase } from "@/lib/supabase/client"
 import { useDelegationContext } from "@/contexts/delegation-context"
-import { useMovimientos } from "@/hooks/use-movimientos"
+import { useMovimientos, applyAbsoluteAmountFilter } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { Button } from "@/components/ui/button"
@@ -429,14 +429,33 @@ export function TransactionManager() {
       setUncategorizedCount(0)
       return
     }
-    supabase
+    let countQuery = supabase
       .from("movimiento")
       .select("id", { count: "exact", head: true })
       .eq("delegacion_id", selectedDelegation)
       .eq("ignorado", false)
       .is("categoria_id", null)
-      .then(({ count }) => setUncategorizedCount(count ?? 0))
-  }, [selectedDelegation, uncategorizedCountRevision])
+
+    if (filters.dateFrom) countQuery = countQuery.gte("fecha", filters.dateFrom)
+    if (filters.dateTo) countQuery = countQuery.lte("fecha", filters.dateTo)
+    if (filters.accountId) countQuery = countQuery.eq("cuenta_id", filters.accountId)
+    if (filters.search) {
+      const term = filters.search.replace(/%/g, "\\%").replace(/,/g, "\\,")
+      countQuery = countQuery.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%`)
+    }
+    countQuery = applyAbsoluteAmountFilter(countQuery, filters.amountFrom, filters.amountTo)
+
+    countQuery.then(({ count }) => setUncategorizedCount(count ?? 0))
+  }, [
+    selectedDelegation,
+    uncategorizedCountRevision,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.accountId,
+    filters.search,
+    filters.amountFrom,
+    filters.amountTo,
+  ])
 
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
     if (key === "dateFrom" || key === "dateTo") return false

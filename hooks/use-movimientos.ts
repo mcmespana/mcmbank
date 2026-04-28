@@ -19,6 +19,39 @@ interface MovimientosFilters {
 
 const DEFAULT_PAGE_SIZE = 100
 
+/**
+ * Applies an absolute-value range filter on `importe`.
+ * Matches both positive and negative amounts whose |importe| is in [from, to].
+ *
+ * Implementation note: avoids nested `and()` inside `or()` (unreliable in PostgREST/supabase-js)
+ * by combining a chained range constraint with a single-level `or()`.
+ */
+export function applyAbsoluteAmountFilter<T extends { gte: any; lte: any; or: any }>(
+  query: T,
+  amountFrom: number | undefined,
+  amountTo: number | undefined
+): T {
+  if (amountFrom !== undefined && amountTo !== undefined) {
+    const minAbs = Math.min(Math.abs(amountFrom), Math.abs(amountTo))
+    const maxAbs = Math.max(Math.abs(amountFrom), Math.abs(amountTo))
+    // |importe| in [minAbs, maxAbs] ⇔ importe in [-maxAbs, -minAbs] ∪ [minAbs, maxAbs]
+    // Equivalently: -maxAbs <= importe <= maxAbs AND (importe >= minAbs OR importe <= -minAbs)
+    return query
+      .gte("importe", -maxAbs)
+      .lte("importe", maxAbs)
+      .or(`importe.gte.${minAbs},importe.lte.${-minAbs}`)
+  }
+  if (amountFrom !== undefined) {
+    const val = Math.abs(amountFrom)
+    return query.or(`importe.gte.${val},importe.lte.${-val}`)
+  }
+  if (amountTo !== undefined) {
+    const val = Math.abs(amountTo)
+    return query.gte("importe", -val).lte("importe", val)
+  }
+  return query
+}
+
 export function useMovimientos(
   delegacionId: string | null,
   filters?: MovimientosFilters,
@@ -181,20 +214,8 @@ export function useMovimientos(
             const term = memoizedFilters.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
             query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%`)
           }
-          // Filter by absolute amount value so -45 matches range [40, 50]
-          if (memoizedFilters.amountFrom !== undefined && memoizedFilters.amountTo !== undefined) {
-            const from = memoizedFilters.amountFrom
-            const to = memoizedFilters.amountTo
-            query = query.or(
-              `and(importe.gte.${from},importe.lte.${to}),and(importe.lte.${-from},importe.gte.${-to})`
-            )
-          } else if (memoizedFilters.amountFrom !== undefined) {
-            const from = memoizedFilters.amountFrom
-            query = query.or(`importe.gte.${from},importe.lte.${-from}`)
-          } else if (memoizedFilters.amountTo !== undefined) {
-            const to = memoizedFilters.amountTo
-            query = query.lte("importe", to).gte("importe", -to)
-          }
+          // Filter by absolute amount value so -150 matches range [100, 300]
+          query = applyAbsoluteAmountFilter(query, memoizedFilters.amountFrom, memoizedFilters.amountTo)
           if (memoizedFilters.uncategorized) {
             query = query.is("categoria_id", null)
           }

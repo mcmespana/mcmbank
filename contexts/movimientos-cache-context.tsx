@@ -5,6 +5,7 @@ import { createContext, useContext, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { registerAC, unregisterAC } from "@/lib/db/in-flight"
 import type { MovimientoConRelaciones } from "@/lib/types/database"
+import { applyAbsoluteAmountFilter } from "@/hooks/use-movimientos"
 
 const FETCH_TIMEOUT_MS = 15000
 
@@ -180,12 +181,8 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
               const term = filters.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
               query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%`)
             }
-            if (filters.amountFrom !== undefined) {
-              query = query.gte("importe", filters.amountFrom)
-            }
-            if (filters.amountTo !== undefined) {
-              query = query.lte("importe", filters.amountTo)
-            }
+            // Filter by absolute amount value (matches both positive and negative)
+            query = applyAbsoluteAmountFilter(query, filters.amountFrom, filters.amountTo)
             if (filters.uncategorized) {
               query = query.is("categoria_id", null)
             }

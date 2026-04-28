@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useSyncExternalStore } from "react"
 import { abortAllInFlight } from "@/lib/db/in-flight"
+import { addOurVisibilityListener } from "@/lib/supabase/client"
 
 // --- Focus version store ---
 // Module-level counter bumped on each tab-focus revalidation.
@@ -79,25 +80,23 @@ export const useAppStatus = () => {
       if (!document.hidden) _bumpFocusVersion()
     }
 
-    // pageshow with persisted=true fires when Chrome restores the tab from
-    // BFCache (back/forward cache). visibilitychange may not fire reliably
-    // in that flow. Triggering the same handler covers both cases.
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) handleVisibilityChange()
+    const handlePageShow = (e: Event) => {
+      if ((e as PageTransitionEvent).persisted) handleVisibilityChange()
     }
-    // online fires when network connectivity returns after a drop —
-    // good moment to abort zombie fetches and restart queries.
     const handleOnline = () => {
       if (!document.hidden) handleVisibilityChange()
     }
 
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("pageshow", handlePageShow)
+    // Register through addOurVisibilityListener so the global block in
+    // lib/supabase/client.ts (which suppresses Supabase's internal listeners)
+    // lets our own listeners through.
+    const unsubVis = addOurVisibilityListener("visibilitychange", handleVisibilityChange, "document")
+    const unsubShow = addOurVisibilityListener("pageshow", handlePageShow, "window")
     window.addEventListener("online", handleOnline)
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("pageshow", handlePageShow)
+      unsubVis()
+      unsubShow()
       window.removeEventListener("online", handleOnline)
     }
   }, [])

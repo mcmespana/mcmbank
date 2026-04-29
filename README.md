@@ -1,39 +1,32 @@
 # 🏦 MCM Bank
 
-¡Hola! Este repositorio contiene la versión web del panel financiero usado por las delegaciones del Movimiento Consolación para el Mundo. La app permite llevar un control limpio de ingresos, gastos y balances por actividades, con importaciones bancarias guiadas y dashboards listos para compartir.
+MCM Bank es una app web para llevar la administración económica de delegaciones del **Movimiento Consolación para el Mundo**.
 
-## 🚀 TL;DR para arrancar
-1. Clona el repo y entra en la carpeta del proyecto.
-2. Asegura Node.js 20 (`nvm use` si tienes el archivo `.nvmrc`).
-3. Instala dependencias con `pnpm install` (habilita pnpm ejecutando `corepack enable` una vez).
-4. Crea `.env.local` con tus claves de Supabase (ver más abajo).
+Está pensada para equipos técnicos y no técnicos: registrar ingresos/gastos, consultar balances y exportar información de forma clara.
+
+## 🚀 Inicio rápido
+1. Clona el repositorio.
+2. Usa Node.js 20 (`nvm use`).
+3. Instala dependencias (`pnpm install`).
+4. Configura `.env.local` con Supabase.
 5. Ejecuta `pnpm dev` y abre `http://localhost:3000`.
 
-> 🧪 Usuario demo: `admin@movimientoconsolacion.com` · contraseña `1234`.
-
 ## 📋 Requisitos
-- **Node.js ≥ 20** (el repo incluye `.nvmrc`).
-- **pnpm ≥ 8** (viene con Node 20 usando Corepack).
-- **Cuenta Supabase** para obtener `URL` y `anon key`.
+- **Node.js ≥ 20**
+- **pnpm ≥ 8**
+- **Proyecto de Supabase**
 
-## 🛠️ Instalación paso a paso
+## 🛠️ Instalación
 ```bash
-# 1. Clonar y entrar
- git clone https://github.com/mcmespana/mcmbank.git
- cd mcmbank
-
-# 2. Seleccionar la versión de Node recomendada
- nvm use
-
-# 3. Habilitar pnpm (solo la primera vez)
- corepack enable
-
-# 4. Instalar dependencias
- pnpm install
+git clone https://github.com/mcmespana/mcmbank.git
+cd mcmbank
+nvm use
+corepack enable
+pnpm install
 ```
 
-### Variables de entorno
-Crea un archivo `.env.local` en la raíz con las siguientes claves (añade valores reales de Supabase):
+## 🔐 Variables de entorno
+Crea `.env.local` en la raíz:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL="https://tu-proyecto.supabase.co"
@@ -42,46 +35,51 @@ NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL="http://localhost:3000/auth/callback"
 ```
 
-> 💡 Después de añadir o cambiar variables, reinicia el servidor de desarrollo.
+> ⚠️ Este repositorio es público: no publiques secretos, tokens ni contraseñas en documentación o código.
 
-### Ejecutar la app
+## ▶️ Comandos útiles
 ```bash
-# Servidor de desarrollo
-pnpm dev
-
-# Compilar para producción
-pnpm build
-
-# Servir la build localmente
-pnpm start
+pnpm dev      # desarrollo
+pnpm build    # build producción
+pnpm start    # servir build
 ```
 
-### Calidad y mantenimiento
-```bash
-# Linter en modo lectura
-pnpm lint
+## 🗳️ Regla de votaciones (Canon 119)
+El sistema de votaciones sigue el criterio de **rondas sucesivas**:
 
-# Linter con autofix
-pnpm lint:fix
-```
+- Se realiza una ronda de votación.
+- Si uno o más candidatos alcanzan **mitad + 1** de los votos válidos en esa ronda, resultan elegidos.
+- Si nadie alcanza esa mayoría, se abre una nueva ronda.
+- Se repite hasta que exista ganador (o ganadores) con mayoría requerida.
 
-## 🧭 Estructura esencial del proyecto
-- `app/`: Rutas App Router de Next.js (auth, cuentas, transacciones, etc.).
-- `components/`: Componentes reutilizables (UI, dashboard, formularios).
-- `lib/`: Servicios, utilidades y clientes Supabase (`@/lib/...`).
-- `hooks/` y `contexts/`: Hooks personalizados y providers de React.
-- `docs/`: Manual funcional para las delegaciones (`docs/README.md`).
-- `scripts/`: Utilidades y scripts de soporte (ej. comprobaciones de Supabase).
+> Ejemplo rápido: con 10 votos válidos, la mayoría necesaria es 6.
 
-## 📚 Recursos útiles
-- Manual funcional: `docs/README.md` y capítulos numerados para cada módulo.
-- Guía rápida de categorías, cuentas y movimientos en `docs/03-categorias.md`, `docs/04-cuentas.md` y `docs/05-movimientos.md`.
-- Configuración detallada del proyecto y convenciones internas en `AGENTS.md`.
+## 📚 Documentación (mapa completo)
+### Manual funcional
+- `docs/README.md`
+- `docs/01-acceso.md`
+- `docs/02-delegaciones.md`
+- `docs/03-categorias.md`
+- `docs/04-cuentas.md`
+- `docs/05-movimientos.md`
+- `docs/06-dashboard.md`
+- `docs/07-diagnostico.md`
 
-## 🤝 Cómo contribuir
-1. Crea una rama descriptiva (`git checkout -b feat/nueva-funcionalidad`).
-2. Sigue las convenciones de código descritas en `AGENTS.md` (TypeScript estricto, Tailwind + `cn`).
-3. Verifica el linting y documenta cualquier comando/test que ejecutes.
-4. Abre un PR incluyendo contexto, capturas si hay cambios de UI y pasos de QA.
+### Guías técnicas y operativas
+- `docs/ENABLE_BANKING.md`
+- `docs/OPTIMIZACIONES_REALIZADAS.md`
+- `docs/OPTIMIZACIONES_PENDIENTES.md`
+- `docs/FUTURE_DEVELOPMENTS.md`
+- `docs/TAB_SWITCH_HANG_FIX.md`
+- `docs/NEXTJS_16_UPGRADE.md`
+- `SECURITY-AUDIT.md`
 
-¡Gracias por aportar a la transparencia financiera del movimiento! 💙
+## 🤝 Contribuciones (simple y realista)
+Si quieres hacer un fork y adaptarlo para otra entidad:
+
+1. Crea una rama (`feat/...` o `fix/...`).
+2. Cambia textos, branding y reglas internas según tu organización.
+3. Actualiza la documentación funcional y técnica afectada.
+4. Abre PR explicando qué cambiaste y cómo se valida.
+
+Aunque no haya muchas contribuciones externas, dejar cambios pequeños y bien documentados facilita muchísimo mantener el proyecto en el tiempo.

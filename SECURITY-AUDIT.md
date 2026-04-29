@@ -6,6 +6,8 @@
 
 ---
 
+> ⚠️ **Documento histórico**: esta auditoría corresponde a la fecha indicada y puede quedar desactualizada tras nuevos despliegues o cambios de dependencias.
+
 ## Resumen ejecutivo
 
 | Severidad | Hallazgos |

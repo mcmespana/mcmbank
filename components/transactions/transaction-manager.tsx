@@ -13,6 +13,9 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos, applyAbsoluteAmountFilter } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
+import { useContactos } from "@/hooks/use-contactos"
+import useIsAdminHook from "@/hooks/use-is-admin"
+import { useAuth as useCurrentUser } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -53,6 +56,8 @@ export interface TransactionFilters {
   dateTo?: string
   categoryIds?: string[]
   accountId?: string
+  contactoIds?: string[]
+  contactoTipos?: ("proveedor" | "persona_mcm" | "destinatario_mcm")[]
   search?: string
   amountFrom?: number
   amountTo?: number
@@ -111,6 +116,8 @@ export function TransactionManager() {
     fechaHasta: filters.dateTo,
     categoriaIds: filters.categoryIds,
     cuentaId: filters.accountId,
+    contactoIds: filters.contactoIds,
+    contactoTipos: filters.contactoTipos,
     busqueda: filters.search,
     amountFrom: filters.amountFrom,
     amountTo: filters.amountTo,
@@ -126,6 +133,9 @@ export function TransactionManager() {
 
   const { categorias: categories } = useCategorias(selectedDelegation)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
+  const { contactos, createContacto: createContactoFn } = useContactos(selectedDelegation)
+  const isAdmin = useIsAdminHook()
+  const { user: currentUser } = useCurrentUser()
 
   useEffect(() => {
     if (movements.length === 0) {
@@ -459,7 +469,7 @@ export function TransactionManager() {
 
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
     if (key === "dateFrom" || key === "dateTo") return false
-    if (key === "categoryIds") {
+    if (key === "categoryIds" || key === "contactoIds" || key === "contactoTipos") {
       return Array.isArray(value) && value.length > 0
     }
     return value !== undefined && value !== "" && value !== false
@@ -552,6 +562,7 @@ export function TransactionManager() {
               onClearFilters={clearFilters}
               categories={categories}
               accounts={accounts}
+              contactos={contactos}
               uncategorizedCount={uncategorizedCount}
             />
           </div>
@@ -786,6 +797,13 @@ export function TransactionManager() {
         movement={selectedMovementSnapshot}
         accounts={accounts as unknown as Cuenta[]}
         categories={categories as unknown as Categoria[]}
+        contactos={contactos}
+        delegacionId={selectedDelegation}
+        canManageGlobalContact={isAdmin}
+        onCreateContacto={async (payload) => {
+          if (!payload.insert) return
+          return await createContactoFn({ ...payload.insert, creado_por: currentUser?.id ?? null })
+        }}
         open={selectedMovementId !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -804,6 +822,13 @@ export function TransactionManager() {
       <TransactionCreatePanel
         accounts={accounts as unknown as Cuenta[]}
         categories={categories as unknown as Categoria[]}
+        contactos={contactos}
+        delegacionId={selectedDelegation}
+        canManageGlobalContact={isAdmin}
+        onCreateContacto={async (payload) => {
+          if (!payload.insert) return
+          return await createContactoFn({ ...payload.insert, creado_por: currentUser?.id ?? null })
+        }}
         open={createFormOpen}
         onOpenChange={setCreateFormOpen}
         onCreate={handleCreateMovement}

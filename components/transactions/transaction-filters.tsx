@@ -8,7 +8,10 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { CategorySelector } from "./category-selector"
 import { AmountRangeFilter } from "./amount-range-filter"
-import type { Categoria, CuentaConDelegacion } from "@/lib/types/database"
+import { ContactoSelector } from "@/components/contactos/contacto-selector"
+import { CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
+import { cn } from "@/lib/utils"
+import type { Categoria, ContactoConCategoriaPredeterminada, ContactoTipo, CuentaConDelegacion } from "@/lib/types/database"
 import type { TransactionFilters as Filters } from "./transaction-manager"
 
 interface TransactionFiltersProps {
@@ -17,6 +20,7 @@ interface TransactionFiltersProps {
   onClearFilters: () => void
   categories: Categoria[]
   accounts?: CuentaConDelegacion[]
+  contactos?: ContactoConCategoriaPredeterminada[]
   uncategorizedCount: number
 }
 
@@ -26,15 +30,22 @@ export function TransactionFiltersComponent({
   onClearFilters,
   categories,
   accounts = [],
+  contactos = [],
   uncategorizedCount,
 }: TransactionFiltersProps) {
   const updateFilter = (key: keyof Filters, value: any) => {
     onFiltersChange({ ...filters, [key]: value })
   }
 
+  const toggleContactoTipo = (tipo: ContactoTipo) => {
+    const current = filters.contactoTipos || []
+    const next = current.includes(tipo) ? current.filter((t) => t !== tipo) : [...current, tipo]
+    updateFilter("contactoTipos", next.length > 0 ? next : undefined)
+  }
+
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
     if (key === "uncategorized" || key === "dateRange") return false
-    if (key === "categoryIds") {
+    if (key === "categoryIds" || key === "contactoIds" || key === "contactoTipos") {
       return Array.isArray(value) && value.length > 0
     }
     return value !== undefined && value !== "" && value !== false
@@ -163,6 +174,40 @@ export function TransactionFiltersComponent({
             onFiltersChange({ ...filters, amountFrom, amountTo })
           }}
         />
+      </div>
+
+      <Separator className="bg-border" />
+
+      <div className="space-y-3">
+        <Label className="text-sm font-semibold text-foreground">Contactos</Label>
+        <ContactoSelector
+          contactos={contactos}
+          value={filters.contactoIds?.[0] ?? null}
+          onChange={(id) => updateFilter("contactoIds", id ? [id] : undefined)}
+          placeholder="Cualquier contacto"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {CONTACTO_TIPO_ORDER.map((t) => {
+            const info = CONTACTO_TIPO_INFO[t]
+            const active = (filters.contactoTipos ?? []).includes(t)
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleContactoTipo(t)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-all",
+                  active
+                    ? `${info.bgClass} ${info.textClass} ${info.borderClass} shadow-sm`
+                    : "border-border/40 bg-background/60 text-muted-foreground hover:bg-muted",
+                )}
+              >
+                <span aria-hidden>{info.emoji}</span>
+                <span>{info.shortLabel}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

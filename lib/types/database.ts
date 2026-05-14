@@ -125,6 +125,7 @@ export type Database = {
           notas: string | null
           ignorado: boolean
           categoria_id: string | null
+          contacto_id: string | null
           adjunto_principal_url: string | null
           creado_por: string
           creado_en: string
@@ -150,6 +151,7 @@ export type Database = {
           notas?: string | null
           ignorado?: boolean
           categoria_id?: string | null
+          contacto_id?: string | null
           adjunto_principal_url?: string | null
           creado_por: string
           creado_en?: string
@@ -175,6 +177,7 @@ export type Database = {
           notas?: string | null
           ignorado?: boolean
           categoria_id?: string | null
+          contacto_id?: string | null
           adjunto_principal_url?: string | null
           creado_por?: string
           creado_en?: string
@@ -184,6 +187,74 @@ export type Database = {
           booking_date?: string | null
           value_date?: string | null
           origen_sync?: "manual" | "import_excel" | "enablebanking" | null
+        }
+      }
+      contacto: {
+        Row: {
+          id: string
+          delegacion_id: string | null
+          es_global: boolean
+          tipo: "proveedor" | "persona_mcm" | "destinatario_mcm"
+          nombre: string
+          emoji: string | null
+          color: string | null
+          identificador_fiscal: string | null
+          iban: string | null
+          email: string | null
+          telefono: string | null
+          direccion: string | null
+          ciudad: string | null
+          codigo_postal: string | null
+          categoria_id_predeterminada: string | null
+          notas: string | null
+          archivado: boolean
+          creado_por: string | null
+          creado_en: string
+          actualizado_en: string
+        }
+        Insert: {
+          id?: string
+          delegacion_id?: string | null
+          es_global?: boolean
+          tipo: "proveedor" | "persona_mcm" | "destinatario_mcm"
+          nombre: string
+          emoji?: string | null
+          color?: string | null
+          identificador_fiscal?: string | null
+          iban?: string | null
+          email?: string | null
+          telefono?: string | null
+          direccion?: string | null
+          ciudad?: string | null
+          codigo_postal?: string | null
+          categoria_id_predeterminada?: string | null
+          notas?: string | null
+          archivado?: boolean
+          creado_por?: string | null
+          creado_en?: string
+          actualizado_en?: string
+        }
+        Update: {
+          id?: string
+          delegacion_id?: string | null
+          es_global?: boolean
+          tipo?: "proveedor" | "persona_mcm" | "destinatario_mcm"
+          nombre?: string
+          emoji?: string | null
+          color?: string | null
+          identificador_fiscal?: string | null
+          iban?: string | null
+          email?: string | null
+          telefono?: string | null
+          direccion?: string | null
+          ciudad?: string | null
+          codigo_postal?: string | null
+          categoria_id_predeterminada?: string | null
+          notas?: string | null
+          archivado?: boolean
+          creado_por?: string | null
+          creado_en?: string
+          actualizado_en?: string
         }
       }
       categoria: {
@@ -599,6 +670,16 @@ export type PropuestaMejoraComentario = Database["public"]["Tables"]["propuesta_
 export type PropuestaMejoraVoto = Database["public"]["Tables"]["propuesta_mejora_voto"]["Row"]
 export type BancoConexion = Database["public"]["Tables"]["banco_conexion"]["Row"]
 export type BancoSyncLog = Database["public"]["Tables"]["banco_sync_log"]["Row"]
+export type Contacto = Database["public"]["Tables"]["contacto"]["Row"]
+export type ContactoInsert = Database["public"]["Tables"]["contacto"]["Insert"]
+export type ContactoUpdate = Database["public"]["Tables"]["contacto"]["Update"]
+export type ContactoTipo = Contacto["tipo"]
+
+export const CONTACTO_TIPOS: readonly ContactoTipo[] = ["proveedor", "persona_mcm", "destinatario_mcm"] as const
+
+export type ContactoConCategoriaPredeterminada = Contacto & {
+  categoria_predeterminada?: Pick<Categoria, "id" | "nombre" | "emoji" | "color"> | null
+}
 
 export type BancoSyncLogStep = {
   t: string
@@ -611,6 +692,7 @@ export type BancoSyncLogStep = {
 export type MovimientoConRelaciones = Movimiento & {
   cuenta: Cuenta
   categoria?: Categoria
+  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "es_global"> | null
   archivos?: MovimientoArchivo[] // Lazy loaded - not included in default queries
 }
 

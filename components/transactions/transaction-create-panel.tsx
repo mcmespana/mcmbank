@@ -18,11 +18,18 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CategorySelector } from "./category-selector"
 import { BankAvatar } from "@/components/bank-avatar"
-import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
+import { ContactoSelector } from "@/components/contactos/contacto-selector"
+import { ContactoForm } from "@/components/contactos/contacto-form"
+import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
+import type { Contacto, ContactoConCategoriaPredeterminada, Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionCreatePanelProps {
   accounts: Cuenta[]
   categories: Categoria[]
+  contactos?: ContactoConCategoriaPredeterminada[]
+  delegacionId?: string | null
+  canManageGlobalContact?: boolean
+  onCreateContacto?: (payload: Parameters<NonNullable<React.ComponentProps<typeof ContactoForm>["onSubmit"]>>[0]) => Promise<Contacto | void>
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreate: (data: Partial<Movimiento>) => Promise<void>
@@ -31,6 +38,10 @@ interface TransactionCreatePanelProps {
 export function TransactionCreatePanel({
   accounts,
   categories,
+  contactos = [],
+  delegacionId,
+  canManageGlobalContact,
+  onCreateContacto,
   open,
   onOpenChange,
   onCreate,
@@ -41,12 +52,14 @@ export function TransactionCreatePanel({
     fecha: format(new Date(), "yyyy-MM-dd"),
     descripcion: "",
     categoria_id: "",
-    contraparte: "",
+    contacto_id: null,
     cuenta_id: "",
   })
   const [dateOpen, setDateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [dateInput, setDateInput] = useState(() => formatIsoDateToInput(format(new Date(), "yyyy-MM-dd")))
+  const [contactoCreateOpen, setContactoCreateOpen] = useState(false)
+  const [contactoInitialNombre, setContactoInitialNombre] = useState("")
 
   const isFormValid = 
     formData.concepto?.trim() && 
@@ -69,9 +82,9 @@ export function TransactionCreatePanel({
         ...formData,
         // Ensure nullable UUIDs are not sent as empty strings
         categoria_id: formData.categoria_id || null,
+        contacto_id: formData.contacto_id || null,
         concepto: formData.concepto?.trim(),
         descripcion: formData.descripcion?.trim() || "",
-        contraparte: formData.contraparte?.trim() || "",
       })
       // Reset form
       const initialDate = format(new Date(), "yyyy-MM-dd")
@@ -81,7 +94,7 @@ export function TransactionCreatePanel({
         fecha: initialDate,
         descripcion: "",
         categoria_id: "",
-        contraparte: "",
+        contacto_id: null,
         cuenta_id: "",
       })
       setDateInput(formatIsoDateToInput(initialDate))
@@ -103,7 +116,7 @@ export function TransactionCreatePanel({
       fecha: initialDate,
       descripcion: "",
       categoria_id: "",
-      contraparte: "",
+      contacto_id: null,
       cuenta_id: "",
     })
     setDateInput(formatIsoDateToInput(initialDate))
@@ -354,12 +367,43 @@ export function TransactionCreatePanel({
           {/* Contact */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-muted-foreground">CONTACTO</Label>
-            <Input
-              value={formData.contraparte || ""}
-              onChange={(e) => setFormData({ ...formData, contraparte: e.target.value })}
-              placeholder="Proveedor, cliente u otros (sin uso todavía)"
-              className="bg-muted/30"
+            <ContactoSelector
+              contactos={contactos}
+              value={formData.contacto_id ?? null}
+              onChange={(contactoId) => {
+                setFormData((prev) => {
+                  const next: Partial<Movimiento> = { ...prev, contacto_id: contactoId }
+                  if (contactoId && !prev.categoria_id) {
+                    const c = contactos.find((x) => x.id === contactoId)
+                    if (c?.categoria_id_predeterminada) {
+                      next.categoria_id = c.categoria_id_predeterminada
+                    }
+                  }
+                  return next
+                })
+              }}
+              onCreateNew={
+                onCreateContacto
+                  ? (initialNombre) => {
+                      setContactoInitialNombre(initialNombre)
+                      setContactoCreateOpen(true)
+                    }
+                  : undefined
+              }
+              placeholder="Sin contacto"
             />
+            {formData.contacto_id && (() => {
+              const c = contactos.find((x) => x.id === formData.contacto_id)
+              if (!c) return null
+              return (
+                <p className="text-[11px] text-muted-foreground">
+                  Tipo: <span className="font-medium">{CONTACTO_TIPO_INFO[c.tipo].label}</span>
+                  {c.categoria_id_predeterminada && !formData.categoria_id && (
+                    <span> · Te sugerimos su categoría por defecto</span>
+                  )}
+                </p>
+              )
+            })()}
           </div>
         </div>
 
@@ -397,6 +441,32 @@ export function TransactionCreatePanel({
         {/* Spacer for mobile fixed buttons */}
         <div className="h-20 sm:hidden"></div>
       </SheetContent>
+
+      {onCreateContacto && (
+        <Sheet open={contactoCreateOpen} onOpenChange={setContactoCreateOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto z-[70]">
+            <SheetHeader className="mb-2">
+              <SheetTitle>Nuevo contacto</SheetTitle>
+            </SheetHeader>
+            <ContactoForm
+              delegacionId={delegacionId ?? null}
+              contacto={null}
+              categorias={categories as any}
+              canManageGlobal={Boolean(canManageGlobalContact)}
+              defaultNombre={contactoInitialNombre}
+              onSubmit={async (payload) => {
+                const created = (await onCreateContacto(payload)) as Contacto | void
+                if (created?.id) {
+                  setFormData((prev) => ({ ...prev, contacto_id: created.id }))
+                }
+                return created
+              }}
+              onCancel={() => setContactoCreateOpen(false)}
+              onSaved={() => setContactoCreateOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
     </Sheet>
   )
 }

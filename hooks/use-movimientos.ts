@@ -11,6 +11,8 @@ interface MovimientosFilters {
   fechaHasta?: string
   categoriaIds?: string[]
   cuentaId?: string
+  contactoIds?: string[]
+  contactoTipos?: ("proveedor" | "persona_mcm" | "destinatario_mcm")[]
   busqueda?: string
   amountFrom?: number
   amountTo?: number
@@ -75,6 +77,8 @@ export function useMovimientos(
     const normalized = {
       ...filters,
       categoriaIds: filters.categoriaIds ? [...filters.categoriaIds].sort() : undefined,
+      contactoIds: filters.contactoIds ? [...filters.contactoIds].sort() : undefined,
+      contactoTipos: filters.contactoTipos ? [...filters.contactoTipos].sort() : undefined,
     }
     try {
       return JSON.stringify(normalized)
@@ -91,6 +95,8 @@ export function useMovimientos(
       return {
         ...parsed,
         categoriaIds: parsed.categoriaIds ? [...parsed.categoriaIds] : undefined,
+        contactoIds: parsed.contactoIds ? [...parsed.contactoIds] : undefined,
+        contactoTipos: parsed.contactoTipos ? [...parsed.contactoTipos] : undefined,
       }
     } catch (error) {
       console.warn("No se pudieron deserializar los filtros de movimientos", error)
@@ -146,6 +152,25 @@ export function useMovimientos(
         }
         setError(null)
 
+        // Resolve contacto IDs to filter by when filtering by name match or tipo
+        let contactoIdsExtra: string[] | null = null
+        if (memoizedFilters?.busqueda || (memoizedFilters?.contactoTipos && memoizedFilters.contactoTipos.length > 0)) {
+          const term = memoizedFilters.busqueda?.replace(/%/g, "\\%")
+          let contactoLookup = supabase
+            .from("contacto")
+            .select("id")
+            .or(`delegacion_id.eq.${delegacionId},es_global.is.true`)
+            .limit(500)
+          if (term) {
+            contactoLookup = contactoLookup.ilike("nombre", `%${term}%`)
+          }
+          if (memoizedFilters.contactoTipos && memoizedFilters.contactoTipos.length > 0) {
+            contactoLookup = contactoLookup.in("tipo", memoizedFilters.contactoTipos)
+          }
+          const { data: matchedContactos } = await contactoLookup.abortSignal(abortController.signal)
+          contactoIdsExtra = (matchedContactos ?? []).map((c: any) => c.id)
+        }
+
         // Optimized query: removed delegacion JOIN and archivos JOIN
         let query = supabase
           .from("movimiento")
@@ -165,6 +190,7 @@ export function useMovimientos(
             notas,
             ignorado,
             categoria_id,
+            contacto_id,
             adjunto_principal_url,
             creado_por,
             creado_en,
@@ -187,6 +213,14 @@ export function useMovimientos(
               orden,
               categoria_padre_id,
               creado_en
+            ),
+            contacto:contacto_id (
+              id,
+              nombre,
+              tipo,
+              emoji,
+              color,
+              es_global
             )
           `,
             { count: "exact" }
@@ -210,9 +244,20 @@ export function useMovimientos(
           if (memoizedFilters.cuentaId) {
             query = query.eq("cuenta_id", memoizedFilters.cuentaId)
           }
+          if (memoizedFilters.contactoIds && memoizedFilters.contactoIds.length > 0) {
+            query = query.in("contacto_id", memoizedFilters.contactoIds)
+          }
+          if (memoizedFilters.contactoTipos && memoizedFilters.contactoTipos.length > 0) {
+            // Restringe a movimientos cuyo contacto coincide con uno de los tipos
+            query = query.in("contacto_id", contactoIdsExtra && contactoIdsExtra.length > 0 ? contactoIdsExtra : ["00000000-0000-0000-0000-000000000000"])
+          }
           if (memoizedFilters.busqueda) {
             const term = memoizedFilters.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
-            query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%`)
+            const orParts = [`concepto.ilike.%${term}%`, `descripcion.ilike.%${term}%`]
+            if (contactoIdsExtra && contactoIdsExtra.length > 0) {
+              orParts.push(`contacto_id.in.(${contactoIdsExtra.join(",")})`)
+            }
+            query = query.or(orParts.join(","))
           }
           // Filter by absolute amount value so -150 matches range [100, 300]
           query = applyAbsoluteAmountFilter(query, memoizedFilters.amountFrom, memoizedFilters.amountTo)
@@ -334,6 +379,7 @@ export function useMovimientos(
       const payload: any = {
         ...data,
         categoria_id: (data as any)?.categoria_id || null,
+        contacto_id: (data as any)?.contacto_id || null,
         creado_por: user.id,
       }
 
@@ -356,6 +402,7 @@ export function useMovimientos(
           notas,
           ignorado,
           categoria_id,
+          contacto_id,
           adjunto_principal_url,
           creado_por,
           creado_en,
@@ -389,6 +436,14 @@ export function useMovimientos(
             creado_en,
             es_global
           ),
+          contacto:contacto_id (
+            id,
+            nombre,
+            tipo,
+            emoji,
+            color,
+            es_global
+          ),
           archivos:movimiento_archivo!movimiento_id (
             id,
             nombre_original,
@@ -420,7 +475,7 @@ export function useMovimientos(
   const updateMovimiento = async (movimientoId: string, patch: Partial<MovimientoConRelaciones>) => {
     try {
       // Strip relation fields — only send flat DB columns to .update()
-      const { cuenta, categoria, archivos, ...dbFields } = patch
+      const { cuenta, categoria, contacto, archivos, ...dbFields } = patch
       const { error } = await (supabase as any)
         .from("movimiento")
         .update(dbFields)

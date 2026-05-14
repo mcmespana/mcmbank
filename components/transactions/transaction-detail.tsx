@@ -22,13 +22,20 @@ import { TabWithCounter } from "./tab-with-counter"
 import { formatCurrency } from "@/lib/utils/format"
 import { formatIsoDateToInput, maskDateInput, parseDateInputToIso } from "@/lib/utils/date-input"
 import { TransactionFiles } from "./transaction-files"
-import type { Movimiento, Cuenta, Categoria } from "@/lib/types/database"
+import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria, Contacto, ContactoConCategoriaPredeterminada } from "@/lib/types/database"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { ContactoSelector } from "@/components/contactos/contacto-selector"
+import { ContactoForm } from "@/components/contactos/contacto-form"
+import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 
 interface TransactionDetailProps {
-  movement: Movimiento | null
+  movement: MovimientoConRelaciones | null
   accounts: Cuenta[]
   categories: Categoria[]
+  contactos?: ContactoConCategoriaPredeterminada[]
+  delegacionId?: string | null
+  canManageGlobalContact?: boolean
+  onCreateContacto?: (payload: Parameters<NonNullable<React.ComponentProps<typeof ContactoForm>["onSubmit"]>>[0]) => Promise<Contacto | void>
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
@@ -42,12 +49,18 @@ export function TransactionDetail({
   movement,
   accounts,
   categories,
+  contactos = [],
+  delegacionId,
+  canManageGlobalContact,
+  onCreateContacto,
   open,
   onOpenChange,
   onUpdate,
   onBack,
   initialTab = "datos",
 }: TransactionDetailProps) {
+  const [contactoCreateOpen, setContactoCreateOpen] = useState(false)
+  const [contactoInitialNombre, setContactoInitialNombre] = useState("")
   const [formData, setFormData] = useState<Partial<Movimiento>>({})
   const [formMovementId, setFormMovementId] = useState<string | null>(movement?.id ?? null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -72,7 +85,7 @@ export function TransactionDetail({
       concepto: movement.concepto,
       descripcion: movement.descripcion || "",
       categoria_id: movement.categoria_id,
-      contraparte: movement.contraparte || "",
+      contacto_id: movement.contacto_id ?? null,
     }
   }, [movement])
 
@@ -529,13 +542,40 @@ export function TransactionDetail({
                     <Label htmlFor="contacto" className="text-sm font-medium">
                       Contacto
                     </Label>
-                    <Input
-                      id="contacto"
-                      value={formData.contraparte || ""}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, contraparte: e.target.value }))}
-                      placeholder="Nombre del contacto"
-                      className="h-9"
+                    <ContactoSelector
+                      contactos={contactos}
+                      value={formData.contacto_id ?? null}
+                      onChange={(contactoId) => {
+                        setFormData((prev) => {
+                          const next: Partial<Movimiento> = { ...prev, contacto_id: contactoId }
+                          // Auto-sugerir categoría predeterminada al elegir contacto si no había una
+                          if (contactoId && !prev.categoria_id) {
+                            const c = contactos.find((x) => x.id === contactoId)
+                            if (c?.categoria_id_predeterminada) {
+                              next.categoria_id = c.categoria_id_predeterminada
+                            }
+                          }
+                          return next
+                        })
+                      }}
+                      onCreateNew={
+                        onCreateContacto
+                          ? (initialNombre) => {
+                              setContactoInitialNombre(initialNombre)
+                              setContactoCreateOpen(true)
+                            }
+                          : undefined
+                      }
+                      placeholder="Sin contacto vinculado"
                     />
+                    {movement?.contacto && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Tipo:{" "}
+                        <span className="font-medium">
+                          {CONTACTO_TIPO_INFO[movement.contacto.tipo].label}
+                        </span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -597,6 +637,32 @@ export function TransactionDetail({
           </>
         )}
       </SheetContent>
+
+      {onCreateContacto && (
+        <Sheet open={contactoCreateOpen} onOpenChange={setContactoCreateOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto z-[70]">
+            <SheetHeader className="mb-2">
+              <SheetTitle>Nuevo contacto</SheetTitle>
+            </SheetHeader>
+            <ContactoForm
+              delegacionId={delegacionId ?? null}
+              contacto={null}
+              categorias={categories as any}
+              canManageGlobal={Boolean(canManageGlobalContact)}
+              defaultNombre={contactoInitialNombre}
+              onSubmit={async (payload) => {
+                const created = (await onCreateContacto(payload)) as Contacto | void
+                if (created?.id) {
+                  setFormData((prev) => ({ ...prev, contacto_id: created.id }))
+                }
+                return created
+              }}
+              onCancel={() => setContactoCreateOpen(false)}
+              onSaved={() => setContactoCreateOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
     </Sheet>
   )
 }

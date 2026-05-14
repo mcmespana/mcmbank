@@ -14,6 +14,8 @@ interface MovimientosFilters {
   fechaHasta?: string
   categoriaIds?: string[]
   cuentaId?: string
+  contactoIds?: string[]
+  contactoTipos?: ("proveedor" | "persona_mcm" | "destinatario_mcm")[]
   busqueda?: string
   amountFrom?: number
   amountTo?: number
@@ -46,6 +48,8 @@ function serializeFilters(filters?: MovimientosFilters): string {
   const normalized = {
     ...filters,
     categoriaIds: filters.categoriaIds ? [...filters.categoriaIds].sort() : undefined,
+    contactoIds: filters.contactoIds ? [...filters.contactoIds].sort() : undefined,
+    contactoTipos: filters.contactoTipos ? [...filters.contactoTipos].sort() : undefined,
   }
   return JSON.stringify(normalized)
 }
@@ -111,6 +115,25 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
       // Create and store the request promise
       const requestPromise = (async () => {
         try {
+          // Resolve contacto IDs to filter by when filtering by name match or tipo
+          let contactoIdsExtra: string[] | null = null
+          if (filters?.busqueda || (filters?.contactoTipos && filters.contactoTipos.length > 0)) {
+            const term = filters.busqueda?.replace(/%/g, "\\%")
+            let contactoLookup = (supabase as any)
+              .from("contacto")
+              .select("id")
+              .or(`delegacion_id.eq.${delegacionId},es_global.is.true`)
+              .limit(500)
+            if (term) {
+              contactoLookup = contactoLookup.ilike("nombre", `%${term}%`)
+            }
+            if (filters.contactoTipos && filters.contactoTipos.length > 0) {
+              contactoLookup = contactoLookup.in("tipo", filters.contactoTipos)
+            }
+            const { data: matchedContactos } = await contactoLookup.abortSignal(ac.signal)
+            contactoIdsExtra = (matchedContactos ?? []).map((c: any) => c.id)
+          }
+
           // Build query
           // Optimized query: removed unnecessary delegacion JOIN (we already have delegacion_id)
           // and archivos JOIN (lazy loaded on demand)
@@ -132,6 +155,7 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
               notas,
               ignorado,
               categoria_id,
+              contacto_id,
               adjunto_principal_url,
               creado_por,
               creado_en,
@@ -154,6 +178,14 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
                 orden,
                 categoria_padre_id,
                 creado_en
+              ),
+              contacto:contacto_id (
+                id,
+                nombre,
+                tipo,
+                emoji,
+                color,
+                es_global
               )
             `,
               { count: "exact" }
@@ -177,9 +209,19 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
             if (filters.cuentaId) {
               query = query.eq("cuenta_id", filters.cuentaId)
             }
+            if (filters.contactoIds && filters.contactoIds.length > 0) {
+              query = query.in("contacto_id", filters.contactoIds)
+            }
+            if (filters.contactoTipos && filters.contactoTipos.length > 0) {
+              query = query.in("contacto_id", contactoIdsExtra && contactoIdsExtra.length > 0 ? contactoIdsExtra : ["00000000-0000-0000-0000-000000000000"])
+            }
             if (filters.busqueda) {
               const term = filters.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
-              query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%`)
+              const orParts = [`concepto.ilike.%${term}%`, `descripcion.ilike.%${term}%`]
+              if (contactoIdsExtra && contactoIdsExtra.length > 0) {
+                orParts.push(`contacto_id.in.(${contactoIdsExtra.join(",")})`)
+              }
+              query = query.or(orParts.join(","))
             }
             // Filter by absolute amount value (matches both positive and negative)
             query = applyAbsoluteAmountFilter(query, filters.amountFrom, filters.amountTo)

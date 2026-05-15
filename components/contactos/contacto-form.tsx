@@ -159,7 +159,7 @@ export function ContactoForm({
       {/* Selector de tipo */}
       <div className="space-y-2">
         <Label>Tipo de contacto *</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {CONTACTO_TIPO_ORDER.map((t) => {
             const info = CONTACTO_TIPO_INFO[t]
             const isSelected = tipo === t
@@ -169,32 +169,37 @@ export function ContactoForm({
                 type="button"
                 onClick={() => setTipo(t)}
                 className={cn(
-                  "flex flex-col items-start gap-1 p-3 rounded-xl border-2 text-left transition-all",
+                  "flex flex-col items-start gap-1 p-3 rounded-xl border-2 text-left transition-all h-full",
                   isSelected
                     ? `${info.bgClass} ${info.borderClass} shadow-md`
                     : "border-border/40 bg-card hover:border-border",
                 )}
               >
-                <div className="flex items-center gap-2 font-semibold text-sm">
+                <div className="flex items-center gap-1.5 font-semibold text-sm">
                   <span>{info.emoji}</span>
-                  <span className={cn(isSelected && info.textClass)}>{info.label}</span>
+                  <span className={cn("leading-tight", isSelected && info.textClass)}>{info.label}</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground line-clamp-2">{info.descripcion}</p>
+                <p className="text-[10px] text-muted-foreground leading-tight">{info.descripcion}</p>
               </button>
             )
           })}
         </div>
       </div>
 
+      {/* Contacto global (solo gestores centrales) */}
+      {canManageGlobal && (
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <Checkbox checked={esGlobal} onCheckedChange={(v) => setEsGlobal(Boolean(v))} />
+          <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Contacto global (todas las delegaciones)</span>
+        </label>
+      )}
+
       {/* Identidad */}
       <div className="space-y-3 rounded-xl border border-border/40 bg-card/40 p-4">
-        <div className="flex items-end gap-3">
-          <div className="space-y-1.5">
-            <Label>Emoji</Label>
-            <EmojiPickerButton value={emoji} onChange={setEmoji} size="md" />
-          </div>
-          <div className="flex-1 space-y-1.5">
-            <Label htmlFor="contacto-nombre">Nombre *</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="contacto-nombre">Nombre *</Label>
+          <div className="flex items-center gap-1.5">
             <Input
               id="contacto-nombre"
               value={nombre}
@@ -202,12 +207,11 @@ export function ContactoForm({
               placeholder={tipo === "proveedor" ? "Mercadona, Luz García SL…" : tipo === "persona_mcm" ? "Juan Pérez" : "Familia López"}
               required
               autoFocus
+              className="flex-1"
             />
+            <EmojiPickerButton value={emoji} onChange={setEmoji} size="sm" />
+            <ColorPicker value={color} onChange={setColor} className="h-8 w-8" />
           </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Color</Label>
-          <ColorPicker value={color} onChange={setColor} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="contacto-id-fiscal">CIF / NIF / DNI</Label>
@@ -218,25 +222,37 @@ export function ContactoForm({
             placeholder="B12345678 · 12345678X"
           />
         </div>
-
-        {canManageGlobal && (
-          <label className="flex items-start gap-2 rounded-lg border border-border/40 bg-background/60 p-3 cursor-pointer">
-            <Checkbox checked={esGlobal} onCheckedChange={(v) => setEsGlobal(Boolean(v))} />
-            <div className="flex-1">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Globe className="h-3.5 w-3.5" />
-                Contacto global
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Compartido por todas las delegaciones. Solo los gestores centrales pueden crearlos o editarlos.
-              </p>
-            </div>
-          </label>
-        )}
       </div>
 
       {/* Contacto */}
       <div className="space-y-3 rounded-xl border border-border/40 bg-card/40 p-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="contacto-iban">IBAN</Label>
+          <div className="flex gap-2">
+            <Input
+              id="contacto-iban"
+              value={iban}
+              onChange={(e) => setIban(e.target.value)}
+              onBlur={() => setIban(formatearIban(iban))}
+              placeholder="ES91 2100 0418 4502 0005 1332"
+              className={cn(!ibanValido && "border-red-500 focus-visible:ring-red-500/30")}
+            />
+            {ibanNormalizado && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => copy(ibanNormalizado)}
+                title="Copiar IBAN"
+              >
+                <Copy className={cn("h-4 w-4", isCopied(ibanNormalizado) && "text-green-600")} />
+              </Button>
+            )}
+          </div>
+          {iban && !ibanValido && (
+            <p className="text-[11px] text-red-600">El dígito de control no cuadra. Revísalo o déjalo vacío.</p>
+          )}
+        </div>
         <div className="space-y-1.5">
           <Label htmlFor="contacto-email">Email</Label>
           <div className="flex gap-2">
@@ -270,33 +286,6 @@ export function ContactoForm({
               </Button>
             )}
           </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="contacto-iban">IBAN</Label>
-          <div className="flex gap-2">
-            <Input
-              id="contacto-iban"
-              value={iban}
-              onChange={(e) => setIban(e.target.value)}
-              onBlur={() => setIban(formatearIban(iban))}
-              placeholder="ES91 2100 0418 4502 0005 1332"
-              className={cn(!ibanValido && "border-red-500 focus-visible:ring-red-500/30")}
-            />
-            {ibanNormalizado && (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => copy(ibanNormalizado)}
-                title="Copiar IBAN"
-              >
-                <Copy className={cn("h-4 w-4", isCopied(ibanNormalizado) && "text-green-600")} />
-              </Button>
-            )}
-          </div>
-          {iban && !ibanValido && (
-            <p className="text-[11px] text-red-600">El dígito de control no cuadra. Revísalo o déjalo vacío.</p>
-          )}
         </div>
       </div>
 

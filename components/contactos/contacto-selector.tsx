@@ -74,7 +74,11 @@ export function ContactoSelector({
           role="combobox"
           aria-expanded={open}
           disabled={disabled || loading}
-          className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground", className)}
+          className={cn(
+            "w-full justify-between font-normal bg-background border-border hover:bg-muted/50 h-9",
+            !selected && "text-muted-foreground",
+            className,
+          )}
         >
           <span className="flex items-center gap-2 truncate">
             {selected ? (
@@ -101,7 +105,7 @@ export function ContactoSelector({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[80]" align="start">
         <Command>
           <CommandInput
             placeholder="Buscar contacto…"

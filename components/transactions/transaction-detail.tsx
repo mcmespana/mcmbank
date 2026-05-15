@@ -539,8 +539,9 @@ export function TransactionDetail({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="contacto" className="text-sm font-medium">
+                    <Label htmlFor="contacto" className="text-sm font-medium flex items-center gap-1.5">
                       Contacto
+                      <span className="text-[11px] font-normal text-muted-foreground">(opcional)</span>
                     </Label>
                     <ContactoSelector
                       contactos={contactos}

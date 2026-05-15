@@ -366,7 +366,7 @@ export function TransactionCreatePanel({
 
           {/* Contact */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-muted-foreground">CONTACTO</Label>
+            <Label className="text-sm font-medium text-muted-foreground">CONTACTO <span className="text-[10px] font-normal normal-case">(opcional)</span></Label>
             <ContactoSelector
               contactos={contactos}
               value={formData.contacto_id ?? null}

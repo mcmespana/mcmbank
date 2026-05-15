@@ -12,6 +12,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Check, Pencil } from "lucide-react"
+import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListRowProps {
@@ -193,7 +194,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                   </div>
                 )}
 
-                <div onClick={(e) => e.stopPropagation()}>
+                <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 flex-wrap">
                   {isUpdating ? (
                     <div className="flex items-center gap-2">
                       <LoadingSpinner size="sm" />
@@ -207,6 +208,20 @@ export const TransactionListRow = memo(function TransactionListRow({
                       account={account}
                       onCategoryChange={(categoryId) => handleCategoryChange(categoryId)}
                     />
+                  )}
+                  {movement.contacto && (
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                        CONTACTO_TIPO_INFO[movement.contacto.tipo].bgClass,
+                        CONTACTO_TIPO_INFO[movement.contacto.tipo].textClass,
+                        CONTACTO_TIPO_INFO[movement.contacto.tipo].borderClass,
+                      )}
+                      title={`${CONTACTO_TIPO_INFO[movement.contacto.tipo].label}: ${movement.contacto.nombre}`}
+                    >
+                      <span aria-hidden>{movement.contacto.emoji ?? CONTACTO_TIPO_INFO[movement.contacto.tipo].emoji}</span>
+                      <span className="max-w-[120px] truncate">{movement.contacto.nombre}</span>
+                    </span>
                   )}
                 </div>
               </div>

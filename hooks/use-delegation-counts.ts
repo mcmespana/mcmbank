@@ -10,12 +10,14 @@ export interface DelegationCounts {
   movimientos: number | null
   categorias: number | null
   cuentas: number | null
+  contactos: number | null
 }
 
 const INITIAL_COUNTS: DelegationCounts = {
   movimientos: null,
   categorias: null,
   cuentas: null,
+  contactos: null,
 }
 
 const QUERY_TIMEOUT_MS = 10000
@@ -54,7 +56,7 @@ export function useDelegationCounts() {
     const organizacionId = delegation?.organizacion_id ?? null
 
     try {
-      const [movimientosRes, cuentasRes, categoriasRes] = await Promise.all([
+      const [movimientosRes, cuentasRes, categoriasRes, contactosRes] = await Promise.all([
         runQuery<{ count: number | null }>({
           label: "count-movimientos",
           table: "movimiento",
@@ -96,6 +98,20 @@ export function useDelegationCounts() {
               },
             })
           : Promise.resolve({ data: { count: null }, error: null }),
+        runQuery<{ count: number | null }>({
+          label: "count-contactos",
+          table: "contacto",
+          timeoutMs: QUERY_TIMEOUT_MS,
+          build: async (signal) => {
+            const { count, error } = await supabase
+              .from("contacto")
+              .select("id", { head: true, count: "exact" })
+              .or(`delegacion_id.eq.${delegationId},es_global.is.true`)
+              .eq("archivado", false)
+              .abortSignal(signal)
+            return { data: { count: typeof count === "number" ? count : 0 }, error }
+          },
+        }),
       ])
 
       if (requestRef.current !== fetchId) return
@@ -109,18 +125,21 @@ export function useDelegationCounts() {
             : categoriasRes.error
               ? null
               : categoriasRes.data?.count ?? 0,
+        contactos: contactosRes.error ? null : contactosRes.data?.count ?? 0,
       }
 
       const hasError =
         Boolean(movimientosRes.error) ||
         Boolean(cuentasRes.error) ||
-        (organizacionId !== null && Boolean(categoriasRes.error))
+        (organizacionId !== null && Boolean(categoriasRes.error)) ||
+        Boolean(contactosRes.error)
 
       if (hasError) {
         console.warn("⚠️ useDelegationCounts: error loading counts", {
           movimientosError: movimientosRes.error,
           cuentasError: cuentasRes.error,
           categoriasError: categoriasRes.error,
+          contactosError: contactosRes.error,
         })
         setError("No se pudieron cargar todos los totales")
       } else {

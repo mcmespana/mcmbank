@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { CategorySelector } from "./category-selector"
 import { AmountRangeFilter } from "./amount-range-filter"
-import type { Categoria, CuentaConDelegacion } from "@/lib/types/database"
+import { ContactoSelector } from "@/components/contactos/contacto-selector"
+import { CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
+import { cn } from "@/lib/utils"
+import type { Categoria, ContactoConCategoriaPredeterminada, ContactoTipo, CuentaConDelegacion } from "@/lib/types/database"
 import type { TransactionFilters as Filters } from "./transaction-manager"
 
 interface TransactionFiltersProps {
@@ -17,6 +19,7 @@ interface TransactionFiltersProps {
   onClearFilters: () => void
   categories: Categoria[]
   accounts?: CuentaConDelegacion[]
+  contactos?: ContactoConCategoriaPredeterminada[]
   uncategorizedCount: number
 }
 
@@ -26,37 +29,44 @@ export function TransactionFiltersComponent({
   onClearFilters,
   categories,
   accounts = [],
+  contactos = [],
   uncategorizedCount,
 }: TransactionFiltersProps) {
   const updateFilter = (key: keyof Filters, value: any) => {
     onFiltersChange({ ...filters, [key]: value })
   }
 
+  const toggleContactoTipo = (tipo: ContactoTipo) => {
+    const current = filters.contactoTipos || []
+    const next = current.includes(tipo) ? current.filter((t) => t !== tipo) : [...current, tipo]
+    updateFilter("contactoTipos", next.length > 0 ? next : undefined)
+  }
+
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
     if (key === "uncategorized" || key === "dateRange") return false
-    if (key === "categoryIds") {
+    if (key === "categoryIds" || key === "contactoIds" || key === "contactoTipos") {
       return Array.isArray(value) && value.length > 0
     }
     return value !== undefined && value !== "" && value !== false
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {hasActiveFilters && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Filtros activos</span>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-2.5 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse shrink-0"></div>
+              <span className="text-xs font-medium text-blue-700 dark:text-blue-300 truncate">Filtros activos</span>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={onClearFilters}
-              className="bg-white/80 hover:bg-white border-blue-300 text-blue-700 hover:text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950/70"
+              className="h-7 px-2 text-xs bg-white/80 hover:bg-white border-blue-300 text-blue-700 hover:text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950/70"
             >
-              <X className="mr-2 h-4 w-4" />
-              Quitar filtros
+              <X className="mr-1 h-3.5 w-3.5" />
+              Quitar
             </Button>
           </div>
         </div>
@@ -88,10 +98,18 @@ export function TransactionFiltersComponent({
         )}
       </Button>
 
-      <Separator className="bg-border" />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-foreground uppercase tracking-wide">Buscar</Label>
+        <Input
+          placeholder="Concepto, descripción, contacto…"
+          value={filters.search || ""}
+          onChange={(e) => updateFilter("search", e.target.value || undefined)}
+          className="h-9 bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+        />
+      </div>
 
-      <div className="space-y-3">
-        <Label className="text-sm font-semibold text-foreground">Categorías</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-foreground uppercase tracking-wide">Categorías</Label>
         <CategorySelector
           categories={categories}
           selectedCategories={filters.categoryIds || []}
@@ -99,63 +117,76 @@ export function TransactionFiltersComponent({
             updateFilter("categoryIds", categoryIds.length > 0 ? categoryIds : undefined)
           }
           allowMultiple={true}
-          placeholder="Seleccionar categorías..."
+          placeholder="Todas las categorías"
         />
       </div>
 
-      <Separator className="bg-border" />
+      {accounts.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-foreground uppercase tracking-wide">Cuenta</Label>
+          <Select
+            value={filters.accountId || "all"}
+            onValueChange={(value) => updateFilter("accountId", value === "all" ? undefined : value)}
+          >
+            <SelectTrigger className="h-9 bg-background border-border focus:border-primary">
+              <SelectValue placeholder="Todas las cuentas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las cuentas</SelectItem>
+              {accounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  <div className="flex items-center gap-2">
+                    {account.tipo === "caja" ? (
+                      <PiggyBank className="h-4 w-4 text-amber-600" />
+                    ) : (
+                      <Building2 className="h-4 w-4 text-blue-600" />
+                    )}
+                    <span>{account.nombre}</span>
+                    {account.banco_nombre && (
+                      <span className="text-xs text-muted-foreground">({account.banco_nombre})</span>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-      <div className="space-y-3">
-        <Label className="text-sm font-semibold text-foreground">Buscar transacciones</Label>
-        <div className="relative">
-          <Input
-            placeholder="Buscar en concepto o descripción..."
-            value={filters.search || ""}
-            onChange={(e) => updateFilter("search", e.target.value || undefined)}
-            className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
-          />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-foreground uppercase tracking-wide">Contactos</Label>
+        <ContactoSelector
+          contactos={contactos}
+          value={filters.contactoIds?.[0] ?? null}
+          onChange={(id) => updateFilter("contactoIds", id ? [id] : undefined)}
+          placeholder="Cualquier contacto"
+        />
+        <div className="flex flex-wrap gap-1">
+          {CONTACTO_TIPO_ORDER.map((t) => {
+            const info = CONTACTO_TIPO_INFO[t]
+            const active = (filters.contactoTipos ?? []).includes(t)
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleContactoTipo(t)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-all",
+                  active
+                    ? `${info.bgClass} ${info.textClass} ${info.borderClass} shadow-sm`
+                    : "border-border/40 bg-background/60 text-muted-foreground hover:bg-muted",
+                )}
+              >
+                <span aria-hidden>{info.emoji}</span>
+                <span>{info.shortLabel}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      <Separator className="bg-border" />
-
-      {accounts.length > 0 && (
-        <>
-          <div className="space-y-3">
-            <Label className="text-sm font-semibold text-foreground">Cuenta</Label>
-            <Select
-              value={filters.accountId || "all"}
-              onValueChange={(value) => updateFilter("accountId", value === "all" ? undefined : value)}
-            >
-              <SelectTrigger className="bg-background border-border focus:border-primary">
-                <SelectValue placeholder="Todas las cuentas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las cuentas</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    <div className="flex items-center gap-2">
-                      {account.tipo === "caja" ? (
-                        <PiggyBank className="h-4 w-4 text-amber-600" />
-                      ) : (
-                        <Building2 className="h-4 w-4 text-blue-600" />
-                      )}
-                      <span>{account.nombre}</span>
-                      {account.banco_nombre && (
-                        <span className="text-xs text-muted-foreground">({account.banco_nombre})</span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Separator className="bg-border" />
-        </>
-      )}
-
-      <div className="space-y-3">
-        <Label className="text-sm font-semibold text-foreground">Importe</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-foreground uppercase tracking-wide">Importe</Label>
         <AmountRangeFilter
           amountFrom={filters.amountFrom}
           amountTo={filters.amountTo}

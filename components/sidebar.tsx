@@ -88,8 +88,8 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
       name: "Contactos",
       href: "/contactos",
       icon: Users,
-      count: null,
-      enabled: false,
+      count: getCountBadge(counts.contactos),
+      enabled: true,
     },
     ...(isAdmin
       ? [

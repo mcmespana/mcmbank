@@ -4,8 +4,14 @@ import type {
   CategoryBreakdownRow,
   CategoriaConOrdenEfectivo,
   CategoriaOrdenDelegacion,
+  Contacto,
+  ContactoConCategoriaPredeterminada,
+  ContactoInsert,
+  ContactoTipo,
+  ContactoUpdate,
   FinancialSummary,
   MonthlyTrendRow,
+  MovimientoConRelaciones,
 } from "@/lib/types/database"
 
 type CategoriaWithOverrides = Categoria & {
@@ -213,6 +219,172 @@ export class DatabaseService {
       .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
 
     if (error) throw error
+  }
+
+  // ---------------------------------------------------------------------------
+  // Contacto operations (client-side)
+  // ---------------------------------------------------------------------------
+
+  static async getContactosByDelegacion(
+    delegacionId?: string | null,
+    options: {
+      tipo?: ContactoTipo
+      busqueda?: string
+      incluirArchivados?: boolean
+      incluirGlobales?: boolean
+      signal?: AbortSignal
+    } = {},
+  ): Promise<ContactoConCategoriaPredeterminada[]> {
+    const supabase = this.getClient() as any
+    const incluirGlobales = options.incluirGlobales ?? true
+
+    if (!delegacionId && !incluirGlobales) return []
+
+    let query = supabase
+      .from("contacto")
+      .select(`
+        *,
+        categoria_predeterminada:categoria_id_predeterminada (
+          id,
+          nombre,
+          emoji,
+          color
+        )
+      `)
+      .order("archivado", { ascending: true })
+      .order("nombre", { ascending: true })
+
+    if (delegacionId) {
+      query = incluirGlobales
+        ? query.or(`delegacion_id.eq.${delegacionId},es_global.is.true`)
+        : query.eq("delegacion_id", delegacionId)
+    } else if (incluirGlobales) {
+      query = query.eq("es_global", true)
+    }
+
+    if (options.tipo) {
+      query = query.eq("tipo", options.tipo)
+    }
+
+    if (!options.incluirArchivados) {
+      query = query.eq("archivado", false)
+    }
+
+    if (options.busqueda) {
+      const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
+      query = query.or(
+        `nombre.ilike.%${term}%,email.ilike.%${term}%,telefono.ilike.%${term}%,identificador_fiscal.ilike.%${term}%,iban.ilike.%${term}%`,
+      )
+    }
+
+    if (options.signal) {
+      query = query.abortSignal(options.signal)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return (data ?? []) as ContactoConCategoriaPredeterminada[]
+  }
+
+  static async getContactoById(id: string): Promise<ContactoConCategoriaPredeterminada | null> {
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase
+      .from("contacto")
+      .select(`
+        *,
+        categoria_predeterminada:categoria_id_predeterminada (
+          id,
+          nombre,
+          emoji,
+          color
+        )
+      `)
+      .eq("id", id)
+      .maybeSingle()
+    if (error) throw error
+    return (data ?? null) as ContactoConCategoriaPredeterminada | null
+  }
+
+  static async createContacto(
+    contacto: Omit<ContactoInsert, "creado_en" | "actualizado_en">,
+  ): Promise<Contacto> {
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase.from("contacto").insert(contacto).select().single()
+    if (error) throw error
+    return data as Contacto
+  }
+
+  static async updateContacto(id: string, updates: ContactoUpdate): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase.from("contacto").update(updates).eq("id", id)
+    if (error) throw error
+  }
+
+  static async deleteContacto(id: string): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase.from("contacto").delete().eq("id", id)
+    if (error) throw error
+  }
+
+  static async archiveContacto(id: string, archivado: boolean): Promise<void> {
+    await this.updateContacto(id, { archivado })
+  }
+
+  static async getMovimientosByContacto(
+    contactoId: string,
+    options: { limite?: number; signal?: AbortSignal } = {},
+  ): Promise<MovimientoConRelaciones[]> {
+    const supabase = this.getClient() as any
+    const limite = options.limite ?? 100
+
+    let query = supabase
+      .from("movimiento")
+      .select(`
+        id,
+        delegacion_id,
+        cuenta_id,
+        fecha,
+        concepto,
+        descripcion,
+        importe,
+        notas,
+        ignorado,
+        categoria_id,
+        contacto_id,
+        creado_en,
+        cuenta:cuenta_id (
+          id,
+          delegacion_id,
+          nombre,
+          tipo,
+          origen,
+          banco_nombre,
+          color
+        ),
+        categoria:categoria_id (
+          id,
+          nombre,
+          color,
+          tipo,
+          emoji,
+          orden,
+          categoria_padre_id,
+          creado_en
+        )
+      `)
+      .eq("contacto_id", contactoId)
+      .eq("ignorado", false)
+      .order("fecha", { ascending: false })
+      .order("creado_en", { ascending: false })
+      .limit(limite)
+
+    if (options.signal) {
+      query = query.abortSignal(options.signal)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return (data ?? []) as MovimientoConRelaciones[]
   }
 
   // ---------------------------------------------------------------------------

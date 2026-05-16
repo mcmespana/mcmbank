@@ -30,6 +30,107 @@ function iso(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+interface ReconcileLogger {
+  info: (msg: string, data?: Record<string, unknown>) => void
+  warn: (msg: string, data?: Record<string, unknown>) => void
+}
+
+/**
+ * Para cada movimiento recien insertado (gasto), busca un unico pago MCM pendiente
+ * que case por importe absoluto y fecha (+/-3 dias). Si hay un unico match, vincula
+ * ambos lados (movimiento.pago_mcm_id y pago_mcm.movimiento_id) — el trigger pone
+ * el pago en 'pagado'. Si hay 0 o varios candidatos, no toca nada.
+ *
+ * Best-effort: no lanza si algo falla.
+ */
+async function autoLinkPagosMcm(
+  admin: AdminClient,
+  movimientos: Array<{
+    id: string
+    fecha: string
+    importe: number
+    contacto_id: string | null
+    pago_mcm_id: string | null
+  }>,
+  delegacionId: string,
+  logger: ReconcileLogger,
+): Promise<number> {
+  let vinculados = 0
+  const VENTANA_DIAS = 3
+
+  for (const mov of movimientos) {
+    if (mov.pago_mcm_id) continue // ya vinculado
+    if (mov.importe >= 0) continue // solo gastos
+    const importeAbs = Math.abs(Number(mov.importe))
+    if (!(importeAbs > 0)) continue
+
+    const fechaMov = new Date(mov.fecha)
+    if (Number.isNaN(fechaMov.getTime())) continue
+    const desde = new Date(fechaMov)
+    desde.setDate(desde.getDate() - VENTANA_DIAS)
+    const hasta = new Date(fechaMov)
+    hasta.setDate(hasta.getDate() + VENTANA_DIAS)
+    const desdeIso = desde.toISOString().slice(0, 10)
+    const hastaIso = hasta.toISOString().slice(0, 10)
+
+    // Buscar pagos MCM pendientes con mismo importe absoluto. Filtramos por
+    // ventana de creacion del pago (creado_en) para evitar matches con pagos
+    // futuros: tipicamente el pago se crea ANTES del movimiento bancario real.
+    let query = (admin as any)
+      .from("pago_mcm")
+      .select("id, contacto_id, creado_en, importe")
+      .eq("delegacion_id", delegacionId)
+      .eq("estado", "pendiente")
+      .is("movimiento_id", null)
+      .eq("importe", importeAbs)
+      .lte("creado_en", `${hastaIso}T23:59:59`)
+      .gte("creado_en", `${desdeIso}T00:00:00`)
+
+    if (mov.contacto_id) {
+      query = query.eq("contacto_id", mov.contacto_id)
+    }
+
+    const { data: candidatos, error } = await query
+    if (error || !Array.isArray(candidatos)) continue
+
+    if (candidatos.length !== 1) {
+      if (candidatos.length > 1) {
+        logger.info("Auto-vinculo descartado: varios candidatos", {
+          movimiento_id: mov.id,
+          candidatos: candidatos.length,
+        })
+      }
+      continue
+    }
+
+    const pago = candidatos[0] as { id: string }
+
+    const { error: e1 } = await (admin as any)
+      .from("pago_mcm")
+      .update({ movimiento_id: mov.id })
+      .eq("id", pago.id)
+    if (e1) {
+      logger.warn("Auto-vinculo: error actualizando pago_mcm", { error: e1.message })
+      continue
+    }
+
+    const { error: e2 } = await (admin as any)
+      .from("movimiento")
+      .update({ pago_mcm_id: pago.id })
+      .eq("id", mov.id)
+    if (e2) {
+      // rollback best-effort
+      await (admin as any).from("pago_mcm").update({ movimiento_id: null }).eq("id", pago.id)
+      logger.warn("Auto-vinculo: error actualizando movimiento", { error: e2.message })
+      continue
+    }
+
+    vinculados += 1
+  }
+
+  return vinculados
+}
+
 function daysAgo(n: number): Date {
   const d = new Date()
   d.setUTCDate(d.getUTCDate() - n)
@@ -282,6 +383,41 @@ export async function syncCuenta(
         } else {
           insertadas = count ?? nuevas.length
         }
+      }
+
+      // Reconciliacion automatica con pagos MCM pendientes:
+      // para cada gasto recien importado, si existe UN unico pago MCM pendiente
+      // con el mismo importe absoluto y fecha dentro de ventana de +/-3 dias,
+      // se vincula automaticamente. Si hay varios candidatos no toca nada.
+      try {
+        const externalIdsNuevas = nuevas.map((r) => r.external_id)
+        if (externalIdsNuevas.length > 0) {
+          const { data: insertadosRows } = await admin
+            .from("movimiento")
+            .select("id, fecha, importe, contacto_id, pago_mcm_id")
+            .eq("cuenta_id", cuenta.id)
+            .in("external_id", externalIdsNuevas)
+          const reconciliados = await autoLinkPagosMcm(
+            admin,
+            (insertadosRows ?? []) as Array<{
+              id: string
+              fecha: string
+              importe: number
+              contacto_id: string | null
+              pago_mcm_id: string | null
+            }>,
+            cuenta.delegacion_id,
+            logger,
+          )
+          if (reconciliados > 0) {
+            logger.info(`Pagos MCM auto-vinculados: ${reconciliados}`)
+          }
+        }
+      } catch (err) {
+        // best-effort: no rompemos la sync si la reconciliacion falla
+        logger.warn("Fallo al auto-vincular pagos MCM (no bloqueante)", {
+          error: err instanceof Error ? err.message : String(err),
+        })
       }
 
       logger.info("Resumen", { recibidas, insertadas, duplicadas, errores })

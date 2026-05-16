@@ -125,8 +125,8 @@ export function usePagosMcm(delegacionId?: string | null, options: UsePagosMcmOp
     [],
   )
 
-  const linkToMovimiento = useCallback(async (pagoId: string, movimientoId: string) => {
-    await DatabaseService.linkPagoToMovimiento(pagoId, movimientoId)
+  const linkToMovimiento = useCallback(async (pagoId: string, movimientoId: string, creadoPor?: string) => {
+    await DatabaseService.linkPagoToMovimiento(pagoId, movimientoId, creadoPor)
     await fetchRef.current()
   }, [])
 

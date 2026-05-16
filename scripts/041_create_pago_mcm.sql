@@ -73,7 +73,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 
 DROP TRIGGER IF EXISTS trg_pago_mcm_actualizado_en ON public.pago_mcm;
 CREATE TRIGGER trg_pago_mcm_actualizado_en
@@ -90,7 +90,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 
 DROP TRIGGER IF EXISTS trg_pago_mcm_insert_defaults ON public.pago_mcm;
 CREATE TRIGGER trg_pago_mcm_insert_defaults

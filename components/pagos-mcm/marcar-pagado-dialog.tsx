@@ -36,7 +36,7 @@ interface MarcarPagadoDialogProps {
     pagoId: string,
     options: { cuentaId: string; fecha: string; delegacionId: string; creadoPor: string },
   ) => Promise<{ movimientoId: string }>
-  onLink: (pagoId: string, movimientoId: string) => Promise<void>
+  onLink: (pagoId: string, movimientoId: string, creadoPor?: string) => Promise<void>
 }
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
@@ -124,7 +124,7 @@ export function MarcarPagadoDialog({
     if (!pago || !seleccionMov) return
     setBusy(true)
     try {
-      await onLink(pago.id, seleccionMov)
+      await onLink(pago.id, seleccionMov, user?.id)
       toast.success("Pago vinculado al movimiento")
       onOpenChange(false)
     } catch (err) {

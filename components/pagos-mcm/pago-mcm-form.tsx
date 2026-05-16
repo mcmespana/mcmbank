@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
+import { PagoMcmArchivos } from "./pago-mcm-archivos"
 import {
   PAGO_MCM_GASOLINA_PRESETS,
   PAGO_MCM_GASOLINA_PRESETS_ORDER,
@@ -409,6 +410,18 @@ export function PagoMcmForm({
           rows={2}
         />
       </div>
+
+      {/* Adjuntos (solo en edición) */}
+      {isEdit && pago && delegacionId && (
+        <div className="space-y-1.5">
+          <Label>Archivos adjuntos</Label>
+          <PagoMcmArchivos pagoId={pago.id} delegacionId={delegacionId} />
+          <p className="text-[11px] text-muted-foreground">
+            Tickets, justificantes, etc. Si vinculas este pago a un movimiento, el archivo también
+            quedará disponible desde el movimiento.
+          </p>
+        </div>
+      )}
 
       {/* Acciones */}
       <div className="flex items-center justify-end gap-2 pt-2">

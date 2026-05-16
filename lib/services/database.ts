@@ -522,7 +522,8 @@ export class DatabaseService {
    * Convierte un pago MCM en un movimiento manual (gasto) en la cuenta indicada.
    * Crea el movimiento con importe negativo (gasto), copia contacto y categoría
    * del pago, y vincula ambos lados (pago_mcm.movimiento_id y movimiento.pago_mcm_id).
-   * Tras vincular, el trigger marca el pago como 'pagado'.
+   * Tras vincular, el trigger marca el pago como 'pagado'. También replica los
+   * adjuntos del pago en movimiento_archivo para que aparezcan desde el movimiento.
    */
   static async convertPagoToMovimiento(
     pagoId: string,
@@ -572,16 +573,22 @@ export class DatabaseService {
       throw updErr
     }
 
+    // Replica los adjuntos del pago en movimiento_archivo (best-effort: si falla,
+    // el pago y movimiento siguen vinculados; el usuario puede resubir).
+    await this.replicateArchivosPagoToMovimiento(pagoId, created.id, options.creadoPor).catch(
+      (err) => console.warn("No se pudieron replicar adjuntos del pago al movimiento:", err),
+    )
+
     return { movimientoId: created.id }
   }
 
   /**
    * Vincula un pago MCM a un movimiento existente (sin crear nada nuevo).
+   * Replica los adjuntos del pago en movimiento_archivo.
    */
-  static async linkPagoToMovimiento(pagoId: string, movimientoId: string): Promise<void> {
+  static async linkPagoToMovimiento(pagoId: string, movimientoId: string, creadoPor?: string): Promise<void> {
     const supabase = this.getClient() as any
 
-    // Actualizamos ambos lados; ON CONFLICT del UNIQUE evita doble vínculo.
     const { error: updPagoErr } = await supabase
       .from("pago_mcm")
       .update({ movimiento_id: movimientoId })
@@ -593,6 +600,59 @@ export class DatabaseService {
       .update({ pago_mcm_id: pagoId })
       .eq("id", movimientoId)
     if (updMovErr) throw updMovErr
+
+    // Replica los adjuntos best-effort. Si no nos dieron creadoPor, lo obtenemos.
+    let userId = creadoPor
+    if (!userId) {
+      const { data } = await supabase.auth.getUser()
+      userId = data?.user?.id ?? undefined
+    }
+    if (userId) {
+      await this.replicateArchivosPagoToMovimiento(pagoId, movimientoId, userId).catch((err) =>
+        console.warn("No se pudieron replicar adjuntos del pago al movimiento:", err),
+      )
+    }
+  }
+
+  /**
+   * Inserta copias de los adjuntos del pago en movimiento_archivo apuntando al
+   * mismo path de Storage. UNIQUE (movimiento_id, path_storage) evita duplicados
+   * si la operación se repite.
+   */
+  private static async replicateArchivosPagoToMovimiento(
+    pagoId: string,
+    movimientoId: string,
+    subidoPor: string,
+  ): Promise<void> {
+    const supabase = this.getClient() as any
+
+    const { data: adjuntos, error } = await supabase
+      .from("archivo_adjunto")
+      .select("*")
+      .eq("entidad", "pago_mcm")
+      .eq("entidad_id", pagoId)
+    if (error) throw error
+    if (!Array.isArray(adjuntos) || adjuntos.length === 0) return
+
+    // movimiento_archivo usa "tamaño_bytes" (con ñ) y subido_por (string NOT NULL).
+    const inserts = adjuntos.map((a: any) => ({
+      movimiento_id: movimientoId,
+      nombre_original: a.nombre_original,
+      nombre_archivo: a.nombre_archivo,
+      tipo_mime: a.tipo_mime,
+      "tamaño_bytes": a.tamano_bytes,
+      bucket: a.bucket,
+      path_storage: a.path_storage,
+      url_publica: a.url_publica,
+      es_factura: a.es_factura,
+      descripcion: a.descripcion,
+      subido_por: subidoPor,
+    }))
+
+    // upsert con onConflict para idempotencia
+    await supabase
+      .from("movimiento_archivo")
+      .upsert(inserts, { onConflict: "movimiento_id,path_storage", ignoreDuplicates: true })
   }
 
   /**

@@ -74,9 +74,39 @@ export class FileService {
     return { valid: true }
   }
 
+  /**
+   * Sube un archivo asociado a una entidad genérica (movimiento, pago_mcm, etc.).
+   * Estructura: delegacion/año/mes/<scope>/<entityId>/archivo.ext
+   */
+  static async uploadFileForEntity(
+    file: File,
+    entity: { scope: string; id: string },
+    bucketType: 'facturas' | 'documentos',
+    delegacionCodigo: string,
+  ): Promise<FileUploadResult> {
+    const validation = this.validateFile(file, bucketType)
+    if (!validation.valid) {
+      throw new Error(validation.error)
+    }
+    const now = new Date()
+    const year = now.getFullYear().toString()
+    const month = this.getMonthAbbreviation(now.getMonth())
+    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const fileName = `${delegacionCodigo}/${year}/${month}/${entity.scope}/${entity.id}/${cleanFileName}`
+
+    const { data, error } = await supabase.storage
+      .from(bucketType)
+      .upload(fileName, file, { cacheControl: '3600', upsert: false })
+
+    if (error) throw new Error(`Error al subir archivo: ${error.message}`)
+
+    const { data: urlData } = supabase.storage.from(bucketType).getPublicUrl(data.path)
+    return { url: urlData.publicUrl, path: data.path, bucket: bucketType }
+  }
+
   static async uploadFile(
-    file: File, 
-    movimientoId: string, 
+    file: File,
+    movimientoId: string,
     bucketType: 'facturas' | 'documentos',
     userId: string,
     delegacionCodigo: string

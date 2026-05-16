@@ -325,6 +325,59 @@ export type Database = {
           actualizado_en?: string
         }
       }
+      archivo_adjunto: {
+        Row: {
+          id: string
+          entidad: "pago_mcm" | "movimiento"
+          entidad_id: string
+          delegacion_id: string
+          nombre_original: string
+          nombre_archivo: string
+          tipo_mime: string
+          tamano_bytes: number
+          bucket: "facturas" | "documentos"
+          path_storage: string
+          url_publica: string
+          es_factura: boolean
+          descripcion: string | null
+          subido_por: string
+          subido_en: string
+        }
+        Insert: {
+          id?: string
+          entidad: "pago_mcm" | "movimiento"
+          entidad_id: string
+          delegacion_id: string
+          nombre_original: string
+          nombre_archivo: string
+          tipo_mime: string
+          tamano_bytes: number
+          bucket: "facturas" | "documentos"
+          path_storage: string
+          url_publica: string
+          es_factura?: boolean
+          descripcion?: string | null
+          subido_por: string
+          subido_en?: string
+        }
+        Update: {
+          id?: string
+          entidad?: "pago_mcm" | "movimiento"
+          entidad_id?: string
+          delegacion_id?: string
+          nombre_original?: string
+          nombre_archivo?: string
+          tipo_mime?: string
+          tamano_bytes?: number
+          bucket?: "facturas" | "documentos"
+          path_storage?: string
+          url_publica?: string
+          es_factura?: boolean
+          descripcion?: string | null
+          subido_por?: string
+          subido_en?: string
+        }
+      }
       categoria: {
         Row: {
           color: string
@@ -748,6 +801,11 @@ export const CONTACTO_TIPOS: readonly ContactoTipo[] = ["proveedor", "persona_mc
 export type ContactoConCategoriaPredeterminada = Contacto & {
   categoria_predeterminada?: Pick<Categoria, "id" | "nombre" | "emoji" | "color"> | null
 }
+
+export type ArchivoAdjunto = Database["public"]["Tables"]["archivo_adjunto"]["Row"]
+export type ArchivoAdjuntoInsert = Database["public"]["Tables"]["archivo_adjunto"]["Insert"]
+export type ArchivoAdjuntoUpdate = Database["public"]["Tables"]["archivo_adjunto"]["Update"]
+export type ArchivoAdjuntoEntidad = ArchivoAdjunto["entidad"]
 
 export type PagoMcm = Database["public"]["Tables"]["pago_mcm"]["Row"]
 export type PagoMcmInsert = Database["public"]["Tables"]["pago_mcm"]["Insert"]

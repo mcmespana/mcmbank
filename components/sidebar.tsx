@@ -10,6 +10,7 @@ import {
   FileText,
   BarChart3,
   Banknote,
+  HandCoins,
   Settings,
   Users,
   Menu,
@@ -68,6 +69,13 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
       href: "/cuentas",
       icon: Banknote,
       count: getCountBadge(counts.cuentas),
+      enabled: true,
+    },
+    {
+      name: "Pagos MCM",
+      href: "/pagos-mcm",
+      icon: HandCoins,
+      count: getCountBadge(counts.pagosMcmPendientes),
       enabled: true,
     },
     {

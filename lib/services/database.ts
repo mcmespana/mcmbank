@@ -12,6 +12,11 @@ import type {
   FinancialSummary,
   MonthlyTrendRow,
   MovimientoConRelaciones,
+  PagoMcm,
+  PagoMcmConRelaciones,
+  PagoMcmEstado,
+  PagoMcmInsert,
+  PagoMcmUpdate,
 } from "@/lib/types/database"
 
 type CategoriaWithOverrides = Categoria & {
@@ -385,6 +390,131 @@ export class DatabaseService {
     const { data, error } = await query
     if (error) throw error
     return (data ?? []) as MovimientoConRelaciones[]
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pago MCM operations (client-side)
+  // ---------------------------------------------------------------------------
+
+  static async getPagosMcmByDelegacion(
+    delegacionId: string,
+    options: {
+      estados?: PagoMcmEstado[]
+      contactoId?: string
+      busqueda?: string
+      signal?: AbortSignal
+    } = {},
+  ): Promise<PagoMcmConRelaciones[]> {
+    const supabase = this.getClient() as any
+    let query = supabase
+      .from("pago_mcm")
+      .select(`
+        *,
+        contacto:contacto_id (
+          id,
+          nombre,
+          tipo,
+          emoji,
+          color,
+          iban,
+          email,
+          telefono
+        ),
+        categoria_sugerida:categoria_id_sugerida (
+          id,
+          nombre,
+          emoji,
+          color
+        ),
+        movimiento:movimiento_id (
+          id,
+          fecha,
+          concepto,
+          importe,
+          cuenta_id
+        )
+      `)
+      .eq("delegacion_id", delegacionId)
+      .order("estado", { ascending: true })
+      .order("creado_en", { ascending: false })
+
+    if (options.estados && options.estados.length > 0) {
+      query = query.in("estado", options.estados)
+    }
+
+    if (options.contactoId) {
+      query = query.eq("contacto_id", options.contactoId)
+    }
+
+    if (options.busqueda) {
+      const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
+      query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%,notas.ilike.%${term}%`)
+    }
+
+    if (options.signal) {
+      query = query.abortSignal(options.signal)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return (data ?? []) as PagoMcmConRelaciones[]
+  }
+
+  static async getPagoMcmById(id: string): Promise<PagoMcmConRelaciones | null> {
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase
+      .from("pago_mcm")
+      .select(`
+        *,
+        contacto:contacto_id (
+          id,
+          nombre,
+          tipo,
+          emoji,
+          color,
+          iban,
+          email,
+          telefono
+        ),
+        categoria_sugerida:categoria_id_sugerida (
+          id,
+          nombre,
+          emoji,
+          color
+        ),
+        movimiento:movimiento_id (
+          id,
+          fecha,
+          concepto,
+          importe,
+          cuenta_id
+        )
+      `)
+      .eq("id", id)
+      .maybeSingle()
+    if (error) throw error
+    return (data ?? null) as PagoMcmConRelaciones | null
+  }
+
+  static async createPagoMcm(
+    pago: Omit<PagoMcmInsert, "creado_en" | "actualizado_en">,
+  ): Promise<PagoMcm> {
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase.from("pago_mcm").insert(pago).select().single()
+    if (error) throw error
+    return data as PagoMcm
+  }
+
+  static async updatePagoMcm(id: string, updates: PagoMcmUpdate): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase.from("pago_mcm").update(updates).eq("id", id)
+    if (error) throw error
+  }
+
+  static async deletePagoMcm(id: string): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase.from("pago_mcm").delete().eq("id", id)
+    if (error) throw error
   }
 
   // ---------------------------------------------------------------------------

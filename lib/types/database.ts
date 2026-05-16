@@ -126,6 +126,7 @@ export type Database = {
           ignorado: boolean
           categoria_id: string | null
           contacto_id: string | null
+          pago_mcm_id: string | null
           adjunto_principal_url: string | null
           creado_por: string
           creado_en: string
@@ -152,6 +153,7 @@ export type Database = {
           ignorado?: boolean
           categoria_id?: string | null
           contacto_id?: string | null
+          pago_mcm_id?: string | null
           adjunto_principal_url?: string | null
           creado_por: string
           creado_en?: string
@@ -178,6 +180,7 @@ export type Database = {
           ignorado?: boolean
           categoria_id?: string | null
           contacto_id?: string | null
+          pago_mcm_id?: string | null
           adjunto_principal_url?: string | null
           creado_por?: string
           creado_en?: string
@@ -252,6 +255,71 @@ export type Database = {
           categoria_id_predeterminada?: string | null
           notas?: string | null
           archivado?: boolean
+          creado_por?: string | null
+          creado_en?: string
+          actualizado_en?: string
+        }
+      }
+      pago_mcm: {
+        Row: {
+          id: string
+          delegacion_id: string
+          contacto_id: string
+          concepto: string
+          descripcion: string | null
+          importe: number
+          moneda: string
+          estado: "borrador" | "pendiente" | "pagado" | "cancelado"
+          tipo_calculo: "manual" | "gasolina_tickets" | "gasolina_km" | "gasolina_avanzado"
+          gasolina_km_un_trayecto: number | null
+          gasolina_ida_vuelta: boolean
+          gasolina_precio_km: number | null
+          gasolina_preset: "ivaj_0_12" | "min_0_18" | "max_0_20" | "estandar_0_26" | "personalizado" | null
+          categoria_id_sugerida: string | null
+          notas: string | null
+          movimiento_id: string | null
+          creado_por: string | null
+          creado_en: string
+          actualizado_en: string
+        }
+        Insert: {
+          id?: string
+          delegacion_id: string
+          contacto_id: string
+          concepto: string
+          descripcion?: string | null
+          importe: number
+          moneda?: string
+          estado?: "borrador" | "pendiente" | "pagado" | "cancelado"
+          tipo_calculo?: "manual" | "gasolina_tickets" | "gasolina_km" | "gasolina_avanzado"
+          gasolina_km_un_trayecto?: number | null
+          gasolina_ida_vuelta?: boolean
+          gasolina_precio_km?: number | null
+          gasolina_preset?: "ivaj_0_12" | "min_0_18" | "max_0_20" | "estandar_0_26" | "personalizado" | null
+          categoria_id_sugerida?: string | null
+          notas?: string | null
+          movimiento_id?: string | null
+          creado_por?: string | null
+          creado_en?: string
+          actualizado_en?: string
+        }
+        Update: {
+          id?: string
+          delegacion_id?: string
+          contacto_id?: string
+          concepto?: string
+          descripcion?: string | null
+          importe?: number
+          moneda?: string
+          estado?: "borrador" | "pendiente" | "pagado" | "cancelado"
+          tipo_calculo?: "manual" | "gasolina_tickets" | "gasolina_km" | "gasolina_avanzado"
+          gasolina_km_un_trayecto?: number | null
+          gasolina_ida_vuelta?: boolean
+          gasolina_precio_km?: number | null
+          gasolina_preset?: "ivaj_0_12" | "min_0_18" | "max_0_20" | "estandar_0_26" | "personalizado" | null
+          categoria_id_sugerida?: string | null
+          notas?: string | null
+          movimiento_id?: string | null
           creado_por?: string | null
           creado_en?: string
           actualizado_en?: string
@@ -679,6 +747,36 @@ export const CONTACTO_TIPOS: readonly ContactoTipo[] = ["proveedor", "persona_mc
 
 export type ContactoConCategoriaPredeterminada = Contacto & {
   categoria_predeterminada?: Pick<Categoria, "id" | "nombre" | "emoji" | "color"> | null
+}
+
+export type PagoMcm = Database["public"]["Tables"]["pago_mcm"]["Row"]
+export type PagoMcmInsert = Database["public"]["Tables"]["pago_mcm"]["Insert"]
+export type PagoMcmUpdate = Database["public"]["Tables"]["pago_mcm"]["Update"]
+export type PagoMcmEstado = PagoMcm["estado"]
+export type PagoMcmTipoCalculo = PagoMcm["tipo_calculo"]
+export type PagoMcmGasolinaPreset = NonNullable<PagoMcm["gasolina_preset"]>
+
+export const PAGO_MCM_ESTADOS: readonly PagoMcmEstado[] = [
+  "borrador",
+  "pendiente",
+  "pagado",
+  "cancelado",
+] as const
+
+export const PAGO_MCM_TIPOS_CALCULO: readonly PagoMcmTipoCalculo[] = [
+  "manual",
+  "gasolina_tickets",
+  "gasolina_km",
+  "gasolina_avanzado",
+] as const
+
+export type PagoMcmConRelaciones = PagoMcm & {
+  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "iban" | "email" | "telefono"> | null
+  categoria_sugerida?: Pick<Categoria, "id" | "nombre" | "emoji" | "color"> | null
+  movimiento?: Pick<
+    Database["public"]["Tables"]["movimiento"]["Row"],
+    "id" | "fecha" | "concepto" | "importe" | "cuenta_id"
+  > | null
 }
 
 export type BancoSyncLogStep = {

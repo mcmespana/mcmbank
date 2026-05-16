@@ -356,6 +356,7 @@ export class DatabaseService {
         ignorado,
         categoria_id,
         contacto_id,
+        pago_mcm_id,
         creado_en,
         cuenta:cuenta_id (
           id,
@@ -515,6 +516,195 @@ export class DatabaseService {
     const supabase = this.getClient() as any
     const { error } = await supabase.from("pago_mcm").delete().eq("id", id)
     if (error) throw error
+  }
+
+  /**
+   * Convierte un pago MCM en un movimiento manual (gasto) en la cuenta indicada.
+   * Crea el movimiento con importe negativo (gasto), copia contacto y categoría
+   * del pago, y vincula ambos lados (pago_mcm.movimiento_id y movimiento.pago_mcm_id).
+   * Tras vincular, el trigger marca el pago como 'pagado'.
+   */
+  static async convertPagoToMovimiento(
+    pagoId: string,
+    options: {
+      cuentaId: string
+      fecha: string // YYYY-MM-DD
+      delegacionId: string
+      creadoPor: string
+    },
+  ): Promise<{ movimientoId: string }> {
+    const supabase = this.getClient() as any
+
+    const pago = await this.getPagoMcmById(pagoId)
+    if (!pago) throw new Error("Pago MCM no encontrado")
+    if (pago.movimiento_id) throw new Error("Este pago ya está vinculado a un movimiento")
+
+    const movimientoInsert = {
+      cuenta_id: options.cuentaId,
+      delegacion_id: options.delegacionId,
+      fecha: options.fecha,
+      concepto: pago.concepto,
+      descripcion: pago.descripcion,
+      importe: -Math.abs(Number(pago.importe)),
+      categoria_id: pago.categoria_id_sugerida,
+      contacto_id: pago.contacto_id,
+      pago_mcm_id: pago.id,
+      notas: pago.notas,
+      origen_sync: "manual" as const,
+      creado_por: options.creadoPor,
+    }
+
+    const { data: created, error: insertErr } = await supabase
+      .from("movimiento")
+      .insert(movimientoInsert)
+      .select("id")
+      .single()
+    if (insertErr) throw insertErr
+
+    // Vincular el pago al movimiento (trigger ajusta estado a 'pagado').
+    const { error: updErr } = await supabase
+      .from("pago_mcm")
+      .update({ movimiento_id: created.id })
+      .eq("id", pagoId)
+    if (updErr) {
+      // rollback best-effort
+      await supabase.from("movimiento").delete().eq("id", created.id)
+      throw updErr
+    }
+
+    return { movimientoId: created.id }
+  }
+
+  /**
+   * Vincula un pago MCM a un movimiento existente (sin crear nada nuevo).
+   */
+  static async linkPagoToMovimiento(pagoId: string, movimientoId: string): Promise<void> {
+    const supabase = this.getClient() as any
+
+    // Actualizamos ambos lados; ON CONFLICT del UNIQUE evita doble vínculo.
+    const { error: updPagoErr } = await supabase
+      .from("pago_mcm")
+      .update({ movimiento_id: movimientoId })
+      .eq("id", pagoId)
+    if (updPagoErr) throw updPagoErr
+
+    const { error: updMovErr } = await supabase
+      .from("movimiento")
+      .update({ pago_mcm_id: pagoId })
+      .eq("id", movimientoId)
+    if (updMovErr) throw updMovErr
+  }
+
+  /**
+   * Desvincula un pago MCM de su movimiento (el movimiento sigue existiendo).
+   */
+  static async unlinkPagoFromMovimiento(pagoId: string): Promise<void> {
+    const supabase = this.getClient() as any
+    const pago = await this.getPagoMcmById(pagoId)
+    if (!pago?.movimiento_id) return
+
+    const movimientoId = pago.movimiento_id
+    const { error: e1 } = await supabase
+      .from("pago_mcm")
+      .update({ movimiento_id: null })
+      .eq("id", pagoId)
+    if (e1) throw e1
+
+    const { error: e2 } = await supabase
+      .from("movimiento")
+      .update({ pago_mcm_id: null })
+      .eq("id", movimientoId)
+    if (e2) throw e2
+  }
+
+  /**
+   * Devuelve la cuenta de la delegación con más movimientos (sugerencia por defecto
+   * para 'convertir pago a movimiento'). Si ninguna cuenta tiene movimientos,
+   * devuelve la primera disponible.
+   */
+  static async getCuentaConMasMovimientos(delegacionId: string): Promise<string | null> {
+    const supabase = this.getClient() as any
+    const { data: cuentas, error } = await supabase
+      .from("cuenta")
+      .select("id")
+      .eq("delegacion_id", delegacionId)
+    if (error || !Array.isArray(cuentas) || cuentas.length === 0) return null
+
+    const counts = await Promise.all(
+      cuentas.map(async (c: { id: string }) => {
+        const { count } = await supabase
+          .from("movimiento")
+          .select("id", { head: true, count: "exact" })
+          .eq("cuenta_id", c.id)
+        return { id: c.id, count: typeof count === "number" ? count : 0 }
+      }),
+    )
+    counts.sort((a, b) => b.count - a.count)
+    return counts[0]?.id ?? null
+  }
+
+  /**
+   * Busca movimientos candidatos para vincular a un pago MCM por importe exacto.
+   * Excluye los que ya tienen pago_mcm_id.
+   */
+  static async findCandidatosMovimientoParaPago(
+    delegacionId: string,
+    importe: number,
+    opts: { contactoId?: string | null; limit?: number; signal?: AbortSignal } = {},
+  ): Promise<MovimientoConRelaciones[]> {
+    const supabase = this.getClient() as any
+    // Pagos son gastos: el movimiento del banco tendrá importe negativo del mismo valor absoluto.
+    const target = -Math.abs(importe)
+    let query = supabase
+      .from("movimiento")
+      .select(`
+        id,
+        delegacion_id,
+        cuenta_id,
+        fecha,
+        concepto,
+        descripcion,
+        importe,
+        notas,
+        ignorado,
+        categoria_id,
+        contacto_id,
+        pago_mcm_id,
+        creado_en,
+        cuenta:cuenta_id (
+          id,
+          nombre,
+          banco_nombre,
+          color
+        )
+      `)
+      .eq("delegacion_id", delegacionId)
+      .eq("importe", target)
+      .is("pago_mcm_id", null)
+      .order("fecha", { ascending: false })
+      .limit(opts.limit ?? 20)
+
+    if (opts.contactoId) {
+      // Prioriza los del mismo contacto, pero no excluye los otros
+      // (postgrest no soporta order by case-when; lo dejamos a nivel cliente)
+    }
+
+    if (opts.signal) query = query.abortSignal(opts.signal)
+
+    const { data, error } = await query
+    if (error) throw error
+    const list = (data ?? []) as MovimientoConRelaciones[]
+
+    if (opts.contactoId) {
+      // Sort: same contacto first
+      list.sort((a, b) => {
+        const aMatch = a.contacto_id === opts.contactoId ? 0 : 1
+        const bMatch = b.contacto_id === opts.contactoId ? 0 : 1
+        return aMatch - bMatch
+      })
+    }
+
+    return list
   }
 
   // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 "use client"
 
-import { Copy, Edit3, ExternalLink, Trash2 } from "lucide-react"
+import { CheckCircle2, Copy, Edit3, ExternalLink, Trash2, Unlink } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,9 +17,11 @@ interface PagoMcmCardProps {
   canEdit: boolean
   onEdit: () => void
   onDelete: () => void
+  onMarcarPagado?: () => void
+  onDesvincular?: () => void
 }
 
-export function PagoMcmCard({ pago, canEdit, onEdit, onDelete }: PagoMcmCardProps) {
+export function PagoMcmCard({ pago, canEdit, onEdit, onDelete, onMarcarPagado, onDesvincular }: PagoMcmCardProps) {
   const estadoInfo = PAGO_MCM_ESTADO_INFO[pago.estado]
   const tipoInfo = PAGO_MCM_TIPO_CALCULO_INFO[pago.tipo_calculo]
   const contactoTipoInfo = pago.contacto ? CONTACTO_TIPO_INFO[pago.contacto.tipo] : null
@@ -119,6 +121,19 @@ export function PagoMcmCard({ pago, canEdit, onEdit, onDelete }: PagoMcmCardProp
           </div>
         )}
 
+        {/* Botón "Marcar como pagado" destacado en pagos pendientes */}
+        {canEdit && pago.estado === "pendiente" && onMarcarPagado && (
+          <Button
+            type="button"
+            onClick={onMarcarPagado}
+            size="sm"
+            className="w-full"
+            variant="default"
+          >
+            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Marcar como pagado
+          </Button>
+        )}
+
         {/* Footer: fecha + acciones */}
         <div className="flex items-center justify-between gap-2 pt-1">
           <span className="text-[11px] text-muted-foreground">
@@ -126,6 +141,17 @@ export function PagoMcmCard({ pago, canEdit, onEdit, onDelete }: PagoMcmCardProp
           </span>
           {canEdit && (
             <div className="flex items-center gap-1">
+              {pago.estado === "pagado" && onDesvincular && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onDesvincular}
+                  className="h-7 w-7 p-0"
+                  title="Desvincular movimiento"
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={onEdit} className="h-7 w-7 p-0">
                 <Edit3 className="h-3.5 w-3.5" />
               </Button>

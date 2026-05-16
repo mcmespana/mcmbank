@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { FileText, MessageSquare } from "lucide-react"
+import { FileText, HandCoins, MessageSquare } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -10,21 +10,24 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 interface TransactionRowIndicatorsProps {
   description?: string | null
   fileCount?: number
+  pagoMcmId?: string | null
   className?: string
   onOpenFiles?: () => void
 }
 
-export function TransactionRowIndicators({ 
+export function TransactionRowIndicators({
   description,
   fileCount = 0,
+  pagoMcmId,
   className,
   onOpenFiles,
 }: TransactionRowIndicatorsProps) {
   const trimmedDescription = description?.trim() ?? ""
   const hasDescription = !!trimmedDescription
   const hasFiles = fileCount > 0
+  const hasPagoMcm = Boolean(pagoMcmId)
 
-  if (!hasDescription && !hasFiles) {
+  if (!hasDescription && !hasFiles && !hasPagoMcm) {
     return null
   }
 
@@ -104,6 +107,20 @@ export function TransactionRowIndicators({
             </PopoverContent>
           </Popover>
         </div>
+      )}
+
+      {/* Indicador de Pago MCM */}
+      {hasPagoMcm && (
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center" aria-label="Pago MCM">
+                <HandCoins className="h-3 w-3 text-emerald-700 dark:text-emerald-300" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">Vinculado a un Pago MCM</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
 
       {/* Indicador de archivos */}

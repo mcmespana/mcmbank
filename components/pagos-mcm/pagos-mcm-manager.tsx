@@ -31,6 +31,7 @@ import type {
 import { PagoMcmCard } from "./pago-mcm-card"
 import { PagoMcmForm, type PagoMcmFormSubmit } from "./pago-mcm-form"
 import { DeletePagoMcmDialog } from "./delete-pago-mcm-dialog"
+import { MarcarPagadoDialog } from "./marcar-pagado-dialog"
 
 type TabValue = "pendiente" | "borrador" | "pagado" | "todos"
 
@@ -66,6 +67,9 @@ export function PagosMcmManager() {
     createPago,
     updatePago,
     deletePago,
+    convertToMovimiento,
+    linkToMovimiento,
+    unlinkFromMovimiento,
   } = usePagosMcm(selectedDelegation, {
     estados: estadosForTab,
     busqueda: busquedaDebounced || undefined,
@@ -80,6 +84,7 @@ export function PagosMcmManager() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<PagoMcmConRelaciones | null>(null)
   const [deleting, setDeleting] = useState<PagoMcmConRelaciones | null>(null)
+  const [marcando, setMarcando] = useState<PagoMcmConRelaciones | null>(null)
 
   const { copy } = useClipboard()
 
@@ -262,6 +267,15 @@ export function PagosMcmManager() {
               canEdit={canEdit}
               onEdit={() => openEdit(pago)}
               onDelete={() => setDeleting(pago)}
+              onMarcarPagado={() => setMarcando(pago)}
+              onDesvincular={async () => {
+                try {
+                  await unlinkFromMovimiento(pago.id)
+                  toast.success("Movimiento desvinculado")
+                } catch (err) {
+                  toast.error("No se pudo desvincular: " + (err instanceof Error ? err.message : "error"))
+                }
+              }}
             />
           ))}
         </div>
@@ -283,6 +297,18 @@ export function PagosMcmManager() {
           />
         </SheetContent>
       </Sheet>
+
+      {/* Marcar como pagado */}
+      {selectedDelegation && (
+        <MarcarPagadoDialog
+          pago={marcando}
+          open={Boolean(marcando)}
+          onOpenChange={(open) => !open && setMarcando(null)}
+          delegacionId={selectedDelegation}
+          onConvert={convertToMovimiento}
+          onLink={linkToMovimiento}
+        />
+      )}
 
       {/* Borrar */}
       <DeletePagoMcmDialog

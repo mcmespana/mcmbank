@@ -113,6 +113,28 @@ export function usePagosMcm(delegacionId?: string | null, options: UsePagosMcmOp
     setPagos((prev) => prev.filter((p) => p.id !== id))
   }, [])
 
+  const convertToMovimiento = useCallback(
+    async (
+      pagoId: string,
+      options: { cuentaId: string; fecha: string; delegacionId: string; creadoPor: string },
+    ) => {
+      const result = await DatabaseService.convertPagoToMovimiento(pagoId, options)
+      await fetchRef.current()
+      return result
+    },
+    [],
+  )
+
+  const linkToMovimiento = useCallback(async (pagoId: string, movimientoId: string) => {
+    await DatabaseService.linkPagoToMovimiento(pagoId, movimientoId)
+    await fetchRef.current()
+  }, [])
+
+  const unlinkFromMovimiento = useCallback(async (pagoId: string) => {
+    await DatabaseService.unlinkPagoFromMovimiento(pagoId)
+    await fetchRef.current()
+  }, [])
+
   const totals = useMemo(() => {
     const base = {
       borrador: 0,
@@ -141,6 +163,9 @@ export function usePagosMcm(delegacionId?: string | null, options: UsePagosMcmOp
     createPago,
     updatePago,
     deletePago,
+    convertToMovimiento,
+    linkToMovimiento,
+    unlinkFromMovimiento,
   }
 }
 

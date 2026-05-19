@@ -186,9 +186,10 @@ export const TransactionListRow = memo(function TransactionListRow({
                     >
                       {movement.concepto}
                     </h3>
-                    <TransactionRowIndicators 
-                      description={movement.descripcion} 
+                    <TransactionRowIndicators
+                      description={movement.descripcion}
                       fileCount={movement.archivos?.length || 0}
+                      pagoMcmId={(movement as any).pago_mcm_id}
                       onOpenFiles={() => onOpenFiles?.(movement)}
                     />
                   </div>

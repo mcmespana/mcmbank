@@ -54,7 +54,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith("/auth")
 
   // Only protect specific routes, not everything
-  const protectedRoutes = ["/transacciones", "/categorias", "/cuentas", "/delegaciones", "/movimientos"]
+  const protectedRoutes = ["/transacciones", "/categorias", "/cuentas", "/delegaciones", "/movimientos", "/contactos", "/pagos-mcm"]
   const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
 
   if (isProtectedRoute && !user) {

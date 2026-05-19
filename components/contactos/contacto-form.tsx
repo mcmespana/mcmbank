@@ -175,9 +175,9 @@ export function ContactoForm({
                     : "border-border/40 bg-card hover:border-border",
                 )}
               >
-                <div className="flex items-center gap-1.5 font-semibold text-sm">
-                  <span>{info.emoji}</span>
-                  <span className={cn("leading-tight", isSelected && info.textClass)}>{info.label}</span>
+                <div className="flex items-center gap-2 font-semibold text-sm">
+                  <info.icon className={cn("h-3.5 w-3.5", isSelected ? info.textClass : "text-muted-foreground")} aria-hidden />
+                  <span className={cn("leading-tight tracking-tight", isSelected && info.textClass)}>{info.label}</span>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-tight">{info.descripcion}</p>
               </button>

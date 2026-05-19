@@ -31,7 +31,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { formatCurrency, formatDate, getAmountColorClass } from "@/lib/utils/format"
 import { formatearIban } from "@/lib/utils/iban"
-import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
+import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
+import { EntityAvatar } from "@/components/ui/entity-avatar"
 import { useClipboard } from "@/hooks/use-clipboard"
 import { useContactoDetalle } from "@/hooks/use-contactos"
 import { ContactoTipoBadge } from "./contacto-tipo-badge"
@@ -97,24 +98,26 @@ export function ContactoDetailSheet({
           <>
             <SheetHeader className="border-b border-border/30 p-6 pb-4 space-y-3">
               <div className="flex items-start gap-3">
-                <div
-                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl shadow"
-                  style={{ backgroundColor: contacto.color ?? tipoInfo.color }}
-                  aria-hidden
-                >
-                  {contacto.emoji ?? tipoInfo.emoji}
-                </div>
+                <EntityAvatar
+                  name={contacto.nombre}
+                  emoji={contacto.emoji}
+                  defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
+                  colorHex={contacto.color}
+                  size="lg"
+                  seed={`contacto:${contacto.id}`}
+                  className="h-12 w-12 text-sm"
+                />
                 <div className="flex-1 min-w-0 pr-8">
-                  <SheetTitle className="truncate text-xl">{contacto.nombre}</SheetTitle>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <SheetTitle className="truncate text-xl tracking-tight">{contacto.nombre}</SheetTitle>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     <ContactoTipoBadge tipo={contacto.tipo} size="sm" />
                     {contacto.es_global && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground">
                         <Globe className="h-2.5 w-2.5" /> Global
                       </span>
                     )}
                     {contacto.archivado && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
                         <Archive className="h-2.5 w-2.5" /> Archivado
                       </span>
                     )}

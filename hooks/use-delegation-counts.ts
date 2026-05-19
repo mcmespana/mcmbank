@@ -11,6 +11,7 @@ export interface DelegationCounts {
   categorias: number | null
   cuentas: number | null
   contactos: number | null
+  pagosMcmPendientes: number | null
 }
 
 const INITIAL_COUNTS: DelegationCounts = {
@@ -18,6 +19,7 @@ const INITIAL_COUNTS: DelegationCounts = {
   categorias: null,
   cuentas: null,
   contactos: null,
+  pagosMcmPendientes: null,
 }
 
 const QUERY_TIMEOUT_MS = 10000
@@ -56,7 +58,7 @@ export function useDelegationCounts() {
     const organizacionId = delegation?.organizacion_id ?? null
 
     try {
-      const [movimientosRes, cuentasRes, categoriasRes, contactosRes] = await Promise.all([
+      const [movimientosRes, cuentasRes, categoriasRes, contactosRes, pagosMcmRes] = await Promise.all([
         runQuery<{ count: number | null }>({
           label: "count-movimientos",
           table: "movimiento",
@@ -112,6 +114,20 @@ export function useDelegationCounts() {
             return { data: { count: typeof count === "number" ? count : 0 }, error }
           },
         }),
+        runQuery<{ count: number | null }>({
+          label: "count-pagos-mcm-pendientes",
+          table: "pago_mcm",
+          timeoutMs: QUERY_TIMEOUT_MS,
+          build: async (signal) => {
+            const { count, error } = await supabase
+              .from("pago_mcm")
+              .select("id", { head: true, count: "exact" })
+              .eq("delegacion_id", delegationId)
+              .eq("estado", "pendiente")
+              .abortSignal(signal)
+            return { data: { count: typeof count === "number" ? count : 0 }, error }
+          },
+        }),
       ])
 
       if (requestRef.current !== fetchId) return
@@ -126,13 +142,15 @@ export function useDelegationCounts() {
               ? null
               : categoriasRes.data?.count ?? 0,
         contactos: contactosRes.error ? null : contactosRes.data?.count ?? 0,
+        pagosMcmPendientes: pagosMcmRes.error ? null : pagosMcmRes.data?.count ?? 0,
       }
 
       const hasError =
         Boolean(movimientosRes.error) ||
         Boolean(cuentasRes.error) ||
         (organizacionId !== null && Boolean(categoriasRes.error)) ||
-        Boolean(contactosRes.error)
+        Boolean(contactosRes.error) ||
+        Boolean(pagosMcmRes.error)
 
       if (hasError) {
         console.warn("⚠️ useDelegationCounts: error loading counts", {
@@ -140,6 +158,7 @@ export function useDelegationCounts() {
           cuentasError: cuentasRes.error,
           categoriasError: categoriasRes.error,
           contactosError: contactosRes.error,
+          pagosMcmError: pagosMcmRes.error,
         })
         setError("No se pudieron cargar todos los totales")
       } else {

@@ -29,7 +29,8 @@ import useIsAdmin from "@/hooks/use-is-admin"
 import { useAuth } from "@/contexts/auth-context"
 import { useClipboard } from "@/hooks/use-clipboard"
 import { useDebouncedState } from "@/hooks/use-debounced-state"
-import { CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
+import { EntityAvatar } from "@/components/ui/entity-avatar"
+import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
 import { formatearIban } from "@/lib/utils/iban"
 import type { ContactoConCategoriaPredeterminada, ContactoTipo } from "@/lib/types/database"
 import { ContactoForm, type ContactoFormSubmitPayload } from "./contacto-form"
@@ -135,18 +136,18 @@ export function ContactosManager() {
       {/* Tipo tabs */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
         <TabsList className="w-full max-w-2xl grid grid-cols-4">
-          <TabsTrigger value="todos">
-            Todos
-            {counts.total > 0 && <span className="ml-1.5 text-[10px] text-muted-foreground">{counts.total}</span>}
+          <TabsTrigger value="todos" className="gap-1.5">
+            <span>Todos</span>
+            {counts.total > 0 && <span className="text-[10px] text-muted-foreground tabular-nums">{counts.total}</span>}
           </TabsTrigger>
           {CONTACTO_TIPO_ORDER.map((t) => {
             const info = CONTACTO_TIPO_INFO[t]
             const n = counts[t]
             return (
-              <TabsTrigger key={t} value={t}>
-                <span className="mr-1">{info.emoji}</span>
+              <TabsTrigger key={t} value={t} className="gap-1.5">
+                <span className={cn("h-1.5 w-1.5 rounded-full", info.dotClass)} aria-hidden />
                 <span className="hidden sm:inline">{info.shortLabel}</span>
-                {n > 0 && <span className="ml-1.5 text-[10px] text-muted-foreground">{n}</span>}
+                {n > 0 && <span className="text-[10px] text-muted-foreground tabular-nums">{n}</span>}
               </TabsTrigger>
             )
           })}
@@ -285,37 +286,38 @@ function ContactoCard({
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5",
+        "group cursor-pointer transition-all hover:border-foreground/15 hover:shadow-md hover:-translate-y-0.5",
         contacto.archivado && "opacity-60",
       )}
       onClick={onOpen}
     >
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start gap-3">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl shadow-sm"
-            style={{ backgroundColor: contacto.color ?? info.color }}
-            aria-hidden
-          >
-            {contacto.emoji ?? info.emoji}
-          </div>
+          <EntityAvatar
+            name={contacto.nombre}
+            emoji={contacto.emoji}
+            defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
+            colorHex={contacto.color}
+            size="lg"
+            seed={`contacto:${contacto.id}`}
+          />
           <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold">{contacto.nombre}</div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1">
+            <div className="truncate font-semibold tracking-tight">{contacto.nombre}</div>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
               <ContactoTipoBadge tipo={contacto.tipo} size="sm" short />
               {contacto.es_global && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground">
                   <Globe className="h-2.5 w-2.5" /> Global
                 </span>
               )}
               {contacto.archivado && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
                   <Archive className="h-2.5 w-2.5" /> Archivado
                 </span>
               )}
             </div>
             {contacto.identificador_fiscal && (
-              <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{contacto.identificador_fiscal}</div>
+              <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{contacto.identificador_fiscal}</div>
             )}
           </div>
         </div>

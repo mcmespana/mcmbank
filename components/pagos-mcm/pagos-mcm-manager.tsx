@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CheckCircle2, CircleDashed, Clock, Coins, Copy, HandCoins, Loader2, Plus, Search, type LucideIcon } from "lucide-react"
+import { CheckCircle2, ChevronDown, CircleDashed, Clock, Coins, Copy, HandCoins, Loader2, Plus, Search, Wallet, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { useDelegationContext } from "@/contexts/delegation-context"
@@ -20,7 +21,7 @@ import { useDelegationRole } from "@/hooks/use-delegation-role"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { usePagosMcm } from "@/hooks/use-pagos-mcm"
 import { formatCurrency } from "@/lib/utils/format"
-import { formatearIban } from "@/lib/utils/iban"
+import { COPY_FORMATS, type CopyFormatId } from "@/lib/utils/copy-formats"
 import { PAGO_MCM_ESTADO_INFO } from "@/lib/utils/pago-mcm"
 import type {
   PagoMcmConRelaciones,
@@ -32,6 +33,7 @@ import { PagoMcmCard } from "./pago-mcm-card"
 import { PagoMcmForm, type PagoMcmFormSubmit } from "./pago-mcm-form"
 import { DeletePagoMcmDialog } from "./delete-pago-mcm-dialog"
 import { MarcarPagadoDialog } from "./marcar-pagado-dialog"
+import { TransferRunDialog } from "./transfer-run-dialog"
 
 type TabValue = "pendiente" | "borrador" | "pagado" | "todos"
 
@@ -85,6 +87,8 @@ export function PagosMcmManager() {
   const [editing, setEditing] = useState<PagoMcmConRelaciones | null>(null)
   const [deleting, setDeleting] = useState<PagoMcmConRelaciones | null>(null)
   const [marcando, setMarcando] = useState<PagoMcmConRelaciones | null>(null)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [copyMenuOpen, setCopyMenuOpen] = useState(false)
 
   const { copy } = useClipboard()
 
@@ -93,18 +97,20 @@ export function PagosMcmManager() {
     [pagos],
   )
 
-  const handleCopyAllIbans = async () => {
+  const handleCopyFormat = async (formatId: CopyFormatId) => {
+    setCopyMenuOpen(false)
     if (pendientesConIban.length === 0) {
       toast.info("No hay pagos pendientes con IBAN")
       return
     }
-    const lines = pendientesConIban.map((p) => {
-      const nombre = p.contacto?.nombre ?? "Contacto"
-      const iban = formatearIban(p.contacto?.iban ?? "")
-      return `${nombre} — ${iban} — ${formatCurrency(Number(p.importe))} — ${p.concepto}`
-    })
-    const ok = await copy(lines.join("\n"))
-    if (ok) toast.success(`${lines.length} pagos copiados al portapapeles`)
+    const fmt = COPY_FORMATS[formatId]
+    const text = fmt.build(pendientesConIban)
+    const ok = await copy(text)
+    if (ok) {
+      toast.success(`${pendientesConIban.length} pagos copiados`, {
+        description: fmt.label,
+      })
+    }
   }
 
   const handleSubmitForm = async (payload: PagoMcmFormSubmit) => {
@@ -147,10 +153,46 @@ export function PagosMcmManager() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {pendientesConIban.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleCopyAllIbans}>
-              <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar IBANes pendientes
+          {pendientesConIban.length > 0 && canEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTransferOpen(true)}
+              title="Asistente paso a paso para hacer todas las transferencias"
+            >
+              <Wallet className="mr-1.5 h-3.5 w-3.5" /> Modo transferencia
+              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold tabular-nums text-primary">
+                {pendientesConIban.length}
+              </span>
             </Button>
+          )}
+          {pendientesConIban.length > 0 && (
+            <Popover open={copyMenuOpen} onOpenChange={setCopyMenuOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar IBANes pendientes
+                  <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72 p-1">
+                {(Object.keys(COPY_FORMATS) as CopyFormatId[]).map((id) => {
+                  const fmt = COPY_FORMATS[id]
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => handleCopyFormat(id)}
+                      className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus:bg-accent focus:outline-none"
+                    >
+                      <span className="font-medium">{fmt.label}</span>
+                      <span className="text-[11px] leading-tight text-muted-foreground">
+                        {fmt.description}
+                      </span>
+                    </button>
+                  )
+                })}
+              </PopoverContent>
+            </Popover>
           )}
           {canEdit && (
             <Button onClick={openCreate}>
@@ -314,6 +356,17 @@ export function PagosMcmManager() {
           delegacionId={selectedDelegation}
           onConvert={convertToMovimiento}
           onLink={linkToMovimiento}
+        />
+      )}
+
+      {/* Modo transferencia (wizard) */}
+      {selectedDelegation && (
+        <TransferRunDialog
+          pagos={pendientesConIban}
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+          delegacionId={selectedDelegation}
+          onConvert={convertToMovimiento}
         />
       )}
 

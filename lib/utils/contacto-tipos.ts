@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react"
+import { Building2, Target, User } from "lucide-react"
 import type { ContactoTipo } from "@/lib/types/database"
 
 export interface ContactoTipoInfo {
@@ -6,7 +8,9 @@ export interface ContactoTipoInfo {
   shortLabel: string
   descripcion: string
   emoji: string
+  icon: LucideIcon
   color: string
+  dotClass: string
   bgClass: string
   textClass: string
   borderClass: string
@@ -19,10 +23,12 @@ export const CONTACTO_TIPO_INFO: Record<ContactoTipo, ContactoTipoInfo> = {
     shortLabel: "Proveedor",
     descripcion: "Empresa o autónomo que nos vende o factura.",
     emoji: "🏢",
-    color: "#3B82F6",
-    bgClass: "bg-blue-100 dark:bg-blue-950/40",
+    icon: Building2,
+    color: "#2563EB",
+    dotClass: "bg-blue-500",
+    bgClass: "bg-blue-50 dark:bg-blue-950/30",
     textClass: "text-blue-700 dark:text-blue-300",
-    borderClass: "border-blue-200 dark:border-blue-900",
+    borderClass: "border-blue-200/70 dark:border-blue-900/60",
   },
   persona_mcm: {
     value: "persona_mcm",
@@ -30,10 +36,12 @@ export const CONTACTO_TIPO_INFO: Record<ContactoTipo, ContactoTipoInfo> = {
     shortLabel: "Persona",
     descripcion: "Socio, voluntario, monitor, miembro de equipo. Candidato a reembolsos.",
     emoji: "🧑",
-    color: "#10B981",
-    bgClass: "bg-emerald-100 dark:bg-emerald-950/40",
+    icon: User,
+    color: "#059669",
+    dotClass: "bg-emerald-500",
+    bgClass: "bg-emerald-50 dark:bg-emerald-950/30",
     textClass: "text-emerald-700 dark:text-emerald-300",
-    borderClass: "border-emerald-200 dark:border-emerald-900",
+    borderClass: "border-emerald-200/70 dark:border-emerald-900/60",
   },
   destinatario_mcm: {
     value: "destinatario_mcm",
@@ -41,12 +49,16 @@ export const CONTACTO_TIPO_INFO: Record<ContactoTipo, ContactoTipoInfo> = {
     shortLabel: "Destinatario",
     descripcion: "Destinatario final de nuestras actividades o su familia. Suele ser origen de ingresos.",
     emoji: "🎯",
-    color: "#F59E0B",
-    bgClass: "bg-amber-100 dark:bg-amber-950/40",
+    icon: Target,
+    color: "#D97706",
+    dotClass: "bg-amber-500",
+    bgClass: "bg-amber-50 dark:bg-amber-950/30",
     textClass: "text-amber-700 dark:text-amber-300",
-    borderClass: "border-amber-200 dark:border-amber-900",
+    borderClass: "border-amber-200/70 dark:border-amber-900/60",
   },
 }
+
+export const CONTACTO_TIPO_DEFAULT_EMOJIS: readonly string[] = ["🏢", "🧑", "🎯"]
 
 export const CONTACTO_TIPO_ORDER: ContactoTipo[] = ["proveedor", "persona_mcm", "destinatario_mcm"]
 

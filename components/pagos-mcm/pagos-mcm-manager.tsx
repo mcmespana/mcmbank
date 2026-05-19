@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Copy, HandCoins, Loader2, Plus, Search } from "lucide-react"
+import { CheckCircle2, CircleDashed, Clock, Coins, Copy, HandCoins, Loader2, Plus, Search, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -166,25 +166,29 @@ export function PagosMcmManager() {
           label="Pendiente"
           value={formatCurrency(globalTotals.pendienteImporte)}
           sub={`${globalTotals.pendiente} pago${globalTotals.pendiente === 1 ? "" : "s"}`}
-          emoji="⏳"
+          icon={Clock}
+          accent="amber"
         />
         <KpiCard
           label="Borradores"
           value={String(globalTotals.borrador)}
           sub="por confirmar"
-          emoji="📝"
+          icon={CircleDashed}
+          accent="muted"
         />
         <KpiCard
           label="Pagados"
           value={String(globalTotals.pagado)}
           sub={`${formatCurrency(globalTotals.pagadoImporte)} acumulado`}
-          emoji="✅"
+          icon={CheckCircle2}
+          accent="emerald"
         />
         <KpiCard
           label="Total"
           value={String(globalTotals.total)}
           sub="registros"
-          emoji="💰"
+          icon={Coins}
+          accent="primary"
         />
       </div>
 
@@ -202,10 +206,13 @@ export function PagosMcmManager() {
                     ? globalTotals.borrador
                     : globalTotals.pagado
             return (
-              <TabsTrigger key={t} value={t}>
-                <span className="mr-1">{info?.emoji ?? "📋"}</span>
+              <TabsTrigger key={t} value={t} className="gap-1.5">
+                {info ? (
+                  <span className={cn("h-1.5 w-1.5 rounded-full", info.dotClass)} aria-hidden />
+                ) : null}
                 <span className="hidden sm:inline">{TAB_LABELS[t]}</span>
-                {n > 0 && <span className="ml-1.5 text-[10px] text-muted-foreground">{n}</span>}
+                <span className="sm:hidden">{TAB_LABELS[t].slice(0, 3)}</span>
+                {n > 0 && <span className="text-[10px] text-muted-foreground tabular-nums">{n}</span>}
               </TabsTrigger>
             )
           })}
@@ -325,18 +332,58 @@ export function PagosMcmManager() {
   )
 }
 
-function KpiCard({ label, value, sub, emoji }: { label: string; value: string; sub?: string; emoji: string }) {
+type KpiAccent = "amber" | "emerald" | "muted" | "primary"
+
+const ACCENT_CLASSES: Record<KpiAccent, { bg: string; icon: string; border: string }> = {
+  amber: {
+    bg: "bg-amber-50/70 dark:bg-amber-950/20",
+    icon: "text-amber-700 dark:text-amber-300",
+    border: "border-amber-200/60 dark:border-amber-900/40",
+  },
+  emerald: {
+    bg: "bg-emerald-50/70 dark:bg-emerald-950/20",
+    icon: "text-emerald-700 dark:text-emerald-300",
+    border: "border-emerald-200/60 dark:border-emerald-900/40",
+  },
+  muted: {
+    bg: "bg-muted/50",
+    icon: "text-muted-foreground",
+    border: "border-border/60",
+  },
+  primary: {
+    bg: "bg-primary/5",
+    icon: "text-primary",
+    border: "border-primary/20",
+  },
+}
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  accent,
+}: {
+  label: string
+  value: string
+  sub?: string
+  icon: LucideIcon
+  accent: KpiAccent
+}) {
+  const a = ACCENT_CLASSES[accent]
   return (
-    <Card>
+    <Card className={cn("border", a.border)}>
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-            <div className="mt-1 truncate text-xl font-bold">{value}</div>
-            {sub && <div className="mt-0.5 text-[11px] text-muted-foreground">{sub}</div>}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+              {label}
+            </div>
+            <div className="truncate text-xl font-bold tracking-tight tabular-nums">{value}</div>
+            {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
           </div>
-          <div className={cn("text-2xl leading-none")} aria-hidden>
-            {emoji}
+          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", a.bg)}>
+            <Icon className={cn("h-4 w-4", a.icon)} aria-hidden />
           </div>
         </div>
       </CardContent>

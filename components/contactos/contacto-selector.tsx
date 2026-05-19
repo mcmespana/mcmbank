@@ -14,7 +14,8 @@ import {
   CommandSeparator,
 } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
-import { CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
+import { EntityAvatar } from "@/components/ui/entity-avatar"
+import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
 import type { ContactoConCategoriaPredeterminada, ContactoTipo } from "@/lib/types/database"
 
 interface ContactoSelectorProps {
@@ -83,15 +84,24 @@ export function ContactoSelector({
           <span className="flex items-center gap-2 truncate">
             {selected ? (
               <>
-                <span aria-hidden>{selected.emoji ?? CONTACTO_TIPO_INFO[selected.tipo].emoji}</span>
+                <EntityAvatar
+                  name={selected.nombre}
+                  emoji={selected.emoji}
+                  defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
+                  colorHex={selected.color}
+                  size="sm"
+                  seed={`contacto:${selected.id}`}
+                />
                 <span className="truncate">{selected.nombre}</span>
                 <span
                   className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+                    "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium tracking-tight",
                     CONTACTO_TIPO_INFO[selected.tipo].bgClass,
                     CONTACTO_TIPO_INFO[selected.tipo].textClass,
+                    CONTACTO_TIPO_INFO[selected.tipo].borderClass,
                   )}
                 >
+                  <span className={cn("h-1 w-1 rounded-full", CONTACTO_TIPO_INFO[selected.tipo].dotClass)} aria-hidden />
                   {CONTACTO_TIPO_INFO[selected.tipo].shortLabel}
                 </span>
               </>
@@ -135,7 +145,7 @@ export function ContactoSelector({
               if (items.length === 0) return null
               const info = CONTACTO_TIPO_INFO[tipo]
               return (
-                <CommandGroup key={tipo} heading={`${info.emoji} ${info.label}`}>
+                <CommandGroup key={tipo} heading={info.label}>
                   {items.map((c) => {
                     const isSelected = c.id === value
                     const searchValue = `${c.nombre} ${c.email ?? ""} ${c.identificador_fiscal ?? ""} ${c.iban ?? ""}`
@@ -148,7 +158,15 @@ export function ContactoSelector({
                           setOpen(false)
                         }}
                       >
-                        <span className="mr-2">{c.emoji ?? info.emoji}</span>
+                        <EntityAvatar
+                          name={c.nombre}
+                          emoji={c.emoji}
+                          defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
+                          colorHex={c.color}
+                          size="sm"
+                          seed={`contacto:${c.id}`}
+                          className="mr-2"
+                        />
                         <div className="flex-1 truncate">
                           <div className="truncate font-medium">{c.nombre}</div>
                           {(c.email || c.identificador_fiscal) && (

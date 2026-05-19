@@ -70,7 +70,7 @@ export function DeleteContactoDialog({ contacto, open, onOpenChange, onDelete, o
 
         <Alert>
           <AlertDescription>
-            <span className="font-semibold">{contacto.emoji ?? "👤"} {contacto.nombre}</span>
+            <span className="font-semibold tracking-tight">{contacto.nombre}</span>
           </AlertDescription>
         </Alert>
 

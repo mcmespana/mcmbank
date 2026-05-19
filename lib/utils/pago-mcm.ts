@@ -1,10 +1,15 @@
+import type { LucideIcon } from "lucide-react"
+import { Calculator, CheckCircle2, CircleDashed, CircleSlash, Clock, Coins, FileText, Fuel, Gauge } from "lucide-react"
 import type { PagoMcmEstado, PagoMcmGasolinaPreset, PagoMcmTipoCalculo } from "@/lib/types/database"
 
 export interface PagoMcmEstadoInfo {
   value: PagoMcmEstado
   label: string
-  emoji: string
-  color: string
+  icon: LucideIcon
+  /** Color tonal (token). */
+  tone: "muted" | "amber" | "emerald" | "rose"
+  /** Punto de color para badges sutiles. */
+  dotClass: string
   bgClass: string
   textClass: string
   borderClass: string
@@ -14,73 +19,82 @@ export const PAGO_MCM_ESTADO_INFO: Record<PagoMcmEstado, PagoMcmEstadoInfo> = {
   borrador: {
     value: "borrador",
     label: "Borrador",
-    emoji: "📝",
-    color: "#6B7280",
-    bgClass: "bg-zinc-100 dark:bg-zinc-900/40",
-    textClass: "text-zinc-700 dark:text-zinc-300",
-    borderClass: "border-zinc-200 dark:border-zinc-800",
+    icon: CircleDashed,
+    tone: "muted",
+    dotClass: "bg-zinc-400 dark:bg-zinc-500",
+    bgClass: "bg-zinc-50 dark:bg-zinc-900/40",
+    textClass: "text-zinc-600 dark:text-zinc-300",
+    borderClass: "border-zinc-200/70 dark:border-zinc-800/70",
   },
   pendiente: {
     value: "pendiente",
     label: "Pendiente",
-    emoji: "⏳",
-    color: "#F59E0B",
-    bgClass: "bg-amber-100 dark:bg-amber-950/40",
+    icon: Clock,
+    tone: "amber",
+    dotClass: "bg-amber-500",
+    bgClass: "bg-amber-50 dark:bg-amber-950/30",
     textClass: "text-amber-700 dark:text-amber-300",
-    borderClass: "border-amber-200 dark:border-amber-900",
+    borderClass: "border-amber-200/70 dark:border-amber-900/60",
   },
   pagado: {
     value: "pagado",
     label: "Pagado",
-    emoji: "✅",
-    color: "#10B981",
-    bgClass: "bg-emerald-100 dark:bg-emerald-950/40",
+    icon: CheckCircle2,
+    tone: "emerald",
+    dotClass: "bg-emerald-500",
+    bgClass: "bg-emerald-50 dark:bg-emerald-950/30",
     textClass: "text-emerald-700 dark:text-emerald-300",
-    borderClass: "border-emerald-200 dark:border-emerald-900",
+    borderClass: "border-emerald-200/70 dark:border-emerald-900/60",
   },
   cancelado: {
     value: "cancelado",
     label: "Cancelado",
-    emoji: "✖️",
-    color: "#EF4444",
-    bgClass: "bg-rose-100 dark:bg-rose-950/40",
-    textClass: "text-rose-700 dark:text-rose-300",
-    borderClass: "border-rose-200 dark:border-rose-900",
+    icon: CircleSlash,
+    tone: "rose",
+    dotClass: "bg-rose-500",
+    bgClass: "bg-rose-50 dark:bg-rose-950/30",
+    textClass: "text-rose-600 dark:text-rose-300",
+    borderClass: "border-rose-200/70 dark:border-rose-900/60",
   },
 }
 
 export interface PagoMcmTipoCalculoInfo {
   value: PagoMcmTipoCalculo
   label: string
+  shortLabel: string
   descripcion: string
-  emoji: string
+  icon: LucideIcon
   disabled?: boolean
 }
 
 export const PAGO_MCM_TIPO_CALCULO_INFO: Record<PagoMcmTipoCalculo, PagoMcmTipoCalculoInfo> = {
   manual: {
     value: "manual",
-    label: "Manual",
+    label: "Importe manual",
+    shortLabel: "Manual",
     descripcion: "Importe fijo introducido a mano.",
-    emoji: "💶",
+    icon: Coins,
   },
   gasolina_tickets: {
     value: "gasolina_tickets",
     label: "Gasolina · tickets",
-    descripcion: "Subes los tickets de gasolina y se reembolsa lo que toca.",
-    emoji: "🧾",
+    shortLabel: "Tickets",
+    descripcion: "Sube los tickets de gasolina y se reembolsa lo que toca.",
+    icon: FileText,
   },
   gasolina_km: {
     value: "gasolina_km",
     label: "Gasolina · €/km",
+    shortLabel: "€/km",
     descripcion: "Cálculo automático por kilómetros recorridos.",
-    emoji: "🛣️",
+    icon: Fuel,
   },
   gasolina_avanzado: {
     value: "gasolina_avanzado",
     label: "Gasolina · avanzado",
+    shortLabel: "Avanzado",
     descripcion: "Cálculo más preciso (próximamente).",
-    emoji: "🚧",
+    icon: Gauge,
     disabled: true,
   },
 }
@@ -95,25 +109,25 @@ export interface PagoMcmGasolinaPresetInfo {
 export const PAGO_MCM_GASOLINA_PRESETS: Record<PagoMcmGasolinaPreset, PagoMcmGasolinaPresetInfo> = {
   ivaj_0_12: {
     value: "ivaj_0_12",
-    label: "IVAJ 0,12 €",
+    label: "IVAJ · 0,12 €",
     precio: 0.12,
     descripcion: "Precio de referencia del IVAJ.",
   },
   min_0_18: {
     value: "min_0_18",
-    label: "Mínimo 0,18 €",
+    label: "Mínimo · 0,18 €",
     precio: 0.18,
     descripcion: "Mínimo recomendado.",
   },
   max_0_20: {
     value: "max_0_20",
-    label: "Máximo 0,20 €",
+    label: "Máximo · 0,20 €",
     precio: 0.20,
     descripcion: "Máximo recomendado.",
   },
   estandar_0_26: {
     value: "estandar_0_26",
-    label: "Estándar 0,26 €",
+    label: "Estándar · 0,26 €",
     precio: 0.26,
     descripcion: "Estándar habitual.",
   },

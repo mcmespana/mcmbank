@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
 import { PagoMcmArchivos } from "./pago-mcm-archivos"
 import {
+  PAGO_MCM_ESTADO_INFO,
   PAGO_MCM_GASOLINA_PRESETS,
   PAGO_MCM_GASOLINA_PRESETS_ORDER,
   PAGO_MCM_TIPO_CALCULO_INFO,
@@ -230,11 +231,16 @@ export function PagoMcmForm({
           <SelectContent>
             {TIPO_CALCULO_OPTIONS.map((t) => {
               const info = PAGO_MCM_TIPO_CALCULO_INFO[t]
+              const TipoIcon = info.icon
               return (
                 <SelectItem key={t} value={t} disabled={info.disabled}>
-                  <span className="mr-1.5">{info.emoji}</span>
-                  {info.label}
-                  {info.disabled && <span className="ml-1.5 text-[10px] text-muted-foreground">(próximamente)</span>}
+                  <span className="inline-flex items-center gap-2">
+                    <TipoIcon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                    <span>{info.label}</span>
+                    {info.disabled && (
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">próximamente</span>
+                    )}
+                  </span>
                 </SelectItem>
               )
             })}
@@ -245,10 +251,12 @@ export function PagoMcmForm({
 
       {/* Inputs específicos de gasolina_km */}
       {tipoCalculo === "gasolina_km" && (
-        <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+        <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="km">Kilómetros (un trayecto)</Label>
+              <Label htmlFor="km" className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Km (un trayecto)
+              </Label>
               <Input
                 id="km"
                 type="text"
@@ -256,22 +264,25 @@ export function PagoMcmForm({
                 value={km}
                 onChange={(e) => setKm(e.target.value)}
                 placeholder="0"
+                className="tabular-nums"
               />
             </div>
-            <div className="flex items-end gap-2 pb-1">
+            <div className="flex items-end gap-2 pb-1.5">
               <Checkbox
                 id="ida-vuelta"
                 checked={idaVuelta}
                 onCheckedChange={(c) => setIdaVuelta(Boolean(c))}
               />
               <Label htmlFor="ida-vuelta" className="cursor-pointer text-sm">
-                Ida y vuelta (×2)
+                Ida y vuelta <span className="text-muted-foreground">(×2)</span>
               </Label>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Precio por kilómetro</Label>
+            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Precio por kilómetro
+            </Label>
             <div className="flex flex-wrap gap-1.5">
               {PAGO_MCM_GASOLINA_PRESETS_ORDER.map((p) => {
                 const info = PAGO_MCM_GASOLINA_PRESETS[p]
@@ -282,10 +293,10 @@ export function PagoMcmForm({
                     type="button"
                     onClick={() => setPreset(p)}
                     className={cn(
-                      "rounded-full border px-2.5 py-1 text-[11px] transition-all",
+                      "rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-tight transition-all tabular-nums",
                       active
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                        : "border-border bg-background hover:bg-muted",
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border/70 bg-background text-foreground/70 hover:border-foreground/30 hover:text-foreground",
                     )}
                     title={info.descripcion}
                   >
@@ -301,28 +312,30 @@ export function PagoMcmForm({
                 value={precioKm}
                 onChange={(e) => setPrecioKm(e.target.value)}
                 placeholder="0,26"
-                className="mt-1"
+                className="mt-1.5 tabular-nums"
               />
             )}
           </div>
 
-          <div className="rounded-md bg-background/60 px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Importe calculado: </span>
-            <span className="font-semibold tabular-nums">
-              {formatCurrency(importeCalculadoKm ?? 0)}
-            </span>
-            {idaVuelta && (
-              <span className="ml-2 text-[11px] text-muted-foreground">
-                ({km || 0} km × 2 × {precioKm} €)
-              </span>
-            )}
+          <div className="flex items-baseline justify-between gap-3 rounded-lg border border-border/60 bg-background px-3 py-2.5">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Importe calculado
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-bold tracking-tight tabular-nums">
+                {formatCurrency(importeCalculadoKm ?? 0)}
+              </div>
+              <div className="text-[10px] text-muted-foreground tabular-nums">
+                {(parseFloat(km.replace(",", ".")) || 0)} km{idaVuelta ? " × 2" : ""} × {precioKm} €
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {tipoCalculo === "gasolina_tickets" && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          Sube los tickets de gasolina en la sección de archivos (próximamente) e introduce el importe total a mano.
+        <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+          Sube los tickets en la sección de archivos (al guardar el pago) e introduce el importe total a mano.
         </div>
       )}
 
@@ -389,12 +402,23 @@ export function PagoMcmForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="borrador">📝 Borrador</SelectItem>
-            <SelectItem value="pendiente">⏳ Pendiente</SelectItem>
-            <SelectItem value="pagado" disabled={!pago?.movimiento_id}>
-              ✅ Pagado {!pago?.movimiento_id && "(vincula un movimiento primero)"}
-            </SelectItem>
-            <SelectItem value="cancelado">✖️ Cancelado</SelectItem>
+            {(["borrador", "pendiente", "pagado", "cancelado"] as const).map((s) => {
+              const info = PAGO_MCM_ESTADO_INFO[s]
+              const lockedPagado = s === "pagado" && !pago?.movimiento_id
+              return (
+                <SelectItem key={s} value={s} disabled={lockedPagado}>
+                  <span className="inline-flex items-center gap-2">
+                    <span className={cn("h-1.5 w-1.5 rounded-full", info.dotClass)} aria-hidden />
+                    <span>{info.label}</span>
+                    {lockedPagado && (
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        vincula un movimiento
+                      </span>
+                    )}
+                  </span>
+                </SelectItem>
+              )
+            })}
           </SelectContent>
         </Select>
       </div>

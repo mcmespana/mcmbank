@@ -80,7 +80,7 @@ export function CategoryChip({
         </Button>
 
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-3xl w-full p-0 overflow-hidden">
+          <DialogContent className="max-w-3xl w-full p-0 overflow-hidden z-[60]">
             <DialogHeader className="sr-only">
               <DialogTitle>Cambiar categoría</DialogTitle>
               <DialogDescription>

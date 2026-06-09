@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect, useRef, type CSSProperties } from "react"
-import { X, Search, Plus } from "lucide-react"
+import { X, Search, Plus, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -56,6 +56,19 @@ export function CategoryMegaSelector({
   useEffect(() => {
     const frame = requestAnimationFrame(() => inputRef.current?.focus())
     return () => cancelAnimationFrame(frame)
+  }, [])
+
+  // Escape cierra el selector desde cualquier sitio (no solo el input)
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation()
+        onClose()
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const { groups, orphans, parentLookup } = useMemo(() => {
@@ -114,7 +127,14 @@ export function CategoryMegaSelector({
     return { groups, orphans, parentLookup: parentLookupMap }
   }, [categories])
 
-  const normalizedSearch = searchValue.trim().toLowerCase()
+  // Búsqueda insensible a acentos: "campana" encuentra "Campaña"
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+
+  const normalizedSearch = normalize(searchValue.trim())
 
   const filteredResults = useMemo(() => {
     if (!normalizedSearch) {
@@ -123,7 +143,7 @@ export function CategoryMegaSelector({
 
     return categories
       .filter((category) =>
-        category.nombre.toLowerCase().includes(normalizedSearch) ||
+        normalize(category.nombre).includes(normalizedSearch) ||
         (category.emoji && category.emoji.includes(searchValue.trim())),
       )
       .sort((a, b) => {
@@ -329,11 +349,11 @@ export function CategoryMegaSelector({
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
               {selectedCategories.length === 0
-                ? "Selecciona categorías para filtrar"
+                ? "Sin categorías seleccionadas (aplicar = quitar filtro)"
                 : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
             </p>
-            <Button onClick={handleApply} disabled={selectedCategories.length === 0}>
-              Aplicar filtros
+            <Button onClick={handleApply}>
+              {selectedCategories.length === 0 ? "Quitar filtros" : "Aplicar filtros"}
             </Button>
           </div>
         </div>
@@ -447,6 +467,7 @@ function CategoryPill({ category, size = "md", isSelected = false, onClick }: Ca
       )}
       style={badgeStyles}
     >
+      {isSelected && <Check className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={3} />}
       {category.emoji && <span className="text-sm leading-none">{category.emoji}</span>}
       <span className="font-medium leading-none">{category.nombre}</span>
     </Badge>

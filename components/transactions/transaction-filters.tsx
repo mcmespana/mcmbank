@@ -1,5 +1,5 @@
 "use client"
-import { X, Tag, Building2, PiggyBank } from "lucide-react"
+import { X, Tag, Building2, PiggyBank, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -42,13 +42,14 @@ export function TransactionFiltersComponent({
     updateFilter("contactoTipos", next.length > 0 ? next : undefined)
   }
 
-  const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+  const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
     if (key === "uncategorized" || key === "dateRange") return false
     if (key === "categoryIds" || key === "contactoIds" || key === "contactoTipos") {
       return Array.isArray(value) && value.length > 0
     }
     return value !== undefined && value !== "" && value !== false
-  })
+  }).length
+  const hasActiveFilters = activeFilterCount > 0
 
   return (
     <div className="space-y-4">
@@ -57,7 +58,9 @@ export function TransactionFiltersComponent({
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse shrink-0"></div>
-              <span className="text-xs font-medium text-blue-700 dark:text-blue-300 truncate">Filtros activos</span>
+              <span className="text-xs font-medium text-blue-700 dark:text-blue-300 truncate">
+                {activeFilterCount} filtro{activeFilterCount !== 1 ? "s" : ""} activo{activeFilterCount !== 1 ? "s" : ""}
+              </span>
             </div>
             <Button
               variant="outline"
@@ -100,12 +103,25 @@ export function TransactionFiltersComponent({
 
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-foreground uppercase tracking-wide">Buscar</Label>
-        <Input
-          placeholder="Concepto, descripción, contacto…"
-          value={filters.search || ""}
-          onChange={(e) => updateFilter("search", e.target.value || undefined)}
-          className="h-9 bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
-        />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Concepto, descripción, contacto…"
+            value={filters.search || ""}
+            onChange={(e) => updateFilter("search", e.target.value || undefined)}
+            className="h-9 bg-background border-border pl-9 pr-8 focus:border-primary focus:ring-1 focus:ring-primary/20"
+          />
+          {filters.search && (
+            <button
+              type="button"
+              onClick={() => updateFilter("search", undefined)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">

@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react"
 import { Sparkles, PartyPopper, EyeOff, Eye, RefreshCw, Bug } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ProposalsBoard } from "./proposals-board"
 import { CreateProposalDialog } from "./create-proposal-dialog"
@@ -118,86 +117,65 @@ export function ImprovementProposalsPanel() {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 text-white shadow-lg">
-        <div className="pointer-events-none absolute -left-20 -top-16 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 right-0 h-64 w-64 rounded-full bg-sky-400/30 blur-3xl" />
-
-        <div className="relative grid gap-6 p-5 sm:gap-8 sm:p-8 md:grid-cols-[2fr_1fr] md:p-10">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1 text-sm font-medium uppercase tracking-wide text-white/90">
-              <Sparkles className="h-4 w-4" /> Propuestas de mejora
-            </div>
-            <div className="space-y-3">
-              <h1 className="text-2xl sm:text-3xl font-semibold leading-tight md:text-4xl">
-                ¿Por qué no mejoramos esto?
-              </h1>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => handleOpenDialog("idea")}
-                className="rounded-full bg-white text-indigo-700 shadow-lg shadow-indigo-900/20 transition hover:bg-white/90 sm:text-sm sm:px-4 sm:py-2"
-              >
-                <PartyPopper className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Compartir idea
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => handleOpenDialog("error")}
-                className="rounded-full border-white/30 bg-white/20 text-white hover:bg-white/30 sm:text-sm sm:px-4 sm:py-2"
-              >
-                <Bug className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Reportar error
-              </Button>
-
-              {showCelebratedToggle && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => setShowCompleted((prev) => !prev)}
-                  className={cn(
-                    "rounded-full border-white/30 bg-white/20 text-white hover:bg-white/30",
-                    showCompleted && "bg-white text-indigo-700 hover:bg-white/90",
-                  )}
-                >
-                  {showCompleted ? (
-                    <>
-                      <EyeOff className="mr-2 h-5 w-5" /> Ocultar Desarrollos Hechísimos
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="mr-2 h-5 w-5" /> Mostrar Desarrollos Hechísimos
-                    </>
-                  )}
-                </Button>
-              )}
-
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                onClick={handleRefresh}
-                disabled={manualRefresh || loading}
-                className="rounded-full border-white/30 bg-white/10 text-white hover:bg-white/20"
-              >
-                <RefreshCw className={cn("mr-2 h-5 w-5", manualRefresh && "animate-spin")} />
-                Refrescar
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
-              {isAdmin && <Badge className="bg-white text-indigo-700 hover:bg-white">Control gestor central</Badge>}
-              <Badge className="bg-white/20 text-white">{ideaProposals.length} ideas</Badge>
-              <Badge className="bg-white/20 text-white">{errorProposals.length} errores</Badge>
-            </div>
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-primary/10 bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-4 text-white shadow-md sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-lg font-semibold sm:text-xl">
+              <Sparkles className="h-5 w-5 flex-shrink-0" />
+              ¿Por qué no mejoramos esto?
+            </h1>
+            <p className="text-sm text-white/80">
+              {ideaProposals.length} ideas · {errorProposals.length} errores
+              {isAdmin && " · gestionas los estados"}
+            </p>
           </div>
-
-
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleOpenDialog("idea")}
+              className="rounded-full bg-white text-indigo-700 hover:bg-white/90"
+            >
+              <PartyPopper className="mr-1.5 h-4 w-4" /> Compartir idea
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => handleOpenDialog("error")}
+              className="rounded-full border-white/30 bg-white/20 text-white hover:bg-white/30"
+            >
+              <Bug className="mr-1.5 h-4 w-4" /> Reportar error
+            </Button>
+            {showCelebratedToggle && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowCompleted((prev) => !prev)}
+                title={showCompleted ? "Ocultar hechísimos" : "Mostrar hechísimos"}
+                className={cn(
+                  "rounded-full border-white/30 bg-white/20 text-white hover:bg-white/30",
+                  showCompleted && "bg-white text-indigo-700 hover:bg-white/90",
+                )}
+              >
+                {showCompleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="ml-1.5 hidden sm:inline">Hechísimos</span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={manualRefresh || loading}
+              title="Refrescar"
+              className="rounded-full border-white/30 bg-white/10 px-2.5 text-white hover:bg-white/20"
+            >
+              <RefreshCw className={cn("h-4 w-4", manualRefresh && "animate-spin")} />
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -209,18 +187,11 @@ export function ImprovementProposalsPanel() {
       )}
 
       {/* Errores primero */}
-      <section className="space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-bold text-destructive flex items-center gap-2">
-              <Bug className="h-6 w-6" />
-              Errores reportados por la comunidad
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Usa este tablero para seguir el avance de los fallos que ya estamos revisando. Esto está arriba para que no se olviden.
-            </p>
-          </div>
-        </div>
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-destructive">
+          <Bug className="h-5 w-5" />
+          Errores reportados
+        </h2>
 
         <ProposalsBoard
           type="error"
@@ -237,18 +208,11 @@ export function ImprovementProposalsPanel() {
       </section>
 
       {/* Ideas después */}
-      <section className="space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
-              <Sparkles className="h-6 w-6" />
-              Ideas de mejora
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Comparte tus ideas para mejorar la aplicación. La comunidad puede votarlas y el equipo las revisará.
-            </p>
-          </div>
-        </div>
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-primary">
+          <Sparkles className="h-5 w-5" />
+          Ideas de mejora
+        </h2>
 
         <ProposalsBoard
           type="idea"

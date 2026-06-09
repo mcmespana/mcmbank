@@ -66,8 +66,9 @@ export function useDelegationCounts() {
           build: async (signal) => {
             const { count, error } = await supabase
               .from("movimiento")
-              .select("id", { head: true, count: "exact" })
+              .select("id, cuenta:cuenta_id!inner(activa)", { head: true, count: "exact" })
               .eq("delegacion_id", delegationId)
+              .eq("cuenta.activa", true)
               .abortSignal(signal)
             return { data: { count: typeof count === "number" ? count : 0 }, error }
           },

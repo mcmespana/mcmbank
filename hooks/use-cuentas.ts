@@ -9,13 +9,14 @@ import { runQuery } from "@/lib/db/query"
 interface UseCuentasOptions {
   timeout?: number // milliseconds, default 10000 (10s)
   ttlMs?: number // cache TTL before auto refetch, default 30000 (30s)
+  includeInactive?: boolean // incluir cuentas desactivadas (solo gestor de cuentas), default false
 }
 
 export function useCuentas(
   delegacionId: string | null,
   options: UseCuentasOptions = {}
 ) {
-  const { timeout = 10000, ttlMs = 30000 } = options
+  const { timeout = 10000, ttlMs = 30000, includeInactive = false } = options
   const [cuentas, setCuentas] = useState<CuentaConDelegacion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -90,6 +91,7 @@ export function useCuentas(
               last_sync_status,
               last_sync_error,
               sync_desde_fecha,
+              activa,
               delegacion:delegacion_id (
                 id,
                 organizacion_id,
@@ -117,10 +119,15 @@ export function useCuentas(
       }
 
       // Transform data to match CuentaConDelegacion type
-      const transformedData = (data || []).map((item: any) => ({
+      let transformedData = (data || []).map((item: any) => ({
         ...item,
         delegacion: Array.isArray(item.delegacion) ? item.delegacion[0] : item.delegacion
       })) as CuentaConDelegacion[]
+
+      // Cuentas desactivadas: solo visibles donde se pida explícitamente (gestor de cuentas)
+      if (!includeInactive) {
+        transformedData = transformedData.filter((c) => (c as any).activa !== false)
+      }
 
       setCuentas(transformedData)
       lastFetchAtRef.current = Date.now()
@@ -142,7 +149,7 @@ export function useCuentas(
         timeoutRef.current = null
       }
     }
-  }, [memoizedDelegacionId, timeout, cuentas.length, delegacionId, ttlMs])
+  }, [memoizedDelegacionId, timeout, cuentas.length, delegacionId, ttlMs, includeInactive])
 
   // Función para forzar un refresh completo
   const forceRefresh = useCallback(() => {

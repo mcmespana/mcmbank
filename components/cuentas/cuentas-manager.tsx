@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check, User, Link2, RefreshCw, Unlink } from "lucide-react"
+import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check, User, Link2, RefreshCw, Unlink, Power, PowerOff } from "lucide-react"
 import { BankAvatar } from "@/components/bank-avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,7 +32,7 @@ export function CuentasManager() {
     addCuenta,
     updateCuenta,
     removeCuenta,
-  } = useCuentas(selectedDelegation)
+  } = useCuentas(selectedDelegation, { includeInactive: true })
   console.log("CuentasManager: cuentas after useCuentas", cuentasWithDelegacion)
   const cuentas = useMemo(
     () => cuentasWithDelegacion.map((item) => {
@@ -165,6 +165,32 @@ export function CuentasManager() {
       forceRefresh()
     } catch (e) {
       toast.error("Error al desconectar: " + (e instanceof Error ? e.message : String(e)))
+    }
+  }
+
+  const handleToggleActiva = async (cuenta: Cuenta) => {
+    const activar = (cuenta as any).activa === false
+    if (
+      !activar &&
+      !confirm(
+        `¿Desactivar "${cuenta.nombre}"? La cuenta y sus movimientos dejarán de aparecer en transacciones y estadísticas, pero se conservan como copia. Puedes reactivarla cuando quieras.`,
+      )
+    ) {
+      return
+    }
+    try {
+      const { error } = await (supabase as any)
+        .from("cuenta")
+        .update({ activa: activar })
+        .eq("id", cuenta.id)
+      if (error) {
+        toast.error("Error al actualizar la cuenta: " + error.message)
+        return
+      }
+      toast.success(activar ? "Cuenta reactivada" : "Cuenta desactivada")
+      forceRefresh()
+    } catch (e) {
+      toast.error("Error: " + (e instanceof Error ? e.message : String(e)))
     }
   }
 
@@ -358,6 +384,12 @@ export function CuentasManager() {
         cuenta.banco_nombre?.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     .sort((a, b) => {
+      // Desactivadas al final
+      const aInactive = (a as any).activa === false
+      const bInactive = (b as any).activa === false
+      if (aInactive !== bInactive) {
+        return aInactive ? 1 : -1
+      }
       // Primero bancos, luego cajas
       if (a.tipo !== b.tipo) {
         return a.tipo === "banco" ? -1 : 1
@@ -490,6 +522,7 @@ export function CuentasManager() {
               const isCreating = operationStates[cuenta.id] === 'creating'
               const isUpdating = operationStates[cuenta.id] === 'updating'
               const isDeleting = operationStates[cuenta.id] === 'deleting'
+              const isInactive = (cuenta as any).activa === false
 
               return (
                 <Card
@@ -497,7 +530,7 @@ export function CuentasManager() {
                   className={`group hover:shadow-lg transition-all duration-200 border-border bg-card ${isCreating ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20' :
                     isUpdating ? 'ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
                       isDeleting ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''
-                    }`}
+                    } ${isInactive ? 'opacity-50 grayscale' : ''}`}
                 >
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col gap-4">
@@ -569,6 +602,11 @@ export function CuentasManager() {
                                     </span>
                                   )}
                                 </h3>
+                                {isInactive && (
+                                  <Badge variant="outline" className="text-xs text-muted-foreground border-dashed flex-shrink-0">
+                                    Desactivada
+                                  </Badge>
+                                )}
                                 {cuenta.descripcion && (
                                   <Popover>
                                     <PopoverTrigger asChild>
@@ -756,6 +794,20 @@ export function CuentasManager() {
                                 </Button>
                               </>
                             )}
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleActiva(cuenta)}
+                              disabled={isCreating || isUpdating || isDeleting}
+                              className={`h-8 w-8 sm:h-9 sm:w-9 p-0 disabled:opacity-50 disabled:cursor-not-allowed ${isInactive
+                                ? "text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-200 dark:hover:bg-green-950"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300 dark:hover:bg-gray-900"
+                                }`}
+                              title={isInactive ? "Reactivar cuenta" : "Desactivar cuenta (se conserva como copia, fuera de estadísticas)"}
+                            >
+                              {isInactive ? <Power className="h-3 w-3 sm:h-4 sm:w-4" /> : <PowerOff className="h-3 w-3 sm:h-4 sm:w-4" />}
+                            </Button>
 
                             <Button
                               variant="outline"

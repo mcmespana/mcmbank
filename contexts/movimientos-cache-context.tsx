@@ -160,14 +160,15 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
               creado_por,
               creado_en,
               concepto_hash,
-              cuenta:cuenta_id (
+              cuenta:cuenta_id!inner (
                 id,
                 delegacion_id,
                 nombre,
                 tipo,
                 origen,
                 banco_nombre,
-                color
+                color,
+                activa
               ),
               categoria:categoria_id (
                 id,
@@ -192,6 +193,8 @@ export function MovimientosCacheProvider({ children }: { children: React.ReactNo
             )
             .eq("delegacion_id", delegacionId)
             .eq("ignorado", false)
+            // Excluir movimientos de cuentas desactivadas
+            .eq("cuenta.activa", true)
             .order("fecha", { ascending: false })
             .order("creado_en", { ascending: false })
 

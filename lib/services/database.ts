@@ -358,14 +358,15 @@ export class DatabaseService {
         contacto_id,
         pago_mcm_id,
         creado_en,
-        cuenta:cuenta_id (
+        cuenta:cuenta_id!inner (
           id,
           delegacion_id,
           nombre,
           tipo,
           origen,
           banco_nombre,
-          color
+          color,
+          activa
         ),
         categoria:categoria_id (
           id,
@@ -380,6 +381,7 @@ export class DatabaseService {
       `)
       .eq("contacto_id", contactoId)
       .eq("ignorado", false)
+      .eq("cuenta.activa", true)
       .order("fecha", { ascending: false })
       .order("creado_en", { ascending: false })
       .limit(limite)

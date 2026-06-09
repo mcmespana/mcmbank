@@ -65,6 +65,7 @@ export type Database = {
           last_sync_status: string | null
           last_sync_error: string | null
           sync_desde_fecha: string | null
+          activa: boolean
         }
         Insert: {
           id?: string
@@ -86,6 +87,7 @@ export type Database = {
           last_sync_status?: string | null
           last_sync_error?: string | null
           sync_desde_fecha?: string | null
+          activa?: boolean
         }
         Update: {
           id?: string
@@ -107,6 +109,7 @@ export type Database = {
           last_sync_status?: string | null
           last_sync_error?: string | null
           sync_desde_fecha?: string | null
+          activa?: boolean
         }
       }
       movimiento: {

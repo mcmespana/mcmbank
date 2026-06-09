@@ -212,29 +212,12 @@ export function CategoryMegaSelector({
               </div>
             ) : title ? (
               <div className="flex items-start gap-3">
-                <div className="space-y-1">
-                  <h2 className="text-lg font-semibold leading-tight">{title}</h2>
-                  {allowMultiple && selectedCategories.length > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      {selectedCategories.length} categoría{selectedCategories.length !== 1 ? "s" : ""} seleccionada{selectedCategories.length !== 1 ? "s" : ""}
-                    </p>
-                  )}
-                </div>
+                <h2 className="text-lg font-semibold leading-tight">{title}</h2>
               </div>
             ) : null}
           </div>
 
           <div className="flex items-center gap-2">
-            {allowMultiple && selectedCategories.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearAll}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Limpiar
-              </Button>
-            )}
             {movement && (
               <span
                 className={cn(
@@ -360,13 +343,31 @@ export function CategoryMegaSelector({
       </div>
 
       {allowMultiple && (
-        <div className="border-t bg-muted/20 p-4 sm:p-6">
+        <div className="border-t bg-muted/20 px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              {selectedCategories.length === 0
-                ? "Sin categorías seleccionadas (aplicar = quitar filtro)"
-                : `${selectedCategories.length} categoría${selectedCategories.length !== 1 ? "s" : ""} seleccionada${selectedCategories.length !== 1 ? "s" : ""}`}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                {selectedCategories.length === 0 ? (
+                  "Ninguna seleccionada"
+                ) : (
+                  <>
+                    <span className="font-semibold text-foreground">{selectedCategories.length}</span>{" "}
+                    seleccionada{selectedCategories.length !== 1 ? "s" : ""}
+                  </>
+                )}
+              </p>
+              {selectedCategories.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAll}
+                  className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                  Limpiar
+                </Button>
+              )}
+            </div>
             <Button onClick={handleApply}>
               {selectedCategories.length === 0 ? "Quitar filtros" : "Aplicar filtros"}
             </Button>
@@ -472,7 +473,7 @@ function CategoryPill({ category, size = "md", isSelected = false, onClick }: Ca
       variant="outline"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-transparent shadow-sm transition-all duration-200 bg-[var(--category-color)] text-[var(--category-text-color)] hover:shadow-md cursor-pointer",
+        "inline-flex items-center gap-2 rounded-full border border-transparent shadow-sm transition-all duration-200 bg-[var(--category-color)] text-[var(--category-text-color)] hover:bg-[var(--category-color)] hover:brightness-110 hover:shadow-md cursor-pointer",
         isSelected && "ring-2 ring-primary",
         sizeClasses,
       )}

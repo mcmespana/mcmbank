@@ -83,6 +83,13 @@ export function useCuentas(
               personas_autorizadas,
               descripcion,
               creado_en,
+              banco_conexion_id,
+              external_account_uid,
+              sync_enabled,
+              last_sync_at,
+              last_sync_status,
+              last_sync_error,
+              sync_desde_fecha,
               delegacion:delegacion_id (
                 id,
                 organizacion_id,

@@ -36,13 +36,10 @@ export function MonthlyTrend({ from, to }: Props) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold flex items-center gap-2">
-        <div className="h-6 w-1 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" />
-        Tendencia Mensual
-      </h2>
+      <h2 className="text-xl font-semibold">Tendencia mensual</h2>
       <Card>
-        <CardHeader>
-          <CardTitle>Evolución Financiera</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Ingresos, gastos y balance por mes</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px]">

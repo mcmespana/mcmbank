@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -17,6 +15,8 @@ import {
   Scale,
   Tags,
   X,
+  List,
+  Layers,
 } from "lucide-react"
 import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
 import { useDelegationContext } from "@/contexts/delegation-context"
@@ -43,6 +43,80 @@ const FALLBACK_COLORS = [
   "#06b6d4", "#84cc16", "#f97316", "#ec4899", "#6366f1",
 ]
 
+type SummaryRow = {
+  id: string
+  name: string
+  income: number
+  expense: number
+  emoji?: string
+  incomePct: number
+  expensePct: number
+}
+
+function PctBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+        <div className={cn("h-full rounded-full", color)} style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+      <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{pct.toFixed(0)}%</span>
+    </div>
+  )
+}
+
+function CategoryDataRow({
+  row,
+  indent = false,
+  nameOverride,
+}: {
+  row: SummaryRow
+  indent?: boolean
+  nameOverride?: string
+}) {
+  const rowBalance = row.income - row.expense
+  return (
+    <TableRow>
+      <TableCell className={cn(indent && "pl-10")}>
+        <div className="flex items-center gap-2">
+          {!nameOverride && row.emoji && <span className="text-lg">{row.emoji}</span>}
+          <span className={cn("font-medium", nameOverride && "italic text-muted-foreground")}>
+            {nameOverride ?? row.name}
+          </span>
+        </div>
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.income ? (
+          <span className="font-medium text-green-600 dark:text-green-400">{formatCurrency(row.income)}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        {row.income > 0 && <PctBar pct={row.incomePct} color="bg-green-500/80" />}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.expense ? (
+          <span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(row.expense)}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        {row.expense > 0 && <PctBar pct={row.expensePct} color="bg-red-500/80" />}
+      </TableCell>
+      <TableCell
+        className={cn(
+          "text-right font-semibold tabular-nums",
+          rowBalance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
+        )}
+      >
+        {rowBalance >= 0 ? "+" : ""}
+        {formatCurrency(rowBalance)}
+      </TableCell>
+    </TableRow>
+  )
+}
+
 export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   const { selectedDelegation } = useDelegationContext()
   const [isLoaded, setIsLoaded] = useState(false)
@@ -51,6 +125,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   const [sortField, setSortField] = useState<SortField>("default")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [selectorOpen, setSelectorOpen] = useState(false)
+  const [grouped, setGrouped] = useState(false)
 
   const { categorias } = useCategorias(selectedDelegation)
   const expandedCategoryIds = useMemo(
@@ -80,6 +155,9 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
             setCategoryIds(parsed)
           }
         }
+        if (window.localStorage.getItem("mcmbank-dashboard-analysis-grouped") === "1") {
+          setGrouped(true)
+        }
       } catch (error) {
         console.warn("Error loading categories from local storage", error)
       } finally {
@@ -99,6 +177,15 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
       console.warn("Error saving categories to local storage", error)
     }
   }, [selectedCategories, isLoaded])
+
+  useEffect(() => {
+    if (!isLoaded) return
+    try {
+      window.localStorage.setItem("mcmbank-dashboard-analysis-grouped", grouped ? "1" : "0")
+    } catch {
+      // ignore
+    }
+  }, [grouped, isLoaded])
 
   useEffect(() => {
     if (!resetToken) return
@@ -184,6 +271,72 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
 
     return result
   }, [filteredBreakdown, categorias, sortField, sortDirection, totals])
+
+  // Vista agrupada: subcategorías bajo su categoría padre, con subtotales por grupo.
+  // Las filas de `summary` ya vienen ordenadas por sortField → los hijos heredan ese orden.
+  const groupedSummary = useMemo(() => {
+    if (!grouped) return []
+    type Row = (typeof summary)[number]
+    type Group = {
+      key: string
+      name: string
+      emoji?: string
+      order: number
+      income: number
+      expense: number
+      ownRow: Row | null
+      children: Row[]
+    }
+    const map = new Map<string, Group>()
+    for (const row of summary) {
+      const cat = categorias.find((c) => c.id === row.id)
+      const parentCat = cat?.categoria_padre_id
+        ? categorias.find((c) => c.id === cat.categoria_padre_id)
+        : undefined
+      const groupCat = parentCat ?? cat
+      const key = groupCat?.id ?? row.id
+      let g = map.get(key)
+      if (!g) {
+        g = {
+          key,
+          name: groupCat?.nombre ?? row.name,
+          emoji: groupCat?.emoji ?? row.emoji,
+          order: groupCat?.orden ?? 999,
+          income: 0,
+          expense: 0,
+          ownRow: null,
+          children: [],
+        }
+        map.set(key, g)
+      }
+      g.income += row.income
+      g.expense += row.expense
+      if (parentCat) {
+        g.children.push(row)
+      } else {
+        g.ownRow = row
+      }
+    }
+    const groups = [...map.values()]
+    if (sortField === "default") {
+      groups.sort((a, b) => (a.order || 999) - (b.order || 999))
+    } else if (sortField === "category") {
+      groups.sort((a, b) => {
+        const cmp = a.name.localeCompare(b.name)
+        return sortDirection === "asc" ? cmp : -cmp
+      })
+    } else if (sortField === "income") {
+      groups.sort((a, b) => (sortDirection === "asc" ? a.income - b.income : b.income - a.income))
+    } else if (sortField === "expense") {
+      groups.sort((a, b) => (sortDirection === "asc" ? a.expense - b.expense : b.expense - a.expense))
+    } else if (sortField === "balance") {
+      groups.sort((a, b) => {
+        const cmp = a.income - a.expense - (b.income - b.expense)
+        return sortDirection === "asc" ? cmp : -cmp
+      })
+    }
+    return groups
+  }, [grouped, summary, categorias, sortField, sortDirection])
 
   const clearFilters = () => {
     setCategoryIds([])
@@ -432,13 +585,35 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
           {summary.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Tags className="h-4 w-4" />
-                  Detalle por categoría
-                  <span className="ml-1 text-sm font-normal text-muted-foreground">
-                    ({summary.length} categoría{summary.length !== 1 ? "s" : ""})
-                  </span>
-                </CardTitle>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Tags className="h-4 w-4" />
+                    Detalle por categoría
+                    <span className="ml-1 text-sm font-normal text-muted-foreground">
+                      ({summary.length} categoría{summary.length !== 1 ? "s" : ""})
+                    </span>
+                  </CardTitle>
+                  <div className="flex rounded-lg border p-0.5">
+                    <Button
+                      variant={grouped ? "ghost" : "secondary"}
+                      size="sm"
+                      className="h-7 gap-1.5 px-2.5 text-xs"
+                      onClick={() => setGrouped(false)}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      Lista
+                    </Button>
+                    <Button
+                      variant={grouped ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-7 gap-1.5 px-2.5 text-xs"
+                      onClick={() => setGrouped(true)}
+                    >
+                      <Layers className="h-3.5 w-3.5" />
+                      Agrupado
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -465,76 +640,76 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {summary.map((s) => {
-                      const rowBalance = s.income - s.expense
-                      return (
-                        <TableRow key={s.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {s.emoji && <span className="text-lg">{s.emoji}</span>}
-                              <span className="font-medium">{s.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {s.income ? (
-                              <span className="font-medium text-green-600 dark:text-green-400">
-                                {formatCurrency(s.income)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {s.income > 0 && (
-                              <div className="flex items-center gap-2">
-                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                  <div
-                                    className="h-full rounded-full bg-green-500/80"
-                                    style={{ width: `${Math.min(s.incomePct, 100)}%` }}
-                                  />
-                                </div>
-                                <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
-                                  {s.incomePct.toFixed(0)}%
-                                </span>
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {s.expense ? (
-                              <span className="font-medium text-red-600 dark:text-red-400">
-                                {formatCurrency(s.expense)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {s.expense > 0 && (
-                              <div className="flex items-center gap-2">
-                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                  <div
-                                    className="h-full rounded-full bg-red-500/80"
-                                    style={{ width: `${Math.min(s.expensePct, 100)}%` }}
-                                  />
-                                </div>
-                                <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
-                                  {s.expensePct.toFixed(0)}%
-                                </span>
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              "text-right font-semibold tabular-nums",
-                              rowBalance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
-                            )}
-                          >
-                            {rowBalance >= 0 ? "+" : ""}
-                            {formatCurrency(rowBalance)}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
+                    {!grouped
+                      ? summary.map((s) => (
+                          <CategoryDataRow key={s.id} row={s} />
+                        ))
+                      : groupedSummary.map((g) => {
+                          const hasChildren = g.children.length > 0
+                          if (!hasChildren && g.ownRow) {
+                            // Grupo sin subcategorías → fila normal
+                            return <CategoryDataRow key={g.key} row={g.ownRow} />
+                          }
+                          const groupBalance = g.income - g.expense
+                          const groupIncomePct = totals.income > 0 ? (g.income / totals.income) * 100 : 0
+                          const groupExpensePct = totals.expense > 0 ? (g.expense / totals.expense) * 100 : 0
+                          return (
+                            <React.Fragment key={g.key}>
+                              <TableRow className="bg-muted/40 hover:bg-muted/60">
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {g.emoji && <span className="text-lg">{g.emoji}</span>}
+                                    <span className="font-semibold">{g.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {g.children.length} subcategoría{g.children.length !== 1 ? "s" : ""}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {g.income ? (
+                                    <span className="font-semibold text-green-600 dark:text-green-400">
+                                      {formatCurrency(g.income)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                  {g.income > 0 && <PctBar pct={groupIncomePct} color="bg-green-500/80" />}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {g.expense ? (
+                                    <span className="font-semibold text-red-600 dark:text-red-400">
+                                      {formatCurrency(g.expense)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                  {g.expense > 0 && <PctBar pct={groupExpensePct} color="bg-red-500/80" />}
+                                </TableCell>
+                                <TableCell
+                                  className={cn(
+                                    "text-right font-bold tabular-nums",
+                                    groupBalance >= 0
+                                      ? "text-green-600 dark:text-green-400"
+                                      : "text-red-600 dark:text-red-400",
+                                  )}
+                                >
+                                  {groupBalance >= 0 ? "+" : ""}
+                                  {formatCurrency(groupBalance)}
+                                </TableCell>
+                              </TableRow>
+                              {g.ownRow && (
+                                <CategoryDataRow row={g.ownRow} indent nameOverride="(sin subcategoría)" />
+                              )}
+                              {g.children.map((child) => (
+                                <CategoryDataRow key={child.id} row={child} indent />
+                              ))}
+                            </React.Fragment>
+                          )
+                        })}
                   </TableBody>
                   <TableFooter>
                     <TableRow>

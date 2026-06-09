@@ -504,6 +504,15 @@ export function TransactionManager() {
       setFilters((prev) => ({ ...prev, uncategorized: true }))
     }
 
+    // Llega desde el dashboard (Balance) con categorías preseleccionadas
+    const categoriasParam = searchParams.get("categorias")
+    if (categoriasParam) {
+      const ids = categoriasParam.split(",").filter(Boolean)
+      if (ids.length > 0) {
+        setFilters((prev) => ({ ...prev, categoryIds: ids }))
+      }
+    }
+
     const movId = searchParams.get("mov")
     if (movId) {
       const found = movements.find((m) => m.id === movId)

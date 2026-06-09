@@ -132,7 +132,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
               // no-op
             }
           }}
-          className="flex items-center gap-3 hover:opacity-90 transition-all duration-300 hover:scale-105"
+          className="flex items-center gap-3 transition-opacity duration-200 hover:opacity-80"
           title="Ir al inicio"
         >
           <div className="bg-gradient-to-br from-primary to-primary/70 p-2 rounded-xl shadow-lg flex-shrink-0">
@@ -143,39 +143,58 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className={cn("flex-1 space-y-1", collapsed ? "px-2 py-4" : "p-4")}>
         {navigation.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = !item.enabled
 
-          const linkContent = (
+          // Modo encogido: solo icono, centrado, con indicador de activo y tooltip nativo
+          const linkContent = collapsed ? (
             <div
               className={cn(
-                "flex items-center rounded-xl text-sm font-medium transition-all duration-300 relative overflow-hidden group",
-                collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3",
+                "relative mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-transparent transition-colors duration-200",
+                isDisabled
+                  ? "text-muted-foreground cursor-not-allowed opacity-40"
+                  : isActive
+                    ? "bg-primary/15 text-primary border-primary/30"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+              )}
+              title={item.name}
+            >
+              <item.icon className="h-[18px] w-[18px]" />
+              {/* Indicador de sección activa */}
+              {isActive && (
+                <span className="absolute -left-3 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
+              )}
+              {/* Punto de aviso si hay contador (sin número, no cabe) */}
+              {item.count !== null && item.count !== 0 && !isDisabled && (
+                <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-primary" />
+              )}
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "flex items-center justify-between rounded-xl border border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 relative group",
                 isDisabled
                   ? "text-muted-foreground cursor-not-allowed opacity-50"
                   : isActive
-                    ? "bg-gradient-to-r from-primary/20 to-primary/10 text-sidebar-accent-foreground shadow-md backdrop-blur-sm border border-primary/30"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:shadow-md hover:backdrop-blur-sm hover:scale-105 hover:border hover:border-sidebar-border/30",
+                    ? "bg-gradient-to-r from-primary/20 to-primary/10 text-sidebar-accent-foreground shadow-md border-primary/30"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
               )}
             >
-              {isActive && (
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent animate-pulse" />
-              )}
               <div className="flex items-center gap-3 relative z-10">
                 <div className={cn(
-                  "p-1.5 rounded-lg transition-all duration-300 flex-shrink-0",
+                  "p-1.5 rounded-lg transition-colors duration-200 flex-shrink-0",
                   isActive ? "bg-primary/20 shadow-sm" : "group-hover:bg-primary/10"
                 )}>
                   <item.icon className="h-4 w-4" />
                 </div>
-                {!collapsed && <span>{item.name}</span>}
+                <span>{item.name}</span>
               </div>
-              {!collapsed && item.count !== null && (
+              {item.count !== null && (
                 <span
                   className={cn(
-                    "rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-sm relative z-10",
+                    "rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm relative z-10",
                     isDisabled
                       ? "bg-muted text-muted-foreground"
                       : "bg-primary/90 text-primary-foreground border border-primary/20",

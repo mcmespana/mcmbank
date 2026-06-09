@@ -33,6 +33,7 @@ import {
   FilePlus,
   AlertTriangle,
   X,
+  Search,
 } from "lucide-react"
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -544,7 +545,7 @@ export function TransactionManager() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-8rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-6rem)] md:h-[calc(100vh-7rem)] lg:h-[calc(100vh-8rem)] overflow-hidden">
       {/* Desktop Sidebar Filters */}
       <div
         className={`hidden lg:block border-r bg-card transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
@@ -584,7 +585,7 @@ export function TransactionManager() {
         <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
           <div className="flex items-center justify-between gap-2 min-h-[40px]">
             {/* Date Filter with show filters button - Responsive width */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Desktop Show Filters Button */}
               {sidebarCollapsed && (
                 <Button
@@ -597,12 +598,33 @@ export function TransactionManager() {
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               )}
-              <div className="w-[200px] sm:w-[240px] md:w-[280px] lg:w-[320px]">
+              <h1 className="hidden xl:block text-lg font-bold flex-shrink-0 mr-1">Movimientos</h1>
+              <div className="w-[200px] sm:w-[240px] md:w-[260px] flex-shrink-0">
                 <DateRangeFilter
                   dateFrom={filters.dateFrom}
                   dateTo={filters.dateTo}
                   onDateRangeChange={(dateFrom, dateTo) => setFilters((prev) => ({ ...prev, dateFrom, dateTo }))}
                 />
+              </div>
+              {/* Búsqueda rápida inline (sincronizada con el filtro del sidebar) */}
+              <div className="relative hidden md:block flex-1 max-w-xs">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar concepto, contacto…"
+                  value={filters.search || ""}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value || undefined }))}
+                  className="h-9 pl-9 pr-8"
+                />
+                {filters.search && (
+                  <button
+                    type="button"
+                    onClick={() => setFilters((prev) => ({ ...prev, search: undefined }))}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 

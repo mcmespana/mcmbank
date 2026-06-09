@@ -312,20 +312,35 @@ export function CategoryMegaSelector({
                 )}
               </div>
             ) : (
-              <div className="space-y-5 pb-4">
-                {groups.map((group) => (
-                  <CategoryGroupSection
-                    key={group.parent.id}
-                    group={group}
-                    isSelected={isSelected}
-                    onSelect={handleSelect}
-                  />
-                ))}
+              <div className="space-y-2.5 pb-4">
+                {/* Grupos con subcategorías: bloque propio */}
+                {groups
+                  .filter((group) => group.children.length > 0)
+                  .map((group) => (
+                    <CategoryGroupSection
+                      key={group.parent.id}
+                      group={group}
+                      isSelected={isSelected}
+                      onSelect={handleSelect}
+                    />
+                  ))}
 
-                {orphans.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Otras categorías</p>
+                {/* Categorías sin subcategorías + huérfanas: juntas en un bloque compacto */}
+                {(groups.some((g) => g.children.length === 0) || orphans.length > 0) && (
+                  <div className="rounded-2xl border border-border/50 bg-muted/20 p-3 space-y-2.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase">Más categorías</p>
                     <div className="flex flex-wrap gap-2">
+                      {groups
+                        .filter((g) => g.children.length === 0)
+                        .map((g) => (
+                          <CategoryPill
+                            key={g.parent.id}
+                            category={g.parent}
+                            size="md"
+                            isSelected={isSelected(g.parent.id)}
+                            onClick={() => handleSelect(g.parent.id)}
+                          />
+                        ))}
                       {orphans.map((category) => (
                         <CategoryPill
                           key={category.id}
@@ -401,7 +416,7 @@ function CategoryGroupSection({ group, isSelected, onSelect }: CategoryGroupSect
   const { parent, children } = group
 
   return (
-    <div className="space-y-3">
+    <div className="rounded-2xl border border-border/50 bg-muted/20 p-3 space-y-2.5 transition-colors hover:border-border">
       <div className="flex items-center gap-3">
         <CategoryPill
           category={parent}
@@ -409,25 +424,21 @@ function CategoryGroupSection({ group, isSelected, onSelect }: CategoryGroupSect
           onClick={() => onSelect(parent.id)}
           isSelected={isSelected(parent.id)}
         />
-        {children.length > 0 && (
-          <span className="text-xs text-muted-foreground">
-            {children.length} subcategoría{children.length !== 1 ? "s" : ""}
-          </span>
-        )}
+        <span className="text-xs text-muted-foreground">
+          {children.length} subcategoría{children.length !== 1 ? "s" : ""}
+        </span>
       </div>
-      {children.length > 0 && (
-        <div className="flex flex-wrap gap-2 pl-6 sm:pl-12">
-          {children.map((child) => (
-            <CategoryPill
-              key={child.id}
-              category={child}
-              size="sm"
-              onClick={() => onSelect(child.id)}
-              isSelected={isSelected(child.id)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-2">
+        {children.map((child) => (
+          <CategoryPill
+            key={child.id}
+            category={child}
+            size="sm"
+            onClick={() => onSelect(child.id)}
+            isSelected={isSelected(child.id)}
+          />
+        ))}
+      </div>
     </div>
   )
 }

@@ -24,6 +24,8 @@ export type SyncCuentaResult = {
   date_to: string | null
   error_mensaje?: string | null
   log: BancoSyncLogStep[]
+  /** Preview de los movimientos insertados (cap 200) para mostrar resumen en UI */
+  movimientos_insertados: Array<{ fecha: string; concepto: string | null; importe: number }>
 }
 
 function iso(d: Date): string {
@@ -135,6 +137,138 @@ function daysAgo(n: number): Date {
   const d = new Date()
   d.setUTCDate(d.getUTCDate() - n)
   return d
+}
+
+// Prioridad de tipos de balance de Enable Banking (ISO 20022). Buscamos el
+// saldo "contable actual": cerrado contabilizado (CLBD) o provisional
+// contabilizado (ITBD) antes que los disponibles, que pueden incluir
+// retenciones todavía no contabilizadas.
+const BALANCE_TYPE_PRIORITY = ["CLBD", "ITBD", "PRCD", "XPCD", "OTHR", "CLAV", "ITAV"]
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100
+}
+
+/**
+ * Saldo inicial automático. En la PRIMERA sync de una cuenta, Enable Banking
+ * solo trae movimientos desde `sync_desde_fecha`; lo anterior no existe en la
+ * app, así que la suma de movimientos NO cuadra con el saldo real del banco.
+ *
+ * Pedimos el balance actual al banco y calculamos:
+ *   saldo_inicial = balance_actual − suma(todos los movimientos de la cuenta)
+ *
+ * Insertamos un movimiento "Saldo inicial" con fecha = día anterior al primer
+ * movimiento. Idempotente vía external_id = `opening:<cuenta_id>`: si ya existe
+ * no se duplica (constraint UNIQUE cuenta_id, external_id).
+ *
+ * Best-effort: si el banco no devuelve balances o algo falla, se avisa en el
+ * log pero la sync no se rompe.
+ */
+async function ensureSaldoInicial(
+  admin: AdminClient,
+  cuenta: { id: string; delegacion_id: string; external_account_uid: string },
+  logger: SyncLogger,
+  creadoPor: string,
+): Promise<number | null> {
+  const openingExternalId = `opening:${cuenta.id}`
+
+  // ¿Ya existe el saldo inicial? (idempotencia)
+  const { data: existente } = await admin
+    .from("movimiento")
+    .select("id")
+    .eq("cuenta_id", cuenta.id)
+    .eq("external_id", openingExternalId)
+    .maybeSingle()
+  if (existente) {
+    logger.info("Saldo inicial ya existe, no se recalcula")
+    return null
+  }
+
+  // 1. Balance actual del banco
+  let balances
+  try {
+    balances = await enableBanking.getBalances(cuenta.external_account_uid)
+  } catch (err) {
+    logger.warn("No se pudieron obtener balances para el saldo inicial (no bloqueante)", {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+
+  if (!balances?.balances?.length) {
+    logger.warn("El banco no devolvió balances; no se puede calcular saldo inicial")
+    return null
+  }
+
+  // Elegir el balance contable actual según prioridad
+  const sorted = [...balances.balances].sort((a, b) => {
+    const ia = BALANCE_TYPE_PRIORITY.indexOf(a.balance_type || "")
+    const ib = BALANCE_TYPE_PRIORITY.indexOf(b.balance_type || "")
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+  })
+  const elegido = sorted[0]
+  const balanceActual = parseFloat(elegido.balance_amount.amount)
+  if (!Number.isFinite(balanceActual)) {
+    logger.warn("Balance no numérico; no se puede calcular saldo inicial", { balance: elegido })
+    return null
+  }
+
+  // 2. Suma de todos los movimientos actuales de la cuenta
+  const { data: movs, error: sumErr } = await admin
+    .from("movimiento")
+    .select("importe, fecha")
+    .eq("cuenta_id", cuenta.id)
+  if (sumErr) {
+    logger.warn("No se pudo sumar movimientos para el saldo inicial", { error: sumErr.message })
+    return null
+  }
+  const sumaMovimientos = round2((movs || []).reduce((acc, m) => acc + Number(m.importe), 0))
+
+  // 3. saldo_inicial = balance_actual − suma_movimientos
+  const saldoInicial = round2(balanceActual - sumaMovimientos)
+
+  logger.info("Cálculo de saldo inicial", {
+    balance_actual: balanceActual,
+    balance_type: elegido.balance_type,
+    suma_movimientos: sumaMovimientos,
+    saldo_inicial: saldoInicial,
+  })
+
+  // Si el saldo inicial es ~0, no insertamos (la cuenta arrancaba a 0)
+  if (Math.abs(saldoInicial) < 0.01) {
+    logger.info("Saldo inicial ≈ 0, no se inserta movimiento")
+    return 0
+  }
+
+  // 4. Fecha: día anterior al primer movimiento
+  const fechas = (movs || []).map((m) => m.fecha).filter(Boolean).sort()
+  let fechaSaldo: string
+  if (fechas.length > 0) {
+    const primera = new Date(fechas[0])
+    primera.setUTCDate(primera.getUTCDate() - 1)
+    fechaSaldo = iso(primera)
+  } else {
+    fechaSaldo = iso(new Date())
+  }
+
+  const { error: insErr } = await admin.from("movimiento").insert({
+    cuenta_id: cuenta.id,
+    delegacion_id: cuenta.delegacion_id,
+    fecha: fechaSaldo,
+    concepto: "Saldo inicial",
+    descripcion: `Calculado automáticamente: saldo del banco (${balanceActual}) menos la suma de movimientos importados (${sumaMovimientos}).`,
+    importe: saldoInicial,
+    external_id: openingExternalId,
+    origen_sync: "enablebanking",
+    creado_por: creadoPor,
+  })
+  if (insErr) {
+    logger.warn("Error al insertar saldo inicial", { error: insErr.message })
+    return null
+  }
+
+  logger.info(`Saldo inicial insertado: ${saldoInicial} con fecha ${fechaSaldo}`)
+  return saldoInicial
 }
 
 class SyncLogger {
@@ -264,6 +398,7 @@ export async function syncCuenta(
   let errores = 0
   let estado: "ok" | "error" | "parcial" = "ok"
   let errorMensaje: string | null = null
+  let movimientosInsertados: Array<{ fecha: string; concepto: string | null; importe: number }> = []
 
   try {
     // 4. Verificar sesión viva
@@ -382,6 +517,9 @@ export async function syncCuenta(
           estado = "parcial"
         } else {
           insertadas = count ?? nuevas.length
+          movimientosInsertados = nuevas
+            .slice(0, 200)
+            .map((r) => ({ fecha: r.fecha, concepto: r.concepto ?? null, importe: Number(r.importe) }))
         }
       }
 
@@ -421,6 +559,26 @@ export async function syncCuenta(
       }
 
       logger.info("Resumen", { recibidas, insertadas, duplicadas, errores })
+    }
+
+    // 6.5 Saldo inicial automático (solo primera sync). Best-effort: no rompe la sync.
+    if (isFirstSync) {
+      try {
+        await ensureSaldoInicial(
+          admin,
+          {
+            id: cuenta.id,
+            delegacion_id: cuenta.delegacion_id,
+            external_account_uid: cuenta.external_account_uid,
+          },
+          logger,
+          opts.iniciadoPor ?? "00000000-0000-0000-0000-000000000000",
+        )
+      } catch (err) {
+        logger.warn("Fallo al calcular saldo inicial (no bloqueante)", {
+          error: err instanceof Error ? err.message : String(err),
+        })
+      }
     }
 
     // 7. Actualizar cuenta
@@ -472,6 +630,7 @@ export async function syncCuenta(
     date_to: dateTo,
     error_mensaje: errorMensaje,
     log: logger.steps,
+    movimientos_insertados: movimientosInsertados,
   }
 }
 

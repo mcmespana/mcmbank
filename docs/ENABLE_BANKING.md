@@ -27,13 +27,13 @@ Este documento describe la integración de **Enable Banking (PSD2 AIS)** con MCM
 - **`cuenta`** · `banco_conexion_id`, `external_account_uid`, `external_account_hash`, `sync_enabled`, `last_sync_at`, `last_sync_status`, `last_sync_error`, `sync_desde_fecha`.
 - **`movimiento`** · `external_id` (clave de dedup), `external_id_source`, `booking_date`, `value_date`, `origen_sync`.
 
-### Índice único para dedup
+### Constraint único para dedup
 
 ```
-UNIQUE (cuenta_id, external_id) WHERE external_id IS NOT NULL
+UNIQUE (cuenta_id, external_id)
 ```
 
-Parcial para no afectar a movimientos manuales sin external_id.
+Constraint normal (no índice parcial): el upsert con `ON CONFLICT (cuenta_id, external_id)` no puede inferir índices parciales vía PostgREST. Los movimientos manuales tienen `external_id` NULL y los NULL no colisionan entre sí (migración 043).
 
 ### Estrategia de dedup (3 niveles)
 

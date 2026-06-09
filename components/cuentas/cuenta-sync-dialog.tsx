@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle, ChevronDown, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,6 +26,7 @@ type SyncResult = {
   date_to: string | null
   error_mensaje?: string | null
   log: BancoSyncLogStep[]
+  movimientos_insertados?: Array<{ fecha: string; concepto: string | null; importe: number }>
 }
 
 interface Props {
@@ -40,6 +41,18 @@ export function CuentaSyncDialog({ open, onOpenChange, cuentaId, cuentaNombre, o
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<SyncResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Refrescamos la lista de cuentas SOLO al cerrar el dialog: si lo hacemos
+  // al terminar la sync, el manager entra en loading, desmonta este dialog
+  // y se pierde el resumen en pantalla.
+  const didSyncRef = useRef(false)
+
+  const handleOpenChange = (o: boolean) => {
+    if (!o && didSyncRef.current) {
+      didSyncRef.current = false
+      onCompleted?.()
+    }
+    onOpenChange(o)
+  }
 
   const run = async () => {
     setRunning(true)
@@ -52,7 +65,7 @@ export function CuentaSyncDialog({ open, onOpenChange, cuentaId, cuentaNombre, o
         setError(body.error || `HTTP ${res.status}`)
       } else {
         setResult(body.resultado as SyncResult)
-        onCompleted?.()
+        didSyncRef.current = true
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -62,7 +75,7 @@ export function CuentaSyncDialog({ open, onOpenChange, cuentaId, cuentaNombre, o
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -103,7 +116,7 @@ export function CuentaSyncDialog({ open, onOpenChange, cuentaId, cuentaNombre, o
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={running}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={running}>
             Cerrar
           </Button>
           <Button onClick={run} disabled={running}>
@@ -160,7 +173,51 @@ function ResultView({ result }: { result: SyncResult }) {
         )}
       </div>
 
+      {result.movimientos_insertados && result.movimientos_insertados.length > 0 && (
+        <ImportedList movimientos={result.movimientos_insertados} total={result.insertadas} />
+      )}
+
       <LogViewer steps={result.log} />
+    </div>
+  )
+}
+
+function ImportedList({
+  movimientos,
+  total,
+}: {
+  movimientos: NonNullable<SyncResult["movimientos_insertados"]>
+  total: number
+}) {
+  const sorted = [...movimientos].sort((a, b) => b.fecha.localeCompare(a.fecha))
+  return (
+    <div className="rounded-lg border">
+      <div className="border-b px-3 py-2 font-semibold text-sm">
+        Movimientos importados ({total})
+        {total > movimientos.length && (
+          <span className="ml-2 font-normal text-xs text-muted-foreground">
+            mostrando los {movimientos.length} primeros
+          </span>
+        )}
+      </div>
+      <div className="max-h-72 overflow-y-auto divide-y text-sm">
+        {sorted.map((m, i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-1.5">
+            <span className="font-mono text-xs text-muted-foreground shrink-0">{m.fecha}</span>
+            <span className="flex-1 truncate" title={m.concepto || undefined}>
+              {m.concepto || "(sin concepto)"}
+            </span>
+            <span
+              className={
+                "font-mono text-xs font-semibold shrink-0 " +
+                (m.importe >= 0 ? "text-green-600" : "text-red-600")
+              }
+            >
+              {m.importe.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

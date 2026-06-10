@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { enableBanking, EnableBankingError } from "@/lib/enable-banking/client"
+import { normalizarIban } from "@/lib/utils/iban"
 
 export const runtime = "nodejs"
 
@@ -67,11 +68,14 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${redirectBase}?bank_sync_error=cuenta_no_encontrada`)
     }
 
+    // Comparamos IBANs normalizados (sin espacios, mayúsculas) para que dé
+    // igual si el usuario lo escribió en bloques de 4.
+    const cuentaIban = normalizarIban(cuenta.iban)
     let match = session.accounts.find(
       (a) =>
-        cuenta.iban &&
-        (a.account_id.iban === cuenta.iban ||
-          a.all_account_ids?.some((id) => id.iban === cuenta.iban)),
+        cuentaIban &&
+        (normalizarIban(a.account_id.iban) === cuentaIban ||
+          a.all_account_ids?.some((id) => normalizarIban(id.iban) === cuentaIban)),
     )
     if (!match && session.accounts.length === 1) {
       match = session.accounts[0]
@@ -99,7 +103,7 @@ export async function GET(request: Request) {
         sync_enabled: true,
         origen: "conectada",
         // Si la cuenta no tenía IBAN, lo copiamos del account de EB
-        iban: cuenta.iban || match.account_id.iban || null,
+        iban: cuentaIban || normalizarIban(match.account_id.iban) || null,
       })
       .eq("id", cuentaId)
 

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { ColorPicker } from "@/components/ui/color-picker"
 import type { Cuenta } from "@/lib/types/database"
+import { formatearIban, normalizarIban } from "@/lib/utils/iban"
 
 interface CuentaEditFormProps {
   cuenta: Cuenta
@@ -25,7 +26,7 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
     tipo: cuenta.tipo || "banco",
     origen: cuenta.origen || "manual",
     banco_nombre: cuenta.banco_nombre || "",
-    iban: cuenta.iban || "",
+    iban: formatearIban(cuenta.iban),
     color: cuenta.color || "#4ECDC4",
     personas_autorizadas: cuenta.personas_autorizadas || "",
     descripcion: cuenta.descripcion || "",
@@ -66,7 +67,7 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
         tipo: formData.tipo as "banco" | "caja",
         origen: formData.origen as "manual" | "conectada",
         banco_nombre: formData.tipo === "banco" ? formData.banco_nombre.trim() : null,
-        iban: formData.tipo === "banco" ? formData.iban.trim() : null,
+        iban: formData.tipo === "banco" ? normalizarIban(formData.iban) || null : null,
         color: formData.color,
         personas_autorizadas: formData.personas_autorizadas,
         descripcion: formData.descripcion.trim() || null,
@@ -183,6 +184,7 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
             id="iban"
             value={formData.iban}
             onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+            onBlur={() => setFormData((prev) => ({ ...prev, iban: formatearIban(prev.iban) }))}
             placeholder="ES91 2100 0418 4502 0005 1332"
           />
         </div>

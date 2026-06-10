@@ -19,6 +19,7 @@ import { useCuentas } from "@/hooks/use-cuentas"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { supabase } from "@/lib/supabase/client"
 import { formatCurrency } from "@/lib/utils/format"
+import { formatearIban } from "@/lib/utils/iban"
 import { toast } from "sonner"
 
 export function CuentasManager() {
@@ -670,7 +671,7 @@ export function CuentasManager() {
                         {cuenta.tipo === "banco" && cuenta.iban && (
                           <div className="flex items-center gap-2 flex-wrap">
                             <code className="text-xs sm:text-sm text-muted-foreground font-mono bg-muted px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border break-all inline-block">
-                              {cuenta.iban}
+                              {formatearIban(cuenta.iban)}
                             </code>
                             <Popover>
                               <PopoverTrigger asChild>

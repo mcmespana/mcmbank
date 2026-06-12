@@ -147,7 +147,6 @@ export function useTransacciones({
       setTransacciones(processedData)
     } catch (err) {
       if (abortController.signal.aborted) {
-        console.log("Query was cancelled")
         return
       }
 

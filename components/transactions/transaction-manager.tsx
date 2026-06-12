@@ -876,11 +876,9 @@ export function TransactionManager() {
         onOpenChange={setImportOpen}
         delegacionId={selectedDelegation}
         onImported={(importedCount) => {
-          console.log(`🔄 TransactionManager: Iniciando refetch después de importar ${importedCount || 0} transacciones para delegación ${selectedDelegation}`)
           refetch()
           // Refetch adicional después de un delay para asegurar sincronización
           setTimeout(() => {
-            console.log('🔄 TransactionManager: Segundo refetch para asegurar sincronización')
             refetch()
           }, 1000)
         }}

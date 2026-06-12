@@ -434,15 +434,12 @@ export function TransactionImportPanel({
 
     // Mostrar información sobre el procesamiento
     if (skippedRows.length > 0) {
-      console.log(`ℹ️ Se omitieron ${skippedRows.length} filas por falta de fecha o importe: ${skippedRows.join(', ')}`)
     }
 
     if (categoriesFound > 0) {
-      console.log(`✅ Se encontraron y asignaron ${categoriesFound} categorías automáticamente`)
     }
 
     if (categoriesNotFound.length > 0) {
-      console.log(`⚠️ Categorías no encontradas (se añadieron a descripción): ${categoriesNotFound.join(', ')}`)
     }
 
     return result
@@ -618,7 +615,6 @@ export function TransactionImportPanel({
 
             // Llamar a onImported si se importaron transacciones exitosamente
             if (successCount > 0 && onImported) {
-              console.log(`✅ Importación completada: ${successCount} transacciones`)
               setTimeout(() => onImported(successCount), 500) // Pequeño delay para asegurar que la DB esté actualizada
             }
           } else {
@@ -632,7 +628,6 @@ export function TransactionImportPanel({
 
           // Llamar a onImported si se importaron transacciones exitosamente
           if (insertCount > 0 && onImported) {
-            console.log(`✅ Importación masiva completada: ${insertCount} transacciones`)
             setTimeout(() => onImported(insertCount), 500) // Pequeño delay para asegurar que la DB esté actualizada
           }
         }
@@ -695,7 +690,6 @@ export function TransactionImportPanel({
         }
 
         // Actualizar las transacciones en el fondo
-        console.log(`✅ Duplicado forzado importado`)
         setTimeout(() => {
           if (onImported) onImported(1)
         }, 500)

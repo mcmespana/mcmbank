@@ -121,7 +121,6 @@ export function useMovimientos(
 
       // Prevent concurrent fetches
       if (fetchingRef.current) {
-        console.log("[useMovimientos] Already fetching, skipping...")
         return
       }
 
@@ -293,7 +292,6 @@ export function useMovimientos(
         setHasMore(movimientosData.length === pageSize && (pageIndex + 1) * pageSize < totalCount)
       } catch (err: any) {
         if (abortController.signal.aborted) {
-          console.log("[useMovimientos] Caught aborted request")
           return
         }
         const errorMessage = err?.message || "Error desconocido"

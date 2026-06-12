@@ -24,7 +24,6 @@ import { toast } from "sonner"
 
 export function CuentasManager() {
   const { selectedDelegation } = useDelegationContext()
-  console.log("CuentasManager: selectedDelegation", selectedDelegation)
   const {
     cuentas: cuentasWithDelegacion,
     loading,
@@ -34,7 +33,6 @@ export function CuentasManager() {
     updateCuenta,
     removeCuenta,
   } = useCuentas(selectedDelegation, { includeInactive: true })
-  console.log("CuentasManager: cuentas after useCuentas", cuentasWithDelegacion)
   const cuentas = useMemo(
     () => cuentasWithDelegacion.map((item) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -57,30 +55,24 @@ export function CuentasManager() {
 
   // Función para actualizar el estado de una operación
   const setOperationState = useCallback((cuentaId: string, state: 'creating' | 'updating' | 'deleting' | null) => {
-    console.log(`🔄 setOperationState: ${cuentaId} -> ${state}`)
     setOperationStates(prev => {
       if (state === null) {
         const newStates = { ...prev }
         delete newStates[cuentaId]
-        console.log(`🧹 Limpiando estado para cuenta ${cuentaId}`)
         return newStates
       }
-      console.log(`✅ Estableciendo estado ${state} para cuenta ${cuentaId}`)
       return { ...prev, [cuentaId]: state }
     })
   }, [])
 
   // Función para limpiar automáticamente el estado de una operación
   const clearOperationStateAfterDelay = useCallback((cuentaId: string, delay: number = 1500) => {
-    console.log(`⏰ Programando limpieza automática para cuenta ${cuentaId} en ${delay}ms`)
     setTimeout(() => {
-      console.log(`⏰ Ejecutando limpieza automática para cuenta ${cuentaId}`)
       setOperationState(cuentaId, null)
     }, delay)
   }, [setOperationState])
 
   useEffect(() => {
-    console.log("CuentasManager: cuentas state updated", cuentas)
     async function fetchBalances() {
       const entries = await Promise.all(
         cuentas.map(async (c) => {
@@ -111,14 +103,12 @@ export function CuentasManager() {
 
   // Limpiar estados de operación cuando cambie la delegación
   useEffect(() => {
-    console.log("🧹 Limpiando estados de operación por cambio de delegación")
     setOperationStates({})
   }, [selectedDelegation])
 
   // Limpiar estados de operación al desmontar el componente
   useEffect(() => {
     return () => {
-      console.log("🧹 Limpiando estados de operación al desmontar componente")
       setOperationStates({})
     }
   }, [])
@@ -198,7 +188,6 @@ export function CuentasManager() {
   const handleCreateCuenta = async (cuentaData: Partial<Cuenta>) => {
     if (!selectedDelegation) return
 
-    console.log("handleCreateCuenta: Attempting to create account", cuentaData)
 
     try {
       const { data, error } = await (supabase as any).from("cuenta").insert({
@@ -239,7 +228,6 @@ export function CuentasManager() {
         clearOperationStateAfterDelay(newCuenta.id, 1500)
       }
 
-      console.log("handleCreateCuenta: Account created successfully")
       setIsCreateSheetOpen(false)
     } catch (error) {
       console.error("handleCreateCuenta: Error in try-catch", error)
@@ -250,7 +238,6 @@ export function CuentasManager() {
   const handleUpdateCuenta = async (cuentaData: Partial<Cuenta>) => {
     if (!editingCuenta) return
 
-    console.log("handleUpdateCuenta: Attempting to update account", cuentaData)
 
     // Marcar como en proceso de actualización
     setOperationState(editingCuenta.id, 'updating')
@@ -271,7 +258,6 @@ export function CuentasManager() {
         throw error
       }
 
-      console.log("handleUpdateCuenta: Account updated successfully")
       // Limpiar estado inmediatamente después de éxito
       setOperationState(editingCuenta.id, null)
       setEditingCuenta(null)
@@ -284,7 +270,6 @@ export function CuentasManager() {
   }
 
   const handleDeleteCuenta = async (cuentaId: string) => {
-    console.log("handleDeleteCuenta: Attempting to delete account", cuentaId)
 
     // Marcar como en proceso de eliminación
     setOperationState(cuentaId, 'deleting')
@@ -300,7 +285,6 @@ export function CuentasManager() {
         await forceRefresh()
         throw error
       }
-      console.log("handleDeleteCuenta: Account deleted successfully")
       // No necesitamos limpiar el estado aquí porque la cuenta ya no existe
       setDeletingCuenta(null)
     } catch (error) {

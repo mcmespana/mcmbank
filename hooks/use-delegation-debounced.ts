@@ -25,13 +25,11 @@ export function useDelegationDebounced(options: UseDelegationDebouncedOptions = 
     
     // Skip if same delegation
     if (delegationId === lastDelegationRef.current) {
-      console.log('🔄 useDelegationDebounced: Skipping - same delegation')
       return
     }
     
     // Debounce the change
     debounceRef.current = setTimeout(() => {
-      console.log('🔄 useDelegationDebounced: Changing delegation to:', delegationId)
       lastDelegationRef.current = delegationId
       setSelectedDelegation(delegationId)
     }, debounceMs)
@@ -41,7 +39,6 @@ export function useDelegationDebounced(options: UseDelegationDebouncedOptions = 
   useEffect(() => {
     if (!selectedDelegation && delegations.length > 0 && !loading) {
       const firstDelegation = delegations[0].id
-      console.log('🔄 useDelegationDebounced: Auto-selecting first delegation:', firstDelegation)
       setSelectedDelegation(firstDelegation)
       lastDelegationRef.current = firstDelegation
     }

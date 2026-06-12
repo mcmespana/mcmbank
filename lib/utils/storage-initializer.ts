@@ -41,9 +41,7 @@ export async function initializeStorageBuckets() {
         return false
       }
 
-      console.log("✅ Bucket 'facturas' created successfully")
     } else {
-      console.log("✅ Bucket 'facturas' already exists")
     }
 
     // Crear bucket para documentos si no existe
@@ -77,9 +75,7 @@ export async function initializeStorageBuckets() {
         return false
       }
 
-      console.log("✅ Bucket 'documentos' created successfully")
     } else {
-      console.log("✅ Bucket 'documentos' already exists")
     }
 
     return true

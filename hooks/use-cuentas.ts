@@ -133,7 +133,6 @@ export function useCuentas(
       lastFetchAtRef.current = Date.now()
     } catch (err) {
       if (abortController.signal.aborted) {
-        console.log("Cuentas query was cancelled")
         return
       }
 

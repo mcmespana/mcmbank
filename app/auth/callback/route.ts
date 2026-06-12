@@ -33,7 +33,6 @@ export async function GET(request: Request) {
             `${redirectUrl}/auth/login?error=${message}`,
           )
         }
-        console.log("OAuth success", { userId: user.id })
         return NextResponse.redirect(`${redirectUrl}${next}`)
       }
     }

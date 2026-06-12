@@ -46,13 +46,6 @@ export default function LoginForm() {
 
   async function handleGoogleLogin() {
     const redirectTo = getAuthCallbackUrl({ fallbackToWindow: true })
-    console.log("OAuth start", {
-      provider: "google",
-      redirectTo,
-      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
-      devRedirectUrl: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL,
-      origin: window.location.origin,
-    })
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },

@@ -5,9 +5,14 @@
 
 ## Registro de progreso
 - ✅ **Fase 0 — Bugs confirmados** (12 jun): fechas UTC (0.1), doble panel de filtros (0.2), turbopack.root (0.3), console.log + regla no-console (0.4), keys estables (0.5), params async Next 16 (0.6). Rama `puesta-a-punto-mcmbank`.
-- ✅ **Fase 1 — Tipos de Supabase**: `Database` generado en `lib/types/supabase-generated.ts`; errores de `tsc` en código fuente de **76 → 0**. Verificado SSR + build OK.
-- ⬜ **Fase 2** — loading/error/skeletons (siguiente)
-- ⬜ Fases 3-7 y 6.5 (editor de fechas) — pendientes
+- ✅ **Fase 1 — Tipos de Supabase**: `Database` generado en `lib/types/supabase-generated.ts`; errores de `tsc` en código fuente de **76 → 0**. Verificado en runtime (contactos y transacciones renderizan OK).
+- ✅ **Fase 2 — loading/error/skeletons**: componente `Skeleton`, `loading.tsx` en todas las rutas protegidas (+ neutro en `/auth`), `error.tsx` y `global-error.tsx`.
+- ⬜ **Fase 3** — bottom sheets móvil (vaul)
+- ⬜ **Fase 4** — React Query (añade dependencia)
+- ⬜ **Fase 5** — trocear category-list (refactor grande)
+- ⬜ **Fase 6** — visual menor (chevron, KPI, a11y, toasts)
+- ⬜ **Fase 6.5** — editor de fechas (pedido por el usuario)
+- ⬜ **Fase 7** — tests mínimos (Vitest)
 **Audiencia:** Este documento está escrito para que lo pueda ejecutar un desarrollador junior o una IA sin contexto previo. Cada tarea incluye: objetivo, archivos exactos, pasos numerados, código de ejemplo y cómo verificar que funciona. **No te saltes las verificaciones.**
 
 ---

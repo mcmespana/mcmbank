@@ -1,7 +1,13 @@
 # Plan "Puesta a punto MCM Bank" — Calidad, Bugs y UX
 
 **Fecha:** 12 de junio de 2026
-**Estado:** Pendiente de ejecución
+**Estado:** En ejecución
+
+## Registro de progreso
+- ✅ **Fase 0 — Bugs confirmados** (12 jun): fechas UTC (0.1), doble panel de filtros (0.2), turbopack.root (0.3), console.log + regla no-console (0.4), keys estables (0.5), params async Next 16 (0.6). Rama `puesta-a-punto-mcmbank`.
+- ✅ **Fase 1 — Tipos de Supabase**: `Database` generado en `lib/types/supabase-generated.ts`; errores de `tsc` en código fuente de **76 → 0**. Verificado SSR + build OK.
+- ⬜ **Fase 2** — loading/error/skeletons (siguiente)
+- ⬜ Fases 3-7 y 6.5 (editor de fechas) — pendientes
 **Audiencia:** Este documento está escrito para que lo pueda ejecutar un desarrollador junior o una IA sin contexto previo. Cada tarea incluye: objetivo, archivos exactos, pasos numerados, código de ejemplo y cómo verificar que funciona. **No te saltes las verificaciones.**
 
 ---

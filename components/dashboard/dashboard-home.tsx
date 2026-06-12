@@ -108,17 +108,17 @@ export function DashboardHome({ initialTab }: Props) {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
           <TabsList className="grid w-full grid-cols-3 sm:mx-auto sm:flex sm:w-fit">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <Home className="h-4 w-4" />
-              <span className="data-[state=inactive]:hidden">Resumen</span>
+            <TabsTrigger value="overview" className="flex items-center justify-center gap-2">
+              <Home className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Resumen</span>
             </TabsTrigger>
-            <TabsTrigger value="actividad" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              <span className="data-[state=inactive]:hidden">Balance</span>
+            <TabsTrigger value="actividad" className="flex items-center justify-center gap-2">
+              <TrendingUp className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Balance</span>
             </TabsTrigger>
-            <TabsTrigger value="categorias" className="flex items-center gap-2">
-              <PieChart className="h-4 w-4" />
-              <span className="data-[state=inactive]:hidden">Análisis</span>
+            <TabsTrigger value="categorias" className="flex items-center justify-center gap-2">
+              <PieChart className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Análisis</span>
             </TabsTrigger>
           </TabsList>
 

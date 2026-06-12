@@ -177,6 +177,50 @@
 
 ---
 
+## Tarea 0.6 — Migrar rutas de API dinámicas a `params` asíncrono (Next 16) ⚠️ ROMPE EL BUILD
+
+**Problema:** Al actualizar a Next.js 16, los *route handlers* de rutas dinámicas reciben `params` como **Promise** (`{ params: Promise<{ id: string }> }`), pero varias rutas todavía usan la firma síncrona vieja (`{ params: { id: string } }`). Esto produce errores de TypeScript en los tipos generados por Next y **hace fallar `pnpm build`**.
+
+> Nota de contexto: el proyecto arrastra ~78 errores de `tsc --noEmit` en `main`. Una parte son estos handlers; el resto son los `any` de Supabase que arregla la Fase 1. Por eso, hasta completar 0.6 y la Fase 1, el check "tsc sin errores" del checklist global **no se puede cumplir del todo** — usa "tsc no añade errores nuevos respecto a main" como criterio intermedio.
+
+**Archivos afectados (buscar todos):**
+```bash
+grep -rn "{ params }: { params:" app/api
+# Confirmado al menos: app/api/admin/users/[id]/route.ts (PUT y DELETE)
+# Revisa también cualquier otra carpeta [id]/[slug] bajo app/api y app/
+```
+
+**Patrón de migración (aplicar a cada handler):**
+```typescript
+// ANTES (Next 15 y anterior):
+export async function PUT(
+  req: Request,
+  { params }: { params: { id: string } },
+) {
+  const id = params.id
+  // ...
+}
+
+// DESPUÉS (Next 16):
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params
+  // ...
+}
+```
+Reglas:
+- Cambia la firma a `Promise<...>` y añade `const { ... } = await params` como primera línea del cuerpo.
+- Hazlo en **todos** los métodos exportados del archivo (GET/POST/PUT/PATCH/DELETE).
+- No cambies nada más de la lógica.
+
+**Verificación:**
+1. `npx tsc --noEmit 2>&1 | grep "admin/users"` no devuelve nada.
+2. `pnpm build` ya no falla por estos handlers (puede seguir fallando por los `any` de Supabase hasta la Fase 1; comprueba que el error que desaparece es el de `params`).
+
+---
+
 # FASE 1 — Tipos generados de Supabase (eliminar los ~187 `any`)
 
 **Objetivo:** Generar los tipos TypeScript desde el esquema real de la base de datos para que las consultas de Supabase estén tipadas, y eliminar la mayoría de `as any` / `: any`.

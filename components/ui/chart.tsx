@@ -68,7 +68,7 @@ export function ChartTooltipContent({
         const key = item.dataKey as string
         const color = item.color ?? `var(--color-${key})`
         return (
-          <div key={index} className="flex items-center gap-2 text-muted-foreground">
+          <div key={key} className="flex items-center gap-2 text-muted-foreground">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
             {config[key]?.label ?? key}: {item.value}
           </div>

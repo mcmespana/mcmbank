@@ -709,7 +709,7 @@ export function CuentasManager() {
                                     <div className="space-y-1">
                                       {cuenta.personas_autorizadas.split(",").map((persona, index) => (
                                         <div
-                                          key={index}
+                                          key={`${persona.trim()}-${index}`}
                                           className="text-sm text-muted-foreground flex items-center gap-2"
                                         >
                                           <User className="h-3 w-3 text-green-500" />

@@ -202,7 +202,7 @@ function ImportedList({
       </div>
       <div className="max-h-72 overflow-y-auto divide-y text-sm">
         {sorted.map((m, i) => (
-          <div key={i} className="flex items-center gap-3 px-3 py-1.5">
+          <div key={`${m.fecha}-${m.concepto}-${m.importe}-${i}`} className="flex items-center gap-3 px-3 py-1.5">
             <span className="font-mono text-xs text-muted-foreground shrink-0">{m.fecha}</span>
             <span className="flex-1 truncate" title={m.concepto || undefined}>
               {m.concepto || "(sin concepto)"}
@@ -254,7 +254,7 @@ function LogViewer({ steps }: { steps: BancoSyncLogStep[] }) {
       <div className="border-b px-3 py-2 font-semibold text-sm">Log detallado ({steps.length} pasos)</div>
       <div className="max-h-96 overflow-y-auto divide-y text-xs font-mono">
         {steps.map((s, i) => (
-          <LogRow key={i} step={s} />
+          <LogRow key={`${s.t}-${i}`} step={s} />
         ))}
       </div>
     </div>

@@ -923,7 +923,10 @@ export function TransactionImportPanel({
                 <div className="space-y-2 mt-3 border-t border-amber-200 pt-3">
                   <p className="text-xs text-amber-700 font-medium">Transacciones duplicadas encontradas:</p>
                   {duplicateTransactions.map((dup, index) => (
-                    <div key={index} className="bg-white border border-amber-200 rounded p-3 space-y-2">
+                    <div
+                      key={`${dup.fecha}-${dup.importe}-${dup.concepto}-${index}`}
+                      className="bg-white border border-amber-200 rounded p-3 space-y-2"
+                    >
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <span className="font-medium">Fecha:</span> {dup.fecha}

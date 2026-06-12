@@ -86,8 +86,8 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
     }
   }
 
-  const removePersona = (index: number) => {
-    setPersonasList(personasList.filter((_, i) => i !== index))
+  const removePersona = (persona: string) => {
+    setPersonasList(personasList.filter((p) => p !== persona))
   }
 
   const handlePersonaKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -231,16 +231,16 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
             <div className="space-y-2">
               <Label className="text-sm text-gray-600">Personas autorizadas:</Label>
               <div className="flex flex-wrap gap-2">
-                {personasList.map((persona, index) => (
+                {personasList.map((persona) => (
                   <div
-                    key={index}
+                    key={persona}
                     className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
                   >
                     <User className="h-3 w-3" />
                     <span>{persona}</span>
                     <button
                       type="button"
-                      onClick={() => removePersona(index)}
+                      onClick={() => removePersona(persona)}
                       className="hover:bg-blue-200 rounded-full p-0.5"
                     >
                       <X className="h-3 w-3" />

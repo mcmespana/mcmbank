@@ -8,6 +8,17 @@ consultas desde fuera para recibir toda su información y sus archivos adjuntos.
 Como el ID es único en toda la base de datos, **no hace falta indicar la
 delegación**.
 
+## Documentación interactiva y recursos para agentes de IA
+
+| Recurso | URL | Para qué |
+|---------|-----|----------|
+| **Documentación interactiva** | `https://TU-DOMINIO/docs/api` | Página web (Scalar) con "try it out". |
+| **OpenAPI 3.1** | `https://TU-DOMINIO/api/v1/openapi.json` | Spec legible por máquinas (agentes IA, generadores de clientes). |
+| **llms.txt** | `https://TU-DOMINIO/llms.txt` | Punto de entrada estándar para agentes de IA. |
+
+Todos son públicos (no contienen secretos) y se sirven con URLs absolutas al
+dominio actual.
+
 ## Autenticación
 
 Todas las peticiones requieren una **clave secreta** que se envía en una

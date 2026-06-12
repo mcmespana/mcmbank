@@ -32,7 +32,7 @@ export function usePerfil() {
           console.error('Error fetching perfil:', error)
           setPerfil(null)
         } else {
-          setPerfil(data)
+          setPerfil(data as Perfil)
         }
       } catch (error) {
         console.error('Error fetching perfil:', error)

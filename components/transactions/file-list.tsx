@@ -165,7 +165,7 @@ export function FileList({
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <span>{FileService.formatFileSize(archivo.tamaño_bytes)}</span>
                 <span>•</span>
-                <span>{format(new Date(archivo.subido_en), "dd MMM yyyy", { locale: es })}</span>
+                <span>{archivo.subido_en ? format(new Date(archivo.subido_en), "dd MMM yyyy", { locale: es }) : "—"}</span>
               </div>
 
               {/* Descripción */}

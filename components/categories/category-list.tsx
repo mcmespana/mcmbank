@@ -411,6 +411,7 @@ export function CategoryList() {
         creado_en: "",
         es_global: false,
         esta_activa: true,
+        activa: true,
       })
       setCreateSheetOpen(true)
     }
@@ -522,6 +523,7 @@ export function CategoryList() {
       creado_en: "",
       es_global: false,
       esta_activa: true,
+      activa: true,
     })
     setCreateSheetOpen(true)
   }
@@ -543,6 +545,7 @@ export function CategoryList() {
       creado_en: "",
       es_global: category.es_global,
       esta_activa: true,
+      activa: true,
     })
     setCreateSheetOpen(true)
   }
@@ -709,6 +712,7 @@ export function CategoryList() {
           categoria_padre_id: parentId,
           es_global: targetIsGlobal,
           esta_activa: true,
+          activa: true,
         })
       }
 

@@ -127,7 +127,7 @@ export function usePagoMcmArchivos(
   const deleteFile = useCallback(async (archivo: ArchivoAdjunto): Promise<void> => {
     setError(null)
     try {
-      await FileService.deleteFile(archivo.path_storage, archivo.bucket)
+      await FileService.deleteFile(archivo.path_storage, archivo.bucket as "facturas" | "documentos")
       const { error } = await (supabase as any)
         .from("archivo_adjunto")
         .delete()

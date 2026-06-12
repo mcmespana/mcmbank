@@ -11,7 +11,9 @@ type TableProbe = {
 async function probeTable(client: ReturnType<typeof createClient>, table: string): Promise<TableProbe> {
   try {
     const { data, error, count } = await client
-      .from(table)
+      // El cliente tipado exige un nombre de tabla literal; aquí el nombre es
+      // dinámico (sonda de salud sobre tablas arbitrarias), por eso el cast.
+      .from(table as never)
       .select("*", { count: "exact" })
       .limit(3)
 

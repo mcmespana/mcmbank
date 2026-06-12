@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Database, BancoSyncLogStep } from "@/lib/types/database"
+import type { Database, BancoSyncLogStep, Json } from "@/lib/types/database"
 import { enableBanking, EnableBankingError } from "./client"
 import { mapTransactionToMovimiento } from "./dedup"
 
@@ -383,7 +383,7 @@ export async function syncCuenta(
       date_from: dateFrom,
       date_to: dateTo,
       estado: "en_curso",
-      log: logger.steps as unknown,
+      log: logger.steps as unknown as Json,
     })
     .select("id")
     .single()
@@ -613,7 +613,7 @@ export async function syncCuenta(
         transacciones_error: errores,
         estado,
         error_mensaje: errorMensaje,
-        log: logger.steps as unknown,
+        log: logger.steps as unknown as Json,
       })
       .eq("id", logRow.id)
   }

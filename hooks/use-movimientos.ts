@@ -280,7 +280,7 @@ export function useMovimientos(
 
         if (error) throw error
 
-        const movimientosData = (data || []) as MovimientoConRelaciones[]
+        const movimientosData = (data || []) as unknown as MovimientoConRelaciones[]
         const totalCount = count || 0
 
         if (isAppend && pageIndex > 0) {

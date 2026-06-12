@@ -140,7 +140,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
             <Label>Color</Label>
             <div
               className="h-10 w-full rounded border"
-              style={{ backgroundColor: parentCategory.color }}
+              style={{ backgroundColor: parentCategory.color ?? undefined }}
             />
           </div>
         )}

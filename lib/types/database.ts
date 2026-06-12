@@ -27,10 +27,16 @@ export type PropuestaMejoraComentario = Database["public"]["Tables"]["propuesta_
 export type PropuestaMejoraVoto = Database["public"]["Tables"]["propuesta_mejora_voto"]["Row"]
 export type BancoConexion = Database["public"]["Tables"]["banco_conexion"]["Row"]
 export type BancoSyncLog = Database["public"]["Tables"]["banco_sync_log"]["Row"]
-export type Contacto = Database["public"]["Tables"]["contacto"]["Row"]
+// La columna contacto.tipo es text en la BD (string en el tipo generado), pero
+// la app la restringe a ContactoTipo; lo afinamos aquí para los datos leídos.
+export type Contacto = Omit<Database["public"]["Tables"]["contacto"]["Row"], "tipo"> & {
+  tipo: ContactoTipo
+}
 export type ContactoInsert = Database["public"]["Tables"]["contacto"]["Insert"]
 export type ContactoUpdate = Database["public"]["Tables"]["contacto"]["Update"]
-export type ContactoTipo = Contacto["tipo"]
+// La columna contacto.tipo es text en la BD (no un enum), por eso el tipo
+// generado es string. La app la restringe a estos tres valores.
+export type ContactoTipo = "proveedor" | "persona_mcm" | "destinatario_mcm"
 
 export const CONTACTO_TIPOS: readonly ContactoTipo[] = ["proveedor", "persona_mcm", "destinatario_mcm"] as const
 

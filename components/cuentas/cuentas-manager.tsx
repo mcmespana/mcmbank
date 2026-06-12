@@ -849,6 +849,8 @@ export function CuentasManager() {
                   nombre: "",
                   tipo: "banco",
                   origen: "manual",
+                  activa: true,
+                  informacion: null,
                   banco_nombre: "",
                   iban: "",
                   color: "#4ECDC4",

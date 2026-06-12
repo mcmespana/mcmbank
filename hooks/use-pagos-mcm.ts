@@ -146,7 +146,7 @@ export function usePagosMcm(delegacionId?: string | null, options: UsePagosMcmOp
       pagadoImporte: 0,
     }
     for (const p of pagos) {
-      base[p.estado] += 1
+      base[p.estado as "borrador" | "pendiente" | "pagado" | "cancelado"] += 1
       base.total += 1
       if (p.estado === "pendiente") base.pendienteImporte += Number(p.importe)
       if (p.estado === "pagado") base.pagadoImporte += Number(p.importe)

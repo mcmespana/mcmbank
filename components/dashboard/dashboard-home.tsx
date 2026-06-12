@@ -107,7 +107,7 @@ export function DashboardHome({ initialTab }: Props) {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-3 sm:mx-auto sm:flex sm:w-fit">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Home className="h-4 w-4" />
               <span className="data-[state=inactive]:hidden">Resumen</span>

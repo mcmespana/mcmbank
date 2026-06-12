@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect, useRef, type CSSProperties } from "react"
-import { X, Search, Plus, Check } from "lucide-react"
+import { X, Search, Plus, Check, CheckCheck } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -175,6 +175,15 @@ export function CategoryMegaSelector({
     setInternalSelectedCategories([])
   }
 
+  // Todos los ids seleccionables (padres + subcategorías + huérfanas)
+  const allCategoryIds = useMemo(() => categories.map((cat) => cat.id), [categories])
+  const allSelected =
+    allCategoryIds.length > 0 && allCategoryIds.every((id) => selectedCategories.includes(id))
+
+  const handleToggleAll = () => {
+    setInternalSelectedCategories(allSelected ? [] : allCategoryIds)
+  }
+
   return (
     <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-[calc(100vh-2rem)] sm:h-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
       <div className="border-b bg-muted/40 p-4 sm:p-6">
@@ -344,32 +353,38 @@ export function CategoryMegaSelector({
 
       {allowMultiple && (
         <div className="border-t bg-muted/20 px-4 py-3 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <p className="text-sm text-muted-foreground">
-                {selectedCategories.length === 0 ? (
-                  "Ninguna seleccionada"
-                ) : (
-                  <>
-                    <span className="font-semibold text-foreground">{selectedCategories.length}</span>{" "}
-                    seleccionada{selectedCategories.length !== 1 ? "s" : ""}
-                  </>
-                )}
-              </p>
-              {selectedCategories.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearAll}
-                  className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-3 w-3" />
-                  Limpiar
-                </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleAll}
+              className="h-8 gap-1.5 rounded-lg text-xs"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              {allSelected ? "Quitar todas" : "Seleccionar todas"}
+            </Button>
+            {selectedCategories.length > 0 && !allSelected && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearAll}
+                className="h-8 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+                Limpiar
+              </Button>
+            )}
+            <p className="ml-auto text-xs text-muted-foreground sm:text-sm">
+              {selectedCategories.length === 0 ? (
+                "Ninguna"
+              ) : (
+                <>
+                  <span className="font-semibold text-foreground">{selectedCategories.length}</span> sel.
+                </>
               )}
-            </div>
-            <Button onClick={handleApply}>
-              {selectedCategories.length === 0 ? "Quitar filtros" : "Aplicar filtros"}
+            </p>
+            <Button onClick={handleApply} className="h-9">
+              {selectedCategories.length === 0 ? "Quitar filtros" : "Aplicar"}
             </Button>
           </div>
         </div>

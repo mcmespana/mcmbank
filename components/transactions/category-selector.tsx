@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useMemo, useEffect, useRef, type CSSProperties } from "react"
-import { Check, ChevronsUpDown, X, Search, Plus } from "lucide-react"
+import { Check, ChevronsUpDown, X, Search, Plus, CheckCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -192,6 +192,14 @@ export function CategorySelector({
     onSelectionChange([])
   }
 
+  const allCategoryIds = useMemo(() => categories.map((cat) => cat.id), [categories])
+  const allSelected =
+    allowMultiple && allCategoryIds.length > 0 && allCategoryIds.every((id) => selectedCategorySet.has(id))
+
+  const toggleAll = () => {
+    onSelectionChange(allSelected ? [] : allCategoryIds)
+  }
+
   return (
     <div className="space-y-3">
       <Popover open={open} onOpenChange={setOpenState}>
@@ -214,7 +222,13 @@ export function CategorySelector({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[360px] p-0" align="start">
+        <PopoverContent
+          className="w-[calc(100vw-2rem)] sm:w-[380px] p-0"
+          align="start"
+          side="bottom"
+          sideOffset={6}
+          avoidCollisions={false}
+        >
           <div className="border-b p-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
@@ -236,7 +250,7 @@ export function CategorySelector({
               />
             </div>
           </div>
-          <ScrollArea className="h-[480px]">
+          <ScrollArea className="h-[min(45vh,340px)]">
             <div className="space-y-3 p-3">
               {normalizedSearch ? (
                 filteredCategories.length === 0 ? (
@@ -298,20 +312,31 @@ export function CategorySelector({
             </div>
           </ScrollArea>
           <div className="border-t p-3 space-y-2">
-            {allowMultiple && selectedCategories.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                type="button"
-                onClick={() => {
-                  clearAll()
-                  setOpenState(false)
-                }}
-                className="h-9 w-full text-muted-foreground hover:text-foreground"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Limpiar selección ({selectedCategories.length})
-              </Button>
+            {allowMultiple && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={toggleAll}
+                  className="h-9 flex-1 bg-transparent"
+                >
+                  <CheckCheck className="mr-2 h-4 w-4" />
+                  {allSelected ? "Quitar todas" : "Seleccionar todas"}
+                </Button>
+                {selectedCategories.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={clearAll}
+                    className="h-9 flex-1 bg-transparent text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Limpiar ({selectedCategories.length})
+                  </Button>
+                )}
+              </div>
             )}
             <Button variant="outline" size="sm" className="h-9 w-full bg-transparent" type="button">
               <Plus className="mr-2 h-4 w-4" />
@@ -392,33 +417,26 @@ function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCateg
       <button
         type="button"
         onClick={onSelectParent}
-        className="flex w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2"
+        className="flex w-full items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2"
       >
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(var(--category-color-rgb),0.25)] transition-colors shadow-sm",
-              isParentSelected
-                ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)]"
-                : "bg-[rgba(var(--category-color-rgb),0.1)] text-[var(--category-color)] dark:bg-[rgba(var(--category-color-rgb),0.2)]",
-            )}
-          >
-            {isParentSelected ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <span className="h-2.5 w-2.5 rounded-full bg-[var(--category-color)]" />
-            )}
-          </div>
-          <span className="flex items-center gap-2 text-sm font-semibold leading-none text-foreground">
-            {parent.emoji && <span className="text-base leading-none">{parent.emoji}</span>}
-            {parent.nombre}
-          </span>
+        <div
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[rgba(var(--category-color-rgb),0.25)] transition-colors shadow-sm",
+            isParentSelected
+              ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)]"
+              : "bg-[rgba(var(--category-color-rgb),0.1)] text-[var(--category-color)] dark:bg-[rgba(var(--category-color-rgb),0.2)]",
+          )}
+        >
+          {isParentSelected ? (
+            <Check className="h-4 w-4" />
+          ) : (
+            <span className="h-2.5 w-2.5 rounded-full bg-[var(--category-color)]" />
+          )}
         </div>
-        {children.length > 0 && (
-          <span className="text-xs font-medium text-muted-foreground">
-            {children.length} subcategoría{children.length !== 1 ? "s" : ""}
-          </span>
-        )}
+        <span className="flex items-center gap-2 text-sm font-semibold leading-none text-foreground">
+          {parent.emoji && <span className="text-base leading-none">{parent.emoji}</span>}
+          {parent.nombre}
+        </span>
       </button>
 
       {children.length > 0 && (

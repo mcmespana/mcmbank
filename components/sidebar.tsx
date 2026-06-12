@@ -143,7 +143,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
       </div>
 
       {/* Navigation */}
-      <nav className={cn("flex-1 space-y-1", collapsed ? "px-2 py-4" : "p-4")}>
+      <nav className={cn("flex-1 min-h-0 space-y-1 overflow-y-auto overscroll-contain", collapsed ? "px-2 py-4" : "p-4")}>
         {navigation.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = !item.enabled

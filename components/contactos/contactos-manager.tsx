@@ -135,7 +135,7 @@ export function ContactosManager() {
 
       {/* Tipo tabs */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
-        <TabsList className="w-full max-w-2xl grid grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4 sm:mx-auto sm:flex sm:w-fit">
           <TabsTrigger value="todos" className="gap-1.5">
             <span>Todos</span>
             {counts.total > 0 && <span className="text-[10px] text-muted-foreground tabular-nums">{counts.total}</span>}

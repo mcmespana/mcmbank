@@ -10,6 +10,7 @@ import { DateRangeFilter } from "./date-range-filter"
 import { CategoryMegaSelector } from "./category-mega-selector"
 import { supabase } from "@/lib/supabase/client"
 import { useDelegationContext } from "@/contexts/delegation-context"
+import { useIsMobile } from "@/hooks/use-is-mobile"
 import { useMovimientos, applyAbsoluteAmountFilter } from "@/hooks/use-movimientos"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCuentas } from "@/hooks/use-cuentas"
@@ -80,6 +81,9 @@ export function TransactionManager() {
   const [detailInitialTab, setDetailInitialTab] = useState<"datos" | "archivos">("datos")
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Monta el panel de filtros una sola vez según el viewport (lg = 1024px),
+  // evitando tener la versión escritorio y la móvil en el DOM a la vez.
+  const isMobile = useIsMobile(1024)
 
 
   const [createFormOpen, setCreateFormOpen] = useState(false)
@@ -551,7 +555,7 @@ export function TransactionManager() {
         className={`hidden lg:block border-r bg-card transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
           }`}
       >
-        {!sidebarCollapsed && (
+        {!sidebarCollapsed && !isMobile && (
           <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Filtros</h3>
@@ -771,7 +775,7 @@ export function TransactionManager() {
             </div>
           )}
 
-          {filtersOpen && (
+          {filtersOpen && isMobile && (
             <Card className="lg:hidden p-4 border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -794,6 +798,7 @@ export function TransactionManager() {
                 onClearFilters={clearFilters}
                 categories={categories}
                 accounts={accounts}
+                contactos={contactos}
                 uncategorizedCount={uncategorizedCount}
               />
             </Card>

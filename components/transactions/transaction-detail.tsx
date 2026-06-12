@@ -5,7 +5,8 @@ import type React from "react"
 import { useState, useEffect, useMemo } from "react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { CalendarIcon, AlertTriangle, Check, Loader2, ArrowLeft } from "lucide-react"
+import { CalendarIcon, AlertTriangle, Check, Loader2, ArrowLeft, Copy } from "lucide-react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -592,6 +593,32 @@ export function TransactionDetail({
                       className="resize-none"
                     />
                   </div>
+
+                  {movement && (
+                    <div className="space-y-2 border-t pt-4">
+                      <Label className="text-xs font-medium text-muted-foreground">
+                        ID del movimiento (API)
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 truncate rounded-md bg-muted px-2 py-1.5 font-mono text-xs">
+                          {movement.id}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(movement.id)
+                            toast.success("ID copiado al portapapeles")
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          <span className="ml-1.5">Copiar</span>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
                 <TabsContent value="archivos" className="space-y-6 mt-6" forceMount>
                   <TransactionFiles

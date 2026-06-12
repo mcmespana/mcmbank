@@ -41,7 +41,7 @@ import {
   differenceInYears,
 } from "date-fns"
 import { es } from "date-fns/locale"
-import { formatCurrency } from "@/lib/utils/format"
+import { formatCurrency, toLocalDateString } from "@/lib/utils/format"
 import { Table, TableHeader, TableHead, TableRow, TableCell, TableBody } from "@/components/ui/table"
 import { buildExpandedCategoryIds } from "@/lib/utils/category-utils"
 import { cn } from "@/lib/utils"
@@ -155,12 +155,12 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
 
     let acumulado = 0
     return intervals.map((interval, index) => {
-      const intervalStart = interval.toISOString().split("T")[0]
+      const intervalStart = toLocalDateString(interval)
       const nextInterval = intervals[index + 1]
       // El último intervalo incluye hasta el final (<=), los demás hasta el siguiente (<)
       const intervalMovimientos = movimientos.filter((m) =>
         nextInterval
-          ? m.fecha >= intervalStart && m.fecha < nextInterval.toISOString().split("T")[0]
+          ? m.fecha >= intervalStart && m.fecha < toLocalDateString(nextInterval)
           : m.fecha >= intervalStart,
       )
 

@@ -25,3 +25,17 @@ export function formatDate(dateString: string): string {
 export function getAmountColorClass(amount: number): string {
   return cn("font-medium", amount > 0 ? "text-green-600" : "text-red-600")
 }
+
+/**
+ * Formatea un Date como "yyyy-mm-dd" usando la fecha LOCAL.
+ *
+ * No uses date.toISOString().split("T")[0] para esto: toISOString() convierte
+ * a UTC, así que en husos por delante de UTC (p. ej. España) la medianoche
+ * local se desplaza al día anterior y el rango de fechas sale corrido un día.
+ */
+export function toLocalDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}

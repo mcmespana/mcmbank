@@ -1,6 +1,7 @@
 "use client"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toLocalDateString } from "@/lib/utils/format"
 
 export type Timeframe =
   | "today"
@@ -83,7 +84,7 @@ export function getTimeframeRange(timeframe: Timeframe) {
       break
   }
   return {
-    from: from.toISOString().split("T")[0],
-    to: to.toISOString().split("T")[0],
+    from: toLocalDateString(from),
+    to: toLocalDateString(to),
   }
 }

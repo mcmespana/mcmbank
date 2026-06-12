@@ -16,13 +16,34 @@ import type { Cuenta, Categoria } from "@/lib/types/database"
 interface RelatedMovementsSheetProps {
   account?: Cuenta | null
   category?: Categoria | null
+  /** Lista de categorías a incluir (p. ej. una categoría y sus subcategorías). */
+  categoryIds?: string[]
+  /** Mostrar solo movimientos sin categoría asignada. */
+  uncategorized?: boolean
+  /** Rango de fechas a aplicar (formato ISO yyyy-mm-dd). */
+  from?: string
+  to?: string
+  /** Título personalizado de la ventana. */
+  title?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function RelatedMovementsSheet({ account, category, open, onOpenChange }: RelatedMovementsSheetProps) {
+export function RelatedMovementsSheet({
+  account,
+  category,
+  categoryIds,
+  uncategorized,
+  from,
+  to,
+  title: titleOverride,
+  open,
+  onOpenChange,
+}: RelatedMovementsSheetProps) {
   const { selectedDelegation } = useDelegationContext()
-  const shouldFetch = Boolean(open && (account?.id || category?.id))
+  const resolvedCategoryIds = category ? [category.id] : categoryIds
+  const hasCategoryFilter = Boolean(resolvedCategoryIds && resolvedCategoryIds.length > 0)
+  const shouldFetch = Boolean(open && (account?.id || hasCategoryFilter || uncategorized))
   useCategorias(shouldFetch ? selectedDelegation : null, {
     includeGlobal: shouldFetch,
   })
@@ -33,7 +54,10 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
     shouldFetch
       ? {
           cuentaId: account?.id,
-          categoriaIds: category ? [category.id] : undefined,
+          categoriaIds: hasCategoryFilter ? resolvedCategoryIds : undefined,
+          uncategorized: uncategorized || undefined,
+          fechaDesde: from,
+          fechaHasta: to,
         }
       : undefined,
     { pageSize: 50 },
@@ -55,7 +79,13 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
     }
   }, [loadMore, hasMore, shouldFetch])
 
-  const title = account ? `Movimientos de ${account.nombre}` : category ? `Movimientos de ${category.nombre}` : "Movimientos"
+  const title = account
+    ? `Movimientos de ${account.nombre}`
+    : titleOverride
+      ? `Movimientos de ${titleOverride}`
+      : category
+        ? `Movimientos de ${category.nombre}`
+        : "Movimientos"
 
   return (
     <>
@@ -93,12 +123,12 @@ export function RelatedMovementsSheet({ account, category, open, onOpenChange }:
                           ) : (
                             <span>Sin categoría</span>
                           )
-                        ) : category ? (
+                        ) : (
                           <span className="flex items-center gap-1">
                             <BankAvatar account={mov.cuenta} size="sm" />
                             <span className="truncate">{mov.cuenta.nombre}</span>
                           </span>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                     <AmountDisplay amount={mov.importe} size="sm" />

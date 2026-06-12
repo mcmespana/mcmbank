@@ -19,6 +19,7 @@ import {
   Layers,
 } from "lucide-react"
 import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
+import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCategoryBreakdown } from "@/hooks/use-category-breakdown"
@@ -68,14 +69,19 @@ function CategoryDataRow({
   row,
   indent = false,
   nameOverride,
+  onClick,
 }: {
   row: SummaryRow
   indent?: boolean
   nameOverride?: string
+  onClick?: () => void
 }) {
   const rowBalance = row.income - row.expense
   return (
-    <TableRow>
+    <TableRow
+      onClick={onClick}
+      className={cn(onClick && "cursor-pointer hover:bg-muted/60")}
+    >
       <TableCell className={cn(indent && "pl-10")}>
         <div className="flex items-center gap-2">
           {!nameOverride && row.emoji && <span className="text-lg">{row.emoji}</span>}
@@ -126,6 +132,12 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [grouped, setGrouped] = useState(false)
+  // Categoría (o grupo) cuyos movimientos se están viendo en la ventana lateral
+  const [viewing, setViewing] = useState<{
+    title: string
+    categoryIds?: string[]
+    uncategorized?: boolean
+  } | null>(null)
 
   const { categorias } = useCategorias(selectedDelegation)
   const expandedCategoryIds = useMemo(
@@ -337,6 +349,25 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
     }
     return groups
   }, [grouped, summary, categorias, sortField, sortDirection])
+
+  // Abre la ventana lateral con los movimientos de una fila/categoría
+  const openRow = (row: SummaryRow) => {
+    if (row.id === "uncategorized") {
+      setViewing({ title: "Sin etiqueta", uncategorized: true })
+    } else {
+      setViewing({ title: row.name, categoryIds: [row.id] })
+    }
+  }
+
+  // Abre la ventana lateral con los movimientos de un grupo (categoría + subcategorías)
+  const openGroup = (g: { name: string; ownRow: SummaryRow | null; children: SummaryRow[] }) => {
+    const ids = [
+      ...(g.ownRow && g.ownRow.id !== "uncategorized" ? [g.ownRow.id] : []),
+      ...g.children.map((c) => c.id),
+    ]
+    if (ids.length === 0) return
+    setViewing({ title: g.name, categoryIds: ids })
+  }
 
   const clearFilters = () => {
     setCategoryIds([])
@@ -642,20 +673,29 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                   <TableBody>
                     {!grouped
                       ? summary.map((s) => (
-                          <CategoryDataRow key={s.id} row={s} />
+                          <CategoryDataRow key={s.id} row={s} onClick={() => openRow(s)} />
                         ))
                       : groupedSummary.map((g) => {
                           const hasChildren = g.children.length > 0
                           if (!hasChildren && g.ownRow) {
                             // Grupo sin subcategorías → fila normal
-                            return <CategoryDataRow key={g.key} row={g.ownRow} />
+                            return (
+                              <CategoryDataRow
+                                key={g.key}
+                                row={g.ownRow}
+                                onClick={() => openRow(g.ownRow!)}
+                              />
+                            )
                           }
                           const groupBalance = g.income - g.expense
                           const groupIncomePct = totals.income > 0 ? (g.income / totals.income) * 100 : 0
                           const groupExpensePct = totals.expense > 0 ? (g.expense / totals.expense) * 100 : 0
                           return (
                             <React.Fragment key={g.key}>
-                              <TableRow className="bg-muted/40 hover:bg-muted/60">
+                              <TableRow
+                                onClick={() => openGroup(g)}
+                                className="cursor-pointer bg-muted/40 hover:bg-muted/60"
+                              >
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     {g.emoji && <span className="text-lg">{g.emoji}</span>}
@@ -702,10 +742,20 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                                 </TableCell>
                               </TableRow>
                               {g.ownRow && (
-                                <CategoryDataRow row={g.ownRow} indent nameOverride="(sin subcategoría)" />
+                                <CategoryDataRow
+                                  row={g.ownRow}
+                                  indent
+                                  nameOverride="(sin subcategoría)"
+                                  onClick={() => openRow(g.ownRow!)}
+                                />
                               )}
                               {g.children.map((child) => (
-                                <CategoryDataRow key={child.id} row={child} indent />
+                                <CategoryDataRow
+                                  key={child.id}
+                                  row={child}
+                                  indent
+                                  onClick={() => openRow(child)}
+                                />
                               ))}
                             </React.Fragment>
                           )
@@ -741,6 +791,18 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
           )}
         </>
       )}
+
+      <RelatedMovementsSheet
+        open={!!viewing}
+        onOpenChange={(open) => {
+          if (!open) setViewing(null)
+        }}
+        title={viewing?.title}
+        categoryIds={viewing?.categoryIds}
+        uncategorized={viewing?.uncategorized}
+        from={from}
+        to={to}
+      />
     </div>
   )
 }

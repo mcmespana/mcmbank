@@ -12,6 +12,13 @@ const Body = z.object({
   aspsp_country: z.string().length(2),
   psu_type: z.enum(["personal", "business"]).default("business"),
   valid_days: z.number().int().min(1).max(180).default(90),
+  // Fecha ISO "yyyy-mm-dd" desde la que traer movimientos en la primera sync.
+  // null/omitido = todo el histórico que permita el banco.
+  sync_desde_fecha: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
 })
 
 /**
@@ -55,6 +62,13 @@ export async function POST(request: Request) {
   if (!membresia || !["gestor_central", "tesorero"].includes(membresia.rol)) {
     return NextResponse.json({ error: "Sin permisos para conectar esta cuenta" }, { status: 403 })
   }
+
+  // 1.b Persistir la fecha de inicio elegida (o limpiarla para "todo el histórico").
+  // syncCuenta la respeta sin fallback en la primera sincronización.
+  await admin
+    .from("cuenta")
+    .update({ sync_desde_fecha: body.data.sync_desde_fecha ?? null })
+    .eq("id", cuenta.id)
 
   // 2. Crear banco_conexion pendiente
   const validUntil = new Date(Date.now() + body.data.valid_days * 24 * 60 * 60 * 1000)

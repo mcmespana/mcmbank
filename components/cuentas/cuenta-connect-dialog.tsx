@@ -14,6 +14,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { DateField } from "@/components/ui/date-field"
 
 type Aspsp = {
   name: string
@@ -40,6 +41,8 @@ export function CuentaConnectDialog({ open, onOpenChange, cuentaId, cuentaNombre
   const [aspspName, setAspspName] = useState<string>("")
   const [psuType, setPsuType] = useState<"personal" | "business">("business")
   const [validDays, setValidDays] = useState(90)
+  const [historyMode, setHistoryMode] = useState<"all" | "from">("all")
+  const [syncDesdeFecha, setSyncDesdeFecha] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
 
   useEffect(() => {
@@ -61,6 +64,10 @@ export function CuentaConnectDialog({ open, onOpenChange, cuentaId, cuentaNombre
 
   const connect = async () => {
     if (!aspspName) return
+    if (historyMode === "from" && !syncDesdeFecha) {
+      setError("Indica la fecha desde la que quieres traer los movimientos.")
+      return
+    }
     setConnecting(true)
     setError(null)
     try {
@@ -73,6 +80,7 @@ export function CuentaConnectDialog({ open, onOpenChange, cuentaId, cuentaNombre
           aspsp_country: country,
           psu_type: psuType,
           valid_days: Math.min(validDays, maxDaysAllowed),
+          sync_desde_fecha: historyMode === "from" ? syncDesdeFecha : null,
         }),
       })
       const body = await res.json()
@@ -170,6 +178,31 @@ export function CuentaConnectDialog({ open, onOpenChange, cuentaId, cuentaNombre
             <p className="text-xs text-muted-foreground">
               Máximo permitido por este banco: {maxDaysAllowed} días. Al vencer tendrás que renovar.
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Movimientos a importar</Label>
+            <Select value={historyMode} onValueChange={(v) => setHistoryMode(v as "all" | "from")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los disponibles</SelectItem>
+                <SelectItem value="from">Desde una fecha concreta</SelectItem>
+              </SelectContent>
+            </Select>
+            {historyMode === "from" ? (
+              <>
+                <DateField value={syncDesdeFecha} onChange={setSyncDesdeFecha} />
+                <p className="text-xs text-muted-foreground">
+                  Se importarán los movimientos desde esta fecha. Si el banco no conserva tanto histórico,
+                  rechazará la petición; en ese caso elige una fecha más reciente o importa lo anterior desde Excel.
+                </p>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Intentaremos traer todo el histórico que permita el banco (hasta 2 años). Por PSD2, muchos
+                bancos limitan a los últimos 90 días.
+              </p>
+            )}
           </div>
 
           {error && (

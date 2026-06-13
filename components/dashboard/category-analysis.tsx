@@ -17,6 +17,7 @@ import {
   X,
   List,
   Layers,
+  ChevronRight,
 } from "lucide-react"
 import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
@@ -80,7 +81,7 @@ function CategoryDataRow({
   return (
     <TableRow
       onClick={onClick}
-      className={cn(onClick && "cursor-pointer hover:bg-muted/60")}
+      className={cn(onClick && "group cursor-pointer hover:bg-muted/60")}
     >
       <TableCell className={cn(indent && "pl-10")}>
         <div className="flex items-center gap-2">
@@ -88,6 +89,9 @@ function CategoryDataRow({
           <span className={cn("font-medium", nameOverride && "italic text-muted-foreground")}>
             {nameOverride ?? row.name}
           </span>
+          {onClick && (
+            <ChevronRight className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
+          )}
         </div>
       </TableCell>
       <TableCell className="text-right tabular-nums">
@@ -573,16 +577,16 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-primary/40 bg-primary/5 shadow-sm">
               <CardContent className="flex items-center gap-3 p-4">
-                <div className="rounded-full bg-muted p-2">
-                  <Scale className="h-5 w-5 text-foreground" />
+                <div className="rounded-full bg-primary/15 p-2">
+                  <Scale className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Balance</p>
+                  <p className="text-xs font-medium text-muted-foreground">Balance</p>
                   <p
                     className={cn(
-                      "text-xl font-bold tabular-nums",
+                      "text-2xl font-bold tabular-nums",
                       totals.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
                     )}
                   >
@@ -694,7 +698,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                             <React.Fragment key={g.key}>
                               <TableRow
                                 onClick={() => openGroup(g)}
-                                className="cursor-pointer bg-muted/40 hover:bg-muted/60"
+                                className="group cursor-pointer bg-muted/40 hover:bg-muted/60"
                               >
                                 <TableCell>
                                   <div className="flex items-center gap-2">
@@ -703,6 +707,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                                     <span className="text-xs text-muted-foreground">
                                       {g.children.length} subcategoría{g.children.length !== 1 ? "s" : ""}
                                     </span>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">

@@ -7,6 +7,7 @@ import { MovimientosCacheProvider } from "./movimientos-cache-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeStateWatcher } from "@/components/theme-state-watcher"
 import { ConnectionMonitor } from "@/components/connection-monitor"
+import { QueryProvider } from "./query-provider"
 import { Toaster } from "sonner"
 
 interface AppProvidersProps {
@@ -22,15 +23,17 @@ export function AppProviders({ children }: AppProvidersProps) {
       disableTransitionOnChange
     >
       <ThemeStateWatcher />
-      <AuthProvider>
-        <DelegationProvider>
-          <MovimientosCacheProvider>
-            <ConnectionMonitor />
-            {children}
-            <Toaster richColors />
-          </MovimientosCacheProvider>
-        </DelegationProvider>
-      </AuthProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <DelegationProvider>
+            <MovimientosCacheProvider>
+              <ConnectionMonitor />
+              {children}
+              <Toaster richColors />
+            </MovimientosCacheProvider>
+          </DelegationProvider>
+        </AuthProvider>
+      </QueryProvider>
     </ThemeProvider>
   )
 }

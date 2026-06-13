@@ -1,83 +1,32 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { DatabaseService } from "@/lib/services/database"
-import { runQuery } from "@/lib/db/query"
-import { useRevalidateOnFocusJitter } from "@/hooks/use-app-status"
 import type { CategoryBreakdownRow } from "@/lib/types/database"
 
-const QUERY_TIMEOUT_MS = 15000
-
+/**
+ * Desglose por categoría para un rango de fechas. Migrado a TanStack Query:
+ * caché compartida entre páginas, deduplicación y revalidación al foco sin
+ * gestionar manualmente abort controllers ni refs anti-carrera.
+ *
+ * Mantiene el mismo contrato de salida que la versión anterior
+ * (breakdown, loading, error, refresh) para no tocar a los consumidores.
+ */
 export function useCategoryBreakdown(from: string, to: string) {
   const { selectedDelegation } = useDelegationContext()
 
-  const [breakdown, setBreakdown] = useState<CategoryBreakdownRow[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const query = useQuery<CategoryBreakdownRow[]>({
+    queryKey: ["category-breakdown", selectedDelegation, from, to],
+    queryFn: ({ signal }) =>
+      DatabaseService.getCategoryBreakdown(selectedDelegation as string, from, to, signal),
+    enabled: Boolean(selectedDelegation && from && to),
+  })
 
-  const requestRef = useRef(0)
-  const lastKeyRef = useRef<string | null>(null)
-
-  const fetchBreakdown = useCallback(async () => {
-    if (!selectedDelegation || !from || !to) {
-      setBreakdown([])
-      setLoading(false)
-      setError(null)
-      return
-    }
-
-    const key = `${selectedDelegation}|${from}|${to}`
-    if (lastKeyRef.current !== key) {
-      lastKeyRef.current = key
-      setBreakdown([])
-    }
-
-    const fetchId = ++requestRef.current
-    setLoading(true)
-    setError(null)
-
-    try {
-      const result = await runQuery<CategoryBreakdownRow[]>({
-        label: "category-breakdown",
-        table: "movimiento",
-        timeoutMs: QUERY_TIMEOUT_MS,
-        build: async (signal) => {
-          const data = await DatabaseService.getCategoryBreakdown(
-            selectedDelegation,
-            from,
-            to,
-            signal,
-          )
-          return { data, error: null }
-        },
-      })
-
-      if (requestRef.current !== fetchId) return
-
-      if (result.error) {
-        setError(result.error.message ?? "Error al cargar el desglose por categoría")
-        setBreakdown([])
-      } else {
-        setBreakdown(result.data ?? [])
-        setError(null)
-      }
-    } catch (err) {
-      if (requestRef.current !== fetchId) return
-      setBreakdown([])
-      setError(err instanceof Error ? err.message : "Error al cargar el desglose por categoría")
-    } finally {
-      if (requestRef.current === fetchId) {
-        setLoading(false)
-      }
-    }
-  }, [selectedDelegation, from, to])
-
-  useEffect(() => {
-    fetchBreakdown()
-  }, [fetchBreakdown])
-
-  useRevalidateOnFocusJitter(fetchBreakdown, { minMs: 90, maxMs: 200 })
-
-  return { breakdown, loading, error, refresh: fetchBreakdown }
+  return {
+    breakdown: query.data ?? [],
+    loading: query.isPending && query.fetchStatus !== "idle",
+    error: query.error ? (query.error as Error).message : null,
+    refresh: query.refetch,
+  }
 }

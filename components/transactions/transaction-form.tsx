@@ -7,11 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CalendarIcon, DollarSign, Building2 } from "lucide-react"
+import { DollarSign, Building2 } from "lucide-react"
 import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { DateField } from "@/components/ui/date-field"
 import { cn } from "@/lib/utils"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 
@@ -48,7 +46,6 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
     tipo: (movement && "tipo" in movement ? (movement as any).tipo : undefined) || "gasto",
   })
   const [loading, setLoading] = useState(false)
-  const [dateOpen, setDateOpen] = useState(false)
 
   useEffect(() => {
     if (mode !== "create" || movement || formData.cuenta_id) {
@@ -153,64 +150,10 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Fecha *</Label>
-              <div className="flex gap-2">
-                {/* Manual date input */}
-                <Input
-                  type="text"
-                  value={formData.fecha ? format(formData.fecha, "yyyy-MM-dd") : ""}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    // Allow typing in format yyyy-MM-dd
-                    if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                      const date = new Date(value)
-                      if (!isNaN(date.getTime())) {
-                        setFormData({ ...formData, fecha: date })
-                      }
-                    }
-                  }}
-                  onBlur={(e) => {
-                    // Validate on blur and fix if needed
-                    const value = e.target.value
-                    if (value && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                      const date = new Date(value)
-                      if (!isNaN(date.getTime())) {
-                        setFormData({ ...formData, fecha: date })
-                      }
-                    }
-                  }}
-                  placeholder="YYYY-MM-DD"
-                  className="flex-1"
-                  required
-                />
-                {/* Calendar picker button */}
-                <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="flex-shrink-0"
-                      title="Abrir calendario"
-                    >
-                      <CalendarIcon className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={formData.fecha}
-                      onSelect={(date) => {
-                        if (date) {
-                          setFormData({ ...formData, fecha: date })
-                          setDateOpen(false)
-                        }
-                      }}
-                      locale={es}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <DateField
+                value={formData.fecha ? format(formData.fecha, "yyyy-MM-dd") : null}
+                onChange={(iso) => setFormData({ ...formData, fecha: new Date(`${iso}T00:00:00`) })}
+              />
             </div>
 
             <div className="space-y-2">

@@ -21,7 +21,8 @@ import { CategoryChip } from "./category-chip"
 import { BankAvatar } from "@/components/bank-avatar"
 import { TabWithCounter } from "./tab-with-counter"
 import { formatCurrency } from "@/lib/utils/format"
-import { formatIsoDateToInput, maskDateInput, parseDateInputToIso } from "@/lib/utils/date-input"
+import { formatIsoDateToInput } from "@/lib/utils/date-input"
+import { DateField } from "@/components/ui/date-field"
 import { TransactionFiles } from "./transaction-files"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria, Contacto, ContactoConCategoriaPredeterminada } from "@/lib/types/database"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -67,11 +68,9 @@ export function TransactionDetail({
   const [isInitialized, setIsInitialized] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
   const [isHeaderDateOpen, setIsHeaderDateOpen] = useState(false)
-  const [isFormDateOpen, setIsFormDateOpen] = useState(false)
   const [showAmountConfirm, setShowAmountConfirm] = useState(false)
   const [pendingAmount, setPendingAmount] = useState<string>("")
   const [isAmountEditing, setIsAmountEditing] = useState(false)
-  const [dateInput, setDateInput] = useState("")
   const [activeTab, setActiveTab] = useState<"datos" | "archivos">(initialTab)
   const [fileCount, setFileCount] = useState(0)
 
@@ -108,18 +107,15 @@ export function TransactionDetail({
       setActiveTab("datos")
       setFileCount(0)
       setIsAmountEditing(false)
-      setDateInput("")
       setShowAmountConfirm(false)
       setPendingAmount("")
       setSaveStatus("idle")
       setIsHeaderDateOpen(false)
-      setIsFormDateOpen(false)
       setIsInitialized(false)
       return
     }
 
     setFormData({ ...baselineData })
-    setDateInput(formatIsoDateToInput(baselineData.fecha))
     setFormMovementId(movement.id)
     setActiveTab(initialTab)
     setFileCount(0)
@@ -128,7 +124,6 @@ export function TransactionDetail({
     setPendingAmount("")
     setSaveStatus("idle")
     setIsHeaderDateOpen(false)
-    setIsFormDateOpen(false)
     setIsInitialized(true)
   }, [movement, baselineData, initialTab])
 
@@ -297,7 +292,6 @@ export function TransactionDetail({
     }
 
     const formattedDate = format(selectedDate, "yyyy-MM-dd")
-    setDateInput(formatIsoDateToInput(formattedDate))
 
     setFormData((prev) => {
       if (prev.fecha === formattedDate) {
@@ -390,10 +384,22 @@ export function TransactionDetail({
                         <Calendar
                           mode="single"
                           selected={formData.fecha ? new Date(formData.fecha) : undefined}
+                          defaultMonth={formData.fecha ? new Date(formData.fecha) : new Date()}
                           onSelect={(date) => handleDateSelection(date, () => setIsHeaderDateOpen(false))}
                           locale={es}
-                          initialFocus
+                          autoFocus
                         />
+                        <div className="border-t p-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleDateSelection(new Date(), () => setIsHeaderDateOpen(false))}
+                          >
+                            Hoy
+                          </Button>
+                        </div>
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -478,64 +484,17 @@ export function TransactionDetail({
                       <Label htmlFor="fecha" className="text-sm font-medium">
                         Fecha
                       </Label>
-                      <div className="flex gap-2">
-                        {/* Manual date input */}
-                        <Input
-                          id="fecha"
-                          type="text"
-                          value={dateInput}
-                          onChange={(e) => {
-                            const maskedValue = maskDateInput(e.target.value)
-                            setDateInput(maskedValue)
-
-                            const parsedDate = parseDateInputToIso(maskedValue)
-                            if (!parsedDate) {
-                              return
-                            }
-
-                            setFormData((prev) => {
-                              if (prev.fecha === parsedDate) {
-                                return prev
-                              }
-                              return {
-                                ...prev,
-                                fecha: parsedDate,
-                                descripcion: appendHistoryNote(prev, "date"),
-                              }
-                            })
-                          }}
-                          onBlur={() => {
-                            setDateInput(formatIsoDateToInput(formData.fecha))
-                          }}
-                          inputMode="numeric"
-                          autoComplete="off"
-                          placeholder="DD/MM/AAAA"
-                          className="flex-1 h-9"
-                        />
-                        {/* Calendar picker button */}
-                        <Popover open={isFormDateOpen} onOpenChange={setIsFormDateOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="flex-shrink-0 h-9 w-9"
-                              title="Abrir calendario"
-                            >
-                              <CalendarIcon className="h-4 w-4" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 z-[80]" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={formData.fecha ? new Date(formData.fecha) : undefined}
-                              onSelect={(date) => handleDateSelection(date, () => setIsFormDateOpen(false))}
-                              locale={es}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                      <DateField
+                        id="fecha"
+                        value={formData.fecha ?? null}
+                        onChange={(iso) =>
+                          setFormData((prev) =>
+                            prev.fecha === iso
+                              ? prev
+                              : { ...prev, fecha: iso, descripcion: appendHistoryNote(prev, "date") },
+                          )
+                        }
+                      />
                     </div>
                   </div>
 

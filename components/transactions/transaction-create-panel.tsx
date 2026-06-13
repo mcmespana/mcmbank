@@ -7,13 +7,11 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarIcon, Building2, X, Save } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { formatIsoDateToInput, maskDateInput, parseDateInputToIso } from "@/lib/utils/date-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+import { DateField } from "@/components/ui/date-field"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CategorySelector } from "./category-selector"
@@ -55,9 +53,7 @@ export function TransactionCreatePanel({
     contacto_id: null,
     cuenta_id: "",
   })
-  const [dateOpen, setDateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
-  const [dateInput, setDateInput] = useState(() => formatIsoDateToInput(format(new Date(), "yyyy-MM-dd")))
   const [contactoCreateOpen, setContactoCreateOpen] = useState(false)
   const [contactoInitialNombre, setContactoInitialNombre] = useState("")
 
@@ -97,7 +93,6 @@ export function TransactionCreatePanel({
         contacto_id: null,
         cuenta_id: "",
       })
-      setDateInput(formatIsoDateToInput(initialDate))
       onOpenChange(false)
     } catch (error) {
       console.error("Error creating transaction:", error)
@@ -119,7 +114,6 @@ export function TransactionCreatePanel({
       contacto_id: null,
       cuenta_id: "",
     })
-    setDateInput(formatIsoDateToInput(initialDate))
     onOpenChange(false)
   }
 
@@ -196,59 +190,10 @@ export function TransactionCreatePanel({
           {/* Date */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-muted-foreground">FECHA</Label>
-            <div className="flex gap-2">
-              {/* Manual date input */}
-              <Input
-                type="text"
-                value={dateInput}
-                onChange={(e) => {
-                  const maskedValue = maskDateInput(e.target.value)
-                  setDateInput(maskedValue)
-
-                  const parsedDate = parseDateInputToIso(maskedValue)
-                  if (parsedDate) {
-                    setFormData((prev) => ({ ...prev, fecha: parsedDate }))
-                  }
-                }}
-                onBlur={() => {
-                  setDateInput(formatIsoDateToInput(formData.fecha))
-                }}
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="DD/MM/AAAA"
-                className="flex-1 bg-muted/30"
-              />
-              {/* Calendar picker button */}
-              <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="flex-shrink-0"
-                    title="Abrir calendario"
-                  >
-                    <CalendarIcon className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.fecha ? new Date(formData.fecha) : undefined}
-                    onSelect={(date) => {
-                      if (date) {
-                        const formattedDate = format(date, "yyyy-MM-dd")
-                        setFormData({ ...formData, fecha: formattedDate })
-                        setDateInput(formatIsoDateToInput(formattedDate))
-                        setDateOpen(false)
-                      }
-                    }}
-                    locale={es}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            <DateField
+              value={formData.fecha ?? null}
+              onChange={(iso) => setFormData((prev) => ({ ...prev, fecha: iso }))}
+            />
           </div>
 
           {/* Account Selection */}

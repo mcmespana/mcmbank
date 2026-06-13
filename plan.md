@@ -12,7 +12,7 @@
 - ⬜ **Fase 5** — trocear category-list (refactor grande)
 - ⬜ **Fase 6** — visual menor (chevron, KPI, a11y, toasts)
 - ✅ **Fase 6.5 — editor de fechas**: componente `DateField` en los tres editores; calendario abre en el mes de la transacción + botón "Hoy" + edición de texto sin saltos de cursor. Verificado.
-- ⬜ **Fase 7** — tests mínimos (Vitest)
+- ✅ **Fase 7 — tests mínimos**: Vitest + `pnpm test`; 19 tests de `toLocalDateString`, `formatCurrency` y helpers de `date-input`. Todos verdes.
 **Audiencia:** Este documento está escrito para que lo pueda ejecutar un desarrollador junior o una IA sin contexto previo. Cada tarea incluye: objetivo, archivos exactos, pasos numerados, código de ejemplo y cómo verificar que funciona. **No te saltes las verificaciones.**
 
 ---

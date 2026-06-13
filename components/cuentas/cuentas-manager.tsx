@@ -269,15 +269,36 @@ export function CuentasManager() {
     }
   }
 
-  const handleDeleteCuenta = async (cuentaId: string) => {
+  const handleDeleteCuenta = async (cuentaId: string, opts: { migrateToCuentaId?: string } = {}) => {
 
     // Marcar como en proceso de eliminación
     setOperationState(cuentaId, 'deleting')
 
-    // Aplicar eliminación optimista inmediatamente
-    removeCuenta(cuentaId)
-
     try {
+      // 1. Si se pide migrar, reasignar primero los movimientos a la cuenta destino.
+      //    Los movimientos manuales tienen external_id NULL, así que no colisionan con
+      //    el índice único (cuenta_id, external_id). Si la cuenta destino tuviera el
+      //    mismo movimiento bancario, el UPDATE fallaría y avisamos sin borrar nada.
+      if (opts.migrateToCuentaId) {
+        const { error: migrateError } = await (supabase as any)
+          .from("movimiento")
+          .update({ cuenta_id: opts.migrateToCuentaId })
+          .eq("cuenta_id", cuentaId)
+
+        if (migrateError) {
+          console.error("handleDeleteCuenta: Error migrating movements", migrateError)
+          setOperationState(cuentaId, null)
+          toast.error("No se pudieron migrar los movimientos", {
+            description:
+              "Puede que la cuenta destino ya tenga algún movimiento idéntico. No se ha eliminado nada.",
+          })
+          return
+        }
+      }
+
+      // 2. Eliminación optimista de la cuenta en la UI.
+      removeCuenta(cuentaId)
+
       const { error } = await (supabase as any).from("cuenta").delete().eq("id", cuentaId)
       if (error) {
         console.error("handleDeleteCuenta: Error deleting account", error)
@@ -287,6 +308,10 @@ export function CuentasManager() {
       }
       // No necesitamos limpiar el estado aquí porque la cuenta ya no existe
       setDeletingCuenta(null)
+      if (opts.migrateToCuentaId) {
+        await forceRefresh() // refrescar saldos de la cuenta destino
+        toast.success("Movimientos migrados y cuenta eliminada")
+      }
     } catch (error) {
       console.error("handleDeleteCuenta: Error in try-catch", error)
       // Limpiar estado en caso de error
@@ -881,7 +906,8 @@ export function CuentasManager() {
       {deletingCuenta && (
         <DeleteAccountDialog
           cuenta={deletingCuenta}
-          onConfirm={() => handleDeleteCuenta(deletingCuenta.id)}
+          otherCuentas={cuentas.filter((c) => c.id !== deletingCuenta.id)}
+          onConfirm={(opts) => handleDeleteCuenta(deletingCuenta.id, opts)}
           onCancel={() => setDeletingCuenta(null)}
         />
       )}

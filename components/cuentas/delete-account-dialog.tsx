@@ -1,38 +1,48 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, Trash2 } from "lucide-react"
+import { AlertTriangle, Trash2, ArrowRightLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Cuenta } from "@/lib/types/database"
 
 interface DeleteAccountDialogProps {
   cuenta: Cuenta
-  onConfirm: () => void
+  /** Otras cuentas de la misma delegación a las que se podrían migrar los movimientos. */
+  otherCuentas: Cuenta[]
+  /** Si migrateToCuentaId viene, primero se reasignan los movimientos y luego se borra la cuenta. */
+  onConfirm: (opts: { migrateToCuentaId?: string }) => void | Promise<void>
   onCancel: () => void
 }
 
-export function DeleteAccountDialog({ cuenta, onConfirm, onCancel }: DeleteAccountDialogProps) {
+type Mode = "delete" | "migrate"
+
+export function DeleteAccountDialog({ cuenta, otherCuentas, onConfirm, onCancel }: DeleteAccountDialogProps) {
   const [confirmationText, setConfirmationText] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
+  const [mode, setMode] = useState<Mode>("delete")
+  const [targetCuentaId, setTargetCuentaId] = useState<string>("")
+
+  const canMigrate = otherCuentas.length > 0
+  const isConfirmationValid = confirmationText === "ELIMINAR"
+  const isMigrateReady = mode !== "migrate" || !!targetCuentaId
+  const canConfirm = isConfirmationValid && isMigrateReady && !isDeleting
 
   const handleConfirm = async () => {
-    if (confirmationText !== "ELIMINAR") {
-      return
-    }
-
+    if (!canConfirm) return
     setIsDeleting(true)
     try {
-      await onConfirm()
+      await onConfirm(mode === "migrate" ? { migrateToCuentaId: targetCuentaId } : {})
     } finally {
       setIsDeleting(false)
     }
   }
 
-  const isConfirmationValid = confirmationText === "ELIMINAR"
+  const targetNombre = otherCuentas.find((c) => c.id === targetCuentaId)?.nombre
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
@@ -43,7 +53,7 @@ export function DeleteAccountDialog({ cuenta, onConfirm, onCancel }: DeleteAccou
             Eliminar Cuenta
           </DialogTitle>
           <DialogDescription>
-            Esta acción no se puede deshacer. Se eliminará permanentemente la cuenta y todas sus transacciones asociadas.
+            Esta acción no se puede deshacer. Elige qué hacer con los movimientos de la cuenta antes de eliminarla.
           </DialogDescription>
         </DialogHeader>
 
@@ -60,6 +70,50 @@ export function DeleteAccountDialog({ cuenta, onConfirm, onCancel }: DeleteAccou
               )}
             </AlertDescription>
           </Alert>
+
+          {/* Qué hacer con los movimientos */}
+          {canMigrate && (
+            <div className="space-y-2">
+              <Label>¿Qué hacemos con los movimientos?</Label>
+              <Select value={mode} onValueChange={(v) => setMode(v as Mode)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="delete">Eliminarlos junto con la cuenta</SelectItem>
+                  <SelectItem value="migrate">Migrarlos a otra cuenta y luego eliminar esta</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {mode === "migrate" && (
+                <div className="space-y-2 pt-1">
+                  <Label className="flex items-center gap-1.5 text-sm">
+                    <ArrowRightLeft className="h-3.5 w-3.5" />
+                    Cuenta destino
+                  </Label>
+                  <Select value={targetCuentaId} onValueChange={setTargetCuentaId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una cuenta…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {otherCuentas.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.nombre}
+                          {c.tipo === "banco" && c.banco_nombre ? ` · ${c.banco_nombre}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Alert className="border-amber-200 bg-amber-50">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 text-xs">
+                      Los movimientos pasarán a <strong>{targetNombre || "la cuenta destino"}</strong>. Revisa
+                      después el <strong>saldo inicial</strong> de esa cuenta: si ya estaba sincronizada con el
+                      banco, puede quedar descuadrado y tendrás que ajustarlo a mano.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Confirmation Text Input */}
           <div className="space-y-2">
@@ -83,10 +137,16 @@ export function DeleteAccountDialog({ cuenta, onConfirm, onCancel }: DeleteAccou
             <Button
               variant="destructive"
               onClick={handleConfirm}
-              disabled={!isConfirmationValid || isDeleting}
+              disabled={!canConfirm}
               className="flex-1"
             >
-              {isDeleting ? "Eliminando..." : "Eliminar Cuenta"}
+              {isDeleting
+                ? mode === "migrate"
+                  ? "Migrando…"
+                  : "Eliminando..."
+                : mode === "migrate"
+                  ? "Migrar y eliminar"
+                  : "Eliminar Cuenta"}
             </Button>
             <Button
               variant="outline"

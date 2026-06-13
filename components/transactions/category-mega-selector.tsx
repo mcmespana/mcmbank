@@ -486,6 +486,8 @@ function CategoryPill({ category, size = "md", isSelected = false, onClick }: Ca
   return (
     <Badge
       variant="outline"
+      role="button"
+      aria-pressed={isSelected}
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-2 rounded-full border border-transparent shadow-sm transition-all duration-200 bg-[var(--category-color)] text-[var(--category-text-color)] hover:bg-[var(--category-color)] hover:brightness-110 hover:shadow-md cursor-pointer",

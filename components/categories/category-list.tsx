@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSearchParams } from "next/navigation"
+import { toast } from "sonner"
 import {
   DragDropContext,
   Droppable,
@@ -599,7 +600,7 @@ export function CategoryList() {
       await fetchCategorias()
     } catch (err) {
       console.error("Error toggling category visibility:", err)
-      alert("No se pudo actualizar la visibilidad de la categoría")
+      toast.error("No se pudo actualizar la visibilidad de la categoría")
     }
   }
 
@@ -609,9 +610,10 @@ export function CategoryList() {
     try {
       await DatabaseService.deleteCategoria(deletingCategory.id)
       await fetchCategorias()
+      toast.success("Categoría eliminada")
     } catch (err) {
       console.error("Error deleting category:", err)
-      alert("Error al eliminar la categoría")
+      toast.error("Error al eliminar la categoría")
     } finally {
       setDeletingCategory(null)
     }
@@ -722,9 +724,10 @@ export function CategoryList() {
       setEditingCategory(null)
       setCreatingParent(null)
       setNewCategoryDraft(null)
+      toast.success(editingCategory ? "Categoría actualizada" : "Categoría creada")
     } catch (err) {
       console.error("Error saving category:", err)
-      alert("Error al guardar la categoría")
+      toast.error("Error al guardar la categoría")
     }
   }
 

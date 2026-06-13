@@ -7,10 +7,10 @@
 - ✅ **Fase 0 — Bugs confirmados** (12 jun): fechas UTC (0.1), doble panel de filtros (0.2), turbopack.root (0.3), console.log + regla no-console (0.4), keys estables (0.5), params async Next 16 (0.6). Rama `puesta-a-punto-mcmbank`.
 - ✅ **Fase 1 — Tipos de Supabase**: `Database` generado en `lib/types/supabase-generated.ts`; errores de `tsc` en código fuente de **76 → 0**. Verificado en runtime (contactos y transacciones renderizan OK).
 - ✅ **Fase 2 — loading/error/skeletons**: componente `Skeleton`, `loading.tsx` en todas las rutas protegidas (+ neutro en `/auth`), `error.tsx` y `global-error.tsx`.
-- ⬜ **Fase 3** — bottom sheets móvil (vaul)
-- ⬜ **Fase 4** — React Query (añade dependencia)
-- ⬜ **Fase 5** — trocear category-list (refactor grande)
-- 🟡 **Fase 6 — visual menor** (parcial): ✅ chevron en filas clicables (6.1) + KPI Balance destacado (6.2). ⬜ a11y de chips (6.3) y toasts de confirmación (6.4).
+- ✅ **Fase 3 — header del selector en móvil**: el `CategoryMegaSelector` ya era bottom-sheet en móvil; se arregla la X que caía a una segunda fila. No se migra a vaul (alto esfuerzo, bajo valor).
+- ✅ **Fase 4 — React Query (piloto)**: `@tanstack/react-query` + `QueryProvider`; `useCategoryBreakdown` migrado a `useQuery` con el mismo contrato. Verificado en `/analisis`. (Migrar más hooks queda pendiente.)
+- 🟡 **Fase 5 — trocear category-list** (parcial): `CategoryCard` extraído a su archivo (1527→1269 líneas). El split del componente principal queda para un esfuerzo dedicado con QA.
+- ✅ **Fase 6 — visual menor**: chevron en filas clicables (6.1), KPI Balance destacado (6.2), aria-pressed en chips (6.3) y toasts en categorías (6.4).
 - ✅ **Fase 6.5 — editor de fechas**: componente `DateField` en los tres editores; calendario abre en el mes de la transacción + botón "Hoy" + edición de texto sin saltos de cursor. Verificado.
 - ✅ **Fase 7 — tests mínimos**: Vitest + `pnpm test`; 19 tests de `toLocalDateString`, `formatCurrency` y helpers de `date-input`. Todos verdes.
 **Audiencia:** Este documento está escrito para que lo pueda ejecutar un desarrollador junior o una IA sin contexto previo. Cada tarea incluye: objetivo, archivos exactos, pasos numerados, código de ejemplo y cómo verificar que funciona. **No te saltes las verificaciones.**

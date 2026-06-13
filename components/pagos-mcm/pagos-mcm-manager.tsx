@@ -236,7 +236,7 @@ export function PagosMcmManager() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
-        <TabsList className="w-full max-w-2xl grid grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4 sm:mx-auto sm:flex sm:w-fit">
           {TAB_ORDER.map((t) => {
             const info = t === "todos" ? null : PAGO_MCM_ESTADO_INFO[t as PagoMcmEstado]
             const n =

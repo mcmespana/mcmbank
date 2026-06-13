@@ -187,7 +187,7 @@ export function CategoryMegaSelector({
   return (
     <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-[calc(100vh-2rem)] sm:h-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
       <div className="border-b bg-muted/40 p-4 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+        <div className="flex flex-row items-start justify-between gap-3 sm:gap-6">
           <div className="flex flex-1 items-start gap-3 sm:items-center">
             {movement ? (
               <>

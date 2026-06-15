@@ -294,7 +294,8 @@ This returns `CategoriaConOrdenEfectivo[]` with proper ordering and visibility.
 ## Documentation
 
 - **User manual**: `docs/README.md` and numbered chapters (`docs/01-acceso.md` through `docs/07-diagnostico.md`)
-- **Technical docs**: `docs/SUMMARY.md`, `docs/FUTURE_DEVELOPMENTS.md`, `docs/NEXTJS_16_UPGRADE.md`, `docs/OPTIMIZACIONES_REALIZADAS.md`, `docs/OPTIMIZACIONES_PENDIENTES.md`
+- **Pending work (single backlog)**: `docs/ANALISIS_MEJORAS.md` — la lista única de desarrollos pendientes (seguridad, rendimiento, bugs, UI, funcionalidades y deuda técnica)
+- **Technical docs**: `docs/SUMMARY.md`, `docs/NEXTJS_16_UPGRADE.md`, `docs/OPTIMIZACIONES_REALIZADAS.md` (registro histórico de lo ya optimizado)
 - **Agent guidelines**: `AGENTS.md` for contributor coding conventions (in Spanish)
 - **README**: `README.md` for setup and quick start (in Spanish)
 

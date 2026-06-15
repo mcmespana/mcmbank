@@ -1,7 +1,23 @@
 # Análisis de mejoras de la aplicación
 
-> Análisis completo realizado el 12/06/2026 sobre seguridad, rendimiento, bugs funcionales, interfaz y nuevas funcionalidades.
+> **Lista única de trabajo pendiente.** Análisis completo realizado el 12/06/2026
+> sobre seguridad, rendimiento, bugs funcionales, interfaz y nuevas funcionalidades.
 > Marca con `[x]` las mejoras que se vayan completando.
+>
+> Consolida y sustituye a los antiguos `OPTIMIZACIONES_PENDIENTES.md`,
+> `FUTURE_DEVELOPMENTS.md` y `plan.md`. El registro de lo ya hecho vive en
+> `OPTIMIZACIONES_REALIZADAS.md`.
+
+## Ya completado (no volver a abrir)
+
+Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están en `main`** (verificadas en código y BBDD el 15/06/2026):
+
+- ✅ Lazy loading de archivos: sin JOIN a `movimiento_archivo` en `use-movimientos.ts` / `movimientos-cache-context.tsx`; carga bajo demanda con `use-movimiento-archivos.ts`.
+- ✅ Retry de `runQuery` valida `abort` antes y después de `refreshSession` (`lib/db/query.ts`).
+- ✅ Debounce de filtros de categorías en el dashboard (`useDebouncedCategoryFilter`).
+- ✅ Agregados del dashboard vía RPC: `get_financial_summary`, `get_category_breakdown`, `get_monthly_trend` (`scripts/037_aggregation_functions.sql`).
+- ✅ Skeletons de carga, `error.tsx` y `global-error.tsx` por ruta.
+- ✅ Editor de fechas reutilizable `DateField`; piloto de TanStack Query en `useCategoryBreakdown`; tests de utilidades con Vitest.
 
 ---
 
@@ -48,7 +64,7 @@
 - [ ] **21. `hasChanges` con `JSON.stringify` en cada render** — `transaction-detail.tsx:93`. *Fix: comparación campo a campo memoizada.*
 - [ ] **22. Falta `React.memo` en componentes pesados del dashboard** — `activity-balance.tsx` y similares se re-renderizan cuando cambian hermanos. *Fix: memoizar componentes de gráficos.*
 - [ ] **23. Fetches sin `AbortController`** — `use-financial-summary.ts` y otros hooks: actualizan estado tras desmontar, con condiciones de carrera al cambiar filtros rápido. *Fix: señal de aborto + guard.*
-- [ ] **24. Sin virtualización en listas largas de transacciones** — (ya identificado en `docs/OPTIMIZACIONES_PENDIENTES.md`). *Fix: `@tanstack/react-virtual` o similar.*
+- [ ] **24. Sin virtualización en listas largas de transacciones** — `TransactionTable` renderiza todas las filas en el DOM (lag con +500 movimientos). *Fix: `@tanstack/react-virtual` o similar.*
 - [ ] **25. `images.unoptimized: true`** — `next.config.mjs`: sin compresión/WebP/resize. *Fix: activar optimización de imágenes.*
 - [ ] **26. Sin Suspense/streaming** — todo es `"use client"` sin boundaries; las páginas esperan al hook más lento. *Fix: `loading.tsx` por ruta + Suspense en secciones del dashboard.*
 
@@ -63,7 +79,7 @@
 - [ ] **31. Doble importación posible** — `transaction-import-panel.tsx:553`: clic rápido dos veces dispara dos importaciones; la detección de duplicados no ve la primera. *Fix: guard `isImporting`.*
 - [ ] **32. Saldo de cuentas desactualizado** — `cuentas-manager.tsx:84`: el saldo se calcula al montar y no se refresca al crear/borrar movimientos. *Fix: refetch al cambiar movimientos.*
 - [ ] **33. Selección no se limpia al cambiar filtros** — `transaction-list.tsx:109`: las transacciones seleccionadas persisten tras cambiar filtros; las operaciones masivas pueden aplicarse a elementos que ya no se ven. *Fix: limpiar selección al cambiar filtros.*
-- [ ] **34. Sin `error.tsx` ni `not-found.tsx`** — no existen; un crash en cualquier página deja pantalla rota sin recuperación. *Fix: crear boundaries globales y por ruta.*
+- [ ] **34. Falta `not-found.tsx`** — los boundaries `error.tsx`/`global-error.tsx` ya existen, pero no hay página 404 personalizada. *Fix: crear `app/not-found.tsx`.*
 - [ ] **35. Roles no aplicados en la UI** — el rol `solo_lectura` solo se respeta en categorías y pagos-mcm; en transacciones, cuentas, contactos e importación los botones de edición/borrado siguen activos. *Fix: aplicar el patrón de `category-list.tsx` en el resto.*
 - [ ] **36. Borrados sin deshacer ni resumen de impacto** — borrar una categoría con movimientos no avisa del impacto ni ofrece undo. *Fix: diálogo con recuento de movimientos afectados + toast con "Deshacer".*
 - [ ] **37. Operaciones masivas sin actualización optimista** — `transaction-manager.tsx`: asignar categoría en lote deja la UI congelada hasta la respuesta. *Fix: optimistic update con revert en error.*
@@ -116,9 +132,18 @@
 
 ---
 
+## 🧹 F. Mantenibilidad y deuda técnica
+
+- [ ] **66. Debounce global de revalidaciones al cambiar de pestaña** — `hooks/use-app-status.ts`: las revalidaciones al volver al foco se disparan en ráfaga (jitter individual de 90-220ms). *Fix: agrupador `scheduleRevalidation` con ventana de ~500ms que ejecute los callbacks de forma escalonada.*
+- [ ] **67. Trocear `category-list.tsx` (1269 líneas)** — solo se extrajo `CategoryCard`. *Fix: separar tipos, helpers, dialogs y formularios a `components/categories/`, dejando el archivo principal como orquestador (<400 líneas). Refactor mecánico sin cambio de comportamiento.*
+- [ ] **68. Continuar la migración a TanStack Query** — el piloto cubre `useCategoryBreakdown`. *Fix: migrar el resto de hooks de fetching manteniendo el mismo contrato de salida, y retirar la gestión manual de abort/caché donde React Query ya lo cubra.*
+
+---
+
 ## Prioridades recomendadas
 
 1. **Lote 1 (urgente):** 1–4 — la API de admin abierta es una vulnerabilidad crítica explotable hoy.
 2. **Lote 2 (seguridad alta):** 5, 7, 9 — adjuntos públicos, RPCs sin autorización, cabeceras.
 3. **Lote 3 (bugs diarios):** 27–31 — coma decimal y doble envío afectan a la entrada de datos a diario.
-4. **Lote 4 (rendimiento):** 13–16.
+4. **Lote 4 (rendimiento):** 13–16, 24.
+5. **Lote 5 (deuda técnica):** 66–68.

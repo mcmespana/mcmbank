@@ -334,10 +334,10 @@ CREATE INDEX idx_cuenta_delegacion
 
 ## 🚀 **Próximos Pasos (Opcional - Media Prioridad)**
 
-Según `OPTIMIZACIONES_PENDIENTES.md`, quedan pendientes (no urgentes):
+La lista única de trabajo pendiente vive en `docs/ANALISIS_MEJORAS.md`. Entre lo no urgente destaca:
 
-1. **Virtualización en listas largas** - Para +500 movimientos
-2. **Considerar React Query/SWR** - Si el proyecto crece mucho más
+1. **Virtualización en listas largas** - Para +500 movimientos (item 24)
+2. **Continuar migración a TanStack Query** - El piloto ya cubre `useCategoryBreakdown` (item 68)
 
 ---
 

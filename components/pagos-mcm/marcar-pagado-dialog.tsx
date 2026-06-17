@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { AlertTriangle, Banknote, ExternalLink, Loader2 } from "lucide-react"
+import { AlertTriangle, Banknote, Loader2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,

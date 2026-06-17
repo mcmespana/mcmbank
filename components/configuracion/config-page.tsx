@@ -93,12 +93,17 @@ export function ConfigPage() {
     }
   }
 
+  // Carga inicial de datos de administración. El setState ocurre tras await
+  // (no en cascada); la regla del compiler marca este patrón "fetch al montar"
+  // de forma conservadora.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isAdmin) {
       loadDelegaciones()
       loadUsers()
     }
   }, [isAdmin])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const roles = useMemo(
     () => [

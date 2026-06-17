@@ -91,7 +91,7 @@ export function CuentaSyncDialog({ open, onOpenChange, cuentaId, cuentaNombre, o
         <div className="flex-1 overflow-y-auto space-y-4">
           {!result && !error && !running && (
             <div className="text-sm text-muted-foreground py-8 text-center">
-              Pulsa "Ejecutar sincronización" para empezar.
+              Pulsa &quot;Ejecutar sincronización&quot; para empezar.
             </div>
           )}
 

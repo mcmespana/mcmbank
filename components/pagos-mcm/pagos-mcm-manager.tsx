@@ -65,7 +65,6 @@ export function PagosMcmManager() {
     pagos,
     loading,
     error,
-    totals,
     createPago,
     updatePago,
     deletePago,

@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, Building2 } from "lucide-react"
 import { format } from "date-fns"
 import { DateField } from "@/components/ui/date-field"
-import { cn } from "@/lib/utils"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 
 interface TransactionFormProps {

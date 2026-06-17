@@ -64,7 +64,7 @@ export function ChartTooltipContent({
   return (
     <div className="grid gap-2 rounded-md border bg-background p-2 text-xs shadow-md">
       <div className="font-medium">{label}</div>
-      {payload.map((item: any, index: number) => {
+      {payload.map((item: any) => {
         const key = item.dataKey as string
         const color = item.color ?? `var(--color-${key})`
         return (

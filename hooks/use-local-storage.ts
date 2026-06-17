@@ -10,6 +10,9 @@ export function useLocalStorageState<T>(key: string, defaultValue: T) {
     try {
       const stored = window.localStorage.getItem(key)
       if (stored !== null) {
+        // Sincronización con localStorage tras hidratar (no se puede leer en el
+        // initial state sin arriesgar desajuste de hidratación SSR/cliente).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setState(JSON.parse(stored) as T)
       }
     } catch (error) {

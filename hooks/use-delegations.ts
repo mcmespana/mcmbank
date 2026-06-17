@@ -13,6 +13,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const userId = user?.id ?? null
 
   // Ref so attempt() reads latest delegations without needing them in useCallback deps
   const delegationsRef = useRef<Delegacion[]>(delegations)
@@ -22,14 +23,13 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchDelegations = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       // Don't wipe delegations on a transient null user — selector stays
       // populated through brief auth-state glitches. Genuine sign-out is
       // handled by routing redirecting to /auth/login.
       setLoading(false)
       return
     }
-    const userId = user.id
 
     // Cancel previous pending request (if any)
     if (abortControllerRef.current) abortControllerRef.current.abort()
@@ -101,7 +101,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
         timeoutRef.current = null
       }
     }
-  }, [user?.id, timeout])
+  }, [userId, timeout])
 
   // Ref to avoid effect cleanup aborting in-flight requests on callback identity change
   const fetchDelegationsRef = useRef(fetchDelegations)
@@ -113,8 +113,8 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
       if (abortControllerRef.current) abortControllerRef.current.abort()
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+
+  }, [userId])
 
   // Revalidate on tab focus
   useRevalidateOnFocusJitter(() => fetchDelegationsRef.current(), { minMs: 40, maxMs: 140 })

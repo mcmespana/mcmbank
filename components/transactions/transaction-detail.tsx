@@ -100,6 +100,10 @@ export function TransactionDetail({
   const account = accounts.find((acc) => acc.id === movement?.cuenta_id)
   const selectedCategory = categories.find((cat) => cat.id === formData.categoria_id)
 
+  // Reset del formulario cuando cambia el movimiento seleccionado. Son muchos
+  // campos de estado independientes; mantenerlo como efecto es más legible que
+  // forzar un key-remount desde el padre.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!movement || !baselineData) {
       setFormData({})
@@ -126,7 +130,11 @@ export function TransactionDetail({
     setIsHeaderDateOpen(false)
     setIsInitialized(true)
   }, [movement, baselineData, initialTab])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Autoguardado con debounce: el estado "saving"/"idle" es parte del propio
+  // efecto de guardado (side-effect), no estado derivable durante el render.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!movement || !baselineData || !isInitialized || movement.id !== formMovementId) {
       return
@@ -161,6 +169,7 @@ export function TransactionDetail({
     onUpdate,
     saveStatus,
   ])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (saveStatus !== "saved") {

@@ -7,12 +7,20 @@ Este documento contiene las optimizaciones de **ALTA prioridad** identificadas d
 ✅ **Arreglado:** Memory leak en `useRevalidateOnFocusJitter` que causaba timeouts acumulados
 ✅ **Arreglado:** Sistema de caché compartido para movimientos (elimina peticiones duplicadas)
 ✅ **Arreglado:** Instancia duplicada de `useMovimientos` en `activity-balance.tsx`
+✅ **Arreglado (jun 2026):** Lazy-loading de archivos — la lista de movimientos ya **no** hace JOIN a `movimiento_archivo` (ver `hooks/use-movimientos.ts:174`) y los adjuntos se cargan bajo demanda con `hooks/use-movimiento-archivos.ts`. El punto 2 de abajo queda **completado**.
 
 ---
 
 ## 🔴 **ALTA PRIORIDAD** - Siguientes optimizaciones
 
 ### 1. Implementar debouncing/throttling en revalidaciones
+
+> ✅ **Hecho (jun 2026):** En `hooks/use-app-status.ts` se añadió un intervalo
+> mínimo (`MIN_REVALIDATE_INTERVAL_MS = 10s`) entre revalidaciones por foco, que
+> evita ráfagas de refetch al alternar pestañas rápidamente. El "jitter" por hook
+> se descartó a propósito (reintroducía la complejidad del tab-switch hang).
+>
+> _Propuesta original (mantener como referencia):_
 
 **Problema:**
 Actualmente, las revalidaciones al cambiar de pestaña se disparan todas casi simultáneamente (con jitter de 40-220ms). Aunque ahora el caché evita peticiones duplicadas, sigue habiendo ráfagas de validaciones.

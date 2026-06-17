@@ -435,8 +435,8 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
               </Table>
               {movimientos.length > MOVEMENTS_PREVIEW_LIMIT && (
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Mostrando los {MOVEMENTS_PREVIEW_LIMIT} más recientes de {movimientos.length}. Usa "Ver en
-                  transacciones" para el listado completo.
+                  Mostrando los {MOVEMENTS_PREVIEW_LIMIT} más recientes de {movimientos.length}. Usa &quot;Ver en
+                  transacciones&quot; para el listado completo.
                 </p>
               )}
             </CardContent>

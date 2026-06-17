@@ -27,8 +27,12 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
 
   // Ref avoids recreating setSelectedDelegation when delegations refetch
   // (which would cascade through the entire context consumer tree).
+  // getCurrentDelegation lee el ref en tiempo de llamada, así que actualizarlo
+  // en un efecto (no durante el render) es seguro y satisface react-hooks/refs.
   const delegationsRef = useRef(delegations)
-  delegationsRef.current = delegations
+  useEffect(() => {
+    delegationsRef.current = delegations
+  }, [delegations])
 
   const setSelectedDelegation = useCallback((delegationId: string | null) => {
     if (delegationId === selectedDelegation) return
@@ -40,7 +44,10 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
     setSelectedDelegationState(delegationId)
   }, [selectedDelegation])
 
-  // Auto-select first delegation when loaded (only if no valid selection exists)
+  // Auto-select first delegation when loaded (only if no valid selection exists).
+  // Inicialización a partir de datos asíncronos (las delegaciones llegan por red);
+  // es un efecto legítimo, no estado derivable durante el render.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (delegations.length === 0) return
     // If current selection is still valid in the list, keep it
@@ -48,6 +55,7 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
     // Otherwise pick the first one
     setSelectedDelegation(delegations[0].id)
   }, [delegations, selectedDelegation, setSelectedDelegation])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const getCurrentDelegation = useCallback(() => {
     if (!selectedDelegation) return null

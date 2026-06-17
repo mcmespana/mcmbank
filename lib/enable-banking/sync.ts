@@ -654,7 +654,7 @@ export async function syncTodasLasCuentas(
   const now = new Date()
 
   for (const c of cuentas || []) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const conn: any = Array.isArray((c as any).banco_conexion) ? (c as any).banco_conexion[0] : (c as any).banco_conexion
     if (!conn || conn.estado !== "autorizada" || new Date(conn.consent_valid_until) < now) {
       resultados.push({

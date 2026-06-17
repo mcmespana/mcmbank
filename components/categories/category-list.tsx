@@ -7,15 +7,13 @@ import { toast } from "sonner"
 import {
   DragDropContext,
   Droppable,
-  Draggable,
   type DropResult,
   type DragUpdate,
 } from "@hello-pangea/dnd"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { CategoryEditForm } from "./category-edit-form"
 import { DateRangeFilter } from "@/components/transactions/date-range-filter"
 import { useCategorias } from "@/hooks/use-categorias"
@@ -24,26 +22,20 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import useIsAdmin from "@/hooks/use-is-admin"
 import useDelegationRole from "@/hooks/use-delegation-role"
 import { DatabaseService } from "@/lib/services/database"
-import {
-  GripVertical,
-  Search,
-  Edit,
-  Trash2,
-  Plus,
-  X,
-  Globe2,
-  PlusCircle,
-  EyeOff,
-  Eye,
-  ChevronUp,
-  ChevronDown,
-  HelpCircle,
-} from "lucide-react"
-import { AmountDisplay } from "@/components/amount-display"
+import { Search, Plus, X, HelpCircle } from "lucide-react"
 import autoAnimate from "@formkit/auto-animate"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import { CategoryCard } from "./category-card"
+import {
+  canEditCategory as canEditCategoryFn,
+  canDeleteCategory as canDeleteCategoryFn,
+  canToggleCategoryActive as canToggleCategoryActiveFn,
+  canHideGlobalCategory as canHideGlobalCategoryFn,
+  canReorderCategory as canReorderCategoryFn,
+  canCreateSubcategory as canCreateSubcategoryFn,
+  type CategoryPermissionContext,
+} from "@/lib/utils/category-permissions"
 import type { Categoria, CategoriaConOrdenEfectivo } from "@/lib/types/database"
 
 function buildChildrenMap(items: CategoriaConOrdenEfectivo[]) {
@@ -182,67 +174,26 @@ export function CategoryList() {
   }
 
   // ============================================================================
-  // LÓGICA DE PERMISOS MEJORADA
+  // LÓGICA DE PERMISOS — ver lib/utils/category-permissions.ts (puro y testeado)
   // ============================================================================
 
-  /**
-   * Puede EDITAR (nombre, emoji, color) una categoría
-   * - Gestor MCM: puede editar cualquier categoría (global o local)
-   * - Tesorero: solo puede editar categorías locales de su delegación
-   */
-  const canEditCategory = (category: CategoriaConOrdenEfectivo) => {
-    if (isCentralManager) return true
-    if (!selectedDelegation) return false
-    // Tesoreros solo pueden editar categorías locales de su delegación
-    return !category.es_global && category.delegacion_id === selectedDelegation
+  const permissionCtx: CategoryPermissionContext = {
+    isCentralManager,
+    isDelegationTreasurer,
+    selectedDelegation,
   }
 
-  /**
-   * Puede ELIMINAR una categoría (borrado físico)
-   * - Gestor MCM: puede eliminar cualquier categoría
-   * - Tesorero: solo puede eliminar categorías locales de su delegación
-   */
-  const canDeleteCategory = (category: CategoriaConOrdenEfectivo) => {
-    if (isCentralManager) return true
-    if (!selectedDelegation) return false
-    // Tesoreros solo pueden eliminar categorías locales de su delegación
-    return !category.es_global && category.delegacion_id === selectedDelegation
-  }
-
-  /**
-   * Puede ACTIVAR/DESACTIVAR una categoría (cambiar esta_activa)
-   * - Gestor MCM: puede activar/desactivar categorías globales
-   * - Tesorero: puede activar/desactivar categorías locales de su delegación
-   */
-  const canToggleCategoryActive = (category: CategoriaConOrdenEfectivo) => {
-    if (isCentralManager) {
-      // Gestor MCM solo activa/desactiva globales (las locales las elimina directamente)
-      return category.es_global
-    }
-    if (!selectedDelegation) return false
-    // Tesoreros pueden activar/desactivar sus categorías locales
-    return !category.es_global && category.delegacion_id === selectedDelegation
-  }
-
-  /**
-   * Puede OCULTAR/MOSTRAR una categoría global en su delegación (override local)
-   * - Solo tesoreros pueden ocultar categorías globales en su delegación
-   * - Gestor MCM no necesita ocultar, puede desactivar directamente
-   */
-  const canHideGlobalCategory = (category: CategoriaConOrdenEfectivo) => {
-    if (isCentralManager) return false
-    if (!selectedDelegation) return false
-    // Solo para categorías globales
-    return category.es_global
-  }
-
-  const canReorderCategory = () => true
-
-  const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) => {
-    if (category.categoria_padre_id !== null) return false
-    if (!category.es_global) return true
-    return isCentralManager || (isDelegationTreasurer && !!selectedDelegation)
-  }
+  const canEditCategory = (category: CategoriaConOrdenEfectivo) =>
+    canEditCategoryFn(permissionCtx, category)
+  const canDeleteCategory = (category: CategoriaConOrdenEfectivo) =>
+    canDeleteCategoryFn(permissionCtx, category)
+  const canToggleCategoryActive = (category: CategoriaConOrdenEfectivo) =>
+    canToggleCategoryActiveFn(permissionCtx, category)
+  const canHideGlobalCategory = (category: CategoriaConOrdenEfectivo) =>
+    canHideGlobalCategoryFn(permissionCtx, category)
+  const canReorderCategory = () => canReorderCategoryFn()
+  const canCreateSubcategory = (category: CategoriaConOrdenEfectivo) =>
+    canCreateSubcategoryFn(permissionCtx, category)
 
   const handleEdit = (category: CategoriaConOrdenEfectivo) => {
     if (!canEditCategory(category)) return

@@ -14,6 +14,11 @@ import { addOurVisibilityListener } from "@/lib/supabase/client"
 let _focusVersion = 0
 const _focusListeners = new Set<() => void>()
 
+// Intervalo mínimo entre revalidaciones por foco. Alternar pestañas más rápido
+// que esto reutiliza los datos ya cargados en vez de relanzar todas las queries.
+const MIN_REVALIDATE_INTERVAL_MS = 10_000
+let _lastFocusRevalidate = 0
+
 function _bumpFocusVersion() {
   _focusVersion++
   _focusListeners.forEach((l) => l())
@@ -41,7 +46,11 @@ export function useFocusVersion(): number {
 // lets ours through.
 
 export const useAppStatus = () => {
-  const [isOnline, setIsOnline] = useState(true)
+  // Inicialización perezosa: leemos navigator.onLine en el primer render (en
+  // cliente) en vez de sincronizarlo con un setState dentro del efecto.
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  )
   const [isFocused, setIsFocused] = useState(true)
 
   useEffect(() => {
@@ -49,7 +58,6 @@ export const useAppStatus = () => {
     const handleOffline = () => setIsOnline(false)
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
-    if (typeof navigator !== "undefined") setIsOnline(navigator.onLine)
     return () => {
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
@@ -61,6 +69,13 @@ export const useAppStatus = () => {
       const isNowFocused = !document.hidden
       setIsFocused(isNowFocused)
       if (!isNowFocused) return
+
+      // Evita ráfagas de refetch al alternar pestañas rápidamente: si la última
+      // revalidación por foco fue hace menos de MIN_REVALIDATE_INTERVAL_MS, los
+      // datos siguen frescos y no merece la pena recargar toda la app de nuevo.
+      const now = Date.now()
+      if (now - _lastFocusRevalidate < MIN_REVALIDATE_INTERVAL_MS) return
+      _lastFocusRevalidate = now
 
       abortAllInFlight()
       // tiny delay so abort propagates before bump triggers re-render
@@ -85,8 +100,13 @@ export const useAppStatus = () => {
 export const useRevalidateOnFocus = (revalidate: () => void) => {
   const focusVersion = useFocusVersion()
   const ref = useRef(revalidate)
-  ref.current = revalidate
   const mounted = useRef(false)
+
+  // Mantener la ref con el callback más reciente desde un efecto (no durante el
+  // render). Va antes del efecto de focusVersion para que ya esté actualizada.
+  useEffect(() => {
+    ref.current = revalidate
+  })
 
   useEffect(() => {
     if (!mounted.current) {

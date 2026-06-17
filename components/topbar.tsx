@@ -22,6 +22,9 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // Guard de hidratación: marcamos "montado" en cliente para evitar desajustes
+    // SSR al pintar el tema. Es el patrón estándar, no estado derivable.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 

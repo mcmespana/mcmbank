@@ -38,6 +38,7 @@ export function useMovimientos(
   const [hasMore, setHasMore] = useState(true)
 
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
+  const timeoutMs = options.timeoutMs ?? 15000
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fetchingRef = useRef(false)
@@ -111,7 +112,6 @@ export function useMovimientos(
       fetchingRef.current = true
 
       // Set safety timeout
-      const timeoutMs = options.timeoutMs || 15000
       timeoutRef.current = setTimeout(() => {
         console.warn(`[useMovimientos] Request timed out after ${timeoutMs}ms`)
         abortController.abort()
@@ -282,7 +282,7 @@ export function useMovimientos(
         }
       }
     },
-    [delegacionId, memoizedFilters, pageSize]
+    [delegacionId, memoizedFilters, pageSize, timeoutMs]
   )
 
   // Keep a ref to the latest fetchMovimientos so the effect below does not

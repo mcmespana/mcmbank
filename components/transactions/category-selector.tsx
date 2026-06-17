@@ -126,14 +126,17 @@ export function CategorySelector({
     onOpenChange?.(nextOpen)
   }
 
+  // Reset del buscador al abrir, ajustando estado durante el render comparando
+  // con el valor previo (patrón "adjust state when a prop changes", sin efecto).
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) setSearchValue("")
+  }
+
+  // El efecto solo hace foco (side-effect de DOM), no toca estado.
   useEffect(() => {
-    if (!open) {
-      return
-    }
-
-    setSearchValue("")
-
-    if (!focusSearchOnOpen) {
+    if (!open || !focusSearchOnOpen) {
       return
     }
 

@@ -44,7 +44,10 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
     setSelectedDelegationState(delegationId)
   }, [selectedDelegation])
 
-  // Auto-select first delegation when loaded (only if no valid selection exists)
+  // Auto-select first delegation when loaded (only if no valid selection exists).
+  // Inicialización a partir de datos asíncronos (las delegaciones llegan por red);
+  // es un efecto legítimo, no estado derivable durante el render.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (delegations.length === 0) return
     // If current selection is still valid in the list, keep it
@@ -52,6 +55,7 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
     // Otherwise pick the first one
     setSelectedDelegation(delegations[0].id)
   }, [delegations, selectedDelegation, setSelectedDelegation])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const getCurrentDelegation = useCallback(() => {
     if (!selectedDelegation) return null

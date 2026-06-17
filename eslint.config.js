@@ -18,17 +18,16 @@ const eslintConfig = [
     // Regla global (no necesita plugin)
     rules: {
       "no-console": ["warn", { allow: ["warn", "error"] }],
-      // Reglas nuevas del React Compiler (eslint-plugin-react-hooks) que Next 16
-      // activa como error. Se han corregido los casos que eran mejora real
-      // (estado derivado de props, mirror de ref en efecto, código muerto).
-      // Las que quedan son patrones intencionados y correctos que la heurística
-      // sobre-marca: carga de datos al montar, reset de formulario al cambiar de
-      // prop, guards de hidratación SSR (mounted/localStorage) y reacciones a
-      // estado asíncrono (auth/redirect). Las dejamos como AVISO en vez de
-      // forzar refactors de riesgo en flujos de auth/tema/config.
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/refs": "warn",
-      "react-hooks/immutability": "warn",
+      // Reglas del React Compiler (eslint-plugin-react-hooks). Todos los casos
+      // del código se han resuelto: los que eran mejora real se refactorizaron
+      // (estado derivado de props, mirror de ref en efecto, mutaciones, código
+      // muerto) y los pocos patrones intencionados e irreducibles (carga de
+      // datos al montar, reset de formulario, guards de hidratación SSR,
+      // reacciones a auth) llevan un eslint-disable puntual y justificado en su
+      // sitio. Se mantienen en ERROR para bloquear nuevas infracciones.
+      "react-hooks/set-state-in-effect": "error",
+      "react-hooks/refs": "error",
+      "react-hooks/immutability": "error",
     },
   },
   {

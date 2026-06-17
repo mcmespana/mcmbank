@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import {
@@ -39,46 +39,49 @@ export function ConfigurationManager() {
   const [editingDelegacion, setEditingDelegacion] = useState<DelegacionWithCount | null>(null)
   const [editingUser, setEditingUser] = useState<UserInfo | null>(null)
 
-  useEffect(() => {
-    fetchDelegaciones()
-    fetchUsers()
-  }, [])
-
-  async function fetchDelegaciones() {
+  // useCallback (no como `function ...`) para tener una identidad estable y que
+  // el efecto de carga inicial pueda depender de ellas sin re-ejecutarse.
+  const fetchDelegaciones = useCallback(async () => {
     const { data } = await (supabase as any).from("delegacion").select("*")
-    const results: DelegacionWithCount[] = []
-    if (data) {
-      for (const d of data) {
+    const results: DelegacionWithCount[] = await Promise.all(
+      ((data ?? []) as any[]).map(async (d) => {
         const { count } = await (supabase as any)
           .from("movimiento")
           .select("*", { count: "exact", head: true })
           .eq("delegacion_id", d.id)
-        results.push({ ...d, movimientos: count ?? 0 })
-      }
-    }
+        return { ...d, movimientos: count ?? 0 }
+      })
+    )
     setDelegaciones(results)
-  }
+  }, [])
 
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     const res = await fetch("/api/admin/users")
     if (!res.ok) return
     const json = await res.json()
-    const baseUsers: UserInfo[] = json.users.map((u: any) => ({
-      id: u.id,
-      email: u.email,
-      delegaciones: [],
-      rol: null,
-    }))
     const { data } = await (supabase as any)
       .from("membresia")
       .select("usuario_id, rol, delegacion:delegacion_id (id, nombre)")
-    baseUsers.forEach((u) => {
+    const users: UserInfo[] = json.users.map((u: any) => {
       const memberships = (data || []).filter((m: any) => m.usuario_id === u.id)
-      u.delegaciones = memberships.map((m: any) => m.delegacion).filter(Boolean)
-      u.rol = memberships[0]?.rol || null
+      return {
+        id: u.id,
+        email: u.email,
+        delegaciones: memberships.map((m: any) => m.delegacion).filter(Boolean),
+        rol: memberships[0]?.rol || null,
+      }
     })
-    setUsers(baseUsers)
-  }
+    setUsers(users)
+  }, [])
+
+  // Carga inicial de datos de administración (fetch al montar). El setState va
+  // tras await, no en cascada; la regla del compiler lo marca de forma conservadora.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    fetchDelegaciones()
+    fetchUsers()
+  }, [fetchDelegaciones, fetchUsers])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function saveDelegacion(patch: { nombre: string; codigo: string | null }) {
     if (!editingDelegacion) return

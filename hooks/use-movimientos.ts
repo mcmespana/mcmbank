@@ -347,7 +347,7 @@ export function useMovimientos(
         clearTimeout(timeoutRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [fetchKey])
 
   // Revalidate on focus - with debouncing (only if not currently fetching)

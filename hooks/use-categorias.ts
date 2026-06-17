@@ -92,7 +92,7 @@ export function useCategorias(
         unregisterAC(abortRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [delegacionId, includeGlobal, includeInactive])
 
   useRevalidateOnFocusJitter(() => fetchCategoriasRef.current(), { minMs: 60, maxMs: 160 })

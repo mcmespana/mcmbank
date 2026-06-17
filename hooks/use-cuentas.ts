@@ -175,7 +175,7 @@ export function useCuentas(
         clearTimeout(timeoutRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [memoizedDelegacionId, cuentas.length])
 
   // Revalidate on focus (force = true to bypass skip guard)

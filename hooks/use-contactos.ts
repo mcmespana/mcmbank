@@ -91,7 +91,7 @@ export function useContactos(delegacionId?: string | null, options: UseContactos
         unregisterAC(abortRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [delegacionId, tipo, busqueda, incluirArchivados, incluirGlobales])
 
   useRevalidateOnFocusJitter(() => fetchRef.current(), { minMs: 80, maxMs: 200 })

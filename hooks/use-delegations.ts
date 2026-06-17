@@ -113,7 +113,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
       if (abortControllerRef.current) abortControllerRef.current.abort()
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [user?.id])
 
   // Revalidate on tab focus

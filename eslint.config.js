@@ -1,13 +1,4 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+import next from "eslint-config-next";
 
 const eslintConfig = [
   {
@@ -22,14 +13,28 @@ const eslintConfig = [
       "next-env.d.ts"
     ],
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...next,
   {
+    // Regla global (no necesita plugin)
+    rules: {
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      // Reglas nuevas y estrictas del React Compiler (eslint-plugin-react-hooks)
+      // que Next 16 activa como error. Las dejamos como aviso: marcan deuda
+      // técnica real a vigilar, pero no deben bloquear build ni CI de golpe.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/immutability": "warn",
+    },
+  },
+  {
+    // Reglas de @typescript-eslint: el plugin ya lo registra next/typescript
+    // para estos archivos, así que solo sobreescribimos las reglas.
+    files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "warn",
-      "no-console": ["warn", { allow: ["warn", "error"] }],
-    }
-  }
+    },
+  },
 ];
 
 export default eslintConfig;

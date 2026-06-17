@@ -126,7 +126,7 @@ export function useTransacciones({
       }
 
       // Process data to match expected type structure
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const processedData = ((data || []) as any[]).map(item => {
         const cuenta = Array.isArray(item.cuenta) ? item.cuenta[0] : item.cuenta
         return {
@@ -180,7 +180,7 @@ export function useTransacciones({
         clearTimeout(timeoutRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [delegacionId, fechaInicio, fechaFin, categoriaId, busqueda, timeout])
 
   // Revalidate on focus

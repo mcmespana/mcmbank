@@ -150,7 +150,7 @@ export function ProposalsBoard({
       {hiddenCompleted > 0 && (
         <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-2.5 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
           Hay {hiddenCompleted} propuesta{hiddenCompleted === 1 ? "" : "s"} en Hechísimo. Usa el botón
-          "Mostrar hechísimos" para verlas.
+          &quot;Mostrar hechísimos&quot; para verlas.
         </div>
       )}
     </div>

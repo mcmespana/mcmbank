@@ -89,7 +89,7 @@ export function usePagosMcm(delegacionId?: string | null, options: UsePagosMcmOp
         unregisterAC(abortRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [delegacionId, estadosKey, contactoId, busqueda])
 
   useRevalidateOnFocusJitter(() => fetchRef.current(), { minMs: 80, maxMs: 200 })

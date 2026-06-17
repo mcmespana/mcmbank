@@ -14,6 +14,11 @@ import { addOurVisibilityListener } from "@/lib/supabase/client"
 let _focusVersion = 0
 const _focusListeners = new Set<() => void>()
 
+// Intervalo mínimo entre revalidaciones por foco. Alternar pestañas más rápido
+// que esto reutiliza los datos ya cargados en vez de relanzar todas las queries.
+const MIN_REVALIDATE_INTERVAL_MS = 10_000
+let _lastFocusRevalidate = 0
+
 function _bumpFocusVersion() {
   _focusVersion++
   _focusListeners.forEach((l) => l())
@@ -61,6 +66,13 @@ export const useAppStatus = () => {
       const isNowFocused = !document.hidden
       setIsFocused(isNowFocused)
       if (!isNowFocused) return
+
+      // Evita ráfagas de refetch al alternar pestañas rápidamente: si la última
+      // revalidación por foco fue hace menos de MIN_REVALIDATE_INTERVAL_MS, los
+      // datos siguen frescos y no merece la pena recargar toda la app de nuevo.
+      const now = Date.now()
+      if (now - _lastFocusRevalidate < MIN_REVALIDATE_INTERVAL_MS) return
+      _lastFocusRevalidate = now
 
       abortAllInFlight()
       // tiny delay so abort propagates before bump triggers re-render

@@ -7,15 +7,13 @@ import { toast } from "sonner"
 import {
   DragDropContext,
   Droppable,
-  Draggable,
   type DropResult,
   type DragUpdate,
 } from "@hello-pangea/dnd"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { CategoryEditForm } from "./category-edit-form"
 import { DateRangeFilter } from "@/components/transactions/date-range-filter"
 import { useCategorias } from "@/hooks/use-categorias"
@@ -24,22 +22,7 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import useIsAdmin from "@/hooks/use-is-admin"
 import useDelegationRole from "@/hooks/use-delegation-role"
 import { DatabaseService } from "@/lib/services/database"
-import {
-  GripVertical,
-  Search,
-  Edit,
-  Trash2,
-  Plus,
-  X,
-  Globe2,
-  PlusCircle,
-  EyeOff,
-  Eye,
-  ChevronUp,
-  ChevronDown,
-  HelpCircle,
-} from "lucide-react"
-import { AmountDisplay } from "@/components/amount-display"
+import { Search, Plus, X, HelpCircle } from "lucide-react"
 import autoAnimate from "@formkit/auto-animate"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"

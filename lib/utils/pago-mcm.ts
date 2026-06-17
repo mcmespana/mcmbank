@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { Calculator, CheckCircle2, CircleDashed, CircleSlash, Clock, Coins, FileText, Fuel, Gauge } from "lucide-react"
+import { CheckCircle2, CircleDashed, CircleSlash, Clock, Coins, FileText, Fuel, Gauge } from "lucide-react"
 import type { PagoMcmEstado, PagoMcmGasolinaPreset, PagoMcmTipoCalculo } from "@/lib/types/database"
 
 export interface PagoMcmEstadoInfo {

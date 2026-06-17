@@ -71,7 +71,6 @@ export function TransactionManager() {
     selectedDelegation,
     delegations,
     loading: delegationsLoading,
-    getCurrentDelegation,
   } = useDelegationContext()
 
   const [filters, setFilters] = useState<TransactionFilters>({})
@@ -102,8 +101,6 @@ export function TransactionManager() {
   const [bulkConceptLoading, setBulkConceptLoading] = useState(false)
   const [bulkDescriptionLoading, setBulkDescriptionLoading] = useState(false)
   const searchParams = useSearchParams()
-
-  const currentDelegation = getCurrentDelegation()
 
   const {
     movimientos: movements,
@@ -875,7 +872,7 @@ export function TransactionManager() {
         open={importOpen}
         onOpenChange={setImportOpen}
         delegacionId={selectedDelegation}
-        onImported={(importedCount) => {
+        onImported={() => {
           refetch()
           // Refetch adicional después de un delay para asegurar sincronización
           setTimeout(() => {

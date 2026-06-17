@@ -35,7 +35,6 @@ export function CuentasManager() {
   } = useCuentas(selectedDelegation, { includeInactive: true })
   const cuentas = useMemo(
     () => cuentasWithDelegacion.map((item) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { delegacion, ...cuenta } = item
       return cuenta
     }),

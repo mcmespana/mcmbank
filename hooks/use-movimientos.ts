@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
-import type { Database, MovimientoConRelaciones } from "@/lib/types/database"
+import type { MovimientoConRelaciones } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { registerAC, unregisterAC } from "@/lib/db/in-flight"
 import { applyAbsoluteAmountFilter } from "@/lib/db/amount-filter"

@@ -200,7 +200,6 @@ export function ContactoDetailSheet({
                         icon={<span className="text-[10px] font-bold tracking-wider">IBAN</span>}
                         label="IBAN"
                         value={formatearIban(contacto.iban)}
-                        copyValue={contacto.iban}
                         onCopy={() => handleCopy(contacto.iban, "IBAN")}
                         copied={isCopied(contacto.iban)}
                         mono
@@ -309,7 +308,6 @@ function CopyableRow({
   icon,
   label,
   value,
-  copyValue,
   onCopy,
   copied,
   mono,
@@ -317,7 +315,6 @@ function CopyableRow({
   icon: React.ReactNode
   label: string
   value: string
-  copyValue?: string
   onCopy: () => void
   copied: boolean
   mono?: boolean

@@ -273,7 +273,6 @@ function ContactoCard({
   onDelete: () => void
   onArchive: () => void
 }) {
-  const info = CONTACTO_TIPO_INFO[contacto.tipo]
   const { copy, isCopied } = useClipboard()
 
   const handleCopy = async (e: React.MouseEvent, value: string | null | undefined, label: string) => {
@@ -327,7 +326,6 @@ function ContactoCard({
             <CopyChip
               label="IBAN"
               value={formatearIban(contacto.iban)}
-              copyValue={contacto.iban}
               copied={isCopied(contacto.iban)}
               onCopy={(e) => handleCopy(e, contacto.iban, "IBAN")}
               mono
@@ -397,14 +395,12 @@ function ContactoCard({
 function CopyChip({
   label,
   value,
-  copyValue,
   copied,
   onCopy,
   mono,
 }: {
   label: string
   value: string
-  copyValue?: string
   copied: boolean
   onCopy: (e: React.MouseEvent) => void
   mono?: boolean

@@ -32,7 +32,13 @@ const eslintConfig = [
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
+      // ignoreRestSiblings: permite el patrón de "quitar campos" con rest
+      // (const { a, b, ...resto } = obj) sin marcar a/b como sin usar.
+      // argsIgnorePattern: parámetros que empiezan por _ se ignoran a propósito.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { ignoreRestSiblings: true, argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
 ];

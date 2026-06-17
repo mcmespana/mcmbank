@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useDropzone } from "react-dropzone"
-import { Download, FileIcon, Loader2, Trash2, Upload } from "lucide-react"
+import { Download, Loader2, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"

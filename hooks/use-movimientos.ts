@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase/client"
 import type { Database, MovimientoConRelaciones } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { registerAC, unregisterAC } from "@/lib/db/in-flight"
+import { applyAbsoluteAmountFilter } from "@/lib/db/amount-filter"
 
 interface MovimientosFilters {
   fechaDesde?: string
@@ -21,38 +22,9 @@ interface MovimientosFilters {
 
 const DEFAULT_PAGE_SIZE = 100
 
-/**
- * Applies an absolute-value range filter on `importe`.
- * Matches both positive and negative amounts whose |importe| is in [from, to].
- *
- * Implementation note: avoids nested `and()` inside `or()` (unreliable in PostgREST/supabase-js)
- * by combining a chained range constraint with a single-level `or()`.
- */
-export function applyAbsoluteAmountFilter<T extends { gte: any; lte: any; or: any }>(
-  query: T,
-  amountFrom: number | undefined,
-  amountTo: number | undefined
-): T {
-  if (amountFrom !== undefined && amountTo !== undefined) {
-    const minAbs = Math.min(Math.abs(amountFrom), Math.abs(amountTo))
-    const maxAbs = Math.max(Math.abs(amountFrom), Math.abs(amountTo))
-    // |importe| in [minAbs, maxAbs] ⇔ importe in [-maxAbs, -minAbs] ∪ [minAbs, maxAbs]
-    // Equivalently: -maxAbs <= importe <= maxAbs AND (importe >= minAbs OR importe <= -minAbs)
-    return query
-      .gte("importe", -maxAbs)
-      .lte("importe", maxAbs)
-      .or(`importe.gte.${minAbs},importe.lte.${-minAbs}`)
-  }
-  if (amountFrom !== undefined) {
-    const val = Math.abs(amountFrom)
-    return query.or(`importe.gte.${val},importe.lte.${-val}`)
-  }
-  if (amountTo !== undefined) {
-    const val = Math.abs(amountTo)
-    return query.gte("importe", -val).lte("importe", val)
-  }
-  return query
-}
+// Reexportado desde lib/db/amount-filter.ts (función pura y testeable).
+// Se mantiene aquí para no romper imports existentes.
+export { applyAbsoluteAmountFilter }
 
 export function useMovimientos(
   delegacionId: string | null,

@@ -27,8 +27,12 @@ export function DelegationProvider({ children }: { children: React.ReactNode }) 
 
   // Ref avoids recreating setSelectedDelegation when delegations refetch
   // (which would cascade through the entire context consumer tree).
+  // getCurrentDelegation lee el ref en tiempo de llamada, así que actualizarlo
+  // en un efecto (no durante el render) es seguro y satisface react-hooks/refs.
   const delegationsRef = useRef(delegations)
-  delegationsRef.current = delegations
+  useEffect(() => {
+    delegationsRef.current = delegations
+  }, [delegations])
 
   const setSelectedDelegation = useCallback((delegationId: string | null) => {
     if (delegationId === selectedDelegation) return

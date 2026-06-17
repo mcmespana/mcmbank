@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Landmark, PiggyBank } from "lucide-react"
 import type { Cuenta } from "@/lib/types/database"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 interface BankAvatarProps {
   account?: Cuenta
@@ -21,23 +21,21 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
   const isSabadell = normalizedBankName.includes("sabadell") || normalizedBankName.includes("banco sabadell") || normalizedBankName.includes("banc sabadell")
   const shouldShowLogo = !isCaja && (isCaixabank || isSabadell)
 
-  const [logoSrc, setLogoSrc] = useState<string | null>(() => {
-    if (isCaixabank) return "/bank-logos/caixabank.png"
-    if (isSabadell) return "/bank-logos/sabadell.png"
-    return null
-  })
+  // Logo base derivado de las props (sin efecto). El estado solo guarda el
+  // override de handleImageError; al cambiar el banco se resetea durante el
+  // render comparando con el valor previo (patrón "You Might Not Need an Effect").
+  const baseLogoSrc = isCaixabank
+    ? "/bank-logos/caixabank.png"
+    : isSabadell
+      ? "/bank-logos/sabadell.png"
+      : null
 
-  useEffect(() => {
-    if (isCaixabank) {
-      setLogoSrc("/bank-logos/caixabank.png")
-      return
-    }
-    if (isSabadell) {
-      setLogoSrc("/bank-logos/sabadell.png")
-      return
-    }
-    setLogoSrc(null)
-  }, [isCaixabank, isSabadell])
+  const [logoSrc, setLogoSrc] = useState<string | null>(baseLogoSrc)
+  const [prevBaseLogoSrc, setPrevBaseLogoSrc] = useState<string | null>(baseLogoSrc)
+  if (baseLogoSrc !== prevBaseLogoSrc) {
+    setPrevBaseLogoSrc(baseLogoSrc)
+    setLogoSrc(baseLogoSrc)
+  }
 
   if (!account) {
     const iconClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-7 w-7" : "h-6 w-6"

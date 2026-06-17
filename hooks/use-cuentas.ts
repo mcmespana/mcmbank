@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { useCallback } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase/client"
 import type { CuentaConDelegacion } from "@/lib/types/database"
-import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { runQuery } from "@/lib/db/query"
 
 interface UseCuentasOptions {
@@ -12,197 +12,123 @@ interface UseCuentasOptions {
   includeInactive?: boolean // incluir cuentas desactivadas (solo gestor de cuentas), default false
 }
 
-export function useCuentas(
-  delegacionId: string | null,
-  options: UseCuentasOptions = {}
-) {
+const SELECT = `
+  id,
+  delegacion_id,
+  nombre,
+  tipo,
+  origen,
+  banco_nombre,
+  iban,
+  color,
+  personas_autorizadas,
+  descripcion,
+  creado_en,
+  banco_conexion_id,
+  external_account_uid,
+  sync_enabled,
+  last_sync_at,
+  last_sync_status,
+  last_sync_error,
+  sync_desde_fecha,
+  activa,
+  delegacion:delegacion_id (
+    id,
+    organizacion_id,
+    codigo,
+    nombre,
+    creado_en
+  )
+`
+
+function cuentasKey(delegacionId: string | null) {
+  return ["cuentas", delegacionId] as const
+}
+
+// Referencia estable para el caso "sin datos": evita que `query.data ?? []`
+// devuelva un array nuevo en cada render (lo que dispararía efectos en bucle).
+const EMPTY: CuentaConDelegacion[] = []
+
+async function fetchCuentas(
+  delegacionId: string,
+  timeout: number
+): Promise<CuentaConDelegacion[]> {
+  const { data, error } = await runQuery<unknown[]>({
+    label: "fetch-cuentas",
+    table: "cuenta",
+    timeoutMs: timeout,
+    build: async (signal) =>
+      await supabase
+        .from("cuenta")
+        .select(SELECT)
+        .eq("delegacion_id", delegacionId)
+        .abortSignal(signal),
+  })
+
+  if (error) throw error
+
+  return (data || []).map((item: any) => ({
+    ...item,
+    delegacion: Array.isArray(item.delegacion) ? item.delegacion[0] : item.delegacion,
+  })) as CuentaConDelegacion[]
+}
+
+/**
+ * Cuentas de una delegación. Migrado a TanStack Query: caché compartida entre
+ * páginas, deduplicación de peticiones y revalidación al foco gestionadas por la
+ * librería (sin abort controllers ni refs anti-carrera manuales).
+ *
+ * La caché guarda SIEMPRE todas las cuentas (activas e inactivas) bajo la misma
+ * key por delegación; el filtro `includeInactive` se aplica en `select`, de modo
+ * que el gestor de cuentas y el resto de la app comparten la misma entrada.
+ *
+ * Mantiene el contrato anterior (cuentas, loading, error, refetch, forceRefresh,
+ * addCuenta, updateCuenta, removeCuenta, cancel) para no tocar a los consumidores.
+ */
+export function useCuentas(delegacionId: string | null, options: UseCuentasOptions = {}) {
   const { timeout = 10000, ttlMs = 30000, includeInactive = false } = options
-  const [cuentas, setCuentas] = useState<CuentaConDelegacion[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const forceRefreshRef = useRef<number>(0) // Para forzar refrescos
+  const queryClient = useQueryClient()
 
-  // SIMPLIFIED: Just track the delegacionId
-  const memoizedDelegacionId = useMemo(() => delegacionId, [delegacionId])
+  // `select` con identidad estable para que TanStack Query memoice su resultado
+  // y devuelva la MISMA referencia mientras los datos no cambien (si no, cada
+  // render produciría un array nuevo y los consumidores entrarían en bucle).
+  const select = useCallback(
+    (rows: CuentaConDelegacion[]) =>
+      includeInactive ? rows : rows.filter((c) => (c as any).activa !== false),
+    [includeInactive]
+  )
 
-  // Track last fetch for TTL-based revalidation
-  const lastDelegacionIdRef = useRef<string | null>(null)
-  const lastFetchAtRef = useRef<number>(0)
+  const query = useQuery<CuentaConDelegacion[], Error, CuentaConDelegacion[]>({
+    queryKey: cuentasKey(delegacionId),
+    queryFn: () => fetchCuentas(delegacionId as string, timeout),
+    enabled: Boolean(delegacionId),
+    staleTime: ttlMs,
+    select,
+  })
 
-  const fetchCuentas = useCallback(async (force = false) => {
-    // TTL guard: if same delegacion and fetched recently, skip unless forced
-    const now = Date.now()
-    const isSameDelegacion = memoizedDelegacionId === lastDelegacionIdRef.current
-    const isFresh = now - lastFetchAtRef.current < ttlMs
-    if (!force && isSameDelegacion && isFresh && cuentas.length > 0) {
-      return
-    }
+  const refetch = useCallback(() => query.refetch(), [query])
 
-    lastDelegacionIdRef.current = memoizedDelegacionId
-    if (!delegacionId) {
-      setCuentas([])
-      setLoading(false)
-      return
-    }
-
-    // Cancel previous request if still pending
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-
-    // Create new abort controller for this request
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
-
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Set timeout
-      const { data, error } = await runQuery<unknown[]>({
-        label: 'fetch-cuentas',
-        table: 'cuenta',
-        timeoutMs: timeout,
-        build: async (signal) =>
-          await supabase
-            .from("cuenta")
-            .select(`
-              id,
-              delegacion_id,
-              nombre,
-              tipo,
-              origen,
-              banco_nombre,
-              iban,
-              color,
-              personas_autorizadas,
-              descripcion,
-              creado_en,
-              banco_conexion_id,
-              external_account_uid,
-              sync_enabled,
-              last_sync_at,
-              last_sync_status,
-              last_sync_error,
-              sync_desde_fecha,
-              activa,
-              delegacion:delegacion_id (
-                id,
-                organizacion_id,
-                codigo,
-                nombre,
-                creado_en
-              )
-            `)
-            .eq("delegacion_id", delegacionId)
-            .abortSignal(signal)
-      })
-
-      // Clear timeout if query completed successfully
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-
-      if (abortController.signal.aborted) {
-        return // Request was cancelled
-      }
-
-      if (error) {
-        throw error
-      }
-
-      // Transform data to match CuentaConDelegacion type
-      let transformedData = (data || []).map((item: any) => ({
-        ...item,
-        delegacion: Array.isArray(item.delegacion) ? item.delegacion[0] : item.delegacion
-      })) as CuentaConDelegacion[]
-
-      // Cuentas desactivadas: solo visibles donde se pida explícitamente (gestor de cuentas)
-      if (!includeInactive) {
-        transformedData = transformedData.filter((c) => (c as any).activa !== false)
-      }
-
-      setCuentas(transformedData)
-      lastFetchAtRef.current = Date.now()
-    } catch (err) {
-      if (abortController.signal.aborted) {
-        return
-      }
-
-      const errorMessage = err instanceof Error ? err.message : "Error desconocido"
-      console.error("Error fetching cuentas:", errorMessage)
-      setError(errorMessage)
-    } finally {
-      // Always clear loading to avoid spinner lock; next fetch will set true
-      setLoading(false)
-      // Cleanup
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-    }
-  }, [memoizedDelegacionId, timeout, cuentas.length, delegacionId, ttlMs, includeInactive])
-
-  // Función para forzar un refresh completo
-  const forceRefresh = useCallback(() => {
-    forceRefreshRef.current += 1
-    fetchCuentas(true)
-  }, [fetchCuentas])
-
-  // Ref to avoid effect cleanup aborting in-flight requests on callback identity change
-  const fetchCuentasRef = useRef(fetchCuentas)
-  fetchCuentasRef.current = fetchCuentas
-
-  useEffect(() => {
-    // Fetch if delegacionId changed OR if it's the first load
-    if (memoizedDelegacionId !== lastDelegacionIdRef.current || cuentas.length === 0) {
-      fetchCuentasRef.current()
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
-     
-  }, [memoizedDelegacionId, cuentas.length])
-
-  // Revalidate on focus (force = true to bypass skip guard)
-  useRevalidateOnFocusJitter(() => fetchCuentasRef.current(true), { minMs: 70, maxMs: 180 })
+  // Mutaciones optimistas sobre la caché completa de la delegación.
+  const setCache = useCallback(
+    (updater: (prev: CuentaConDelegacion[]) => CuentaConDelegacion[]) => {
+      queryClient.setQueryData<CuentaConDelegacion[]>(cuentasKey(delegacionId), (prev) =>
+        updater(prev ?? [])
+      )
+    },
+    [queryClient, delegacionId]
+  )
 
   return {
-    cuentas,
-    loading,
-    error,
-    refetch: fetchCuentas,
-    forceRefresh, // Nueva función para forzar refresh
-    // Funciones para actualizaciones optimistas
-    addCuenta: (cuenta: CuentaConDelegacion) => {
-      setCuentas(prev => [cuenta, ...prev])
-    },
-    updateCuenta: (cuentaId: string, updates: Partial<CuentaConDelegacion>) => {
-      setCuentas(prev => prev.map(c =>
-        c.id === cuentaId ? { ...c, ...updates } : c
-      ))
-    },
-    removeCuenta: (cuentaId: string) => {
-      setCuentas(prev => prev.filter(c => c.id !== cuentaId))
-    },
-    cancel: () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
+    cuentas: query.data ?? EMPTY,
+    loading: query.isPending && query.fetchStatus !== "idle",
+    error: query.error ? query.error.message : null,
+    refetch,
+    forceRefresh: refetch,
+    addCuenta: (cuenta: CuentaConDelegacion) => setCache((prev) => [cuenta, ...prev]),
+    updateCuenta: (cuentaId: string, updates: Partial<CuentaConDelegacion>) =>
+      setCache((prev) => prev.map((c) => (c.id === cuentaId ? { ...c, ...updates } : c))),
+    removeCuenta: (cuentaId: string) =>
+      setCache((prev) => prev.filter((c) => c.id !== cuentaId)),
+    cancel: () => queryClient.cancelQueries({ queryKey: cuentasKey(delegacionId) }),
   }
 }

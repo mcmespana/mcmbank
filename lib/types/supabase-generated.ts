@@ -688,6 +688,160 @@ export type Database = {
           },
         ]
       }
+      google_credencial: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          email: string | null
+          id: string
+          refresh_token_cifrado: string
+          scope: string | null
+          token_expiry: string | null
+          usuario_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          email?: string | null
+          id?: string
+          refresh_token_cifrado: string
+          scope?: string | null
+          token_expiry?: string | null
+          usuario_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          email?: string | null
+          id?: string
+          refresh_token_cifrado?: string
+          scope?: string | null
+          token_expiry?: string | null
+          usuario_id?: string
+        }
+        Relationships: []
+      }
+      informe: {
+        Row: {
+          actualizado_en: string
+          anio: number
+          config_generacion: Json | null
+          creado_en: string
+          creado_por: string | null
+          curso_label: string | null
+          delegacion_id: string
+          drive_file_id: string | null
+          drive_url: string | null
+          es_borrador: boolean
+          estado: string
+          id: string
+          notas: string | null
+          origen: string
+          periodicidad: string
+          periodo_tipo: string
+          sub_periodo: string | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          actualizado_en?: string
+          anio: number
+          config_generacion?: Json | null
+          creado_en?: string
+          creado_por?: string | null
+          curso_label?: string | null
+          delegacion_id: string
+          drive_file_id?: string | null
+          drive_url?: string | null
+          es_borrador?: boolean
+          estado?: string
+          id?: string
+          notas?: string | null
+          origen?: string
+          periodicidad?: string
+          periodo_tipo?: string
+          sub_periodo?: string | null
+          tipo?: string
+          titulo: string
+        }
+        Update: {
+          actualizado_en?: string
+          anio?: number
+          config_generacion?: Json | null
+          creado_en?: string
+          creado_por?: string | null
+          curso_label?: string | null
+          delegacion_id?: string
+          drive_file_id?: string | null
+          drive_url?: string | null
+          es_borrador?: boolean
+          estado?: string
+          id?: string
+          notas?: string | null
+          origen?: string
+          periodicidad?: string
+          periodo_tipo?: string
+          sub_periodo?: string | null
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "informe_delegacion_id_fkey"
+            columns: ["delegacion_id"]
+            isOneToOne: false
+            referencedRelation: "delegacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      informe_archivo: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          drive_url: string | null
+          es_pdf_principal: boolean
+          id: string
+          informe_id: string
+          mime_type: string | null
+          nombre: string
+          size_bytes: number | null
+          storage_path: string | null
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          drive_url?: string | null
+          es_pdf_principal?: boolean
+          id?: string
+          informe_id: string
+          mime_type?: string | null
+          nombre: string
+          size_bytes?: number | null
+          storage_path?: string | null
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          drive_url?: string | null
+          es_pdf_principal?: boolean
+          id?: string
+          informe_id?: string
+          mime_type?: string | null
+          nombre?: string
+          size_bytes?: number | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "informe_archivo_informe_id_fkey"
+            columns: ["informe_id"]
+            isOneToOne: false
+            referencedRelation: "informe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       membresia: {
         Row: {
           delegacion_id: string
@@ -902,18 +1056,21 @@ export type Database = {
           creado_en: string
           id: string
           nombre: string
+          plantilla_memoria_sheet_id: string | null
         }
         Insert: {
           codigo?: string | null
           creado_en?: string
           id?: string
           nombre: string
+          plantilla_memoria_sheet_id?: string | null
         }
         Update: {
           codigo?: string | null
           creado_en?: string
           id?: string
           nombre?: string
+          plantilla_memoria_sheet_id?: string | null
         }
         Relationships: []
       }

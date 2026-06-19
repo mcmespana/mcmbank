@@ -86,6 +86,17 @@ export type BancoSyncLogStep = {
   data?: Record<string, unknown>
 }
 
+// Informes (memorias económicas y archivo de informes)
+export type Informe = Database["public"]["Tables"]["informe"]["Row"]
+export type InformeInsert = Database["public"]["Tables"]["informe"]["Insert"]
+export type InformeUpdate = Database["public"]["Tables"]["informe"]["Update"]
+export type InformeArchivo = Database["public"]["Tables"]["informe_archivo"]["Row"]
+export type InformeArchivoInsert = Database["public"]["Tables"]["informe_archivo"]["Insert"]
+export type InformeConArchivos = Informe & {
+  archivos?: InformeArchivo[]
+}
+export type GoogleCredencial = Database["public"]["Tables"]["google_credencial"]["Row"]
+
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {
   cuenta: Cuenta

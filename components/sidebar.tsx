@@ -90,7 +90,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
       href: "/informes",
       icon: BarChart3,
       count: null,
-      enabled: false,
+      enabled: true,
     },
     {
       name: "Contactos",

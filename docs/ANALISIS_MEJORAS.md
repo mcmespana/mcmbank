@@ -36,11 +36,11 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 - [ ] **6. Validación de ficheros permisiva** — `file-service.ts:94`: sanitización débil del nombre, sin lista blanca de extensiones ni límite de tamaño verificado. *Fix: whitelist de extensiones + límite de tamaño.*
 - [ ] **7. Funciones RPC `SECURITY DEFINER` sin comprobar pertenencia** — `scripts/037_aggregation_functions.sql`: aceptan `p_delegacion_id` del cliente sin validar que `auth.uid()` sea miembro de esa delegación → posible lectura de resúmenes financieros de otras delegaciones. *Fix: añadir `EXISTS (SELECT 1 FROM membresia ...)` dentro de cada función.*
 - [ ] **8. Dependencia `xlsx` desde CDN y desactualizada** — `package.json`: versión 0.20.3 instalada desde URL de CDN, con vulnerabilidades conocidas. *Fix: actualizar e instalar desde npm, sanear datos importados.*
-- [ ] **9. Sin cabeceras de seguridad** — `next.config.mjs`: no hay CSP, `X-Frame-Options`, `X-Content-Type-Options`, HSTS, `Referrer-Policy`. *Fix: añadir bloque `headers()`.*
+- [x] **9. Cabeceras de seguridad** — `next.config.mjs` añade `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y HSTS vía `headers()`. (CSP se deja pendiente a propósito: requiere análisis aparte.)
 
 ### Medias / bajas
 
-- [ ] **10. Validación del redirect `next` en el callback OAuth** — `app/auth/callback/route.ts:9`: el check `startsWith("/")` deja pasar URLs protocol-relative (`//evil.com`). *Fix: normalizar con `new URL()` y validar mismo origen.*
+- [x] **10. Validación del redirect `next` en el callback OAuth** — `app/auth/callback/route.ts` resuelve `next` con `new URL()` contra el origin y solo acepta el mismo dominio (bloquea `//evil.com`).
 - [ ] **11. Roles solo comprobados en cliente** — `hooks/use-is-admin.ts` y `DatabaseService`: la autorización descansa al 100% en RLS + UI; operaciones sensibles no tienen verificación de pertenencia server-side. *Fix: revisar/endurecer políticas RLS y añadir checks en server actions.*
 - [ ] **12. Credenciales demo en el repo** — README/CLAUDE.md documentan `admin@movimientoconsolacion.com` / `1234`. *Fix: rotar contraseña y sacarla del repositorio.*
 
@@ -60,7 +60,7 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ### Medio impacto
 
-- [ ] **20. Búsquedas O(n×m) en la tabla de transacciones** — `transaction-table.tsx:93`: `accounts.find()`/`categories.find()` dentro del map de cada fila. *Fix: mapas `byId` memoizados (el patrón ya existe en `transaction-list.tsx`).*
+- [x] **20. Búsquedas O(n×m) en la tabla de transacciones** — `transaction-table.tsx` usa mapas `byId` memoizados en lugar de `accounts.find()`/`categories.find()` por fila.
 - [ ] **21. `hasChanges` con `JSON.stringify` en cada render** — `transaction-detail.tsx:93`. *Fix: comparación campo a campo memoizada.*
 - [ ] **22. Falta `React.memo` en componentes pesados del dashboard** — `activity-balance.tsx` y similares se re-renderizan cuando cambian hermanos. *Fix: memoizar componentes de gráficos.*
 - [ ] **23. Fetches sin `AbortController`** — `use-financial-summary.ts` y otros hooks: actualizan estado tras desmontar, con condiciones de carrera al cambiar filtros rápido. *Fix: señal de aborto + guard.*
@@ -91,9 +91,9 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 - [ ] **39. Dark mode roto en el panel de importación** — `transaction-import-panel.tsx:797,813`: cajas informativas con `bg-blue-50 text-blue-800` hardcodeado, ilegibles en oscuro. *Fix: variantes `dark:`.*
 - [ ] **40. Contraste insuficiente de los chips de importe en dark mode** — `components/ui/amount-display.tsx:26`. *Fix: ajustar opacidades dark.*
-- [ ] **41. Título de categorías gigante en móvil** — `category-list.tsx:316`: `text-4xl` sin breakpoint rompe el layout en pantallas pequeñas. *Fix: `text-2xl sm:text-4xl`.*
+- [x] **41. Título de categorías gigante en móvil** — `category-list.tsx`: `text-2xl sm:text-4xl`.
 - [ ] **42. Truncados/overflow en la tabla de transacciones** — `transaction-table.tsx:105` y `transaction-list-row.tsx:226`: conceptos y badges desbordan o quedan ilegibles en móvil. *Fix: `min-w-0`, `line-clamp`, max-widths responsivas.*
-- [ ] **43. Email del usuario desborda el topbar en móvil** — `topbar.tsx:169`. *Fix: ocultar en `sm` o reducir max-width.*
+- [x] **43. Email del usuario desborda el topbar en móvil** — ya resuelto: el bloque de nombre/email es `hidden sm:flex` con `truncate max-w-[180px]` en `topbar.tsx`.
 - [ ] **44. Sheets/modales desbordan en pantallas pequeñas** — `transaction-import-panel.tsx:716` y formularios de categoría. *Fix: `max-h-[calc(100dvh-2rem)]` + scroll interno.*
 - [ ] **45. Flash del icono de tema al hidratar** — `topbar.tsx:42`: el botón de tema muestra el icono equivocado un instante. *Fix: script inline de inicialización del tema.*
 - [ ] **46. Posible mismatch de hidratación en el sidebar** — `app-layout.tsx:21`: lectura síncrona de localStorage en render. *Fix: leer en `useEffect`.*

@@ -89,12 +89,12 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ## 🎨 D. Interfaz y bugs visuales
 
-- [ ] **39. Dark mode roto en el panel de importación** — `transaction-import-panel.tsx:797,813`: cajas informativas con `bg-blue-50 text-blue-800` hardcodeado, ilegibles en oscuro. *Fix: variantes `dark:`.*
-- [ ] **40. Contraste insuficiente de los chips de importe en dark mode** — `components/ui/amount-display.tsx:26`. *Fix: ajustar opacidades dark.*
+- [x] **39. Dark mode roto en el panel de importación** — `transaction-import-panel.tsx`: todas las cajas informativas (azul, verde, ámbar, rojo) y las tarjetas de duplicados tienen ya variantes `dark:`.
+- [x] **40. Contraste de los chips de importe en dark mode** — ya resuelto: `amount-display.tsx` usa `dark:text-*-400 dark:bg-*-950/30 dark:border-*-700`.
 - [x] **41. Título de categorías gigante en móvil** — `category-list.tsx`: `text-2xl sm:text-4xl`.
-- [ ] **42. Truncados/overflow en la tabla de transacciones** — `transaction-table.tsx:105` y `transaction-list-row.tsx:226`: conceptos y badges desbordan o quedan ilegibles en móvil. *Fix: `min-w-0`, `line-clamp`, max-widths responsivas.*
+- [x] **42. Truncados/overflow en la tabla de transacciones** — ya resuelto: la tabla scrollea en horizontal (`overflow-x-auto` + `min-w`), y `transaction-list-row` usa `line-clamp-1` en el concepto y `truncate max-w-[120px]` en los badges de contacto.
 - [x] **43. Email del usuario desborda el topbar en móvil** — ya resuelto: el bloque de nombre/email es `hidden sm:flex` con `truncate max-w-[180px]` en `topbar.tsx`.
-- [ ] **44. Sheets/modales desbordan en pantallas pequeñas** — `transaction-import-panel.tsx:716` y formularios de categoría. *Fix: `max-h-[calc(100dvh-2rem)]` + scroll interno.*
+- [x] **44. Sheets/modales desbordan en pantallas pequeñas** — ya resuelto: el `SheetContent` es `h-full` (anclado arriba y abajo) y las instancias (panel de importación, formularios de categoría) pasan `overflow-y-auto`, así que el contenido scrollea internamente.
 - [ ] **45. Flash del icono de tema al hidratar** — `topbar.tsx:42`: el botón de tema muestra el icono equivocado un instante. *Fix: script inline de inicialización del tema.*
 - [ ] **46. Posible mismatch de hidratación en el sidebar** — `app-layout.tsx:21`: lectura síncrona de localStorage en render. *Fix: leer en `useEffect`.*
 - [ ] **47. Indicador "sin categorizar" solo por color** — `transaction-list-row.tsx:92`: borde ámbar invisible para daltónicos. *Fix: añadir icono o etiqueta de texto.*

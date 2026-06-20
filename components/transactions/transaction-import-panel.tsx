@@ -735,8 +735,8 @@ export function TransactionImportPanel({
               </button>
             </div>
             {source === "manual" && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3 space-y-3">
-                <p className="text-sm text-blue-800">
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 mt-3 space-y-3">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
                   • Usa la plantilla de importación disponible en Google Drive<br />
                   • Expórtala en CSV o XLSX y súbela<br />
                 </p>
@@ -751,8 +751,8 @@ export function TransactionImportPanel({
               </div>
             )}
             {(source === "caixabank" || source === "sabadell") && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
-                <p className="text-sm text-blue-800">
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 mt-3">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
                   • Sube el Excel extraído banco<br />
                   • Se importarán todas las filas del Excel<br />
                   • Se eliminarán duplicados automáticamente<br />
@@ -816,12 +816,12 @@ export function TransactionImportPanel({
           <div className="pt-6 border-t">
             <div className="space-y-3">
               {(!file || !accountId) && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-red-800 text-sm">
+                <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-red-800 dark:text-red-300 text-sm">
                     <span>⚠️</span>
                     <span className="font-medium">Faltan campos requeridos:</span>
                   </div>
-                  <ul className="mt-1 text-xs text-red-700 ml-6 list-disc">
+                  <ul className="mt-1 text-xs text-red-700 dark:text-red-300 ml-6 list-disc">
                     {!file && <li>Debes subir un archivo {source === "manual" ? "(CSV/Excel)" : "Excel"}</li>}
                     {!accountId && <li>Debes seleccionar una cuenta de destino</li>}
                   </ul>
@@ -846,33 +846,33 @@ export function TransactionImportPanel({
 
           {/* Status Messages */}
           {!isImporting && message && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-sm text-green-800 font-medium">✅ {message}</p>
+            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-3">
+              <p className="text-sm text-green-800 dark:text-green-300 font-medium">✅ {message}</p>
             </div>
           )}
           {duplicateCount > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-amber-800">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
                   ⚠️ {duplicateCount} posibles duplicados detectados
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowDuplicates(!showDuplicates)}
-                  className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                  className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40"
                 >
                   {showDuplicates ? 'Ocultar' : 'Ver'} duplicados
                 </Button>
               </div>
 
               {showDuplicates && duplicateTransactions.length > 0 && (
-                <div className="space-y-2 mt-3 border-t border-amber-200 pt-3">
-                  <p className="text-xs text-amber-700 font-medium">Transacciones duplicadas encontradas:</p>
+                <div className="space-y-2 mt-3 border-t border-amber-200 dark:border-amber-900 pt-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Transacciones duplicadas encontradas:</p>
                   {duplicateTransactions.map((dup, index) => (
                     <div
                       key={`${dup.fecha}-${dup.importe}-${dup.concepto}-${index}`}
-                      className="bg-white border border-amber-200 rounded p-3 space-y-2"
+                      className="bg-white dark:bg-card border border-amber-200 dark:border-amber-900 rounded p-3 space-y-2"
                     >
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
@@ -887,14 +887,14 @@ export function TransactionImportPanel({
                         {dup.descripcion && (
                           <div className="col-span-2">
                             <span className="font-medium">Descripción:</span>
-                            <div className="text-xs text-gray-600 mt-1 p-2 bg-gray-50 rounded">
+                            <div className="text-xs text-gray-600 dark:text-muted-foreground mt-1 p-2 bg-gray-50 dark:bg-muted/40 rounded">
                               {dup.descripcion}
                             </div>
                           </div>
                         )}
                         <div className="col-span-2">
-                          <span className="font-medium text-amber-700">Conflicto:</span>
-                          <span className="text-amber-600 text-xs"> {dup.conflictReason}</span>
+                          <span className="font-medium text-amber-700 dark:text-amber-300">Conflicto:</span>
+                          <span className="text-amber-600 dark:text-amber-400 text-xs"> {dup.conflictReason}</span>
                         </div>
                       </div>
                       <div className="flex justify-end pt-2 border-t border-gray-100">
@@ -914,10 +914,10 @@ export function TransactionImportPanel({
             </div>
           )}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <div className="text-sm text-red-800 space-y-1">
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-3">
+              <div className="text-sm text-red-800 dark:text-red-300 space-y-1">
                 <p className="font-medium">❌ Error: {error}</p>
-                {errorCode && <code className="text-xs bg-red-100 px-1 py-0.5 rounded">{errorCode}</code>}
+                {errorCode && <code className="text-xs bg-red-100 dark:bg-red-900/50 px-1 py-0.5 rounded">{errorCode}</code>}
               </div>
             </div>
           )}

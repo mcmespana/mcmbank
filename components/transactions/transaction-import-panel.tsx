@@ -831,6 +831,7 @@ export function TransactionImportPanel({
                 className="w-full"
                 onClick={handleImport}
                 disabled={!file || !accountId || !source || isImporting}
+                aria-busy={isImporting}
               >
                 {isImporting ? (
                   <div className="flex items-center gap-2">

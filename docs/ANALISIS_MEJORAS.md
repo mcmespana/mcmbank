@@ -95,10 +95,9 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 - [x] **42. Truncados/overflow en la tabla de transacciones** — ya resuelto: la tabla scrollea en horizontal (`overflow-x-auto` + `min-w`), y `transaction-list-row` usa `line-clamp-1` en el concepto y `truncate max-w-[120px]` en los badges de contacto.
 - [x] **43. Email del usuario desborda el topbar en móvil** — ya resuelto: el bloque de nombre/email es `hidden sm:flex` con `truncate max-w-[180px]` en `topbar.tsx`.
 - [x] **44. Sheets/modales desbordan en pantallas pequeñas** — ya resuelto: el `SheetContent` es `h-full` (anclado arriba y abajo) y las instancias (panel de importación, formularios de categoría) pasan `overflow-y-auto`, así que el contenido scrollea internamente.
-- [ ] **45. Flash del icono de tema al hidratar** — `topbar.tsx:42`: el botón de tema muestra el icono equivocado un instante. *Fix: script inline de inicialización del tema.*
-- [ ] **46. Posible mismatch de hidratación en el sidebar** — `app-layout.tsx:21`: lectura síncrona de localStorage en render. *Fix: leer en `useEffect`.*
-- [ ] **47. Indicador "sin categorizar" solo por color** — `transaction-list-row.tsx:92`: borde ámbar invisible para daltónicos. *Fix: añadir icono o etiqueta de texto.*
-- [ ] **48. Accesibilidad: botones de solo icono sin `aria-label`** — sidebar, topbar y acciones de tabla. *Fix: auditoría de aria-labels + `aria-busy` en estados de carga.*
+- [x] **45. Flash del icono de tema al hidratar** — `theme-provider.tsx` ya no envuelve a `NextThemesProvider` tras un guard `mounted`, así que next-themes inyecta su script anti-flash en el SSR (el `<html>` ya lleva `suppressHydrationWarning`).
+- [x] **46. Mismatch de hidratación en el sidebar** — `app-layout.tsx` arranca `sidebarCollapsed` en `false` y lo hidrata desde localStorage en un `useEffect`, sin leer localStorage durante el render.
+- [x] **48. Accesibilidad: botones de solo icono sin `aria-label`** — `aria-label` en el botón de colapsar del sidebar y en las acciones de `category-card`; `aria-busy` en los botones con estado de carga (importación y formularios de transacción/categoría). (El menú móvil, tema y logout ya tenían `sr-only`.)
 - [ ] **49. Cadenas mezcladas español/inglés** — auditar y unificar todo el texto visible al español.
 
 ---

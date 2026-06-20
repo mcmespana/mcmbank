@@ -201,7 +201,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
 
       {/* Action Buttons */}
       <div className="flex gap-3 pt-4">
-        <Button type="submit" disabled={loading} className="flex-1">
+        <Button type="submit" disabled={loading} aria-busy={loading} className="flex-1">
           {loading ? "Guardando..." : category.id ? "Actualizar" : "Crear"}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1 bg-transparent">

@@ -140,6 +140,7 @@ export function CategoryCard({
                       className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground p-0"
                       onClick={() => onMoveUp?.(category)}
                       disabled={!canMoveUp}
+                      aria-label="Mover categoría hacia arriba"
                       title={canMoveUp ? "Mover hacia arriba" : "No se puede mover más arriba"}
                     >
                       <ChevronUp className="h-3 w-3" />
@@ -162,6 +163,7 @@ export function CategoryCard({
                       className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground p-0"
                       onClick={() => onMoveDown?.(category)}
                       disabled={!canMoveDown}
+                      aria-label="Mover categoría hacia abajo"
                       title={canMoveDown ? "Mover hacia abajo" : "No se puede mover más abajo"}
                     >
                       <ChevronDown className="h-3 w-3" />
@@ -218,6 +220,7 @@ export function CategoryCard({
                       size="icon"
                       className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 p-0"
                       onClick={() => onSearch(category)}
+                      aria-label="Buscar transacciones de la categoría"
                       title="Buscar transacciones"
                     >
                       <Search className="h-3 w-3" />
@@ -227,6 +230,7 @@ export function CategoryCard({
                       size="icon"
                       className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 p-0"
                       onClick={() => onAddSubcategory?.(category)}
+                      aria-label="Añadir subcategoría"
                       title={addSubcategoryTitle}
                       disabled={!canAddSubcategory}
                     >
@@ -237,6 +241,7 @@ export function CategoryCard({
                       size="icon"
                       className="h-6 w-6 sm:h-7 sm:w-7 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/30 p-0"
                       onClick={() => onEdit(category)}
+                      aria-label="Editar categoría"
                       title={canEdit ? "Editar categoría" : "Solo el gestor central puede editar categorías globales"}
                       disabled={!canEdit}
                     >
@@ -248,6 +253,7 @@ export function CategoryCard({
                         size="icon"
                         className="h-6 w-6 sm:h-7 sm:w-7 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 p-0"
                         onClick={() => onToggleActive?.(category)}
+                        aria-label={isInactive ? "Mostrar categoría" : "Ocultar categoría"}
                         title={toggleTitle}
                       >
                         {isInactive ? (
@@ -263,6 +269,7 @@ export function CategoryCard({
                         size="icon"
                         className="h-6 w-6 sm:h-7 sm:w-7 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 p-0"
                         onClick={() => onDelete(category)}
+                        aria-label="Eliminar categoría"
                         title="Eliminar categoría"
                       >
                         <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />

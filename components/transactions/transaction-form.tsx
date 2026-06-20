@@ -223,7 +223,7 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
+            <Button type="submit" disabled={loading} aria-busy={loading} className="flex-1">
               {loading ? "Guardando..." : mode === "create" ? "Crear" : "Actualizar"}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">

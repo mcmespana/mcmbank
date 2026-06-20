@@ -171,7 +171,7 @@ export function ConfigPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Email</TableHead>
+              <TableHead>Mail</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Delegaciones</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -355,7 +355,7 @@ export function ConfigPage() {
               }}
             >
               <div className="space-y-2">
-                <label className="text-sm font-medium">Email</label>
+                <label className="text-sm font-medium">Mail</label>
                 <Input value={editingUser.email} disabled />
               </div>
               <div className="space-y-2">
@@ -477,7 +477,7 @@ export function ConfigPage() {
             }}
           >
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
+              <label className="text-sm font-medium">Mail</label>
               <Input
                 value={userForm.email}
                 onChange={(e) => setUserForm((f) => ({ ...f, email: e.target.value }))}

@@ -5,9 +5,19 @@ import { NextResponse } from "next/server"
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
-  // if "next" is in param, use it as the redirect URL
+  // Validar el parámetro "next": solo permitimos redirecciones internas.
+  // Un simple startsWith("/") deja pasar URLs protocol-relative ("//evil.com"),
+  // así que resolvemos contra el origin y comprobamos que sea el mismo dominio.
   const nextParam = searchParams.get("next") ?? "/"
-  const next = nextParam.startsWith("/") ? nextParam : "/"
+  let next = "/"
+  try {
+    const candidate = new URL(nextParam, origin)
+    if (candidate.origin === origin) {
+      next = `${candidate.pathname}${candidate.search}${candidate.hash}`
+    }
+  } catch {
+    next = "/"
+  }
 
   if (code) {
     const supabase = createClient()

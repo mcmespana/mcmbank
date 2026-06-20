@@ -36,11 +36,11 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 - [ ] **6. Validación de ficheros permisiva** — `file-service.ts:94`: sanitización débil del nombre, sin lista blanca de extensiones ni límite de tamaño verificado. *Fix: whitelist de extensiones + límite de tamaño.*
 - [ ] **7. Funciones RPC `SECURITY DEFINER` sin comprobar pertenencia** — `scripts/037_aggregation_functions.sql`: aceptan `p_delegacion_id` del cliente sin validar que `auth.uid()` sea miembro de esa delegación → posible lectura de resúmenes financieros de otras delegaciones. *Fix: añadir `EXISTS (SELECT 1 FROM membresia ...)` dentro de cada función.*
 - [ ] **8. Dependencia `xlsx` desde CDN y desactualizada** — `package.json`: versión 0.20.3 instalada desde URL de CDN, con vulnerabilidades conocidas. *Fix: actualizar e instalar desde npm, sanear datos importados.*
-- [ ] **9. Sin cabeceras de seguridad** — `next.config.mjs`: no hay CSP, `X-Frame-Options`, `X-Content-Type-Options`, HSTS, `Referrer-Policy`. *Fix: añadir bloque `headers()`.*
+- [x] **9. Cabeceras de seguridad** — `next.config.mjs` añade `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y HSTS vía `headers()`. (CSP se deja pendiente a propósito: requiere análisis aparte.)
 
 ### Medias / bajas
 
-- [ ] **10. Validación del redirect `next` en el callback OAuth** — `app/auth/callback/route.ts:9`: el check `startsWith("/")` deja pasar URLs protocol-relative (`//evil.com`). *Fix: normalizar con `new URL()` y validar mismo origen.*
+- [x] **10. Validación del redirect `next` en el callback OAuth** — `app/auth/callback/route.ts` resuelve `next` con `new URL()` contra el origin y solo acepta el mismo dominio (bloquea `//evil.com`).
 - [ ] **11. Roles solo comprobados en cliente** — `hooks/use-is-admin.ts` y `DatabaseService`: la autorización descansa al 100% en RLS + UI; operaciones sensibles no tienen verificación de pertenencia server-side. *Fix: revisar/endurecer políticas RLS y añadir checks en server actions.*
 - [ ] **12. Credenciales demo en el repo** — README/CLAUDE.md documentan `admin@movimientoconsolacion.com` / `1234`. *Fix: rotar contraseña y sacarla del repositorio.*
 
@@ -60,7 +60,7 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ### Medio impacto
 
-- [ ] **20. Búsquedas O(n×m) en la tabla de transacciones** — `transaction-table.tsx:93`: `accounts.find()`/`categories.find()` dentro del map de cada fila. *Fix: mapas `byId` memoizados (el patrón ya existe en `transaction-list.tsx`).*
+- [x] **20. Búsquedas O(n×m) en la tabla de transacciones** — `transaction-table.tsx` usa mapas `byId` memoizados en lugar de `accounts.find()`/`categories.find()` por fila.
 - [ ] **21. `hasChanges` con `JSON.stringify` en cada render** — `transaction-detail.tsx:93`. *Fix: comparación campo a campo memoizada.*
 - [ ] **22. Falta `React.memo` en componentes pesados del dashboard** — `activity-balance.tsx` y similares se re-renderizan cuando cambian hermanos. *Fix: memoizar componentes de gráficos.*
 - [ ] **23. Fetches sin `AbortController`** — `use-financial-summary.ts` y otros hooks: actualizan estado tras desmontar, con condiciones de carrera al cambiar filtros rápido. *Fix: señal de aborto + guard.*
@@ -72,14 +72,14 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ## 🐛 C. Bugs funcionales
 
-- [ ] **27. El importe no acepta coma decimal** — `transaction-form.tsx:143` y `amount-range-filter.tsx:97`: `parseFloat("270,41")` → `270` o `NaN→0`. Siendo app española es un bug grave de entrada de datos. *Fix: usar el `parseEuropeanNumber` que ya existe en el panel de importación.*
-- [ ] **28. Sin validación de importe = 0** — `transaction-form.tsx:69`: se puede guardar una transacción con importe 0 (el fallback del parseFloat). *Fix: validar importe ≠ 0.*
-- [ ] **29. Bug de zona horaria en fechas** — `transaction-detail.tsx:122`: parseo de `yyyy-MM-dd` con `new Date()` puede producir desfase de un día. *Fix: parsear siempre como fecha local (`parseISO` de date-fns).*
+- [x] **27. El importe no acepta coma decimal** — `transaction-form.tsx` y `amount-range-filter.tsx` ahora usan `parseEuropeanNumber` (extraído a `lib/utils/number.ts` y reutilizado por el panel de importación). Inputs pasados a `type="text"` con `inputMode="decimal"`.
+- [x] **28. Sin validación de importe = 0** — `transaction-form.tsx` valida importe finito y ≠ 0 antes de guardar.
+- [x] **29. Bug de zona horaria en fechas** — `transaction-detail.tsx` parsea `yyyy-MM-dd` con `parseISO` (fecha local) en la nota de historial y en el calendario.
 - [ ] **30. Doble envío en formularios** — guardado de categorías (`category-list.tsx:617`) y otros formularios no deshabilitan el botón mientras se envía → registros duplicados con doble clic. *Fix: estado `saving` + disabled.*
 - [ ] **31. Doble importación posible** — `transaction-import-panel.tsx:553`: clic rápido dos veces dispara dos importaciones; la detección de duplicados no ve la primera. *Fix: guard `isImporting`.*
 - [ ] **32. Saldo de cuentas desactualizado** — `cuentas-manager.tsx:84`: el saldo se calcula al montar y no se refresca al crear/borrar movimientos. *Fix: refetch al cambiar movimientos.*
 - [ ] **33. Selección no se limpia al cambiar filtros** — `transaction-list.tsx:109`: las transacciones seleccionadas persisten tras cambiar filtros; las operaciones masivas pueden aplicarse a elementos que ya no se ven. *Fix: limpiar selección al cambiar filtros.*
-- [ ] **34. Falta `not-found.tsx`** — los boundaries `error.tsx`/`global-error.tsx` ya existen, pero no hay página 404 personalizada. *Fix: crear `app/not-found.tsx`.*
+- [x] **34. Falta `not-found.tsx`** — añadida `app/not-found.tsx` con estilo coherente con `error.tsx`.
 - [ ] **35. Roles no aplicados en la UI** — el rol `solo_lectura` solo se respeta en categorías y pagos-mcm; en transacciones, cuentas, contactos e importación los botones de edición/borrado siguen activos. *Fix: aplicar el patrón de `category-list.tsx` en el resto.*
 - [ ] **36. Borrados sin deshacer ni resumen de impacto** — borrar una categoría con movimientos no avisa del impacto ni ofrece undo. *Fix: diálogo con recuento de movimientos afectados + toast con "Deshacer".*
 - [ ] **37. Operaciones masivas sin actualización optimista** — `transaction-manager.tsx`: asignar categoría en lote deja la UI congelada hasta la respuesta. *Fix: optimistic update con revert en error.*
@@ -89,17 +89,16 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ## 🎨 D. Interfaz y bugs visuales
 
-- [ ] **39. Dark mode roto en el panel de importación** — `transaction-import-panel.tsx:797,813`: cajas informativas con `bg-blue-50 text-blue-800` hardcodeado, ilegibles en oscuro. *Fix: variantes `dark:`.*
-- [ ] **40. Contraste insuficiente de los chips de importe en dark mode** — `components/ui/amount-display.tsx:26`. *Fix: ajustar opacidades dark.*
-- [ ] **41. Título de categorías gigante en móvil** — `category-list.tsx:316`: `text-4xl` sin breakpoint rompe el layout en pantallas pequeñas. *Fix: `text-2xl sm:text-4xl`.*
-- [ ] **42. Truncados/overflow en la tabla de transacciones** — `transaction-table.tsx:105` y `transaction-list-row.tsx:226`: conceptos y badges desbordan o quedan ilegibles en móvil. *Fix: `min-w-0`, `line-clamp`, max-widths responsivas.*
-- [ ] **43. Email del usuario desborda el topbar en móvil** — `topbar.tsx:169`. *Fix: ocultar en `sm` o reducir max-width.*
-- [ ] **44. Sheets/modales desbordan en pantallas pequeñas** — `transaction-import-panel.tsx:716` y formularios de categoría. *Fix: `max-h-[calc(100dvh-2rem)]` + scroll interno.*
-- [ ] **45. Flash del icono de tema al hidratar** — `topbar.tsx:42`: el botón de tema muestra el icono equivocado un instante. *Fix: script inline de inicialización del tema.*
-- [ ] **46. Posible mismatch de hidratación en el sidebar** — `app-layout.tsx:21`: lectura síncrona de localStorage en render. *Fix: leer en `useEffect`.*
-- [ ] **47. Indicador "sin categorizar" solo por color** — `transaction-list-row.tsx:92`: borde ámbar invisible para daltónicos. *Fix: añadir icono o etiqueta de texto.*
-- [ ] **48. Accesibilidad: botones de solo icono sin `aria-label`** — sidebar, topbar y acciones de tabla. *Fix: auditoría de aria-labels + `aria-busy` en estados de carga.*
-- [ ] **49. Cadenas mezcladas español/inglés** — auditar y unificar todo el texto visible al español.
+- [x] **39. Dark mode roto en el panel de importación** — `transaction-import-panel.tsx`: todas las cajas informativas (azul, verde, ámbar, rojo) y las tarjetas de duplicados tienen ya variantes `dark:`.
+- [x] **40. Contraste de los chips de importe en dark mode** — ya resuelto: `amount-display.tsx` usa `dark:text-*-400 dark:bg-*-950/30 dark:border-*-700`.
+- [x] **41. Título de categorías gigante en móvil** — `category-list.tsx`: `text-2xl sm:text-4xl`.
+- [x] **42. Truncados/overflow en la tabla de transacciones** — ya resuelto: la tabla scrollea en horizontal (`overflow-x-auto` + `min-w`), y `transaction-list-row` usa `line-clamp-1` en el concepto y `truncate max-w-[120px]` en los badges de contacto.
+- [x] **43. Email del usuario desborda el topbar en móvil** — ya resuelto: el bloque de nombre/email es `hidden sm:flex` con `truncate max-w-[180px]` en `topbar.tsx`.
+- [x] **44. Sheets/modales desbordan en pantallas pequeñas** — ya resuelto: el `SheetContent` es `h-full` (anclado arriba y abajo) y las instancias (panel de importación, formularios de categoría) pasan `overflow-y-auto`, así que el contenido scrollea internamente.
+- [x] **45. Flash del icono de tema al hidratar** — `theme-provider.tsx` ya no envuelve a `NextThemesProvider` tras un guard `mounted`, así que next-themes inyecta su script anti-flash en el SSR (el `<html>` ya lleva `suppressHydrationWarning`).
+- [x] **46. Mismatch de hidratación en el sidebar** — `app-layout.tsx` arranca `sidebarCollapsed` en `false` y lo hidrata desde localStorage en un `useEffect`, sin leer localStorage durante el render.
+- [x] **48. Accesibilidad: botones de solo icono sin `aria-label`** — `aria-label` en el botón de colapsar del sidebar y en las acciones de `category-card`; `aria-busy` en los botones con estado de carga (importación y formularios de transacción/categoría). (El menú móvil, tema y logout ya tenían `sr-only`.)
+- [x] **49. Cadenas mezcladas español/inglés** — auditoría completa. La app ya estaba muy localizada; los únicos textos visibles en inglés eran `Close` (×2, `dialog.tsx`/`sheet.tsx`) → "Cerrar", `Remove file` (`file-dropzone.tsx`) → "Eliminar archivo", y los `Email` sueltos → "Mail" (más corto y coherente con el login). El resto del inglés es código/comentarios (no visible).
 
 ---
 

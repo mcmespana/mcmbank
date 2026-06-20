@@ -18,21 +18,27 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [isRedirecting, setIsRedirecting] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    // Load from localStorage on mount
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mcmbank-sidebar-collapsed')
-      return saved === 'true'
-    }
-    return false
-  })
+  // El estado del sidebar arranca en `false` (igual en servidor y cliente) y se
+  // hidrata desde localStorage en un efecto, evitando leer localStorage durante
+  // el render (causa de mismatch de hidratación).
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarHydrated, setSidebarHydrated] = useState(false)
 
-  // Persist sidebar state to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('mcmbank-sidebar-collapsed', sidebarCollapsed.toString())
+    const saved = localStorage.getItem('mcmbank-sidebar-collapsed')
+    if (saved === 'true') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSidebarCollapsed(true)
     }
-  }, [sidebarCollapsed])
+    setSidebarHydrated(true)
+  }, [])
+
+  // Persist sidebar state to localStorage (solo tras hidratar, para no
+  // sobrescribir el valor guardado con el `false` inicial).
+  useEffect(() => {
+    if (!sidebarHydrated) return
+    localStorage.setItem('mcmbank-sidebar-collapsed', sidebarCollapsed.toString())
+  }, [sidebarCollapsed, sidebarHydrated])
 
   useEffect(() => {
     if (!loading && !user && !isRedirecting) {

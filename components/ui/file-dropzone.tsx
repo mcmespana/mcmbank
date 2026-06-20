@@ -66,7 +66,7 @@ export function FileDropzone({
             type="button"
             onClick={handleRemoveFile}
             className="absolute top-2 right-2 rounded-full bg-background p-1 text-muted-foreground shadow-md hover:bg-destructive hover:text-destructive-foreground"
-            aria-label="Remove file"
+            aria-label="Eliminar archivo"
           >
             <X className="h-4 w-4" />
           </button>

@@ -1,23 +1,16 @@
 'use client'
 
-import * as React from 'react'
 import {
   ThemeProvider as NextThemesProvider,
   type ThemeProviderProps,
 } from 'next-themes'
 
 export function ThemeProvider({ children, storageKey = 'mcmbank-theme', ...props }: ThemeProviderProps) {
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    // Return children with no theme-related classes during SSR
-    return <>{children}</>
-  }
-
+  // No usamos un guard `mounted`: next-themes inyecta un script que fija la
+  // clase de tema en <html> ANTES del primer pintado, evitando el flash. Si
+  // retrasáramos el render del provider hasta montar en cliente, ese script no
+  // se emitiría en el SSR y volvería el parpadeo. El <html> ya lleva
+  // suppressHydrationWarning en app/layout.tsx para cubrir el desajuste.
   return (
     <NextThemesProvider
       attribute="class"

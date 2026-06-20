@@ -255,6 +255,8 @@ export function Sidebar({
               size="icon"
               className="h-8 w-8 rounded-full bg-card/90 backdrop-blur-xl border-2 border-border/50 shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300"
               onClick={onToggleCollapse}
+              aria-label={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
+              title={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
             >
               {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>

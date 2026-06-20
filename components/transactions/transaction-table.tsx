@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -34,6 +34,24 @@ export function TransactionTable({
   onMovementUpdate,
 }: TransactionTableProps) {
   const [updatingMovements, setUpdatingMovements] = useState<Set<string>>(new Set())
+
+  // Mapas por id para evitar accounts.find()/categories.find() en cada fila
+  // (O(n×m) → O(n)). Mismo patrón que en transaction-list.tsx.
+  const accountsById = useMemo(() => {
+    const map: Record<string, Cuenta> = {}
+    for (const acc of accounts) {
+      map[acc.id] = acc
+    }
+    return map
+  }, [accounts])
+
+  const categoriesById = useMemo(() => {
+    const map: Record<string, Categoria> = {}
+    for (const cat of categories) {
+      map[cat.id] = cat
+    }
+    return map
+  }, [categories])
 
   const handleCategoryChange = async (movementId: string, categoryId: string) => {
     setUpdatingMovements((prev) => new Set(prev).add(movementId))
@@ -91,8 +109,8 @@ export function TransactionTable({
           </TableHeader>
           <TableBody>
             {movements.map((movement) => {
-              const account = accounts.find((acc) => acc.id === movement.cuenta_id)
-              const category = categories.find((cat) => cat.id === movement.categoria_id)
+              const account = movement.cuenta_id ? accountsById[movement.cuenta_id] : undefined
+              const category = movement.categoria_id ? categoriesById[movement.categoria_id] : undefined
               const isUpdating = updatingMovements.has(movement.id)
 
               return (

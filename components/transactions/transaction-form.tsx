@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, Building2 } from "lucide-react"
 import { format } from "date-fns"
 import { DateField } from "@/components/ui/date-field"
+import { parseEuropeanNumber } from "@/lib/utils/number"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 
 interface TransactionFormProps {
@@ -37,7 +38,8 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
   const defaultAccountId = movement?.cuenta_id || getDefaultAccountId(accounts)
   const [formData, setFormData] = useState({
     concepto: movement?.concepto || "",
-    importe: movement?.importe || 0,
+    // Importe como texto para permitir la coma decimal española (270,41).
+    importe: movement?.importe != null ? String(movement.importe) : "",
     fecha: movement?.fecha ? new Date(movement.fecha) : new Date(),
     categoria_id: movement?.categoria_id || "",
     cuenta_id: defaultAccountId,
@@ -67,12 +69,24 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
       return
     }
 
+    const importe = parseEuropeanNumber(formData.importe)
+
+    if (!Number.isFinite(importe)) {
+      alert("Introduce un importe válido")
+      return
+    }
+
+    if (importe === 0) {
+      alert("El importe no puede ser 0")
+      return
+    }
+
     setLoading(true)
 
     try {
       await onSave({
         concepto: formData.concepto.trim(),
-        importe: formData.importe,
+        importe,
         fecha: format(formData.fecha, "yyyy-MM-dd"),
         categoria_id: formData.categoria_id,
         cuenta_id: formData.cuenta_id,
@@ -133,11 +147,11 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
                 <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="importe"
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.importe}
-                  onChange={(e) => setFormData({ ...formData, importe: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
+                  onChange={(e) => setFormData({ ...formData, importe: e.target.value })}
+                  placeholder="0,00"
                   className="pl-10"
                   required
                 />
@@ -209,7 +223,7 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
+            <Button type="submit" disabled={loading} aria-busy={loading} className="flex-1">
               {loading ? "Guardando..." : mode === "create" ? "Crear" : "Actualizar"}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">

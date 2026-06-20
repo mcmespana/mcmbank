@@ -254,7 +254,7 @@ export function ContactoForm({
           )}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="contacto-email">Correo electrónico</Label>
+          <Label htmlFor="contacto-email">Mail</Label>
           <div className="flex gap-2">
             <Input
               id="contacto-email"

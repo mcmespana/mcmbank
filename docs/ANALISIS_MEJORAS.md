@@ -98,7 +98,7 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 - [x] **45. Flash del icono de tema al hidratar** — `theme-provider.tsx` ya no envuelve a `NextThemesProvider` tras un guard `mounted`, así que next-themes inyecta su script anti-flash en el SSR (el `<html>` ya lleva `suppressHydrationWarning`).
 - [x] **46. Mismatch de hidratación en el sidebar** — `app-layout.tsx` arranca `sidebarCollapsed` en `false` y lo hidrata desde localStorage en un `useEffect`, sin leer localStorage durante el render.
 - [x] **48. Accesibilidad: botones de solo icono sin `aria-label`** — `aria-label` en el botón de colapsar del sidebar y en las acciones de `category-card`; `aria-busy` en los botones con estado de carga (importación y formularios de transacción/categoría). (El menú móvil, tema y logout ya tenían `sr-only`.)
-- [x] **49. Cadenas mezcladas español/inglés** — auditoría completa. La app ya estaba muy localizada; los únicos textos visibles en inglés eran `Close` (×2, `dialog.tsx`/`sheet.tsx`) → "Cerrar", `Remove file` (`file-dropzone.tsx`) → "Eliminar archivo", y los `Email` sueltos → "Correo electrónico". El resto del inglés es código/comentarios (no visible).
+- [x] **49. Cadenas mezcladas español/inglés** — auditoría completa. La app ya estaba muy localizada; los únicos textos visibles en inglés eran `Close` (×2, `dialog.tsx`/`sheet.tsx`) → "Cerrar", `Remove file` (`file-dropzone.tsx`) → "Eliminar archivo", y los `Email` sueltos → "Mail" (más corto y coherente con el login). El resto del inglés es código/comentarios (no visible).
 
 ---
 

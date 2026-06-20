@@ -164,7 +164,7 @@ export function ConfigurationManager() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Correo electrónico</TableHead>
+              <TableHead>Mail</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Delegaciones</TableHead>
               <TableHead className="w-24"></TableHead>

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Euro, X } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
+import { parseEuropeanNumber } from "@/lib/utils/number"
 
 interface AmountRangeFilterProps {
   amountFrom?: number
@@ -24,8 +25,10 @@ export function AmountRangeFilter({ amountFrom, amountTo, onAmountRangeChange }:
   const hasActiveFilter = amountFrom !== undefined || amountTo !== undefined
 
   const handleApply = () => {
-    const fromValue = tempFrom ? Number.parseFloat(tempFrom) : undefined
-    const toValue = tempTo ? Number.parseFloat(tempTo) : undefined
+    const parsedFrom = tempFrom ? parseEuropeanNumber(tempFrom) : NaN
+    const parsedTo = tempTo ? parseEuropeanNumber(tempTo) : NaN
+    const fromValue = Number.isFinite(parsedFrom) ? parsedFrom : undefined
+    const toValue = Number.isFinite(parsedTo) ? parsedTo : undefined
     onAmountRangeChange(fromValue, toValue)
     setOpen(false)
   }
@@ -91,12 +94,12 @@ export function AmountRangeFilter({ amountFrom, amountTo, onAmountRangeChange }:
                 </Label>
                 <Input
                   id="amount-from"
-                  type="number"
-                  placeholder="0.00"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
                   value={tempFrom}
                   onChange={(e) => setTempFrom(e.target.value)}
                   className="h-8"
-                  step="1"
                 />
               </div>
               <div className="space-y-2">
@@ -105,12 +108,12 @@ export function AmountRangeFilter({ amountFrom, amountTo, onAmountRangeChange }:
                 </Label>
                 <Input
                   id="amount-to"
-                  type="number"
-                  placeholder="1000.00"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="1000,00"
                   value={tempTo}
                   onChange={(e) => setTempTo(e.target.value)}
                   className="h-8"
-                  step="1"
                 />
               </div>
             </div>

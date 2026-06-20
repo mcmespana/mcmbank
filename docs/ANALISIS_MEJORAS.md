@@ -72,14 +72,14 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ## 🐛 C. Bugs funcionales
 
-- [ ] **27. El importe no acepta coma decimal** — `transaction-form.tsx:143` y `amount-range-filter.tsx:97`: `parseFloat("270,41")` → `270` o `NaN→0`. Siendo app española es un bug grave de entrada de datos. *Fix: usar el `parseEuropeanNumber` que ya existe en el panel de importación.*
-- [ ] **28. Sin validación de importe = 0** — `transaction-form.tsx:69`: se puede guardar una transacción con importe 0 (el fallback del parseFloat). *Fix: validar importe ≠ 0.*
-- [ ] **29. Bug de zona horaria en fechas** — `transaction-detail.tsx:122`: parseo de `yyyy-MM-dd` con `new Date()` puede producir desfase de un día. *Fix: parsear siempre como fecha local (`parseISO` de date-fns).*
+- [x] **27. El importe no acepta coma decimal** — `transaction-form.tsx` y `amount-range-filter.tsx` ahora usan `parseEuropeanNumber` (extraído a `lib/utils/number.ts` y reutilizado por el panel de importación). Inputs pasados a `type="text"` con `inputMode="decimal"`.
+- [x] **28. Sin validación de importe = 0** — `transaction-form.tsx` valida importe finito y ≠ 0 antes de guardar.
+- [x] **29. Bug de zona horaria en fechas** — `transaction-detail.tsx` parsea `yyyy-MM-dd` con `parseISO` (fecha local) en la nota de historial y en el calendario.
 - [ ] **30. Doble envío en formularios** — guardado de categorías (`category-list.tsx:617`) y otros formularios no deshabilitan el botón mientras se envía → registros duplicados con doble clic. *Fix: estado `saving` + disabled.*
 - [ ] **31. Doble importación posible** — `transaction-import-panel.tsx:553`: clic rápido dos veces dispara dos importaciones; la detección de duplicados no ve la primera. *Fix: guard `isImporting`.*
 - [ ] **32. Saldo de cuentas desactualizado** — `cuentas-manager.tsx:84`: el saldo se calcula al montar y no se refresca al crear/borrar movimientos. *Fix: refetch al cambiar movimientos.*
 - [ ] **33. Selección no se limpia al cambiar filtros** — `transaction-list.tsx:109`: las transacciones seleccionadas persisten tras cambiar filtros; las operaciones masivas pueden aplicarse a elementos que ya no se ven. *Fix: limpiar selección al cambiar filtros.*
-- [ ] **34. Falta `not-found.tsx`** — los boundaries `error.tsx`/`global-error.tsx` ya existen, pero no hay página 404 personalizada. *Fix: crear `app/not-found.tsx`.*
+- [x] **34. Falta `not-found.tsx`** — añadida `app/not-found.tsx` con estilo coherente con `error.tsx`.
 - [ ] **35. Roles no aplicados en la UI** — el rol `solo_lectura` solo se respeta en categorías y pagos-mcm; en transacciones, cuentas, contactos e importación los botones de edición/borrado siguen activos. *Fix: aplicar el patrón de `category-list.tsx` en el resto.*
 - [ ] **36. Borrados sin deshacer ni resumen de impacto** — borrar una categoría con movimientos no avisa del impacto ni ofrece undo. *Fix: diálogo con recuento de movimientos afectados + toast con "Deshacer".*
 - [ ] **37. Operaciones masivas sin actualización optimista** — `transaction-manager.tsx`: asignar categoría en lote deja la UI congelada hasta la respuesta. *Fix: optimistic update con revert en error.*

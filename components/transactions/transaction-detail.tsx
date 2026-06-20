@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useMemo } from "react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarIcon, AlertTriangle, Check, Loader2, ArrowLeft, Copy } from "lucide-react"
 import { toast } from "sonner"
@@ -189,7 +189,9 @@ export function TransactionDetail({
     if (changes.includes("date")) {
       let previousDateLabel = "Sin fecha"
       if (prev.fecha) {
-        const parsedDate = new Date(prev.fecha)
+        // parseISO interpreta "yyyy-MM-dd" como fecha local; new Date() lo
+        // trataría como UTC y podría desfasar un día al formatear.
+        const parsedDate = parseISO(prev.fecha)
         previousDateLabel = Number.isNaN(parsedDate.getTime())
           ? prev.fecha
           : format(parsedDate, "dd/MM/yyyy")
@@ -392,8 +394,8 @@ export function TransactionDetail({
                       <PopoverContent className="w-auto p-0 z-[80]" align="center" sideOffset={12}>
                         <Calendar
                           mode="single"
-                          selected={formData.fecha ? new Date(formData.fecha) : undefined}
-                          defaultMonth={formData.fecha ? new Date(formData.fecha) : new Date()}
+                          selected={formData.fecha ? parseISO(formData.fecha) : undefined}
+                          defaultMonth={formData.fecha ? parseISO(formData.fecha) : new Date()}
                           onSelect={(date) => handleDateSelection(date, () => setIsHeaderDateOpen(false))}
                           locale={es}
                           autoFocus

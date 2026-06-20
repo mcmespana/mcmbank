@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { formatCurrency } from "@/lib/utils/format"
+import { parseEuropeanNumber } from "@/lib/utils/number"
 import { FileDropzone } from "@/components/ui/file-dropzone"
 
 interface TransactionImportPanelProps {
@@ -153,60 +154,6 @@ export function TransactionImportPanel({
           : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
       )
       .join(" ")
-  }
-
-  const parseEuropeanNumber = (value: string | number): number => {
-    if (typeof value === 'number') return value
-
-    // Limpiar el valor: quitar espacios, símbolos de euro, paréntesis, etc.
-    const cleanValue = String(value).trim()
-      .replace(/\s/g, '')                    // Quitar espacios
-      .replace(/€/g, '')                     // Quitar símbolo de euro
-      .replace(/[\(\)]/g, '')                // Quitar paréntesis (para números negativos)
-      .replace(/^[\+\-]\s*/, (match) => match.replace(/\s/g, '')) // Mantener signo pero sin espacios
-
-    // Si no tiene comas ni puntos, es un número entero
-    if (!/[,.]/.test(cleanValue)) {
-      return parseFloat(cleanValue)
-    }
-
-    // Contar comas y puntos
-    const commaCount = (cleanValue.match(/,/g) || []).length
-    const dotCount = (cleanValue.match(/\./g) || []).length
-
-    let result: number
-
-    if (commaCount === 0 && dotCount === 1) {
-      // Solo punto: puede ser decimal inglés (1234.56) o miles español (1.234)
-      const parts = cleanValue.split('.')
-      if (parts[1].length <= 2) {
-        // Probablemente decimal: 1234.56 → 1234.56
-        result = parseFloat(cleanValue)
-      } else {
-        // Probablemente miles: 1.234 → 1234
-        result = parseFloat(cleanValue.replace('.', ''))
-      }
-    } else if (dotCount === 0 && commaCount === 1) {
-      // Solo coma: decimal español (270,41) → 270.41
-      result = parseFloat(cleanValue.replace(',', '.'))
-    } else if (commaCount === 1 && dotCount >= 1) {
-      // Formato europeo: 1.234.567,89 → 1234567.89
-      const lastCommaIndex = cleanValue.lastIndexOf(',')
-      const beforeComma = cleanValue.substring(0, lastCommaIndex).replace(/\./g, '')
-      const afterComma = cleanValue.substring(lastCommaIndex + 1)
-      result = parseFloat(beforeComma + '.' + afterComma)
-    } else if (dotCount === 1 && commaCount >= 1) {
-      // Formato americano: 1,234,567.89 → 1234567.89
-      const lastDotIndex = cleanValue.lastIndexOf('.')
-      const beforeDot = cleanValue.substring(0, lastDotIndex).replace(/,/g, '')
-      const afterDot = cleanValue.substring(lastDotIndex + 1)
-      result = parseFloat(beforeDot + '.' + afterDot)
-    } else {
-      // Formato ambiguo, usar la estrategia más común (europeo)
-      result = parseFloat(cleanValue.replace(/\./g, '').replace(',', '.'))
-    }
-
-    return result
   }
 
   const parseSabadell = (rows: any[][]): ParsedTransaction[] => {

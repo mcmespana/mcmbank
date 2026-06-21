@@ -50,15 +50,20 @@ export function EstadoBadge({ estado, className, onChange, disabled }: EstadoBad
               type="button"
               onClick={() => onChange(value)}
               className={cn(
-                "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-muted/60",
+                "flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-muted/50",
                 isActive && "bg-muted/40",
               )}
             >
-              <span className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold",
+                  c.badgeClass,
+                )}
+              >
                 <span className={cn("h-2 w-2 rounded-full", c.dotClass)} />
                 {c.label}
               </span>
-              {isActive && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
+              {isActive && <Check className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
             </button>
           )
         })}

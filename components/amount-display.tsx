@@ -22,7 +22,7 @@ export function AmountDisplay({ amount, size = "md", className }: AmountDisplayP
   return (
     <div
       className={cn(
-        "inline-flex items-center justify-center rounded-full font-semibold transition-all duration-200",
+        "inline-flex items-center justify-center rounded-full font-semibold tabular-nums transition-colors duration-200",
         isZero
           ? "bg-muted/30 text-muted-foreground/60"
           : isPositive

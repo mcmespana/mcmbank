@@ -112,6 +112,12 @@ export function CategoriaPickerDialog({
         )}
         style={style}
       >
+        <span
+          className={cn(
+            "h-2 w-2 shrink-0 rounded-full",
+            isSelected ? "bg-[var(--cat-text)]" : "bg-[var(--cat)]",
+          )}
+        />
         {cat.emoji && <span className={cn("leading-none", isDisabled && "opacity-60")}>{cat.emoji}</span>}
         <span className="leading-none">{cat.nombre}</span>
         {isSelected && <Check className="h-3.5 w-3.5" />}

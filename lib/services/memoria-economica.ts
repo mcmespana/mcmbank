@@ -612,6 +612,10 @@ export interface GenerarResultado {
   spreadsheetId: string
   webViewLink: string | null
   titulo: string
+  /** Balance anual leído de la celda F46 del documento generado. */
+  balanceAnual: number | null
+  /** Disponible final de año leído de la celda F49. */
+  disponibleFinal: number | null
 }
 
 export async function generarSheet(
@@ -707,12 +711,36 @@ export async function generarSheet(
 
   await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } })
 
-  // 4. Enlace
+  // 4. Leer totales calculados (F46 = balance anual, F49 = disponible final)
+  let balanceAnual: number | null = null
+  let disponibleFinal: number | null = null
+  try {
+    const vals = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId,
+      ranges: ["F46", "F49"],
+      valueRenderOption: "UNFORMATTED_VALUE",
+    })
+    const ranges = vals.data.valueRanges ?? []
+    const f46 = ranges[0]?.values?.[0]?.[0]
+    const f49 = ranges[1]?.values?.[0]?.[0]
+    if (typeof f46 === "number") balanceAnual = f46
+    if (typeof f49 === "number") disponibleFinal = f49
+  } catch {
+    // no bloqueante: si no se pueden leer, se dejan en null
+  }
+
+  // 5. Enlace
   const file = await drive.files.get({
     fileId: spreadsheetId,
     fields: "webViewLink",
     supportsAllDrives: true,
   })
 
-  return { spreadsheetId, webViewLink: file.data.webViewLink ?? null, titulo }
+  return {
+    spreadsheetId,
+    webViewLink: file.data.webViewLink ?? null,
+    titulo,
+    balanceAnual,
+    disponibleFinal,
+  }
 }

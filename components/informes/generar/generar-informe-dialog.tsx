@@ -16,6 +16,7 @@ import {
 import { InformesService } from "@/lib/services/informes"
 import { CategoriaPickerDialog } from "./categoria-picker-dialog"
 import { useCategorias } from "@/hooks/use-categorias"
+import { getCategoryColorTokens } from "@/lib/utils/category-colors"
 import { formatCurrency } from "@/lib/utils/format"
 import { buildPeriodoOptions, cursoLabelFromAnio, type PeriodoTipo } from "@/lib/types/informes"
 import type { InformeConArchivos } from "@/lib/types/database"
@@ -326,6 +327,11 @@ export function GenerarInformeDialog({
     for (const c of dbCategorias) m.set(c.id, c.nombre)
     return m
   }, [dbCategorias])
+  const catColorById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const c of dbCategorias) m.set(c.id, getCategoryColorTokens(c, dbCategorias).color)
+    return m
+  }, [dbCategorias])
   const periodoOptions = useMemo(() => buildPeriodoOptions(periodoTipo), [periodoTipo])
 
   // Conjunto de categorías ya asignadas en alguna fila (para no repetirlas).
@@ -551,8 +557,16 @@ export function GenerarInformeDialog({
                                       onClick={() => setPickerFila(fila)}
                                       className="h-9 w-full justify-between font-normal"
                                     >
-                                      <span className={cn("truncate", !catNombre && "text-muted-foreground")}>
-                                        {tituloFila || "Elegir categoría…"}
+                                      <span className="flex min-w-0 items-center gap-2">
+                                        {catId && (
+                                          <span
+                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                            style={{ backgroundColor: catColorById.get(catId) }}
+                                          />
+                                        )}
+                                        <span className={cn("truncate", !catNombre && "text-muted-foreground")}>
+                                          {tituloFila || "Elegir categoría…"}
+                                        </span>
                                       </span>
                                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>

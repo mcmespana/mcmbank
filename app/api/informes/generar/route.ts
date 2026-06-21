@@ -69,6 +69,8 @@ export async function POST(req: Request) {
       origen: "generado" as const,
       drive_url: resultado.webViewLink,
       drive_file_id: resultado.spreadsheetId,
+      balance_anual: resultado.balanceAnual,
+      disponible_final: resultado.disponibleFinal,
       config_generacion: mapeo as any,
       es_borrador: false,
       creado_por: user.id,

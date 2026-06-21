@@ -81,8 +81,8 @@ export function InformeCard({
             <p className="line-clamp-1 text-xs text-muted-foreground">{informe.notas}</p>
           )}
 
-          {/* Archivos en línea */}
-          {archivos.length > 0 ? (
+          {/* Archivos / enlaces en línea */}
+          {storageFiles.length > 0 || driveLinks.length > 0 || informe.drive_url ? (
             <div className="flex flex-wrap items-center gap-1.5">
               {storageFiles.map((a) => (
                 <button

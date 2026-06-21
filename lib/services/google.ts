@@ -18,24 +18,44 @@ export const GOOGLE_SCOPES = [
 export const PLANTILLA_MEMORIA_DEFAULT_ID =
   process.env.GOOGLE_MEMORIA_TEMPLATE_ID || "1GfIWcOiJEj90Y7r_6CK8qmMrcq1lPyDi5kG0sjSWDnA"
 
-export function getRedirectUri(): string {
-  if (process.env.GOOGLE_OAUTH_REDIRECT_URI) return process.env.GOOGLE_OAUTH_REDIRECT_URI
-  const site = process.env.NEXT_PUBLIC_SITE_URL
-  if (!site) throw new Error("Falta NEXT_PUBLIC_SITE_URL o GOOGLE_OAUTH_REDIRECT_URI")
-  return `${site.replace(/\/$/, "")}/api/google/callback`
+/**
+ * Origen público de la petición (esquema + host real que ve el usuario),
+ * usando las cabeceras de proxy de Vercel. Imprescindible para que todo el
+ * flujo OAuth ocurra en el MISMO dominio en el que está el usuario y la cookie
+ * de `state` y la sesión de Supabase coincidan.
+ */
+export function originFromRequest(req: Request): string {
+  const h = req.headers
+  const host = h.get("x-forwarded-host") ?? h.get("host")
+  const proto = h.get("x-forwarded-proto") ?? "https"
+  if (host) return `${proto}://${host}`
+  return new URL(req.url).origin
 }
 
-export function createOAuthClient(): OAuth2Client {
+/**
+ * Redirect URI del callback. Se prioriza el `origin` de la petición (dominio
+ * real del usuario) para evitar mezclas de dominio. Si no hay, cae a env.
+ * Puede devolver "" (válido para refresco de token, donde no se valida).
+ */
+export function getRedirectUri(origin?: string): string {
+  if (origin) return `${origin.replace(/\/$/, "")}/api/google/callback`
+  if (process.env.GOOGLE_OAUTH_REDIRECT_URI) return process.env.GOOGLE_OAUTH_REDIRECT_URI
+  const site = process.env.NEXT_PUBLIC_SITE_URL
+  if (site) return `${site.replace(/\/$/, "")}/api/google/callback`
+  return ""
+}
+
+export function createOAuthClient(redirectUri?: string): OAuth2Client {
   const clientId = process.env.GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
   if (!clientId || !clientSecret) {
     throw new Error("Faltan GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET")
   }
-  return new google.auth.OAuth2(clientId, clientSecret, getRedirectUri())
+  return new google.auth.OAuth2(clientId, clientSecret, redirectUri || getRedirectUri() || undefined)
 }
 
-export function getAuthUrl(state: string): string {
-  const client = createOAuthClient()
+export function getAuthUrl(state: string, redirectUri?: string): string {
+  const client = createOAuthClient(redirectUri)
   return client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
@@ -53,8 +73,8 @@ export interface ExchangedTokens {
   email: string | null
 }
 
-export async function exchangeCode(code: string): Promise<ExchangedTokens> {
-  const client = createOAuthClient()
+export async function exchangeCode(code: string, redirectUri?: string): Promise<ExchangedTokens> {
+  const client = createOAuthClient(redirectUri)
   const { tokens } = await client.getToken(code)
   client.setCredentials(tokens)
 

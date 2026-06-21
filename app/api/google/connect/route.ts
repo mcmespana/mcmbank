@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { randomUUID } from "crypto"
-import { createClient } from "@/lib/supabase/server"
-import { getAuthUrl } from "@/lib/services/google"
+import { createRouteClient } from "@/lib/supabase/route"
+import { getAuthUrl, getRedirectUri, originFromRequest } from "@/lib/services/google"
 
-export async function GET() {
-  const supabase = createClient()
+export async function GET(req: Request) {
+  const { supabase, applyCookies } = await createRouteClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -14,8 +14,12 @@ export async function GET() {
 
   try {
     const state = randomUUID()
-    const url = getAuthUrl(state)
+    // redirect_uri ligado al dominio real del usuario: así el callback vuelve al
+    // mismo sitio y la cookie de state (y la sesión) coinciden.
+    const redirectUri = getRedirectUri(originFromRequest(req))
+    const url = getAuthUrl(state, redirectUri)
     const res = NextResponse.redirect(url)
+    applyCookies(res)
     res.cookies.set("g_oauth_state", state, {
       httpOnly: true,
       sameSite: "lax",

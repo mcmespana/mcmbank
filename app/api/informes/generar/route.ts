@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     let msg = raw || "Error generando la memoria"
     if (code === 403 || /permission|sufficient permissions|not have access/i.test(raw)) {
       msg =
-        "Tu cuenta de Google no tiene acceso a la plantilla. Pide que compartan la hoja plantilla con tu cuenta (o con todo el dominio @movimientoconsolacion.com) y vuelve a intentarlo."
+        "Google no deja copiar la plantilla con esta cuenta. Si ya está compartida para ver, abre la plantilla → Compartir → engranaje y activa «Los lectores pueden descargar, imprimir y copiar». Otra opción: comparte la plantilla como Editor con tu cuenta."
     } else if (code === 404 || /not found|notFound/i.test(raw)) {
       msg =
         "No se encuentra la plantilla de Google Sheets. Revisa el ID de la plantilla en Configuración."

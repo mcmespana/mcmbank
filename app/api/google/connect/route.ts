@@ -17,7 +17,8 @@ export async function GET(req: Request) {
     // redirect_uri ligado al dominio real del usuario: así el callback vuelve al
     // mismo sitio y la cookie de state (y la sesión) coinciden.
     const redirectUri = getRedirectUri(originFromRequest(req))
-    const url = getAuthUrl(state, redirectUri)
+    const forceSelectAccount = new URL(req.url).searchParams.get("switch") === "1"
+    const url = getAuthUrl(state, redirectUri, forceSelectAccount)
     const res = NextResponse.redirect(url)
     applyCookies(res)
     res.cookies.set("g_oauth_state", state, {

@@ -681,22 +681,26 @@ export async function generarSheet(
     requestBody: { valueInputOption: "USER_ENTERED", data: updates },
   })
 
-  // 3. Renombrar pestaña + eliminar filas (de abajo a arriba para no descuadrar
-  //    índices ni referencias). Se eliminan: filas deshabilitadas y los rangos
-  //    completos (cabecera incluida) de los capítulos excluidos.
+  // 3. Renombrar pestaña + OCULTAR las filas sobrantes (no eliminarlas).
+  //    Ocultar en vez de borrar evita romper las fórmulas de totales/balance que
+  //    referencian celdas concretas (#REF!). Las filas ocultas no aparecen al
+  //    exportar a PDF, así que el resultado es el mismo de cara al documento.
+  //    Se ocultan: filas deshabilitadas y los rangos completos (cabecera incluida)
+  //    de los capítulos excluidos.
   const tabTitle = ctx.periodoTipo === "curso" ? `Curso ${cursoLabel(ctx.anio)}` : `Año ${ctx.anio}`
   const requests: any[] = [
     { updateSheetProperties: { properties: { sheetId, title: tabTitle }, fields: "title" } },
   ]
 
-  const aEliminar = new Set<number>()
-  for (const f of mapeo.filas) if (!f.enabled) aEliminar.add(f.fila)
-  for (const cap of excluidos) for (const fila of CAP_RANGES[cap] ?? []) aEliminar.add(fila)
-  const filasAEliminar = [...aEliminar].sort((a, b) => b - a)
-  for (const fila of filasAEliminar) {
+  const aOcultar = new Set<number>()
+  for (const f of mapeo.filas) if (!f.enabled) aOcultar.add(f.fila)
+  for (const cap of excluidos) for (const fila of CAP_RANGES[cap] ?? []) aOcultar.add(fila)
+  for (const fila of aOcultar) {
     requests.push({
-      deleteDimension: {
+      updateDimensionProperties: {
         range: { sheetId, dimension: "ROWS", startIndex: fila - 1, endIndex: fila },
+        properties: { hiddenByUser: true },
+        fields: "hiddenByUser",
       },
     })
   }

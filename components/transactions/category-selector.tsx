@@ -53,6 +53,10 @@ interface CategorySelectorProps {
   defaultOpen?: boolean
   onOpenChange?: (isOpen: boolean) => void
   focusSearchOnOpen?: boolean
+  /** Categorías a mostrar en gris y no seleccionables (p. ej. ya usadas en otro sitio). */
+  disabledCategoryIds?: string[]
+  /** Texto opcional bajo el aviso de categorías deshabilitadas. */
+  hideCreateButton?: boolean
 }
 
 export function CategorySelector({
@@ -66,7 +70,10 @@ export function CategorySelector({
   defaultOpen = false,
   onOpenChange,
   focusSearchOnOpen = false,
+  disabledCategoryIds,
+  hideCreateButton = false,
 }: CategorySelectorProps) {
+  const disabledCategorySet = useMemo(() => new Set(disabledCategoryIds ?? []), [disabledCategoryIds])
   const [internalOpen, setInternalOpen] = useState(defaultOpen)
   const [searchValue, setSearchValue] = useState("")
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -170,6 +177,7 @@ export function CategorySelector({
   const selectedCategorySet = useMemo(() => new Set(selectedCategories), [selectedCategories])
 
   const handleSelect = (categoryId: string) => {
+    if (disabledCategorySet.has(categoryId)) return
     if (allowMultiple) {
       const newSelection = selectedCategories.includes(categoryId)
         ? selectedCategories.filter((id) => id !== categoryId)
@@ -267,6 +275,7 @@ export function CategorySelector({
                       category={category}
                       parent={parentLookup.get(category.id)}
                       isSelected={selectedCategorySet.has(category.id)}
+                      isDisabled={disabledCategorySet.has(category.id)}
                       onSelect={() => handleSelect(category.id)}
                     />
                   ))
@@ -284,6 +293,7 @@ export function CategorySelector({
                       onSelectParent={() => handleSelect(group.parent.id)}
                       onSelectChild={(categoryId) => handleSelect(categoryId)}
                       selectedCategorySet={selectedCategorySet}
+                      disabledCategorySet={disabledCategorySet}
                     />
                   ))}
 
@@ -303,6 +313,7 @@ export function CategorySelector({
                               category={category}
                               colorSource={colorSource}
                               selected={selectedCategorySet.has(category.id)}
+                              disabled={disabledCategorySet.has(category.id)}
                               onSelect={() => handleSelect(category.id)}
                             />
                           )
@@ -341,10 +352,12 @@ export function CategorySelector({
                 )}
               </div>
             )}
-            <Button variant="outline" size="sm" className="h-9 w-full bg-transparent" type="button">
-              <Plus className="mr-2 h-4 w-4" />
-              Crear nueva categoría
-            </Button>
+            {!hideCreateButton && (
+              <Button variant="outline" size="sm" className="h-9 w-full bg-transparent" type="button">
+                <Plus className="mr-2 h-4 w-4" />
+                Crear nueva categoría
+              </Button>
+            )}
           </div>
         </PopoverContent>
       </Popover>
@@ -392,9 +405,11 @@ interface CategoryGroupCardProps {
   onSelectParent: () => void
   onSelectChild: (categoryId: string) => void
   selectedCategorySet: Set<string>
+  disabledCategorySet?: Set<string>
 }
 
-function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCategorySet }: CategoryGroupCardProps) {
+function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCategorySet, disabledCategorySet }: CategoryGroupCardProps) {
+  const disabledSet = disabledCategorySet ?? new Set<string>()
   const { parent, children } = group
   const { color, textColor, rgbValue } = getCategoryColorTokens(parent)
   const style: CSSProperties = {
@@ -420,7 +435,12 @@ function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCateg
       <button
         type="button"
         onClick={onSelectParent}
-        className="flex w-full items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2"
+        disabled={disabledSet.has(parent.id)}
+        className={cn(
+          "flex w-full items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2",
+          disabledSet.has(parent.id) && "cursor-not-allowed opacity-40",
+        )}
+        title={disabledSet.has(parent.id) ? "Ya asignada en otra fila" : undefined}
       >
         <div
           className={cn(
@@ -450,6 +470,7 @@ function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCateg
               category={child}
               colorSource={parent}
               selected={selectedCategorySet.has(child.id)}
+              disabled={disabledSet.has(child.id)}
               onSelect={() => onSelectChild(child.id)}
             />
           ))}
@@ -464,9 +485,10 @@ interface CategoryChipButtonProps {
   colorSource: Categoria
   selected: boolean
   onSelect: () => void
+  disabled?: boolean
 }
 
-function CategoryChipButton({ category, colorSource, selected, onSelect }: CategoryChipButtonProps) {
+function CategoryChipButton({ category, colorSource, selected, onSelect, disabled = false }: CategoryChipButtonProps) {
   const { color, textColor, rgbValue } = getCategoryColorTokens(colorSource)
   const style: CSSProperties = {
     ["--category-color" as string]: color,
@@ -479,11 +501,14 @@ function CategoryChipButton({ category, colorSource, selected, onSelect }: Categ
       type="button"
       aria-pressed={selected}
       onClick={onSelect}
+      disabled={disabled}
+      title={disabled ? "Ya asignada en otra fila" : undefined}
       className={cn(
         "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2",
         selected
           ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)] shadow-sm"
           : "border-[rgba(var(--category-color-rgb),0.35)] bg-[rgba(var(--category-color-rgb),0.25)] text-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.35)] shadow-sm dark:bg-[rgba(var(--category-color-rgb),0.18)] dark:hover:bg-[rgba(var(--category-color-rgb),0.26)] dark:border-transparent dark:shadow-none",
+        disabled && "cursor-not-allowed opacity-40 grayscale hover:bg-[rgba(var(--category-color-rgb),0.25)]",
       )}
       style={style}
     >
@@ -498,10 +523,11 @@ interface CategorySearchResultProps {
   category: Categoria
   parent?: Categoria
   isSelected: boolean
+  isDisabled?: boolean
   onSelect: () => void
 }
 
-function CategorySearchResult({ category, parent, isSelected, onSelect }: CategorySearchResultProps) {
+function CategorySearchResult({ category, parent, isSelected, isDisabled = false, onSelect }: CategorySearchResultProps) {
   const colorSource = parent ?? category
   const { color, textColor, rgbValue } = getCategoryColorTokens(colorSource)
   const style: CSSProperties = {
@@ -514,11 +540,14 @@ function CategorySearchResult({ category, parent, isSelected, onSelect }: Catego
     <button
       type="button"
       onClick={onSelect}
+      disabled={isDisabled}
+      title={isDisabled ? "Ya asignada en otra fila" : undefined}
       className={cn(
         "w-full rounded-2xl border border-transparent bg-[rgba(var(--category-color-rgb),0.08)] px-4 py-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.4)] focus-visible:ring-offset-2",
         "hover:bg-[rgba(var(--category-color-rgb),0.14)]",
         isSelected &&
           "border-[var(--category-color)] bg-[rgba(var(--category-color-rgb),0.16)] shadow-[0_12px_32px_-20px_rgba(var(--category-color-rgb),0.6)]",
+        isDisabled && "cursor-not-allowed opacity-40 grayscale hover:bg-[rgba(var(--category-color-rgb),0.08)]",
       )}
       style={style}
     >

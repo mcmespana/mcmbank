@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createRouteClient } from "@/lib/supabase/route"
 
 export async function GET() {
-  const supabase = createClient()
+  const { supabase, applyCookies } = await createRouteClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ connected: false }, { status: 401 })
+  if (!user) {
+    const res = NextResponse.json({ connected: false }, { status: 401 })
+    applyCookies(res)
+    return res
+  }
 
   const { data } = await (supabase as any)
     .from("google_credencial")
@@ -14,8 +18,10 @@ export async function GET() {
     .eq("usuario_id", user.id)
     .maybeSingle()
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     connected: !!data,
     email: data?.email ?? null,
   })
+  applyCookies(res)
+  return res
 }

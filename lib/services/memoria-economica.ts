@@ -511,6 +511,8 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
     filas,
     actividadesParentId: parent?.id ?? null,
     actividadesParentNombre: parent?.nombre ?? null,
+    // Campañas (V) y Otros (VI) van desactivados de inicio; el usuario los activa.
+    capitulosExcluidos: ["V", "VI"],
   }
 }
 

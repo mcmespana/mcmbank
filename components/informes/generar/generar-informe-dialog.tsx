@@ -38,6 +38,7 @@ import {
   Eye,
   Download,
   Save,
+  Info,
 } from "lucide-react"
 
 const eur = (n: number | undefined) =>
@@ -327,13 +328,29 @@ export function GenerarInformeDialog({
                 </div>
                 {!google.loading &&
                   (google.connected ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" asChild>
+                        <a href="/api/google/connect?switch=1">Cambiar cuenta</a>
+                      </Button>
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                    </div>
                   ) : (
                     <Button variant="outline" size="sm" asChild>
                       <a href="/api/google/connect">Conectar Google</a>
                     </Button>
                   ))}
               </div>
+
+              {google.connected && (
+                <div className="mt-3 flex items-start gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    Se generará un archivo de Google Sheets en la carpeta{" "}
+                    <span className="font-medium text-foreground">«Mi unidad»</span> de esta cuenta
+                    {google.email ? ` (${google.email})` : ""} y luego tendrás que moverlo a su sitio.
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end">

@@ -54,11 +54,16 @@ export function createOAuthClient(redirectUri?: string): OAuth2Client {
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri || getRedirectUri() || undefined)
 }
 
-export function getAuthUrl(state: string, redirectUri?: string): string {
+export function getAuthUrl(
+  state: string,
+  redirectUri?: string,
+  forceSelectAccount = false,
+): string {
   const client = createOAuthClient(redirectUri)
   return client.generateAuthUrl({
     access_type: "offline",
-    prompt: "consent",
+    // "select_account" deja elegir/cambiar de cuenta de Google al reconectar.
+    prompt: forceSelectAccount ? "select_account consent" : "consent",
     scope: GOOGLE_SCOPES,
     state,
     include_granted_scopes: true,

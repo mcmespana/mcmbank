@@ -93,6 +93,16 @@ export async function POST(req: Request) {
     })
   } catch (err: any) {
     console.error("Error generando memoria:", err?.message || err)
-    return NextResponse.json({ error: err?.message || "Error generando la memoria" }, { status: 500 })
+    const raw = err?.message || ""
+    const code = err?.code ?? err?.response?.status
+    let msg = raw || "Error generando la memoria"
+    if (code === 403 || /permission|sufficient permissions|not have access/i.test(raw)) {
+      msg =
+        "Tu cuenta de Google no tiene acceso a la plantilla. Pide que compartan la hoja plantilla con tu cuenta (o con todo el dominio @movimientoconsolacion.com) y vuelve a intentarlo."
+    } else if (code === 404 || /not found|notFound/i.test(raw)) {
+      msg =
+        "No se encuentra la plantilla de Google Sheets. Revisa el ID de la plantilla en Configuración."
+    }
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

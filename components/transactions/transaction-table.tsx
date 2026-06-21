@@ -171,7 +171,7 @@ export function TransactionTable({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className={`text-right ${getAmountColorClass(movement.importe)}`}>
+                  <TableCell className={`text-right tabular-nums ${getAmountColorClass(movement.importe)}`}>
                     {formatCurrency(movement.importe)}
                   </TableCell>
                 </TableRow>

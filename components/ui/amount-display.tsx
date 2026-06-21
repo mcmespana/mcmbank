@@ -19,7 +19,7 @@ export function AmountDisplay({ amount, size = "md", className }: AmountDisplayP
   }
 
   const baseClasses = cn(
-    "font-semibold rounded-full border transition-colors text-center inline-flex items-center justify-center",
+    "font-semibold tabular-nums rounded-full border transition-colors text-center inline-flex items-center justify-center",
     sizeClasses[size],
     isPositive
       ? "text-green-700 bg-green-100 border-green-300 dark:text-green-400 dark:bg-green-950/30 dark:border-green-700"

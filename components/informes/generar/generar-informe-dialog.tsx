@@ -5,7 +5,6 @@ import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
@@ -15,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { InformesService } from "@/lib/services/informes"
-import { CategorySelector } from "@/components/transactions/category-selector"
+import { CategoriaPickerDialog } from "./categoria-picker-dialog"
 import { useCategorias } from "@/hooks/use-categorias"
 import { formatCurrency } from "@/lib/utils/format"
 import { buildPeriodoOptions, cursoLabelFromAnio, type PeriodoTipo } from "@/lib/types/informes"
@@ -42,6 +41,15 @@ import {
   Download,
   Save,
   Info,
+  Plus,
+  ChevronsUpDown,
+  Wallet,
+  Coins,
+  Receipt,
+  CalendarRange,
+  HeartHandshake,
+  Boxes,
+  type LucideIcon,
 } from "lucide-react"
 
 const eur = (n: number | undefined) => (typeof n === "number" ? formatCurrency(n) : "—")
@@ -55,6 +63,16 @@ const CAP_LABEL: Record<Capitulo, string> = {
   VI: "Capítulo VI · Otros",
 }
 const CAP_ORDER: Capitulo[] = ["I", "II", "III", "IV", "V", "VI"]
+
+// Diseño por capítulo: número romano, icono (lucide, no emoji) y color de acento.
+const CAP_META: Record<Capitulo, { num: string; icon: LucideIcon; accent: string; chip: string }> = {
+  I: { num: "I", icon: Wallet, accent: "border-l-slate-400", chip: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
+  II: { num: "II", icon: Coins, accent: "border-l-emerald-400", chip: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
+  III: { num: "III", icon: Receipt, accent: "border-l-rose-400", chip: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300" },
+  IV: { num: "IV", icon: CalendarRange, accent: "border-l-sky-400", chip: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" },
+  V: { num: "V", icon: HeartHandshake, accent: "border-l-violet-400", chip: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" },
+  VI: { num: "VI", icon: Boxes, accent: "border-l-amber-400", chip: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
+}
 
 type Modo = "saldo" | "ingreso" | "gasto" | "ambos"
 function modoDeFila(fila: MapeoFila): Modo {
@@ -106,6 +124,7 @@ export function GenerarInformeDialog({
   const [generating, setGenerating] = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
   const [result, setResult] = useState<{ driveUrl: string | null; titulo: string } | null>(null)
+  const [pickerFila, setPickerFila] = useState<MapeoFila | null>(null)
 
   const informeId = initialInforme?.id ?? null
 
@@ -184,12 +203,14 @@ export function GenerarInformeDialog({
     })
   }
 
-  const setCategoria = (fila: MapeoFila, categoriaId: string | null) => {
+  const setCategoria = (fila: MapeoFila, categoriaId: string | null, categoriaNombre?: string) => {
     const modo = modoDeFila(fila)
     const fuente: Fuente | null = categoriaId ? { tipo: "categoria", categoriaId } : null
-    if (modo === "ingreso") updateFila(fila.id, { ingreso: fuente, gasto: null })
-    else if (modo === "gasto") updateFila(fila.id, { gasto: fuente, ingreso: null })
-    else if (modo === "ambos") updateFila(fila.id, { ingreso: fuente, gasto: fuente })
+    // En IV/V/VI la descripción de la fila es el propio nombre de la categoría.
+    const patchDesc = fila.escribirDescripcion ? { descripcion: categoriaNombre ?? "" } : {}
+    if (modo === "ingreso") updateFila(fila.id, { ingreso: fuente, gasto: null, ...patchDesc })
+    else if (modo === "gasto") updateFila(fila.id, { gasto: fuente, ingreso: null, ...patchDesc })
+    else if (modo === "ambos") updateFila(fila.id, { ingreso: fuente, gasto: fuente, ...patchDesc })
   }
 
   const isCapExcluido = (cap: Capitulo) => (mapeo?.capitulosExcluidos ?? []).includes(cap)
@@ -200,11 +221,37 @@ export function GenerarInformeDialog({
       const set = new Set(prev.capitulosExcluidos ?? [])
       if (incluir) set.delete(cap)
       else set.add(cap)
-      const next = { ...prev, capitulosExcluidos: [...set] }
+      // Al incluir un capítulo se marcan TODAS sus filas disponibles; al excluir,
+      // se desmarcan (además de borrarse su rango completo al generar).
+      const filas = prev.filas.map((f) =>
+        f.capitulo === cap ? { ...f, enabled: incluir } : f,
+      )
+      const next = { ...prev, filas, capitulosExcluidos: [...set] }
       recompute(next)
       return next
     })
   }
+
+  /** Activa la siguiente fila libre de un capítulo (para añadir más líneas). */
+  const addFilaCapitulo = (cap: Capitulo) => {
+    setMapeo((prev) => {
+      if (!prev) return prev
+      const libre = prev.filas.find((f) => f.capitulo === cap && !f.enabled)
+      if (!libre) {
+        toast.error("No quedan más filas disponibles en la plantilla para este capítulo")
+        return prev
+      }
+      const next = {
+        ...prev,
+        filas: prev.filas.map((f) => (f.id === libre.id ? { ...f, enabled: true } : f)),
+      }
+      recompute(next)
+      return next
+    })
+  }
+
+  const filasLibres = (cap: Capitulo) =>
+    (mapeo?.filas ?? []).some((f) => f.capitulo === cap && !f.enabled)
 
   const handleGenerar = async () => {
     if (!google.connected) {
@@ -274,6 +321,11 @@ export function GenerarInformeDialog({
     includeGlobal: true,
     includeInactive: false,
   })
+  const catNameById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const c of dbCategorias) m.set(c.id, c.nombre)
+    return m
+  }, [dbCategorias])
   const periodoOptions = useMemo(() => buildPeriodoOptions(periodoTipo), [periodoTipo])
 
   // Conjunto de categorías ya asignadas en alguna fila (para no repetirlas).
@@ -289,8 +341,11 @@ export function GenerarInformeDialog({
   const saldoFecha = periodoTipo === "curso" ? "1 de septiembre" : "1 de enero"
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent
+        className={cn("max-w-4xl", step === "mapeo" && "flex h-[95vh] flex-col gap-3")}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" /> Generar memoria económica
@@ -395,7 +450,7 @@ export function GenerarInformeDialog({
 
         {/* PASO 2 — MAPEO */}
         {step === "mapeo" && mapeo && preview && (
-          <div className="space-y-4 py-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 py-1">
             {/* Título previsto */}
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
               <span className="text-muted-foreground">Título del archivo: </span>
@@ -415,26 +470,36 @@ export function GenerarInformeDialog({
             )}
 
             {/* Mapeo por capítulo */}
-            <div className="max-h-[62vh] space-y-6 overflow-y-auto pr-1">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
               {CAP_ORDER.map((cap) => {
                 const filasCap = mapeo.filas.filter((f) => f.capitulo === cap)
                 if (filasCap.length === 0) return null
                 const opcional = cap === "V" || cap === "VI"
+                const flexible = cap === "IV" || cap === "V" || cap === "VI"
                 const excluido = isCapExcluido(cap)
+                const meta = CAP_META[cap]
+                const CapIcon = meta.icon
                 return (
-                  <div key={cap}>
-                    <div className="sticky top-0 z-10 mb-2 flex items-center justify-between gap-2 bg-background py-1">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {CAP_LABEL[cap]}
-                      </span>
+                  <div key={cap} className={cn("rounded-xl border border-l-4 bg-card/40", meta.accent)}>
+                    {/* Cabecera del capítulo */}
+                    <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={cn(
+                            "flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 text-xs font-bold",
+                            meta.chip,
+                          )}
+                        >
+                          {meta.num}
+                        </span>
+                        <CapIcon className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold">{CAP_LABEL[cap].split(" · ")[1]}</span>
+                      </div>
                       <div className="flex items-center gap-3">
                         {recomputing && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                         {opcional && (
                           <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium">
-                            <Checkbox
-                              checked={!excluido}
-                              onCheckedChange={(c) => toggleCapitulo(cap, !!c)}
-                            />
+                            <Checkbox checked={!excluido} onCheckedChange={(c) => toggleCapitulo(cap, !!c)} />
                             Incluir capítulo
                           </label>
                         )}
@@ -442,51 +507,58 @@ export function GenerarInformeDialog({
                     </div>
 
                     {opcional && excluido ? (
-                      <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        Este capítulo se eliminará por completo del documento (se borran las filas{" "}
-                        {cap === "V" ? "33 a 39" : "40 a 43"} de la plantilla).
+                      <p className="mx-3 mb-3 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        Capítulo desactivado: se eliminará por completo del documento (filas{" "}
+                        {cap === "V" ? "33–39" : "40–43"} de la plantilla).
                       </p>
                     ) : (
-                      <div className="space-y-2.5">
+                      <div className="space-y-2 border-t px-3 py-3">
                         {filasCap.map((fila) => {
                           const modo = modoDeFila(fila)
                           const v = preview.valores[fila.id]
                           const catId = categoriaIdDeFila(fila)
+                          const catNombre = catId ? catNameById.get(catId) : null
                           const esSaldo = modo === "saldo"
                           const cuentaTipo =
                             fila.ingreso?.tipo === "saldo_inicial" ? fila.ingreso.cuentaTipo : null
                           const saldoCero = esSaldo && (v?.ingreso ?? 0) === 0
-                          const disabledIds = [...categoriasUsadas].filter((id) => id !== catId)
+                          // En IV/V/VI el "título" es la categoría; en II/III es fijo.
+                          const usaPicker = !esSaldo
+                          const tituloFila = fila.escribirDescripcion
+                            ? catNombre ?? null
+                            : fila.descripcion
                           return (
                             <div
                               key={fila.id}
                               className={cn(
-                                "rounded-lg border bg-card p-3 transition-opacity",
+                                "rounded-lg border bg-background p-2.5 transition-opacity",
                                 !fila.enabled && "opacity-50",
                                 saldoCero && cuentaTipo === "caja" && fila.enabled && "opacity-70",
                               )}
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                                  <Checkbox
-                                    checked={fila.enabled}
-                                    onCheckedChange={(c) => updateFila(fila.id, { enabled: !!c })}
-                                    aria-label="Incluir fila"
-                                    className="mt-0.5"
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    {fila.escribirDescripcion ? (
-                                      <Input
-                                        value={fila.descripcion}
-                                        onChange={(e) => updateFila(fila.id, { descripcion: e.target.value })}
-                                        placeholder="Descripción de la fila…"
-                                        className="h-8"
-                                        disabled={!fila.enabled}
-                                      />
-                                    ) : (
-                                      <span className="text-sm font-medium">{fila.descripcion}</span>
-                                    )}
-                                  </div>
+                              <div className="flex items-center gap-2.5">
+                                <Checkbox
+                                  checked={fila.enabled}
+                                  onCheckedChange={(c) => updateFila(fila.id, { enabled: !!c })}
+                                  aria-label="Incluir fila"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  {usaPicker ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      disabled={!fila.enabled}
+                                      onClick={() => setPickerFila(fila)}
+                                      className="h-9 w-full justify-between font-normal"
+                                    >
+                                      <span className={cn("truncate", !catNombre && "text-muted-foreground")}>
+                                        {tituloFila || "Elegir categoría…"}
+                                      </span>
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  ) : (
+                                    <span className="text-sm font-medium">{fila.descripcion}</span>
+                                  )}
                                 </div>
                                 <div className="shrink-0 space-y-0.5 text-right text-sm tabular-nums">
                                   {(modo === "ingreso" || modo === "ambos" || modo === "saldo") && (
@@ -498,50 +570,38 @@ export function GenerarInformeDialog({
                                 </div>
                               </div>
 
-                              {esSaldo ? (
-                                <p className="mt-2 pl-7 text-xs text-muted-foreground">
+                              {esSaldo && (
+                                <p className="mt-1.5 pl-7 text-xs text-muted-foreground">
                                   Calculado automáticamente con el saldo{" "}
                                   {cuentaTipo === "caja" ? "de la caja" : "del banco"} el {saldoFecha}.
                                   {saldoCero && cuentaTipo === "caja" && (
                                     <span className="italic"> A 0: parece que no hay caja.</span>
                                   )}
                                 </p>
-                              ) : (
-                                <div className="mt-2 space-y-1 pl-7">
-                                  <div className="flex items-center justify-between">
-                                    <Label className="text-[11px] text-muted-foreground">
-                                      Categoría que se suma aquí
-                                      {modo === "ambos"
-                                        ? " (ingresos y gastos)"
-                                        : modo === "gasto"
-                                          ? " (gastos)"
-                                          : " (ingresos)"}
-                                    </Label>
-                                    {catId && fila.enabled && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setCategoria(fila, null)}
-                                        className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                                      >
-                                        Quitar
-                                      </button>
-                                    )}
-                                  </div>
-                                  <div className={cn(!fila.enabled && "pointer-events-none opacity-50")}>
-                                    <CategorySelector
-                                      categories={dbCategorias}
-                                      selectedCategories={catId ? [catId] : []}
-                                      onSelectionChange={(ids) => setCategoria(fila, ids[0] ?? null)}
-                                      placeholder="Elegir categoría…"
-                                      disabledCategoryIds={disabledIds}
-                                      hideCreateButton
-                                    />
-                                  </div>
-                                </div>
+                              )}
+                              {usaPicker && !esSaldo && (
+                                <p className="mt-1 pl-7 text-[11px] text-muted-foreground">
+                                  Suma de la categoría
+                                  {modo === "ambos" ? " (ingresos y gastos)" : modo === "gasto" ? " (gastos)" : " (ingresos)"}
+                                </p>
                               )}
                             </div>
                           )
                         })}
+
+                        {flexible && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => addFilaCapitulo(cap)}
+                            disabled={!filasLibres(cap)}
+                            className="w-full border border-dashed text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            <Plus className="mr-1.5 h-3.5 w-3.5" />
+                            Añadir fila
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -624,5 +684,24 @@ export function GenerarInformeDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    <CategoriaPickerDialog
+      open={!!pickerFila}
+      onOpenChange={(o) => {
+        if (!o) setPickerFila(null)
+      }}
+      categories={dbCategorias}
+      selectedId={pickerFila ? categoriaIdDeFila(pickerFila) : null}
+      disabledIds={
+        pickerFila
+          ? [...categoriasUsadas].filter((id) => id !== categoriaIdDeFila(pickerFila))
+          : []
+      }
+      onSelect={(id) => {
+        if (pickerFila) setCategoria(pickerFila, id, id ? catNameById.get(id) : undefined)
+      }}
+      subtitle={pickerFila ? CAP_LABEL[pickerFila.capitulo] : undefined}
+    />
+    </>
   )
 }

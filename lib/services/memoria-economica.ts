@@ -583,9 +583,18 @@ export async function generarSheet(
   //    `parents: ["root"]` fuerza el destino a Mi unidad. Sin esto, al copiar un
   //    archivo de una unidad compartida la copia se intenta crear en esa misma
   //    unidad, y si el usuario no tiene rol de creación allí Drive devuelve 403.
+  const fechaGen = new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date())
   const copy = await drive.files.copy({
     fileId: templateId,
-    requestBody: { name: titulo, parents: ["root"] },
+    requestBody: {
+      name: titulo,
+      parents: ["root"],
+      description: `Generado desde MCM Bank el ${fechaGen}`,
+    },
     fields: "id",
     supportsAllDrives: true,
   })

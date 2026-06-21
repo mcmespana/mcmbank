@@ -47,6 +47,7 @@
     "@supabase/supabase-js": "latest",
     "@tanstack/react-query": "^5.101.0",
     "@vercel/analytics": "latest",
+    "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "latest",

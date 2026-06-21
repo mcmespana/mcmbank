@@ -106,15 +106,16 @@ export function CategoriaPickerDialog({
           "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
           isSelected
             ? "border-transparent bg-[var(--cat)] text-[var(--cat-text)] shadow-md ring-2 ring-[var(--cat)] ring-offset-2"
-            : "border-[rgba(var(--cat-rgb),0.35)] bg-[rgba(var(--cat-rgb),0.18)] text-[var(--cat)] hover:bg-[rgba(var(--cat-rgb),0.3)] dark:border-transparent",
-          isDisabled && "cursor-not-allowed border-dashed opacity-40 grayscale hover:bg-[rgba(var(--cat-rgb),0.18)]",
+            : isDisabled
+              ? "cursor-not-allowed border-dashed border-muted-foreground/40 bg-muted text-muted-foreground line-through decoration-muted-foreground/50"
+              : "border-[rgba(var(--cat-rgb),0.35)] bg-[rgba(var(--cat-rgb),0.18)] text-[var(--cat)] hover:bg-[rgba(var(--cat-rgb),0.3)] dark:border-transparent",
         )}
         style={style}
       >
-        {cat.emoji && <span className="leading-none">{cat.emoji}</span>}
+        {cat.emoji && <span className={cn("leading-none", isDisabled && "opacity-60")}>{cat.emoji}</span>}
         <span className="leading-none">{cat.nombre}</span>
         {isSelected && <Check className="h-3.5 w-3.5" />}
-        {isDisabled && <Ban className="h-3 w-3" />}
+        {isDisabled && <Ban className="h-3 w-3 shrink-0" />}
       </button>
     )
   }
@@ -154,28 +155,61 @@ export function CategoriaPickerDialog({
           ) : (
             <>
               {visibleGroups.map(({ parent, children }) => {
-                const { color, rgbValue } = getCategoryColorTokens(parent, categories)
+                const { color, textColor, rgbValue } = getCategoryColorTokens(parent, categories)
                 const headStyle: CSSProperties = {
                   ["--cat" as string]: color,
+                  ["--cat-text" as string]: textColor,
                   ["--cat-rgb" as string]: rgbValue,
                 }
                 const visibleChildren = q ? children.filter(matches) : children
+                const pSelected = parent.id === selectedId
+                const pDisabled = disabledSet.has(parent.id) && !pSelected
+                const tieneHijas = children.length > 0
                 return (
                   <div
                     key={parent.id}
-                    className="rounded-xl border border-[rgba(var(--cat-rgb),0.3)] bg-[rgba(var(--cat-rgb),0.06)] p-3"
+                    className="rounded-xl border border-[rgba(var(--cat-rgb),0.3)] bg-[rgba(var(--cat-rgb),0.06)] p-2"
                     style={headStyle}
                   >
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full bg-[var(--cat)]" />
+                    {/* La categoría madre se selecciona haciendo clic en su título */}
+                    <button
+                      type="button"
+                      ref={pSelected ? selectedRef : undefined}
+                      onClick={() => handlePick(parent.id)}
+                      disabled={pDisabled}
+                      title={pDisabled ? "Ya asignada en otra fila" : "Seleccionar esta categoría"}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
+                        pSelected
+                          ? "bg-[var(--cat)] text-[var(--cat-text)] shadow-sm"
+                          : pDisabled
+                            ? "cursor-not-allowed text-muted-foreground line-through decoration-muted-foreground/50"
+                            : "hover:bg-[rgba(var(--cat-rgb),0.14)]",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-2.5 w-2.5 shrink-0 rounded-full",
+                          pSelected ? "bg-[var(--cat-text)]" : "bg-[var(--cat)]",
+                          pDisabled && "opacity-50",
+                        )}
+                      />
                       {parent.emoji && <span className="text-base leading-none">{parent.emoji}</span>}
-                      <span className="text-sm font-semibold">{parent.nombre}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 pl-1">
-                      {/* el propio padre también es seleccionable */}
-                      {renderChip(parent, parent)}
-                      {visibleChildren.map((child) => renderChip(child, parent))}
-                    </div>
+                      <span className="flex-1 text-sm font-semibold">{parent.nombre}</span>
+                      {tieneHijas && !pSelected && !pDisabled && (
+                        <span className="text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
+                          madre
+                        </span>
+                      )}
+                      {pSelected && <Check className="h-4 w-4 shrink-0" />}
+                      {pDisabled && <Ban className="h-3.5 w-3.5 shrink-0" />}
+                    </button>
+
+                    {visibleChildren.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-2 pl-2.5">
+                        {visibleChildren.map((child) => renderChip(child, parent))}
+                      </div>
+                    )}
                   </div>
                 )
               })}

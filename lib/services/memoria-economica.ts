@@ -579,10 +579,13 @@ export async function generarSheet(
   const drive = getDrive(client)
   const sheets = getSheets(client)
 
-  // 1. Copiar plantilla
+  // 1. Copiar plantilla a "Mi unidad" del usuario.
+  //    `parents: ["root"]` fuerza el destino a Mi unidad. Sin esto, al copiar un
+  //    archivo de una unidad compartida la copia se intenta crear en esa misma
+  //    unidad, y si el usuario no tiene rol de creación allí Drive devuelve 403.
   const copy = await drive.files.copy({
     fileId: templateId,
-    requestBody: { name: titulo },
+    requestBody: { name: titulo, parents: ["root"] },
     fields: "id",
     supportsAllDrives: true,
   })

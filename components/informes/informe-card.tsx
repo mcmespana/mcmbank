@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EstadoBadge } from "./estado-badge"
 import { ArchivoIcon } from "./archivo-icon"
+import { DriveIcon } from "./drive-icon"
 import {
   getEstadoConfig,
   periodoDisplay,
@@ -102,11 +103,11 @@ export function InformeCard({
                   href={a.drive_url!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-muted/60"
                 >
-                  <ArchivoIcon nombre={a.nombre} isDrive />
+                  <DriveIcon className="h-3.5 w-3.5" />
                   <span className="truncate">{a.nombre}</span>
-                  <ExternalLink className="h-3 w-3 shrink-0" />
+                  <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
                 </a>
               ))}
               {informe.drive_url && driveLinks.length === 0 && (
@@ -114,9 +115,10 @@ export function InformeCard({
                   href={informe.drive_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-muted/60"
                 >
-                  <ExternalLink className="h-3 w-3" /> Abrir en Drive
+                  <DriveIcon className="h-3.5 w-3.5" /> Abrir en Drive
+                  <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
                 </a>
               )}
             </div>

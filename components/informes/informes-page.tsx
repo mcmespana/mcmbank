@@ -133,9 +133,9 @@ export function InformesPage() {
 
         <TabsContent value="anuales" className="mt-4">
           {loading ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} className="h-44 animate-pulse bg-muted/40" />
+                <Card key={i} className="h-28 animate-pulse bg-muted/40" />
               ))}
             </div>
           ) : error ? (
@@ -165,7 +165,7 @@ export function InformesPage() {
               )}
             </EmptyState>
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="space-y-3">
               {anuales.map((informe) => (
                 <InformeCard
                   key={informe.id}

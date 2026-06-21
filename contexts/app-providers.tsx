@@ -29,7 +29,7 @@ export function AppProviders({ children }: AppProvidersProps) {
             <MovimientosCacheProvider>
               <ConnectionMonitor />
               {children}
-              <Toaster richColors />
+              <Toaster richColors position="bottom-left" />
             </MovimientosCacheProvider>
           </DelegationProvider>
         </AuthProvider>

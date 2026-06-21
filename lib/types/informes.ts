@@ -19,6 +19,8 @@ export interface EstadoConfig {
   badgeClass: string
   /** Color del puntito indicador. */
   dotClass: string
+  /** Color de la franja de acento a la izquierda de la fila. */
+  accentClass: string
 }
 
 export const ESTADO_ORDER: InformeEstado[] = [
@@ -36,6 +38,7 @@ export const ESTADOS: Record<InformeEstado, EstadoConfig> = {
     badgeClass:
       "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700",
     dotClass: "bg-slate-400",
+    accentClass: "bg-slate-300 dark:bg-slate-600",
   },
   en_desarrollo: {
     value: "en_desarrollo",
@@ -43,6 +46,7 @@ export const ESTADOS: Record<InformeEstado, EstadoConfig> = {
     badgeClass:
       "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800",
     dotClass: "bg-amber-500",
+    accentClass: "bg-amber-400 dark:bg-amber-500",
   },
   hecho: {
     value: "hecho",
@@ -50,6 +54,7 @@ export const ESTADOS: Record<InformeEstado, EstadoConfig> = {
     badgeClass:
       "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800",
     dotClass: "bg-sky-500",
+    accentClass: "bg-sky-400 dark:bg-sky-500",
   },
   revisado: {
     value: "revisado",
@@ -57,6 +62,7 @@ export const ESTADOS: Record<InformeEstado, EstadoConfig> = {
     badgeClass:
       "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-800",
     dotClass: "bg-violet-500",
+    accentClass: "bg-violet-400 dark:bg-violet-500",
   },
   aprobado: {
     value: "aprobado",
@@ -64,6 +70,7 @@ export const ESTADOS: Record<InformeEstado, EstadoConfig> = {
     badgeClass:
       "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800",
     dotClass: "bg-emerald-500",
+    accentClass: "bg-emerald-400 dark:bg-emerald-500",
   },
 }
 

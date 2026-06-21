@@ -725,11 +725,13 @@ export type Database = {
         Row: {
           actualizado_en: string
           anio: number
+          balance_anual: number | null
           config_generacion: Json | null
           creado_en: string
           creado_por: string | null
           curso_label: string | null
           delegacion_id: string
+          disponible_final: number | null
           drive_file_id: string | null
           drive_url: string | null
           es_borrador: boolean
@@ -746,11 +748,13 @@ export type Database = {
         Insert: {
           actualizado_en?: string
           anio: number
+          balance_anual?: number | null
           config_generacion?: Json | null
           creado_en?: string
           creado_por?: string | null
           curso_label?: string | null
           delegacion_id: string
+          disponible_final?: number | null
           drive_file_id?: string | null
           drive_url?: string | null
           es_borrador?: boolean
@@ -767,11 +771,13 @@ export type Database = {
         Update: {
           actualizado_en?: string
           anio?: number
+          balance_anual?: number | null
           config_generacion?: Json | null
           creado_en?: string
           creado_por?: string | null
           curso_label?: string | null
           delegacion_id?: string
+          disponible_final?: number | null
           drive_file_id?: string | null
           drive_url?: string | null
           es_borrador?: boolean

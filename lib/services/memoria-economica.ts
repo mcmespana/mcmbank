@@ -45,6 +45,8 @@ export interface MapeoConfig {
   /** Parent de actividades detectado (informativo). */
   actividadesParentId?: string | null
   actividadesParentNombre?: string | null
+  /** Capítulos eliminados por completo (incl. cabecera). Solo V y VI. */
+  capitulosExcluidos?: Capitulo[]
 }
 
 export interface ValorFila {
@@ -343,12 +345,56 @@ export const FILAS_ACTIVIDADES = [23, 24, 25, 26, 27, 28, 29, 30, 31, 32]
 export const FILAS_CAMPANAS = [34, 35, 36, 37, 38]
 export const FILAS_CAP6 = [41, 42, 43]
 
+// Rango COMPLETO de cada capítulo opcional (cabecera + contenido + subtotal).
+// Si el capítulo se excluye, se eliminan TODAS estas filas del documento.
+export const CAP_RANGES: Partial<Record<Capitulo, number[]>> = {
+  V: [33, 34, 35, 36, 37, 38, 39],
+  VI: [40, 41, 42, 43],
+}
+
+function wordTokens(s: string): string[] {
+  return norm(s)
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 2)
+}
+
+/**
+ * Busca la categoría que mejor encaja con un nombre del template.
+ * Exacto → uno prefijo del otro → solapamiento de palabras significativas.
+ * Tolera diferencias como "Comidas, dietas, viajes y eventos" vs
+ * "Comidas, dietas y viajes".
+ */
 function findCatByName(ctx: MemoriaContext, nombre: string): CategoriaRow | undefined {
   const n = norm(nombre)
-  return (
+  // 1. exacto (global primero)
+  const exact =
     ctx.categorias.find((c) => c.es_global && norm(c.nombre) === n) ||
     ctx.categorias.find((c) => norm(c.nombre) === n)
-  )
+  if (exact) return exact
+
+  // 2. prefijo en cualquier dirección
+  const prefix = ctx.categorias.find((c) => {
+    const cn = norm(c.nombre)
+    return cn.startsWith(n) || n.startsWith(cn)
+  })
+  if (prefix) return prefix
+
+  // 3. solapamiento de palabras (mejor puntuación, exige primera palabra común)
+  const targetTokens = wordTokens(nombre)
+  if (targetTokens.length === 0) return undefined
+  let best: CategoriaRow | undefined
+  let bestScore = 0
+  for (const c of ctx.categorias) {
+    const ct = wordTokens(c.nombre)
+    if (ct.length === 0 || ct[0] !== targetTokens[0]) continue
+    const shared = targetTokens.filter((t) => ct.includes(t)).length
+    const score = shared / Math.max(targetTokens.length, ct.length)
+    if (shared >= 2 && score > bestScore) {
+      bestScore = score
+      best = c
+    }
+  }
+  return best
 }
 
 export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
@@ -606,15 +652,16 @@ export async function generarSheet(
   const sheetId = meta.data.sheets?.[0]?.properties?.sheetId ?? 0
 
   const preview = buildPreview(ctx, mapeo)
+  const excluidos = new Set<Capitulo>(mapeo.capitulosExcluidos ?? [])
 
-  // 2. Preparar valores
+  // 2. Preparar valores (saltando capítulos excluidos por completo)
   const updates: { range: string; values: any[][] }[] = []
   updates.push({ range: "C1", values: [[preview.textos.titulo]] })
   updates.push({ range: "A22", values: [[preview.textos.capituloIV]] })
   updates.push({ range: "C45", values: [[preview.textos.balance]] })
 
   for (const fila of mapeo.filas) {
-    if (!fila.enabled) continue
+    if (!fila.enabled || excluidos.has(fila.capitulo)) continue
     const v = preview.valores[fila.id] || {}
     if (fila.escribirDescripcion && fila.descripcion) {
       updates.push({ range: `C${fila.fila}`, values: [[fila.descripcion]] })
@@ -632,19 +679,27 @@ export async function generarSheet(
     requestBody: { valueInputOption: "USER_ENTERED", data: updates },
   })
 
-  // 3. Eliminar filas deshabilitadas (de abajo a arriba)
-  const filasAEliminar = mapeo.filas
-    .filter((f) => !f.enabled)
-    .map((f) => f.fila)
-    .sort((a, b) => b - a)
-  if (filasAEliminar.length > 0) {
-    const requests = filasAEliminar.map((fila) => ({
+  // 3. Renombrar pestaña + eliminar filas (de abajo a arriba para no descuadrar
+  //    índices ni referencias). Se eliminan: filas deshabilitadas y los rangos
+  //    completos (cabecera incluida) de los capítulos excluidos.
+  const tabTitle = ctx.periodoTipo === "curso" ? `Curso ${cursoLabel(ctx.anio)}` : `Año ${ctx.anio}`
+  const requests: any[] = [
+    { updateSheetProperties: { properties: { sheetId, title: tabTitle }, fields: "title" } },
+  ]
+
+  const aEliminar = new Set<number>()
+  for (const f of mapeo.filas) if (!f.enabled) aEliminar.add(f.fila)
+  for (const cap of excluidos) for (const fila of CAP_RANGES[cap] ?? []) aEliminar.add(fila)
+  const filasAEliminar = [...aEliminar].sort((a, b) => b - a)
+  for (const fila of filasAEliminar) {
+    requests.push({
       deleteDimension: {
         range: { sheetId, dimension: "ROWS", startIndex: fila - 1, endIndex: fila },
       },
-    }))
-    await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } })
+    })
   }
+
+  await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } })
 
   // 4. Enlace
   const file = await drive.files.get({

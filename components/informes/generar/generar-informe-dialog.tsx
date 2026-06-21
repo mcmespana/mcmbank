@@ -15,16 +15,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { InformesService } from "@/lib/services/informes"
+import { CategorySelector } from "@/components/transactions/category-selector"
+import { useCategorias } from "@/hooks/use-categorias"
+import { formatCurrency } from "@/lib/utils/format"
 import { buildPeriodoOptions, cursoLabelFromAnio, type PeriodoTipo } from "@/lib/types/informes"
 import type { InformeConArchivos } from "@/lib/types/database"
 import type {
   Capitulo,
-  CategoriaCatalogo,
   Fuente,
   MapeoConfig,
   MapeoFila,
   PreviewResultado,
 } from "@/lib/services/memoria-economica"
+import { cn } from "@/lib/utils"
 import {
   Loader2,
   Sparkles,
@@ -41,8 +44,7 @@ import {
   Info,
 } from "lucide-react"
 
-const eur = (n: number | undefined) =>
-  typeof n === "number" ? n.toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "—"
+const eur = (n: number | undefined) => (typeof n === "number" ? formatCurrency(n) : "—")
 
 const CAP_LABEL: Record<Capitulo, string> = {
   I: "Capítulo I · Saldos curso anterior",
@@ -190,6 +192,20 @@ export function GenerarInformeDialog({
     else if (modo === "ambos") updateFila(fila.id, { ingreso: fuente, gasto: fuente })
   }
 
+  const isCapExcluido = (cap: Capitulo) => (mapeo?.capitulosExcluidos ?? []).includes(cap)
+
+  const toggleCapitulo = (cap: Capitulo, incluir: boolean) => {
+    setMapeo((prev) => {
+      if (!prev) return prev
+      const set = new Set(prev.capitulosExcluidos ?? [])
+      if (incluir) set.delete(cap)
+      else set.add(cap)
+      const next = { ...prev, capitulosExcluidos: [...set] }
+      recompute(next)
+      return next
+    })
+  }
+
   const handleGenerar = async () => {
     if (!google.connected) {
       toast.error("Conecta tu cuenta de Google primero")
@@ -254,12 +270,27 @@ export function GenerarInformeDialog({
     }
   }
 
+  const { categorias: dbCategorias } = useCategorias(delegacionId, {
+    includeGlobal: true,
+    includeInactive: false,
+  })
   const periodoOptions = useMemo(() => buildPeriodoOptions(periodoTipo), [periodoTipo])
-  const categorias: CategoriaCatalogo[] = preview?.categorias ?? []
+
+  // Conjunto de categorías ya asignadas en alguna fila (para no repetirlas).
+  const categoriasUsadas = useMemo(() => {
+    const s = new Set<string>()
+    for (const f of mapeo?.filas ?? []) {
+      const c = categoriaIdDeFila(f)
+      if (c) s.add(c)
+    }
+    return s
+  }, [mapeo])
+
+  const saldoFecha = periodoTipo === "curso" ? "1 de septiembre" : "1 de enero"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" /> Generar memoria económica
@@ -383,88 +414,136 @@ export function GenerarInformeDialog({
               </div>
             )}
 
-            {/* Tabla de mapeo por capítulo */}
-            <div className="max-h-[48vh] space-y-4 overflow-y-auto pr-1">
+            {/* Mapeo por capítulo */}
+            <div className="max-h-[62vh] space-y-6 overflow-y-auto pr-1">
               {CAP_ORDER.map((cap) => {
                 const filasCap = mapeo.filas.filter((f) => f.capitulo === cap)
                 if (filasCap.length === 0) return null
+                const opcional = cap === "V" || cap === "VI"
+                const excluido = isCapExcluido(cap)
                 return (
                   <div key={cap}>
-                    <div className="sticky top-0 z-10 mb-1.5 flex items-center gap-2 bg-background py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {CAP_LABEL[cap]}
-                      {recomputing && <Loader2 className="h-3 w-3 animate-spin" />}
-                    </div>
-                    <div className="space-y-1">
-                      {filasCap.map((fila) => {
-                        const modo = modoDeFila(fila)
-                        const v = preview.valores[fila.id]
-                        const catId = categoriaIdDeFila(fila)
-                        return (
-                          <div
-                            key={fila.id}
-                            className={`grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border px-2 py-1.5 text-sm ${
-                              fila.enabled ? "" : "opacity-40"
-                            }`}
-                          >
+                    <div className="sticky top-0 z-10 mb-2 flex items-center justify-between gap-2 bg-background py-1">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {CAP_LABEL[cap]}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        {recomputing && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                        {opcional && (
+                          <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium">
                             <Checkbox
-                              checked={fila.enabled}
-                              onCheckedChange={(c) => updateFila(fila.id, { enabled: !!c })}
-                              aria-label="Incluir fila"
+                              checked={!excluido}
+                              onCheckedChange={(c) => toggleCapitulo(cap, !!c)}
                             />
-
-                            <div className="min-w-0 space-y-1">
-                              {fila.escribirDescripcion ? (
-                                <Input
-                                  value={fila.descripcion}
-                                  onChange={(e) => updateFila(fila.id, { descripcion: e.target.value })}
-                                  placeholder="Descripción…"
-                                  className="h-7 text-xs"
-                                  disabled={!fila.enabled}
-                                />
-                              ) : (
-                                <span className="truncate text-xs font-medium">{fila.descripcion}</span>
-                              )}
-
-                              {modo === "saldo" ? (
-                                <div className="text-[11px] text-muted-foreground">
-                                  Saldo inicial ({fila.ingreso?.tipo === "saldo_inicial" ? fila.ingreso.cuentaTipo : "—"})
-                                </div>
-                              ) : (
-                                <Select
-                                  value={catId ?? "__none__"}
-                                  onValueChange={(val) =>
-                                    setCategoria(fila, val === "__none__" ? null : val)
-                                  }
-                                  disabled={!fila.enabled}
-                                >
-                                  <SelectTrigger className="h-7 text-xs">
-                                    <SelectValue placeholder="Categoría…" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="__none__">— Ninguna —</SelectItem>
-                                    {categorias.map((c) => (
-                                      <SelectItem key={c.id} value={c.id}>
-                                        {c.esHija ? "↳ " : ""}
-                                        {c.nombre}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </div>
-
-                            <div className="text-right text-xs tabular-nums">
-                              {(modo === "ingreso" || modo === "ambos" || modo === "saldo") && (
-                                <div className="text-emerald-600">{eur(v?.ingreso)}</div>
-                              )}
-                              {(modo === "gasto" || modo === "ambos") && (
-                                <div className="text-red-500">{eur(v?.gasto)}</div>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
+                            Incluir capítulo
+                          </label>
+                        )}
+                      </div>
                     </div>
+
+                    {opcional && excluido ? (
+                      <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        Este capítulo se eliminará por completo del documento (se borran las filas{" "}
+                        {cap === "V" ? "33 a 39" : "40 a 43"} de la plantilla).
+                      </p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {filasCap.map((fila) => {
+                          const modo = modoDeFila(fila)
+                          const v = preview.valores[fila.id]
+                          const catId = categoriaIdDeFila(fila)
+                          const esSaldo = modo === "saldo"
+                          const cuentaTipo =
+                            fila.ingreso?.tipo === "saldo_inicial" ? fila.ingreso.cuentaTipo : null
+                          const saldoCero = esSaldo && (v?.ingreso ?? 0) === 0
+                          const disabledIds = [...categoriasUsadas].filter((id) => id !== catId)
+                          return (
+                            <div
+                              key={fila.id}
+                              className={cn(
+                                "rounded-lg border bg-card p-3 transition-opacity",
+                                !fila.enabled && "opacity-50",
+                                saldoCero && cuentaTipo === "caja" && fila.enabled && "opacity-70",
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                                  <Checkbox
+                                    checked={fila.enabled}
+                                    onCheckedChange={(c) => updateFila(fila.id, { enabled: !!c })}
+                                    aria-label="Incluir fila"
+                                    className="mt-0.5"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    {fila.escribirDescripcion ? (
+                                      <Input
+                                        value={fila.descripcion}
+                                        onChange={(e) => updateFila(fila.id, { descripcion: e.target.value })}
+                                        placeholder="Descripción de la fila…"
+                                        className="h-8"
+                                        disabled={!fila.enabled}
+                                      />
+                                    ) : (
+                                      <span className="text-sm font-medium">{fila.descripcion}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="shrink-0 space-y-0.5 text-right text-sm tabular-nums">
+                                  {(modo === "ingreso" || modo === "ambos" || modo === "saldo") && (
+                                    <div className="font-semibold text-emerald-600">{eur(v?.ingreso)}</div>
+                                  )}
+                                  {(modo === "gasto" || modo === "ambos") && (
+                                    <div className="font-semibold text-red-500">{eur(v?.gasto)}</div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {esSaldo ? (
+                                <p className="mt-2 pl-7 text-xs text-muted-foreground">
+                                  Calculado automáticamente con el saldo{" "}
+                                  {cuentaTipo === "caja" ? "de la caja" : "del banco"} el {saldoFecha}.
+                                  {saldoCero && cuentaTipo === "caja" && (
+                                    <span className="italic"> A 0: parece que no hay caja.</span>
+                                  )}
+                                </p>
+                              ) : (
+                                <div className="mt-2 space-y-1 pl-7">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-[11px] text-muted-foreground">
+                                      Categoría que se suma aquí
+                                      {modo === "ambos"
+                                        ? " (ingresos y gastos)"
+                                        : modo === "gasto"
+                                          ? " (gastos)"
+                                          : " (ingresos)"}
+                                    </Label>
+                                    {catId && fila.enabled && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setCategoria(fila, null)}
+                                        className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                                      >
+                                        Quitar
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className={cn(!fila.enabled && "pointer-events-none opacity-50")}>
+                                    <CategorySelector
+                                      categories={dbCategorias}
+                                      selectedCategories={catId ? [catId] : []}
+                                      onSelectionChange={(ids) => setCategoria(fila, ids[0] ?? null)}
+                                      placeholder="Elegir categoría…"
+                                      disabledCategoryIds={disabledIds}
+                                      hideCreateButton
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )
               })}

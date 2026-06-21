@@ -1,14 +1,22 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EstadoBadge } from "./estado-badge"
 import { ArchivoIcon } from "./archivo-icon"
-import { periodoDisplay, PERIODICIDAD_LABEL, type InformeEstado, type Periodicidad } from "@/lib/types/informes"
+import {
+  getEstadoConfig,
+  periodoDisplay,
+  PERIODICIDAD_LABEL,
+  type InformeEstado,
+  type Periodicidad,
+} from "@/lib/types/informes"
 import type { InformeArchivo, InformeConArchivos } from "@/lib/types/database"
+import { formatCurrency } from "@/lib/utils/format"
 import { cn } from "@/lib/utils"
-import { Pencil, Trash2, ExternalLink, Eye, Sparkles, FileStack } from "lucide-react"
+import { Pencil, Trash2, ExternalLink, Eye, Sparkles, FileStack, TrendingUp, Wallet } from "lucide-react"
 
 interface InformeCardProps {
   informe: InformeConArchivos
@@ -30,19 +38,26 @@ export function InformeCard({
   const archivos = informe.archivos ?? []
   const storageFiles = archivos.filter((a) => a.storage_path)
   const driveLinks = archivos.filter((a) => a.drive_url)
+  const accent = getEstadoConfig(informe.estado).accentClass
+
+  const balance = informe.balance_anual
+  const disponible = informe.disponible_final
+  const hasMoney = balance != null || disponible != null
 
   return (
-    <Card className="flex flex-col gap-3 p-4 transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            {informe.origen === "generado" && (
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
-            )}
-            <h3 className="truncate font-semibold leading-tight">{informe.titulo}</h3>
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <Badge variant="outline" className="text-[11px]">
+    <Card className="relative overflow-hidden transition-shadow hover:shadow-md">
+      {/* Franja de acento por estado */}
+      <span className={cn("absolute inset-y-0 left-0 w-1.5", accent)} aria-hidden />
+
+      <div className="flex flex-col gap-3 py-4 pl-6 pr-4 sm:flex-row sm:items-center sm:gap-6">
+        {/* Bloque principal */}
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <EstadoBadge
+              estado={informe.estado}
+              onChange={canWrite ? (e) => onChangeEstado(informe, e) : undefined}
+            />
+            <Badge variant="outline" className="text-[11px] font-medium">
               {periodoDisplay(informe)}
             </Badge>
             <Badge variant="secondary" className="text-[11px]">
@@ -54,80 +69,131 @@ export function InformeCard({
               </Badge>
             )}
           </div>
+
+          <h3 className="flex items-center gap-1.5 font-semibold leading-tight">
+            {informe.origen === "generado" && (
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+            )}
+            <span className="truncate">{informe.titulo}</span>
+          </h3>
+
+          {informe.notas && (
+            <p className="line-clamp-1 text-xs text-muted-foreground">{informe.notas}</p>
+          )}
+
+          {/* Archivos en línea */}
+          {archivos.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {storageFiles.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => onView(a)}
+                  className="inline-flex max-w-[14rem] items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 text-xs transition-colors hover:bg-muted/60"
+                >
+                  <ArchivoIcon nombre={a.nombre} mime={a.mime_type} />
+                  <span className="truncate">{a.nombre}</span>
+                  <Eye className="h-3 w-3 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+              {driveLinks.map((a) => (
+                <a
+                  key={a.id}
+                  href={a.drive_url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                >
+                  <ArchivoIcon nombre={a.nombre} isDrive />
+                  <span className="truncate">{a.nombre}</span>
+                  <ExternalLink className="h-3 w-3 shrink-0" />
+                </a>
+              ))}
+              {informe.drive_url && driveLinks.length === 0 && (
+                <a
+                  href={informe.drive_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                >
+                  <ExternalLink className="h-3 w-3" /> Abrir en Drive
+                </a>
+              )}
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <FileStack className="h-3.5 w-3.5" /> Sin archivos
+            </div>
+          )}
         </div>
-        <EstadoBadge
-          estado={informe.estado}
-          onChange={canWrite ? (e) => onChangeEstado(informe, e) : undefined}
-        />
+
+        {/* Cifras económicas */}
+        {hasMoney && (
+          <div className="flex shrink-0 gap-4 border-t pt-3 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+            <Stat
+              icon={<TrendingUp className="h-3.5 w-3.5" />}
+              label="Balance"
+              value={balance}
+              colorize
+            />
+            <Stat
+              icon={<Wallet className="h-3.5 w-3.5" />}
+              label="Disponible"
+              value={disponible}
+            />
+          </div>
+        )}
+
+        {/* Acciones */}
+        {canWrite && (
+          <div className="flex shrink-0 items-center gap-1 border-t pt-2 sm:border-0 sm:pt-0">
+            <Button variant="ghost" size="sm" onClick={() => onEdit(informe)}>
+              <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={() => onDelete(informe)}
+              aria-label="Eliminar informe"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
       </div>
-
-      {informe.notas && (
-        <p className="line-clamp-2 text-xs text-muted-foreground">{informe.notas}</p>
-      )}
-
-      {/* Archivos */}
-      {archivos.length > 0 ? (
-        <div className="flex flex-col gap-1.5">
-          {storageFiles.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => onView(a)}
-              className="flex items-center gap-2 rounded-md border bg-muted/20 px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-muted/50"
-            >
-              <ArchivoIcon nombre={a.nombre} mime={a.mime_type} />
-              <span className="flex-1 truncate">{a.nombre}</span>
-              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          ))}
-          {driveLinks.map((a) => (
-            <a
-              key={a.id}
-              href={a.drive_url!}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-md border bg-amber-50 px-2.5 py-1.5 text-sm transition-colors hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
-            >
-              <ArchivoIcon nombre={a.nombre} isDrive />
-              <span className="flex-1 truncate">{a.nombre}</span>
-              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-            </a>
-          ))}
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 rounded-md border border-dashed px-2.5 py-1.5 text-xs text-muted-foreground">
-          <FileStack className="h-3.5 w-3.5" /> Sin archivos
-        </div>
-      )}
-
-      {/* Drive principal (informe generado) */}
-      {informe.drive_url && driveLinks.length === 0 && (
-        <a
-          href={informe.drive_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 rounded-md border bg-amber-50 px-2.5 py-1.5 text-sm transition-colors hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
-        >
-          <ExternalLink className="h-3.5 w-3.5 text-amber-600" />
-          <span className="flex-1 truncate">Abrir en Google Drive</span>
-        </a>
-      )}
-
-      {canWrite && (
-        <div className="mt-auto flex justify-end gap-1 border-t pt-2">
-          <Button variant="ghost" size="sm" onClick={() => onEdit(informe)}>
-            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("text-destructive hover:text-destructive")}
-            onClick={() => onDelete(informe)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      )}
     </Card>
+  )
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+  colorize,
+}: {
+  icon: ReactNode
+  label: string
+  value: number | null
+  colorize?: boolean
+}) {
+  const color =
+    colorize && value != null
+      ? value > 0
+        ? "text-emerald-600 dark:text-emerald-400"
+        : value < 0
+          ? "text-red-600 dark:text-red-400"
+          : "text-foreground"
+      : "text-foreground"
+  return (
+    <div className="min-w-[5.5rem] text-right sm:text-left">
+      <div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+        {icon}
+        {label}
+      </div>
+      <div className={cn("mt-0.5 text-sm font-semibold tabular-nums", color)}>
+        {value != null ? formatCurrency(value) : "—"}
+      </div>
+    </div>
   )
 }

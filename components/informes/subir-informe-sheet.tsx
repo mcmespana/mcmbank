@@ -4,6 +4,14 @@ import { useEffect, useMemo, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -70,8 +78,16 @@ export function SubirInformeSheet({
   const [estado, setEstado] = useState<InformeEstado>("pendiente")
   const [notas, setNotas] = useState("")
   const [driveUrl, setDriveUrl] = useState("")
+  const [balanceAnual, setBalanceAnual] = useState("")
+  const [disponibleFinal, setDisponibleFinal] = useState("")
   const [files, setFiles] = useState<File[]>([])
   const [saving, setSaving] = useState(false)
+  const [driveConflictOpen, setDriveConflictOpen] = useState(false)
+
+  const existingDriveLinks = useMemo(
+    () => (informe?.archivos ?? []).filter((a) => a.drive_url),
+    [informe],
+  )
 
   // Inicializar / resetear al abrir
   useEffect(() => {
@@ -87,12 +103,16 @@ export function SubirInformeSheet({
       setTituloTouched(true)
       setEstado(informe.estado as InformeEstado)
       setNotas(informe.notas ?? "")
+      setBalanceAnual(informe.balance_anual != null ? String(informe.balance_anual) : "")
+      setDisponibleFinal(informe.disponible_final != null ? String(informe.disponible_final) : "")
     } else {
       setPeriodo({ periodicidad: "anual", periodo_tipo: "curso", anio: currentYear, sub_periodo: null })
       setTitulo("")
       setTituloTouched(false)
       setEstado("pendiente")
       setNotas("")
+      setBalanceAnual("")
+      setDisponibleFinal("")
     }
     setDriveUrl("")
     setFiles([])
@@ -131,15 +151,15 @@ export function SubirInformeSheet({
 
   const removeFile = (idx: number) => setFiles((prev) => prev.filter((_, i) => i !== idx))
 
-  const handleSubmit = async () => {
-    if (!titulo.trim()) {
-      toast.error("El título es obligatorio")
-      return
-    }
-    if (!isEdit && files.length === 0 && !driveUrl.trim()) {
-      toast.error("Añade al menos un archivo o un enlace de Drive")
-      return
-    }
+  /** "1.234,56" / "1234.56" / "" -> number | null */
+  const parseMoney = (raw: string): number | null => {
+    const s = raw.trim().replace(/\s|€/g, "").replace(/\./g, "").replace(",", ".")
+    if (!s) return null
+    const n = Number(s)
+    return Number.isFinite(n) ? n : null
+  }
+
+  const doSave = async (driveMode: "keep" | "replace") => {
     setSaving(true)
     try {
       const payload = {
@@ -153,6 +173,8 @@ export function SubirInformeSheet({
         titulo: titulo.trim(),
         estado,
         notas: notas.trim() || null,
+        balance_anual: parseMoney(balanceAnual),
+        disponible_final: parseMoney(disponibleFinal),
         origen: "subido" as const,
       }
 
@@ -171,6 +193,9 @@ export function SubirInformeSheet({
       }
       // Enlace Drive
       if (driveUrl.trim()) {
+        if (driveMode === "replace") {
+          for (const a of existingDriveLinks) await InformesService.removeArchivo(a)
+        }
         await InformesService.addDriveLink(informeId, "Enlace Drive", driveUrl.trim())
       }
 
@@ -185,7 +210,30 @@ export function SubirInformeSheet({
     }
   }
 
+  const handleSubmit = async () => {
+    if (!titulo.trim()) {
+      toast.error("El título es obligatorio")
+      return
+    }
+    if (!isEdit && files.length === 0 && !driveUrl.trim()) {
+      toast.error("Añade al menos un archivo o un enlace de Drive")
+      return
+    }
+    // Si ya hay enlace(s) de Drive y se añade otro, preguntar qué hacer.
+    if (driveUrl.trim() && existingDriveLinks.length > 0) {
+      setDriveConflictOpen(true)
+      return
+    }
+    await doSave("keep")
+  }
+
+  const confirmDrive = async (mode: "keep" | "replace") => {
+    setDriveConflictOpen(false)
+    await doSave(mode)
+  }
+
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
@@ -226,6 +274,40 @@ export function SubirInformeSheet({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Cifras económicas (opcionales) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Balance anual (opcional)</Label>
+              <div className="relative">
+                <Input
+                  value={balanceAnual}
+                  onChange={(e) => setBalanceAnual(e.target.value)}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  className="pr-7"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  €
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Disponible final de año (opcional)</Label>
+              <div className="relative">
+                <Input
+                  value={disponibleFinal}
+                  onChange={(e) => setDisponibleFinal(e.target.value)}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  className="pr-7"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  €
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Archivos existentes (modo edición) */}
@@ -335,5 +417,30 @@ export function SubirInformeSheet({
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Conflicto: ya existe un enlace de Drive */}
+    <Dialog open={driveConflictOpen} onOpenChange={(o) => !o && setDriveConflictOpen(false)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Ya hay un enlace de Drive</DialogTitle>
+          <DialogDescription>
+            Este informe ya tiene {existingDriveLinks.length === 1 ? "un enlace" : `${existingDriveLinks.length} enlaces`} de
+            Google Drive. ¿Qué quieres hacer con el nuevo?
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:justify-end">
+          <Button variant="outline" onClick={() => setDriveConflictOpen(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button variant="secondary" onClick={() => confirmDrive("keep")} disabled={saving}>
+            Mantener ambos
+          </Button>
+          <Button onClick={() => confirmDrive("replace")} disabled={saving}>
+            Reemplazar el anterior
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

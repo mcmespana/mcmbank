@@ -374,7 +374,7 @@ export function TransactionDetail({
                         type="button"
                         onClick={handleAmountClick}
                         className={cn(
-                          "text-center font-bold text-xl sm:text-2xl hover:bg-muted/50 px-3 py-2 rounded transition-colors",
+                          "text-center font-bold tabular-nums text-xl sm:text-2xl hover:bg-muted/50 px-3 py-2 rounded transition-colors",
                           (formData.importe || 0) >= 0 ? "text-green-600" : "text-red-600",
                         )}
                       >

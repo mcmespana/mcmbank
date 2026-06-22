@@ -253,7 +253,7 @@ export function Sidebar({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 rounded-full bg-card/90 backdrop-blur-xl border-2 border-border/50 shadow-lg hover:shadow-xl hover:scale-110 transition-[transform,box-shadow] duration-300"
+              className="relative h-8 w-8 rounded-full bg-card/90 backdrop-blur-xl border-2 border-border/50 shadow-lg hover:shadow-xl hover:scale-110 transition-[transform,box-shadow] duration-300 after:absolute after:-inset-1 after:content-['']"
               onClick={onToggleCollapse}
             >
               {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

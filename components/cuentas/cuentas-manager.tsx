@@ -687,7 +687,7 @@ export function CuentasManager() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => copyToClipboard(cuenta.iban!)}
-                                  className={`h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-muted flex-shrink-0 transition-colors duration-200 ${copiedIban === cuenta.iban
+                                  className={`relative h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-muted flex-shrink-0 transition-colors duration-200 after:absolute after:-inset-1.5 after:content-[''] ${copiedIban === cuenta.iban
                                     ? "bg-green-100 hover:bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
                                     : "hover:bg-muted"
                                     }`}

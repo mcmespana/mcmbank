@@ -55,7 +55,7 @@ export function PagoMcmCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden border-border/60 transition-all hover:border-foreground/15 hover:shadow-md",
+        "group relative overflow-hidden border-border/60 transition-[border-color,box-shadow] hover:border-foreground/15 hover:shadow-md",
         pago.estado === "cancelado" && "opacity-60",
       )}
     >

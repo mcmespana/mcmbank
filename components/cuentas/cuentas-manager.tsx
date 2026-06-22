@@ -479,7 +479,7 @@ export function CuentasManager() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-green-700 dark:text-green-300 mb-1">Saldo Total</div>
-                <div className="text-2xl sm:text-3xl font-bold text-green-900 dark:text-green-100">
+                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-green-900 dark:text-green-100">
                   {formatCurrency(Object.values(balances).reduce((sum, balance) => sum + balance, 0))}
                 </div>
               </div>
@@ -536,7 +536,7 @@ export function CuentasManager() {
               return (
                 <Card
                   key={cuenta.id}
-                  className={`group hover:shadow-lg transition-all duration-200 border-border bg-card ${isCreating ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20' :
+                  className={`group hover:shadow-lg transition-[background-color,box-shadow] duration-200 border-border bg-card ${isCreating ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20' :
                     isUpdating ? 'ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
                       isDeleting ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''
                     } ${isInactive ? 'opacity-50 grayscale' : ''}`}
@@ -648,7 +648,7 @@ export function CuentasManager() {
                                   <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
                                     <Badge
                                       variant="secondary"
-                                      className={`text-sm sm:text-lg font-semibold px-2 sm:px-4 py-1 sm:py-2 cursor-pointer hover:opacity-80 transition-opacity ${balance >= 0
+                                      className={`text-sm sm:text-lg font-semibold tabular-nums px-2 sm:px-4 py-1 sm:py-2 cursor-pointer hover:opacity-80 transition-opacity ${balance >= 0
                                         ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
                                         : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
                                         }`}
@@ -687,7 +687,7 @@ export function CuentasManager() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => copyToClipboard(cuenta.iban!)}
-                                  className={`h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-muted flex-shrink-0 transition-all duration-200 ${copiedIban === cuenta.iban
+                                  className={`h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-muted flex-shrink-0 transition-colors duration-200 ${copiedIban === cuenta.iban
                                     ? "bg-green-100 hover:bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
                                     : "hover:bg-muted"
                                     }`}

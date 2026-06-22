@@ -490,7 +490,7 @@ function CategoryPill({ category, size = "md", isSelected = false, onClick }: Ca
       aria-pressed={isSelected}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-transparent shadow-sm transition-all duration-200 bg-[var(--category-color)] text-[var(--category-text-color)] hover:bg-[var(--category-color)] hover:brightness-110 hover:shadow-md cursor-pointer",
+        "inline-flex items-center gap-2 rounded-full border border-transparent shadow-sm transition-[color,background-color,box-shadow,filter] duration-200 bg-[var(--category-color)] text-[var(--category-text-color)] hover:bg-[var(--category-color)] hover:brightness-110 hover:shadow-md cursor-pointer",
         isSelected && "ring-2 ring-primary",
         sizeClasses,
       )}

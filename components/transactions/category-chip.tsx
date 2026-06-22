@@ -58,7 +58,7 @@ export function CategoryChip({
       <div className="flex items-center gap-2">
         <Badge
           variant="outline"
-          className="group cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium inline-flex items-center gap-2 transition-all duration-200 border border-transparent shadow-sm hover:shadow-md hover:scale-105 bg-[var(--category-color)] text-[var(--category-text-color)] hover:bg-[var(--category-color)] dark:bg-transparent dark:border-[var(--category-color)] dark:text-[var(--category-color)] dark:hover:bg-[var(--category-color)]/15"
+          className="group cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium inline-flex items-center gap-2 transition-[color,background-color,box-shadow,transform] duration-200 border border-transparent shadow-sm hover:shadow-md hover:scale-105 bg-[var(--category-color)] text-[var(--category-text-color)] hover:bg-[var(--category-color)] dark:bg-transparent dark:border-[var(--category-color)] dark:text-[var(--category-color)] dark:hover:bg-[var(--category-color)]/15"
           style={badgeStyles}
           onClick={openDialog}
         >
@@ -109,7 +109,7 @@ export function CategoryChip({
       <Button
         variant="outline"
         size="sm"
-        className="h-7 px-3 text-xs rounded-full border-dashed hover:bg-primary/5 hover:border-primary/30 bg-transparent transition-all duration-200 text-muted-foreground hover:text-primary"
+        className="h-7 px-3 text-xs rounded-full border-dashed hover:bg-primary/5 hover:border-primary/30 bg-transparent transition-colors duration-200 text-muted-foreground hover:text-primary"
         onClick={openDialog}
       >
         <Plus className="h-3 w-3 mr-1.5" />

@@ -324,7 +324,7 @@ function CopyableRow({
       type="button"
       onClick={onCopy}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl border border-transparent bg-card/40 px-3 py-2 text-left transition-all hover:border-border/50 hover:bg-card",
+        "flex w-full items-center gap-3 rounded-xl border border-transparent bg-card/40 px-3 py-2 text-left transition-colors hover:border-border/50 hover:bg-card",
         copied && "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900",
       )}
       title="Copiar"

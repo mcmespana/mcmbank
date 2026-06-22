@@ -103,7 +103,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       />
 
       {/* Main Content */}
-      <div className={cn("transition-all duration-300 relative z-10", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
+      <div className={cn("transition-[padding] duration-300 relative z-10", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
         {/* Topbar */}
         <Topbar selectedDelegation={selectedDelegation} onDelegationChange={(id) => setSelectedDelegation(id)} />
 

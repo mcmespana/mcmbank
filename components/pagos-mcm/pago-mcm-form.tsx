@@ -293,7 +293,7 @@ export function PagoMcmForm({
                     type="button"
                     onClick={() => setPreset(p)}
                     className={cn(
-                      "rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-tight transition-all tabular-nums",
+                      "rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-tight transition-colors tabular-nums",
                       active
                         ? "border-foreground bg-foreground text-background"
                         : "border-border/70 bg-background text-foreground/70 hover:border-foreground/30 hover:text-foreground",

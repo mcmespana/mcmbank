@@ -149,7 +149,7 @@ export function TransactionCreatePanel({
                 value={formData.importe || ""}
                 onChange={(e) => setFormData({ ...formData, importe: parseFloat(e.target.value) || 0 })}
                 className={cn(
-                  "text-2xl font-bold text-center py-6 border-2 transition-all",
+                  "text-2xl font-bold text-center py-6 border-2 transition-colors",
                   formData.importe && formData.importe !== 0
                     ? "bg-primary/5 border-primary/20 focus:border-primary"
                     : "bg-muted/30 border-border focus:border-primary"
@@ -178,7 +178,7 @@ export function TransactionCreatePanel({
               onChange={(e) => setFormData({ ...formData, concepto: e.target.value })}
               placeholder="Descripción de la transacción"
               className={cn(
-                "transition-all",
+                "transition-colors",
                 formData.concepto?.trim()
                   ? "bg-primary/5 border-primary/20"
                   : "bg-muted/30"
@@ -207,7 +207,7 @@ export function TransactionCreatePanel({
               </div>
             </div>
             <div className={cn(
-              "rounded-lg p-3 transition-all",
+              "rounded-lg p-3 transition-colors",
               formData.cuenta_id
                 ? "bg-primary/5 border border-primary/20"
                 : "bg-muted/30"

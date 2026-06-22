@@ -188,7 +188,7 @@ export function TransactionFiltersComponent({
                 type="button"
                 onClick={() => toggleContactoTipo(t)}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-all",
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-colors",
                   active
                     ? `${info.bgClass} ${info.textClass} ${info.borderClass} shadow-sm`
                     : "border-border/40 bg-background/60 text-muted-foreground hover:bg-muted",

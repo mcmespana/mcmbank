@@ -88,7 +88,7 @@ export const TransactionListRow = memo(function TransactionListRow({
     <div className="relative" data-testid="transaction-row">
       <div
         className={cn(
-          "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md",
+          "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-200 cursor-pointer shadow-sm hover:shadow-md",
           !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10",
           isSelected && "border-primary/60 bg-primary/5 ring-1 ring-primary/40 hover:bg-primary/10",
         )}
@@ -101,7 +101,7 @@ export const TransactionListRow = memo(function TransactionListRow({
             <AccountTooltip account={account}>
               <div
                 className={cn(
-                  "rounded-full p-0.5 cursor-pointer transition-all duration-200 shadow-sm",
+                  "rounded-full p-0.5 cursor-pointer transition-[transform,opacity] duration-200 shadow-sm",
                   isSelected
                     ? "scale-90 opacity-0"
                     : selectionActive
@@ -139,7 +139,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                 }
               }}
               className={cn(
-                "absolute -inset-2 sm:-inset-2.5 flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer",
+                "absolute -inset-2 sm:-inset-2.5 flex items-center justify-center rounded-full transition-[opacity,background-color] duration-200 cursor-pointer",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 isSelected
                   ? "opacity-100 pointer-events-auto bg-primary/5 hover:bg-primary/10"
@@ -150,7 +150,7 @@ export const TransactionListRow = memo(function TransactionListRow({
             >
               <span
                 className={cn(
-                  "h-9 w-9 rounded-full border-2 flex items-center justify-center transition-all shadow-md",
+                  "h-9 w-9 rounded-full border-2 flex items-center justify-center transition-[color,background-color,border-color,box-shadow] shadow-md",
                   isSelected
                     ? "bg-primary border-primary text-primary-foreground shadow-lg"
                     : "bg-background border-input text-transparent",

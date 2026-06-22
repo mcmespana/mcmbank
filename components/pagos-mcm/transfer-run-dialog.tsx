@@ -208,7 +208,7 @@ export function TransferRunDialog({
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-label={`Progreso ${progressPct}%`}>
             <div
-              className="h-full rounded-full bg-primary transition-all"
+              className="h-full rounded-full bg-primary transition-[width]"
               style={{ width: `${progressPct}%` }}
             />
           </div>

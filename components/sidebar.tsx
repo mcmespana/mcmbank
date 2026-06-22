@@ -242,7 +242,7 @@ export function Sidebar({
       {showDesktop && (
         <div
           className={cn(
-            "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300",
+            "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-[width] duration-300",
             collapsed ? "lg:w-16" : "lg:w-72",
           )}
         >
@@ -253,7 +253,7 @@ export function Sidebar({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 rounded-full bg-card/90 backdrop-blur-xl border-2 border-border/50 shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300"
+              className="relative h-8 w-8 rounded-full bg-card/90 backdrop-blur-xl border-2 border-border/50 shadow-lg hover:shadow-xl hover:scale-110 transition-[transform,box-shadow] duration-300 after:absolute after:-inset-1 after:content-['']"
               onClick={onToggleCollapse}
               aria-label={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
               title={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}

@@ -219,7 +219,7 @@ export function MarcarPagadoDialog({
                       type="button"
                       onClick={() => setSeleccionMov(m.id)}
                       className={cn(
-                        "w-full rounded-lg border p-2.5 text-left text-sm transition-all",
+                        "w-full rounded-lg border p-2.5 text-left text-sm transition-colors",
                         selected
                           ? "border-primary bg-primary/5 shadow-sm"
                           : "border-border bg-background hover:border-primary/40 hover:bg-muted/40",

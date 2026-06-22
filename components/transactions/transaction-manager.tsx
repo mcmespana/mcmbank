@@ -549,7 +549,7 @@ export function TransactionManager() {
     <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-6rem)] md:h-[calc(100vh-7rem)] lg:h-[calc(100vh-8rem)] overflow-hidden">
       {/* Desktop Sidebar Filters */}
       <div
-        className={`hidden lg:block border-r bg-card transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
+        className={`hidden lg:block border-r bg-card transition-[width] duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
           }`}
       >
         {!sidebarCollapsed && !isMobile && (

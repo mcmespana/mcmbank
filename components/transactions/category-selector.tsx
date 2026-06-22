@@ -425,7 +425,7 @@ function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCateg
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/60 bg-[rgba(var(--category-color-rgb),0.08)] p-3 transition-all duration-200",
+        "rounded-2xl border border-border/60 bg-[rgba(var(--category-color-rgb),0.08)] p-3 transition-[border-color,background-color,box-shadow] duration-200",
         "hover:border-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.12)] hover:shadow-[0_12px_30px_-18px_rgba(var(--category-color-rgb),0.6)]",
         isActive &&
           "border-[var(--category-color)] bg-[rgba(var(--category-color-rgb),0.16)] shadow-[0_16px_40px_-24px_rgba(var(--category-color-rgb),0.7)]",
@@ -504,7 +504,7 @@ function CategoryChipButton({ category, colorSource, selected, onSelect, disable
       disabled={disabled}
       title={disabled ? "Ya asignada en otra fila" : undefined}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2",
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2",
         selected
           ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)] shadow-sm"
           : "border-[rgba(var(--category-color-rgb),0.35)] bg-[rgba(var(--category-color-rgb),0.25)] text-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.35)] shadow-sm dark:bg-[rgba(var(--category-color-rgb),0.18)] dark:hover:bg-[rgba(var(--category-color-rgb),0.26)] dark:border-transparent dark:shadow-none",
@@ -543,7 +543,7 @@ function CategorySearchResult({ category, parent, isSelected, isDisabled = false
       disabled={isDisabled}
       title={isDisabled ? "Ya asignada en otra fila" : undefined}
       className={cn(
-        "w-full rounded-2xl border border-transparent bg-[rgba(var(--category-color-rgb),0.08)] px-4 py-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.4)] focus-visible:ring-offset-2",
+        "w-full rounded-2xl border border-transparent bg-[rgba(var(--category-color-rgb),0.08)] px-4 py-3 text-left transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.4)] focus-visible:ring-offset-2",
         "hover:bg-[rgba(var(--category-color-rgb),0.14)]",
         isSelected &&
           "border-[var(--category-color)] bg-[rgba(var(--category-color-rgb),0.16)] shadow-[0_12px_32px_-20px_rgba(var(--category-color-rgb),0.6)]",

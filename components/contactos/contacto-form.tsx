@@ -169,7 +169,7 @@ export function ContactoForm({
                 type="button"
                 onClick={() => setTipo(t)}
                 className={cn(
-                  "flex flex-col items-start gap-1 p-3 rounded-xl border-2 text-left transition-all h-full",
+                  "flex flex-col items-start gap-1 p-3 rounded-xl border-2 text-left transition-colors h-full",
                   isSelected
                     ? `${info.bgClass} ${info.borderClass} shadow-md`
                     : "border-border/40 bg-card hover:border-border",

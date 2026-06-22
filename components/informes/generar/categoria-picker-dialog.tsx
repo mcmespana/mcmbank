@@ -103,7 +103,7 @@ export function CategoriaPickerDialog({
         disabled={isDisabled}
         title={isDisabled ? "Ya asignada en otra fila" : undefined}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
           isSelected
             ? "border-transparent bg-[var(--cat)] text-[var(--cat-text)] shadow-md ring-2 ring-[var(--cat)] ring-offset-2"
             : isDisabled

@@ -285,7 +285,7 @@ function ContactoCard({
   return (
     <Card
       className={cn(
-        "group cursor-pointer transition-all hover:border-foreground/15 hover:shadow-md hover:-translate-y-0.5",
+        "group cursor-pointer transition-[border-color,box-shadow,transform] hover:border-foreground/15 hover:shadow-md hover:-translate-y-0.5",
         contacto.archivado && "opacity-60",
       )}
       onClick={onOpen}

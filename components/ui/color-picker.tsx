@@ -78,7 +78,7 @@ export function ColorPicker({ value = "#4ECDC4", onChange, className }: ColorPic
                   key={`${color}-${index}`}
                   type="button"
                   onClick={() => handleColorSelect(color)}
-                  className={`h-8 w-8 rounded-full border-2 transition-all hover:scale-110 ${
+                  className={`h-8 w-8 rounded-full border-2 transition-[transform,border-color,box-shadow] hover:scale-110 ${
                     value === color ? "border-primary ring-2 ring-primary/20" : "border-border"
                   }`}
                   style={{ backgroundColor: color }}

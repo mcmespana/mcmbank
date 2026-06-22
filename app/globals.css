@@ -11,7 +11,11 @@
   .text-balance {
     text-wrap: balance;
   }
-  
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
   /* Scrollbar personalizado */
   .scrollbar-thin {
     scrollbar-width: thin;
@@ -140,6 +144,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    text-wrap: pretty;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
   }
 }
 

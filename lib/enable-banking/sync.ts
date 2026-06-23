@@ -321,7 +321,7 @@ export async function syncCuenta(
 
   const { data: conexion, error: conexErr } = await admin
     .from("banco_conexion")
-    .select("id, session_id, aspsp_name, aspsp_country, estado, consent_valid_until")
+    .select("id, session_id, aspsp_name, aspsp_country, estado, consent_valid_until, creado_por")
     .eq("id", cuenta.banco_conexion_id)
     .single()
 
@@ -343,6 +343,13 @@ export async function syncCuenta(
     session_id_preview: conexion.session_id.slice(0, 8) + "...",
     consent_valid_until: conexion.consent_valid_until,
   })
+
+  // Autor de los movimientos creados por la sync. En modo manual es el usuario
+  // que la lanzó; en modo cron no hay sesión de usuario, así que atribuimos al
+  // usuario que creó la conexión (siempre es un auth.users válido). Usar un UUID
+  // placeholder rompía el FK movimiento_creado_por_fkey y dejaba la sync en
+  // estado "parcial" sin insertar nada.
+  const creadoPor = opts.iniciadoPor ?? conexion.creado_por
 
   // 2. Ventana de fechas
   const dateTo = iso(new Date())
@@ -485,7 +492,7 @@ export async function syncCuenta(
         mapTransactionToMovimiento(tx, {
           cuenta_id: cuenta.id,
           delegacion_id: cuenta.delegacion_id,
-          creado_por: opts.iniciadoPor ?? "00000000-0000-0000-0000-000000000000",
+          creado_por: creadoPor,
         }),
       )
 
@@ -572,7 +579,7 @@ export async function syncCuenta(
             external_account_uid: cuenta.external_account_uid,
           },
           logger,
-          opts.iniciadoPor ?? "00000000-0000-0000-0000-000000000000",
+          creadoPor,
         )
       } catch (err) {
         logger.warn("Fallo al calcular saldo inicial (no bloqueante)", {

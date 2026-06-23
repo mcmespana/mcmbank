@@ -7,6 +7,7 @@ import { TimeframeFilter, type Timeframe, getTimeframeRange } from "@/components
 import { ActivityBalanceDashboard } from "@/components/dashboard/activity-balance"
 import { CategoryAnalysisDashboard } from "@/components/dashboard/category-analysis"
 import { OverviewDashboard } from "@/components/dashboard/overview-dashboard"
+import { ConsentAlertBanner } from "@/components/dashboard/consent-alert-banner"
 import { Button } from "@/components/ui/button"
 import { useLocalStorageState } from "@/hooks/use-local-storage"
 import { TrendingUp, PieChart, Home, RotateCcw } from "lucide-react"
@@ -88,6 +89,9 @@ export function DashboardHome({ initialTab }: Props) {
   return (
     <AppLayout>
       <div className="space-y-8">
+        {/* Aviso de consentimiento bancario próximo a caducar (solo gestor central/tesorero) */}
+        <ConsentAlertBanner />
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">

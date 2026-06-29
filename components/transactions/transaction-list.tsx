@@ -28,6 +28,7 @@ interface TransactionListProps {
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
   selectedMovementIds: string[]
   onMovementSelectionChange: (movementId: string, selected: boolean, rangeFromAnchor?: boolean) => void
+  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
 }
 
 export function TransactionList({
@@ -44,6 +45,7 @@ export function TransactionList({
   onOpenFiles,
   selectedMovementIds,
   onMovementSelectionChange,
+  onRequestCreateCategory,
 }: TransactionListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
@@ -139,6 +141,7 @@ export function TransactionList({
           onSelectionChange={(selected, rangeFromAnchor) =>
             onMovementSelectionChange(movement.id, selected, rangeFromAnchor)
           }
+          onRequestCreateCategory={onRequestCreateCategory}
         />
       ))}
       {hasMore && (

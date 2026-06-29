@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { TransactionFiltersComponent } from "./transaction-filters"
 import { TransactionList } from "./transaction-list"
@@ -8,6 +8,7 @@ import { TransactionDetail } from "./transaction-detail"
 import { TransactionCreatePanel } from "./transaction-create-panel"
 import { DateRangeFilter } from "./date-range-filter"
 import { CategoryMegaSelector } from "./category-mega-selector"
+import { CategoryQuickCreateSheet } from "./category-quick-create-sheet"
 import { supabase } from "@/lib/supabase/client"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useIsMobile } from "@/hooks/use-is-mobile"
@@ -71,6 +72,7 @@ export function TransactionManager() {
     selectedDelegation,
     delegations,
     loading: delegationsLoading,
+    getCurrentDelegation,
   } = useDelegationContext()
 
   const [filters, setFilters] = useState<TransactionFilters>({})
@@ -133,7 +135,9 @@ export function TransactionManager() {
     }
   }, [error])
 
-  const { categorias: categories } = useCategorias(selectedDelegation)
+  const { categorias: categories, fetchCategorias } = useCategorias(selectedDelegation)
+  const [categoryCreateOpen, setCategoryCreateOpen] = useState(false)
+  const pendingCategoryAssignRef = useRef<((categoryId: string) => void | Promise<void>) | null>(null)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
   const { contactos, createContacto: createContactoFn } = useContactos(selectedDelegation)
   const isAdmin = useIsAdminHook()
@@ -278,6 +282,22 @@ export function TransactionManager() {
     } finally {
       setBulkCategoryLoading(false)
     }
+  }
+
+  const requestCreateCategory = useCallback((assign: (categoryId: string) => void | Promise<void>) => {
+    pendingCategoryAssignRef.current = assign
+    setCategoryCreateOpen(true)
+  }, [])
+
+  const handleCategoryCreated = async (newCategory: Categoria) => {
+    await fetchCategorias()
+    const assign = pendingCategoryAssignRef.current
+    pendingCategoryAssignRef.current = null
+    setCategoryCreateOpen(false)
+    if (assign) {
+      await assign(newCategory.id)
+    }
+    toast.success(`Categoría "${newCategory.nombre}" creada y asignada`)
   }
 
   const handleBulkConceptSubmit = async () => {
@@ -822,6 +842,7 @@ export function TransactionManager() {
             onOpenFiles={(movement) => handleOpenFiles(movement as unknown as MovimientoConRelaciones)}
             selectedMovementIds={selectedMovementIds}
             onMovementSelectionChange={handleMovementSelectionChange}
+            onRequestCreateCategory={requestCreateCategory}
           />
         </div>
       </div>
@@ -849,6 +870,7 @@ export function TransactionManager() {
           await handleMovementUpdate(movementId, fullPatch)
         }}
         initialTab={detailInitialTab}
+        onRequestCreateCategory={requestCreateCategory}
       />
 
       {/* Create Transaction Panel */}
@@ -902,9 +924,28 @@ export function TransactionManager() {
             onSelect={handleBulkCategorySelect}
             onClose={() => setBulkCategoryOpen(false)}
             bulkSelectionLabel={`${selectionCount} transacciones seleccionadas`}
+            onCreateCategory={() => {
+              setBulkCategoryOpen(false)
+              requestCreateCategory(handleBulkCategorySelect)
+            }}
           />
         </DialogContent>
       </Dialog>
+
+      <CategoryQuickCreateSheet
+        open={categoryCreateOpen}
+        onOpenChange={(open) => {
+          setCategoryCreateOpen(open)
+          if (!open) {
+            pendingCategoryAssignRef.current = null
+          }
+        }}
+        organizacionId={getCurrentDelegation()?.organizacion_id}
+        delegacionId={selectedDelegation}
+        canManageGlobal={isAdmin}
+        categories={categories as unknown as Categoria[]}
+        onCreated={handleCategoryCreated}
+      />
 
       <Dialog
         open={bulkConceptOpen}

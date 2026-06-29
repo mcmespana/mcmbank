@@ -146,7 +146,6 @@ export function CategoryList() {
         creado_en: "",
         es_global: false,
         esta_activa: true,
-        activa: true,
       })
       setCreateSheetOpen(true)
     }
@@ -217,7 +216,6 @@ export function CategoryList() {
       creado_en: "",
       es_global: false,
       esta_activa: true,
-      activa: true,
     })
     setCreateSheetOpen(true)
   }
@@ -239,7 +237,6 @@ export function CategoryList() {
       creado_en: "",
       es_global: category.es_global,
       esta_activa: true,
-      activa: true,
     })
     setCreateSheetOpen(true)
   }
@@ -255,38 +252,9 @@ export function CategoryList() {
 
   const handleToggleActive = async (category: CategoriaConOrdenEfectivo) => {
     try {
-      // Caso 1: Ocultar/Mostrar categoría global (tesoreros)
-      if (canHideGlobalCategory(category)) {
-        if (!selectedDelegation) {
-          alert("Selecciona una delegación para gestionar la visibilidad")
-          return
-        }
-
-        const nextActive = !category.esta_activa_efectiva
-
-        if (!nextActive) {
-          // Ocultar categoría global en esta delegación
-          await DatabaseService.setDelegacionCategoryVisibility(
-            selectedDelegation,
-            category.id,
-            false,
-            category.orden_override ?? category.orden,
-          )
-        } else if (category.orden_override === null && category.has_override) {
-          // Si solo tiene override de visibilidad, eliminar el override
-          await DatabaseService.clearDelegacionCategoryOrder(selectedDelegation, category.id)
-        } else {
-          // Mostrar categoría global en esta delegación
-          await DatabaseService.setDelegacionCategoryVisibility(
-            selectedDelegation,
-            category.id,
-            true,
-            category.orden_override ?? category.orden,
-          )
-        }
-      }
-      // Caso 2: Activar/Desactivar categoría (gestor MCM para globales, tesoreros para locales)
-      else if (canToggleCategoryActive(category)) {
+      // Solo categorías LOCALES se activan/desactivan. Las globales tienen
+      // visibilidad de alcance global (siempre activas); para quitarlas se eliminan.
+      if (canToggleCategoryActive(category)) {
         await updateCategoria(category.id, { esta_activa: !category.esta_activa })
       }
 
@@ -407,7 +375,6 @@ export function CategoryList() {
           categoria_padre_id: parentId,
           es_global: targetIsGlobal,
           esta_activa: true,
-          activa: true,
         })
       }
 

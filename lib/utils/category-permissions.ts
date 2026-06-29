@@ -40,30 +40,34 @@ export function canDeleteCategory(
 
 /**
  * Puede ACTIVAR/DESACTIVAR una categoría (cambiar esta_activa).
- * - Gestor MCM: solo globales (las locales las elimina directamente).
+ * - Las categorías GLOBALES no se activan/desactivan: su visibilidad es global y
+ *   están siempre activas. Si una global ya no se quiere, se elimina (el archivado
+ *   de actividades será una funcionalidad aparte en el futuro).
  * - Tesorero: solo sus categorías locales.
  */
 export function canToggleCategoryActive(
   ctx: CategoryPermissionContext,
   category: CategoriaConOrdenEfectivo
 ): boolean {
-  if (ctx.isCentralManager) return category.es_global
+  if (category.es_global) return false
+  if (ctx.isCentralManager) return false
   if (!ctx.selectedDelegation) return false
-  return !category.es_global && category.delegacion_id === ctx.selectedDelegation
+  return category.delegacion_id === ctx.selectedDelegation
 }
 
 /**
- * Puede OCULTAR/MOSTRAR una categoría global en su delegación (override local).
- * - Solo tesoreros, y solo sobre categorías globales.
- * - El Gestor MCM no necesita ocultar: desactiva directamente.
+ * (Desactivado) Ocultar/mostrar una categoría global por delegación.
+ *
+ * El modelo es de ALCANCE GLOBAL: no hay overrides de visibilidad por delegación.
+ * Las categorías globales están activas para todas las delegaciones. Se conserva
+ * la función (devolviendo siempre false) para no romper los componentes que la
+ * referencian, pero ya no expone ningún control en la interfaz.
  */
 export function canHideGlobalCategory(
-  ctx: CategoryPermissionContext,
-  category: CategoriaConOrdenEfectivo
+  _ctx: CategoryPermissionContext,
+  _category: CategoriaConOrdenEfectivo
 ): boolean {
-  if (ctx.isCentralManager) return false
-  if (!ctx.selectedDelegation) return false
-  return category.es_global
+  return false
 }
 
 /** Reordenar está permitido siempre. */

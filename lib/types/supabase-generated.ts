@@ -215,7 +215,6 @@ export type Database = {
       }
       categoria: {
         Row: {
-          activa: boolean
           categoria_padre_id: string | null
           color: string | null
           creado_en: string
@@ -230,7 +229,6 @@ export type Database = {
           tipo: Database["public"]["Enums"]["tipo_categoria"]
         }
         Insert: {
-          activa?: boolean
           categoria_padre_id?: string | null
           color?: string | null
           creado_en?: string
@@ -245,7 +243,6 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_categoria"]
         }
         Update: {
-          activa?: boolean
           categoria_padre_id?: string | null
           color?: string | null
           creado_en?: string

@@ -65,24 +65,24 @@ describe("canDeleteCategory", () => {
 })
 
 describe("canToggleCategoryActive", () => {
-  it("el gestor solo activa/desactiva globales", () => {
-    expect(canToggleCategoryActive(gestor, cat({ es_global: true }))).toBe(true)
-    expect(canToggleCategoryActive(gestor, cat({ es_global: false }))).toBe(false)
+  it("las categorías globales nunca se activan/desactivan", () => {
+    expect(canToggleCategoryActive(gestor, cat({ es_global: true }))).toBe(false)
+    expect(canToggleCategoryActive(tesorero, cat({ es_global: true }))).toBe(false)
   })
 
   it("el tesorero activa/desactiva sus categorías locales", () => {
     expect(canToggleCategoryActive(tesorero, cat({ delegacion_id: DELEG }))).toBe(true)
-    expect(canToggleCategoryActive(tesorero, cat({ es_global: true }))).toBe(false)
+    expect(canToggleCategoryActive(tesorero, cat({ delegacion_id: OTRA_DELEG }))).toBe(false)
+  })
+
+  it("el gestor no activa/desactiva categorías locales (las elimina)", () => {
+    expect(canToggleCategoryActive(gestor, cat({ es_global: false }))).toBe(false)
   })
 })
 
 describe("canHideGlobalCategory", () => {
-  it("solo el tesorero puede ocultar globales en su delegación", () => {
-    expect(canHideGlobalCategory(tesorero, cat({ es_global: true }))).toBe(true)
-    expect(canHideGlobalCategory(tesorero, cat({ es_global: false }))).toBe(false)
-  })
-
-  it("el gestor central no oculta (desactiva directamente)", () => {
+  it("nadie oculta globales por delegación: la visibilidad es global", () => {
+    expect(canHideGlobalCategory(tesorero, cat({ es_global: true }))).toBe(false)
     expect(canHideGlobalCategory(gestor, cat({ es_global: true }))).toBe(false)
   })
 })

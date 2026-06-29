@@ -329,9 +329,9 @@ export function CuentasManager() {
     if (!status) return "bg-gray-200"
     switch (status) {
       case "connected":
-        return "bg-green-500"
+        return "bg-emerald-500"
       case "disconnected":
-        return "bg-gray-400"
+        return "bg-slate-300 dark:bg-slate-500"
       default:
         return "bg-gray-200"
     }
@@ -563,10 +563,13 @@ export function CuentasManager() {
 
                           {/* Connection Status Badge */}
                           {connectionStatus && (
-                            <div
-                              className={`absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full ${getConnectionBadgeColor(connectionStatus)} border-2 sm:border-3 border-white dark:border-gray-800 shadow-sm`}
-                            >
-                              <div className="h-full w-full rounded-full bg-current opacity-80" />
+                            <div className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5">
+                              {connectionStatus === "connected" && (
+                                <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                              )}
+                              <div
+                                className={`relative h-full w-full rounded-full ${getConnectionBadgeColor(connectionStatus)} border-2 sm:border-3 border-white dark:border-gray-800 ${connectionStatus === "connected" ? "shadow-[0_0_6px_2px_rgba(16,185,129,0.7)]" : "shadow-sm"}`}
+                              />
                             </div>
                           )}
 

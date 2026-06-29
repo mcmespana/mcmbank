@@ -424,13 +424,28 @@ export function CategoryList() {
     }
   }
 
-  const displayedCategories = useMemo(
-    () =>
-      showInactive
-        ? categories
-        : categories.filter((cat) => cat.esta_activa_efectiva !== false),
-    [categories, showInactive],
-  )
+  const displayedCategories = useMemo(() => {
+    if (showInactive) return categories
+
+    const active = categories.filter((cat) => cat.esta_activa_efectiva !== false)
+    const activeIds = new Set(active.map((cat) => cat.id))
+
+    // Incluir padres inactivos (p. ej. categorías globales con esta_activa=false)
+    // que tengan subcategorías activas. Si no, esos hijos quedan huérfanos e
+    // invisibles, porque el árbol solo renderiza hijos bajo un padre renderizado.
+    // El padre aparece atenuado (isInactive) y permite reactivarlo desde la lista.
+    const byId = new Map(categories.map((cat) => [cat.id, cat]))
+    const orphanParents = new Map<string, CategoriaConOrdenEfectivo>()
+    for (const cat of active) {
+      const parentId = cat.categoria_padre_id
+      if (parentId && !activeIds.has(parentId) && !orphanParents.has(parentId)) {
+        const parent = byId.get(parentId)
+        if (parent) orphanParents.set(parentId, parent)
+      }
+    }
+
+    return orphanParents.size > 0 ? [...active, ...orphanParents.values()] : active
+  }, [categories, showInactive])
 
   const categoryMap = useMemo(() => new Map(categories.map((cat) => [cat.id, cat])), [categories])
   const allChildrenMap = useMemo(() => buildChildrenMap(categories), [categories])

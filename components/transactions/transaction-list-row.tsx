@@ -26,6 +26,7 @@ interface TransactionListRowProps {
   isSelected: boolean
   selectionActive: boolean
   onSelectionChange: (selected: boolean, rangeFromAnchor?: boolean) => void
+  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -39,6 +40,7 @@ export const TransactionListRow = memo(function TransactionListRow({
   isSelected,
   selectionActive,
   onSelectionChange,
+  onRequestCreateCategory,
 }: TransactionListRowProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -210,6 +212,11 @@ export const TransactionListRow = memo(function TransactionListRow({
                       movement={movement}
                       account={account}
                       onCategoryChange={(categoryId) => handleCategoryChange(categoryId)}
+                      onCreateCategory={
+                        onRequestCreateCategory
+                          ? () => onRequestCreateCategory(handleCategoryChange)
+                          : undefined
+                      }
                     />
                   )}
                   {movement.contacto && (

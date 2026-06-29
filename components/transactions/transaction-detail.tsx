@@ -43,6 +43,7 @@ interface TransactionDetailProps {
   onUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onBack?: () => void
   initialTab?: "datos" | "archivos"
+  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
 }
 
 type HistoryChange = "date" | "amount"
@@ -60,6 +61,7 @@ export function TransactionDetail({
   onUpdate,
   onBack,
   initialTab = "datos",
+  onRequestCreateCategory,
 }: TransactionDetailProps) {
   const [contactoCreateOpen, setContactoCreateOpen] = useState(false)
   const [contactoInitialNombre, setContactoInitialNombre] = useState("")
@@ -423,6 +425,14 @@ export function TransactionDetail({
                       account={account}
                       onCategoryChange={(categoryId) =>
                         setFormData((prev) => ({ ...prev, categoria_id: categoryId }))
+                      }
+                      onCreateCategory={
+                        onRequestCreateCategory
+                          ? () =>
+                              onRequestCreateCategory((categoryId) =>
+                                setFormData((prev) => ({ ...prev, categoria_id: categoryId })),
+                              )
+                          : undefined
                       }
                     />
                   </div>

@@ -96,7 +96,14 @@ export function CategoryChip({
               onClose={closeDialog}
               movement={movement}
               account={account}
-              onCreateCategory={onCreateCategory}
+              onCreateCategory={
+                onCreateCategory
+                  ? () => {
+                      closeDialog()
+                      onCreateCategory()
+                    }
+                  : undefined
+              }
             />
           </DialogContent>
         </Dialog>
@@ -132,7 +139,14 @@ export function CategoryChip({
             onClose={closeDialog}
             movement={movement}
             account={account}
-            onCreateCategory={onCreateCategory}
+            onCreateCategory={
+              onCreateCategory
+                ? () => {
+                    closeDialog()
+                    onCreateCategory()
+                  }
+                : undefined
+            }
           />
         </DialogContent>
       </Dialog>

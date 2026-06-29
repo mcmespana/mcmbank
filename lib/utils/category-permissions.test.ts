@@ -81,9 +81,14 @@ describe("canToggleCategoryActive", () => {
 })
 
 describe("canHideGlobalCategory", () => {
-  it("nadie oculta globales por delegación: la visibilidad es global", () => {
-    expect(canHideGlobalCategory(tesorero, cat({ es_global: true }))).toBe(false)
-    expect(canHideGlobalCategory(gestor, cat({ es_global: true }))).toBe(false)
+  it("tesorero y gestor pueden ocultar globales en la delegación seleccionada", () => {
+    expect(canHideGlobalCategory(tesorero, cat({ es_global: true }))).toBe(true)
+    expect(canHideGlobalCategory(gestor, cat({ es_global: true }))).toBe(true)
+  })
+
+  it("no aplica a categorías locales ni sin delegación seleccionada", () => {
+    expect(canHideGlobalCategory(tesorero, cat({ es_global: false }))).toBe(false)
+    expect(canHideGlobalCategory(sinDelegacion, cat({ es_global: true }))).toBe(false)
   })
 })
 

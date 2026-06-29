@@ -252,9 +252,39 @@ export function CategoryList() {
 
   const handleToggleActive = async (category: CategoriaConOrdenEfectivo) => {
     try {
-      // Solo categorías LOCALES se activan/desactivan. Las globales tienen
-      // visibilidad de alcance global (siempre activas); para quitarlas se eliminan.
-      if (canToggleCategoryActive(category)) {
+      // Caso 1: Ocultar/Mostrar una categoría GLOBAL en ESTA delegación
+      // (override de visibilidad por delegación; tesorero o gestor central).
+      if (canHideGlobalCategory(category)) {
+        if (!selectedDelegation) {
+          alert("Selecciona una delegación para gestionar la visibilidad")
+          return
+        }
+
+        const nextActive = !category.esta_activa_efectiva
+
+        if (!nextActive) {
+          // Ocultar la categoría global en esta delegación
+          await DatabaseService.setDelegacionCategoryVisibility(
+            selectedDelegation,
+            category.id,
+            false,
+            category.orden_override ?? category.orden,
+          )
+        } else if (category.orden_override === null && category.has_override) {
+          // Si solo tenía override de visibilidad (sin orden propio), se elimina
+          await DatabaseService.clearDelegacionCategoryOrder(selectedDelegation, category.id)
+        } else {
+          // Mostrar de nuevo la categoría global en esta delegación
+          await DatabaseService.setDelegacionCategoryVisibility(
+            selectedDelegation,
+            category.id,
+            true,
+            category.orden_override ?? category.orden,
+          )
+        }
+      }
+      // Caso 2: Activar/Desactivar una categoría LOCAL (tesorero de su delegación)
+      else if (canToggleCategoryActive(category)) {
         await updateCategoria(category.id, { esta_activa: !category.esta_activa })
       }
 

@@ -39,11 +39,12 @@ export function canDeleteCategory(
 }
 
 /**
- * Puede ACTIVAR/DESACTIVAR una categoría (cambiar esta_activa).
- * - Las categorías GLOBALES no se activan/desactivan: su visibilidad es global y
- *   están siempre activas. Si una global ya no se quiere, se elimina (el archivado
- *   de actividades será una funcionalidad aparte en el futuro).
- * - Tesorero: solo sus categorías locales.
+ * Puede ACTIVAR/DESACTIVAR una categoría LOCAL (cambiar su esta_activa).
+ * - Las categorías GLOBALES no tienen desactivación global: una global no se puede
+ *   ocultar "para todos" (si sobra, se borra). Su visibilidad se gestiona por
+ *   delegación con canHideGlobalCategory.
+ * - Las categorías locales pertenecen a una delegación, así que su esta_activa ya
+ *   es de hecho por delegación: las activa/desactiva el tesorero de esa delegación.
  */
 export function canToggleCategoryActive(
   ctx: CategoryPermissionContext,
@@ -56,18 +57,18 @@ export function canToggleCategoryActive(
 }
 
 /**
- * (Desactivado) Ocultar/mostrar una categoría global por delegación.
- *
- * El modelo es de ALCANCE GLOBAL: no hay overrides de visibilidad por delegación.
- * Las categorías globales están activas para todas las delegaciones. Se conserva
- * la función (devolviendo siempre false) para no romper los componentes que la
- * referencian, pero ya no expone ningún control en la interfaz.
+ * Puede OCULTAR/MOSTRAR una categoría global en la delegación seleccionada
+ * (override de visibilidad POR DELEGACIÓN, no global).
+ * - Solo aplica a categorías globales y con una delegación seleccionada.
+ * - Lo pueden hacer tanto el tesorero (en su delegación) como el gestor central
+ *   (que desactiva una global para UNA delegación concreta, nunca a nivel global).
  */
 export function canHideGlobalCategory(
-  _ctx: CategoryPermissionContext,
-  _category: CategoriaConOrdenEfectivo
+  ctx: CategoryPermissionContext,
+  category: CategoriaConOrdenEfectivo
 ): boolean {
-  return false
+  if (!ctx.selectedDelegation) return false
+  return category.es_global
 }
 
 /** Reordenar está permitido siempre. */

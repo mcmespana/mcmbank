@@ -52,11 +52,15 @@ function mapCategorias(
         ? overrideOrdenRaw
         : null
     const orden_efectivo = orden_override ?? orden_base
-    // La visibilidad de las categorías es de ALCANCE GLOBAL: no se aplican
-    // overrides de visibilidad por delegación. Se conservan los campos por
-    // compatibilidad de tipos, pero esta_activa_efectiva = categoria.esta_activa.
-    const esta_activa_override = null
-    const esta_activa_efectiva = categoria.esta_activa
+    // Visibilidad POR DELEGACIÓN: si existe override para esta delegación, manda;
+    // si no, se usa el esta_activa de la categoría (las globales no tienen
+    // desactivación global, así que su base es siempre activa).
+    const esta_activa_override =
+      override && typeof override.esta_activa === "boolean"
+        ? override.esta_activa
+        : null
+    const esta_activa_efectiva =
+      esta_activa_override !== null ? esta_activa_override : categoria.esta_activa
 
     return {
       ...categoria,
@@ -177,6 +181,35 @@ export class DatabaseService {
         categoria_id: categoriaId,
         orden,
         esta_activa: true,
+      } as any)
+
+      if (insertError) throw insertError
+    }
+  }
+
+  static async setDelegacionCategoryVisibility(
+    delegacionId: string,
+    categoriaId: string,
+    estaActiva: boolean,
+    ordenFallback: number,
+  ): Promise<void> {
+    const supabase = this.getClient() as any
+    const now = new Date().toISOString()
+
+    const { data, error } = await supabase
+      .from("categoria_orden_delegacion")
+      .update({ esta_activa: estaActiva, actualizado_en: now } as any)
+      .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
+      .select("categoria_id")
+
+    if (error) throw error
+
+    if (!data || data.length === 0) {
+      const { error: insertError } = await supabase.from("categoria_orden_delegacion").insert({
+        delegacion_id: delegacionId,
+        categoria_id: categoriaId,
+        orden: ordenFallback,
+        esta_activa: estaActiva,
       } as any)
 
       if (insertError) throw insertError

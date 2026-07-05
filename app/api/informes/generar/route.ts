@@ -92,6 +92,11 @@ export async function POST(req: Request) {
       driveUrl: resultado.webViewLink,
       spreadsheetId: resultado.spreadsheetId,
       titulo,
+      remanente: resultado.remanente,
+      balanceAnual: resultado.balanceAnual,
+      disponibleFinal: resultado.disponibleFinal,
+      resumen: resultado.resumen,
+      cuadraConHoja: resultado.cuadraConHoja,
     })
   } catch (err: any) {
     console.error("Error generando memoria:", err?.message || err)

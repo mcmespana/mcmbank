@@ -26,6 +26,7 @@ import type {
   MapeoConfig,
   MapeoFila,
   PreviewResultado,
+  ResumenValidacion,
 } from "@/lib/services/memoria-economica"
 import { cn } from "@/lib/utils"
 import {
@@ -50,10 +51,18 @@ import {
   CalendarRange,
   HeartHandshake,
   Boxes,
+  Check,
+  Scale,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react"
 
 const eur = (n: number | undefined) => (typeof n === "number" ? formatCurrency(n) : "—")
+
+// Fila fija "Donativo total realizado" del capítulo V (misma constante que en
+// lib/services/memoria-economica.ts — no se importa para no meter googleapis
+// en el bundle del cliente).
+const FILA_DONATIVO = 39
 
 const CAP_LABEL: Record<Capitulo, string> = {
   I: "Capítulo I · Saldos curso anterior",
@@ -80,6 +89,7 @@ function modoDeFila(fila: MapeoFila): Modo {
   if (fila.capitulo === "I") return "saldo"
   if (fila.capitulo === "III") return "gasto"
   if (fila.capitulo === "II") return fila.fila === 10 ? "gasto" : "ingreso"
+  if (fila.capitulo === "V" && fila.fila === FILA_DONATIVO) return "gasto"
   return "ambos" // IV, V, VI
 }
 
@@ -87,6 +97,196 @@ function categoriaIdDeFila(fila: MapeoFila): string | null {
   const f = fila.ingreso ?? fila.gasto
   if (f && f.tipo === "categoria") return f.categoriaId
   return null
+}
+
+// ---------- Stepper ----------
+
+const STEPS = [
+  { key: "config", label: "Periodo" },
+  { key: "mapeo", label: "Revisar y cuadrar" },
+  { key: "done", label: "¡Listo!" },
+] as const
+
+function Stepper({ step }: { step: (typeof STEPS)[number]["key"] }) {
+  const idx = STEPS.findIndex((s) => s.key === step)
+  return (
+    <div className="flex items-center gap-1.5 pt-1">
+      {STEPS.map((s, i) => {
+        const done = i < idx
+        const current = i === idx
+        return (
+          <div key={s.key} className="flex items-center gap-1.5">
+            {i > 0 && (
+              <div className={cn("h-px w-5 sm:w-8", i <= idx ? "bg-primary" : "bg-border")} />
+            )}
+            <span
+              className={cn(
+                "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold transition-colors",
+                done || current
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground",
+                current && "ring-2 ring-primary/25 ring-offset-1 ring-offset-background",
+              )}
+            >
+              {done ? <Check className="h-3 w-3" /> : i + 1}
+            </span>
+            <span
+              className={cn(
+                "text-xs",
+                current ? "font-semibold text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {s.label}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ---------- Panel de validación (cuadre del ejercicio) ----------
+
+function ValidacionPanel({ resumen, finLabel }: { resumen: ResumenValidacion; finLabel: string }) {
+  const [detalle, setDetalle] = useState(false)
+  const r = resumen
+  const remananteDistinto = Math.abs(r.remanenteInforme - r.remanenteReal) >= 0.005
+  const hayNoRecogido = r.noRecogidoIngresos >= 0.005 || r.noRecogidoGastos >= 0.005
+  const hayDoble = r.dobleContadoIngresos >= 0.005 || r.dobleContadoGastos >= 0.005
+
+  const celdas: { label: string; value: number; className?: string; signo?: string }[] = [
+    { label: "Remanente anterior", value: r.remanenteInforme },
+    { label: "Entradas", value: r.informeIngresos, className: "text-emerald-600 dark:text-emerald-400", signo: "+" },
+    { label: "Salidas", value: r.informeGastos, className: "text-red-500", signo: "−" },
+    { label: "Terminas con", value: r.disponibleFinal, className: "font-bold" },
+  ]
+
+  return (
+    <div
+      className={cn(
+        "shrink-0 rounded-xl border p-3",
+        r.cuadra
+          ? "border-emerald-300 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-900/15"
+          : "border-amber-300 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-900/15",
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <Scale className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Cuadre del ejercicio
+        </span>
+        <span
+          className={cn(
+            "ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+            r.cuadra
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+              : "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300",
+          )}
+        >
+          {r.cuadra ? (
+            <>
+              <CheckCircle2 className="h-3 w-3" /> Cuadra al céntimo
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="h-3 w-3" /> Descuadre de {eur(Math.abs(r.descuadre))}
+            </>
+          )}
+        </span>
+      </div>
+
+      {/* remanente + entradas − salidas = cierre */}
+      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {celdas.map((c, i) => (
+          <div key={c.label} className="relative rounded-lg border bg-background/70 px-2.5 py-1.5">
+            {i > 0 && (
+              <span className="absolute -left-2 top-1/2 hidden -translate-y-1/2 text-xs font-bold text-muted-foreground sm:block">
+                {i === 3 ? "=" : c.signo}
+              </span>
+            )}
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{c.label}</p>
+            <p className={cn("text-sm tabular-nums", c.className ?? "font-medium")}>{eur(c.value)}</p>
+          </div>
+        ))}
+      </div>
+
+      {r.cuadra ? (
+        <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
+          Sumando entradas y salidas e incorporando el remanente, terminas el ejercicio con{" "}
+          <strong className="tabular-nums">{eur(r.disponibleFinal)}</strong> — exactamente el saldo
+          real de tus cuentas al {finLabel}. 👌
+        </p>
+      ) : (
+        <div className="mt-2 space-y-1.5">
+          <p className="text-xs text-amber-800 dark:text-amber-300">
+            El informe cierra con <strong className="tabular-nums">{eur(r.disponibleFinal)}</strong>,
+            pero el saldo real de tus cuentas al {finLabel} es{" "}
+            <strong className="tabular-nums">{eur(r.saldoFinalReal)}</strong>.
+            <button
+              type="button"
+              onClick={() => setDetalle((d) => !d)}
+              className="ml-1.5 inline-flex items-center gap-0.5 font-semibold underline underline-offset-2"
+            >
+              ¿Por qué? <ChevronDown className={cn("h-3 w-3 transition-transform", detalle && "rotate-180")} />
+            </button>
+          </p>
+          {detalle && (
+            <ul className="space-y-1 rounded-md bg-background/70 p-2.5 text-xs text-muted-foreground">
+              {hayNoRecogido && (
+                <li className="flex gap-1.5">
+                  <span>•</span>
+                  <span>
+                    <strong>{r.noRecogidoMovs} movimientos del periodo no los recoge ninguna fila</strong>
+                    {": "}
+                    {r.noRecogidoIngresos >= 0.005 && (
+                      <>entradas por <strong className="tabular-nums">{eur(r.noRecogidoIngresos)}</strong></>
+                    )}
+                    {r.noRecogidoIngresos >= 0.005 && r.noRecogidoGastos >= 0.005 && " y "}
+                    {r.noRecogidoGastos >= 0.005 && (
+                      <>salidas por <strong className="tabular-nums">{eur(r.noRecogidoGastos)}</strong></>
+                    )}
+                    . Son movimientos sin categoría o de categorías sin fila en el informe.
+                  </span>
+                </li>
+              )}
+              {hayDoble && (
+                <li className="flex gap-1.5">
+                  <span>•</span>
+                  <span>
+                    <strong>Importes contados más de una vez</strong>
+                    {": "}
+                    {r.dobleContadoIngresos >= 0.005 && (
+                      <>entradas por <strong className="tabular-nums">{eur(r.dobleContadoIngresos)}</strong></>
+                    )}
+                    {r.dobleContadoIngresos >= 0.005 && r.dobleContadoGastos >= 0.005 && " y "}
+                    {r.dobleContadoGastos >= 0.005 && (
+                      <>salidas por <strong className="tabular-nums">{eur(r.dobleContadoGastos)}</strong></>
+                    )}
+                    . Suele pasar al asignar una categoría madre y una subcategoría suya en filas
+                    distintas.
+                  </span>
+                </li>
+              )}
+              {remananteDistinto && (
+                <li className="flex gap-1.5">
+                  <span>•</span>
+                  <span>
+                    El remanente del informe (<span className="tabular-nums">{eur(r.remanenteInforme)}</span>)
+                    no coincide con el saldo inicial real (
+                    <span className="tabular-nums">{eur(r.remanenteReal)}</span>). Revisa las filas del
+                    capítulo I (banco {eur(r.remanenteBanco)} · caja {eur(r.remanenteCaja)}).
+                  </span>
+                </li>
+              )}
+              {!hayNoRecogido && !hayDoble && !remananteDistinto && (
+                <li>Diferencia por filas con importe manual o redondeos.</li>
+              )}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 interface Props {
@@ -124,7 +324,15 @@ export function GenerarInformeDialog({
   const [recomputing, setRecomputing] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
-  const [result, setResult] = useState<{ driveUrl: string | null; titulo: string } | null>(null)
+  const [result, setResult] = useState<{
+    driveUrl: string | null
+    titulo: string
+    remanente: number | null
+    balanceAnual: number | null
+    disponibleFinal: number | null
+    resumen: ResumenValidacion | null
+    cuadraConHoja: boolean
+  } | null>(null)
   const [pickerFila, setPickerFila] = useState<MapeoFila | null>(null)
 
   const informeId = initialInforme?.id ?? null
@@ -237,7 +445,9 @@ export function GenerarInformeDialog({
   const addFilaCapitulo = (cap: Capitulo) => {
     setMapeo((prev) => {
       if (!prev) return prev
-      const libre = prev.filas.find((f) => f.capitulo === cap && !f.enabled)
+      const libre = prev.filas.find(
+        (f) => f.capitulo === cap && !f.enabled && f.fila !== FILA_DONATIVO,
+      )
       if (!libre) {
         toast.error("No quedan más filas disponibles en la plantilla para este capítulo")
         return prev
@@ -252,7 +462,7 @@ export function GenerarInformeDialog({
   }
 
   const filasLibres = (cap: Capitulo) =>
-    (mapeo?.filas ?? []).some((f) => f.capitulo === cap && !f.enabled)
+    (mapeo?.filas ?? []).some((f) => f.capitulo === cap && !f.enabled && f.fila !== FILA_DONATIVO)
 
   const handleGenerar = async () => {
     if (!google.connected) {
@@ -273,7 +483,15 @@ export function GenerarInformeDialog({
         return
       }
       if (!res.ok) throw new Error(data?.error || "Error generando la memoria")
-      setResult({ driveUrl: data.driveUrl ?? null, titulo: data.titulo })
+      setResult({
+        driveUrl: data.driveUrl ?? null,
+        titulo: data.titulo,
+        remanente: typeof data.remanente === "number" ? data.remanente : null,
+        balanceAnual: typeof data.balanceAnual === "number" ? data.balanceAnual : null,
+        disponibleFinal: typeof data.disponibleFinal === "number" ? data.disponibleFinal : null,
+        resumen: (data.resumen as ResumenValidacion) ?? null,
+        cuadraConHoja: !!data.cuadraConHoja,
+      })
       setStep("done")
       onSaved()
     } catch (err) {
@@ -345,6 +563,8 @@ export function GenerarInformeDialog({
   }, [mapeo])
 
   const saldoFecha = periodoTipo === "curso" ? "1 de septiembre" : "1 de enero"
+  const finLabel =
+    periodoTipo === "curso" ? `31 de agosto de ${anio + 1}` : `31 de diciembre de ${anio}`
 
   return (
     <>
@@ -358,9 +578,11 @@ export function GenerarInformeDialog({
           </DialogTitle>
           <DialogDescription>
             {step === "config" && "Elige el periodo y conecta tu cuenta de Google."}
-            {step === "mapeo" && "Revisa qué se escribe en cada celda. Puedes editar, vaciar o quitar filas."}
+            {step === "mapeo" &&
+              "Revisa qué se escribe en cada fila y comprueba abajo que el ejercicio cuadra."}
             {step === "done" && "¡Listo! Tu memoria económica está en tu Google Drive."}
           </DialogDescription>
+          <Stepper step={step} />
         </DialogHeader>
 
         {/* PASO 1 — CONFIG */}
@@ -519,7 +741,16 @@ export function GenerarInformeDialog({
                       </p>
                     ) : (
                       <div className="space-y-2 border-t px-3 py-3">
-                        {filasCap.map((fila) => {
+                        {(flexible
+                          ? filasCap.filter(
+                              (f) =>
+                                f.enabled ||
+                                f.fila === FILA_DONATIVO ||
+                                !!categoriaIdDeFila(f) ||
+                                !!f.descripcion,
+                            )
+                          : filasCap
+                        ).map((fila) => {
                           const modo = modoDeFila(fila)
                           const v = preview.valores[fila.id]
                           const catId = categoriaIdDeFila(fila)
@@ -623,6 +854,8 @@ export function GenerarInformeDialog({
               })}
             </div>
 
+            {preview.resumen && <ValidacionPanel resumen={preview.resumen} finLabel={finLabel} />}
+
             <div className="flex items-center justify-between border-t pt-3">
               <Button variant="ghost" onClick={() => setStep("config")}>
                 <ChevronLeft className="mr-1 h-4 w-4" /> Atrás
@@ -661,6 +894,51 @@ export function GenerarInformeDialog({
                 Se ha guardado en <strong>Mi unidad</strong> de tu Google Drive.
               </p>
             </div>
+
+            {/* Cifras finales leídas del documento generado */}
+            {(result.resumen || result.disponibleFinal !== null) && (
+              <div className="w-full space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-lg border bg-muted/30 px-2 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Remanente anterior
+                    </p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {eur(result.remanente ?? result.resumen?.remanenteInforme)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-muted/30 px-2 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Balance del ejercicio
+                    </p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {eur(result.balanceAnual ?? result.resumen?.balanceEjercicio)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-primary/40 bg-primary/5 px-2 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Terminas con
+                    </p>
+                    <p className="text-sm font-bold tabular-nums">
+                      {eur(result.disponibleFinal ?? result.resumen?.disponibleFinal)}
+                    </p>
+                  </div>
+                </div>
+                {result.resumen &&
+                  (result.resumen.cuadra ? (
+                    <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Cuadra al céntimo con el saldo real de tus cuentas al cierre.
+                    </p>
+                  ) : (
+                    <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      El saldo real al cierre es {eur(result.resumen.saldoFinalReal)} (descuadre de{" "}
+                      {eur(Math.abs(result.resumen.descuadre))}) — repásalo en el Sheet.
+                    </p>
+                  ))}
+              </div>
+            )}
 
             {result.driveUrl && (
               <a

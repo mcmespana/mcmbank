@@ -66,11 +66,57 @@ export interface CategoriaCatalogo {
   esHija: boolean
 }
 
+/**
+ * Validación del ejercicio: compara lo que recogerá el informe con la
+ * realidad de la app (todos los movimientos del periodo, cuentas activas).
+ * La cuenta es la misma que hace la plantilla: remanente + ingresos − gastos.
+ */
+export interface ResumenValidacion {
+  /** Saldo real al inicio del periodo (solo cuentas activas). */
+  remanenteBanco: number
+  remanenteCaja: number
+  remanenteReal: number
+  /** Remanente que escribirá el informe (filas activas del capítulo I). */
+  remanenteInforme: number
+  /** Totales reales del periodo (todos los movimientos no ignorados). */
+  realIngresos: number
+  realGastos: number
+  /** remanenteReal + realIngresos − realGastos = dinero real al cierre. */
+  saldoFinalReal: number
+  /** Totales que suma el informe (filas activas de capítulos II–VI). */
+  informeIngresos: number
+  informeGastos: number
+  balanceEjercicio: number
+  /** remanenteInforme + balanceEjercicio = F49 de la hoja generada. */
+  disponibleFinal: number
+  /** Movimientos del periodo que ninguna fila del informe recoge. */
+  noRecogidoIngresos: number
+  noRecogidoGastos: number
+  noRecogidoMovs: number
+  /** Importes contados en más de una fila (p. ej. madre + subcategoría). */
+  dobleContadoIngresos: number
+  dobleContadoGastos: number
+  /** disponibleFinal − saldoFinalReal. */
+  descuadre: number
+  cuadra: boolean
+}
+
+export interface TextosInforme {
+  titulo: string
+  capituloI: string
+  capituloIV: string
+  saldoBanco: string
+  saldoCaja: string
+  balance: string
+  remanente: string
+}
+
 export interface PreviewResultado {
   mapeo: MapeoConfig
   valores: Record<string, ValorFila>
   avisos: Aviso[]
-  textos: { titulo: string; capituloIV: string; balance: string }
+  resumen: ResumenValidacion
+  textos: TextosInforme
   periodo: { inicio: string; fin: string; label: string }
   categorias: CategoriaCatalogo[]
 }
@@ -195,7 +241,7 @@ export async function buildContext(
 
   const { data: cuentaData, error: cuentaErr } = await supabase
     .from("cuenta")
-    .select("id, tipo")
+    .select("id, tipo, activa")
     .eq("delegacion_id", delegacionId)
   if (cuentaErr) throw cuentaErr
 
@@ -210,12 +256,16 @@ export async function buildContext(
     }
   }
 
+  // Solo cuentas activas: el dashboard también las excluye (join con cuenta,
+  // activa=true), así el informe cuadra con lo que el usuario ve en la app.
   const cuentaTipoById = new Map<string, "banco" | "caja">()
   for (const c of cuentaData || []) {
+    if (c.activa === false) continue
     cuentaTipoById.set(c.id, c.tipo === "caja" ? "caja" : "banco")
   }
 
-  const movs = await fetchAllMovimientos(supabase, delegacionId, rango.fin)
+  const movsAll = await fetchAllMovimientos(supabase, delegacionId, rango.fin)
+  const movs = movsAll.filter((m) => m.cuenta_id && cuentaTipoById.has(m.cuenta_id))
 
   return {
     delegacionId,
@@ -343,6 +393,8 @@ const GASTOS_FUNCIONAMIENTO: { fila: number; nombre: string }[] = [
 // Filas disponibles por capítulo en el template
 export const FILAS_ACTIVIDADES = [23, 24, 25, 26, 27, 28, 29, 30, 31, 32]
 export const FILAS_CAMPANAS = [34, 35, 36, 37, 38]
+/** Fila fija "Donativo total realizado" del capítulo V (gasto en E39). */
+export const FILA_DONATIVO = 39
 export const FILAS_CAP6 = [41, 42, 43]
 
 // Rango COMPLETO de cada capítulo opcional (cabecera + contenido + subtotal).
@@ -421,16 +473,23 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
   })
 
   // Cap II — cuotas y subvenciones
+  // Cada fila del template calcula F = D − E, así que todas las filas de
+  // categoría suman AMBOS lados (entradas en D y salidas en E). Si no, los
+  // abonos/devoluciones se pierden y el informe no cuadra con las cuentas.
   const cuotasMic = findCatByName(ctx, "Cuotas MIC-COM")
   const cuotasCom = findCatByName(ctx, "Cuotas COM-LC +18")
   const cuotaEce = findCatByName(ctx, "Cuota anual enviada al ECE")
+  const ambos = (cat: CategoriaRow | undefined): Pick<MapeoFila, "ingreso" | "gasto"> => ({
+    ingreso: cat ? { tipo: "categoria", categoriaId: cat.id } : null,
+    gasto: cat ? { tipo: "categoria", categoriaId: cat.id } : null,
+  })
   filas.push({
     id: "cap2-miccom",
     capitulo: "II",
     fila: 7,
     descripcion: "Cuotas - MIC y COM",
     escribirDescripcion: false,
-    ingreso: cuotasMic ? { tipo: "categoria", categoriaId: cuotasMic.id } : null,
+    ...ambos(cuotasMic),
     enabled: true,
   })
   filas.push({
@@ -439,7 +498,7 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
     fila: 8,
     descripcion: "Cuotas - COM y LC +18",
     escribirDescripcion: false,
-    ingreso: cuotasCom ? { tipo: "categoria", categoriaId: cuotasCom.id } : null,
+    ...ambos(cuotasCom),
     enabled: true,
   })
   filas.push({
@@ -448,7 +507,7 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
     fila: 10,
     descripcion: "Cuota anual enviada al ECE",
     escribirDescripcion: false,
-    gasto: cuotaEce ? { tipo: "categoria", categoriaId: cuotaEce.id } : null,
+    ...ambos(cuotaEce),
     enabled: true,
   })
 
@@ -461,7 +520,7 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
       fila: g.fila,
       descripcion: g.nombre,
       escribirDescripcion: false,
-      gasto: cat ? { tipo: "categoria", categoriaId: cat.id } : null,
+      ...ambos(cat),
       enabled: true,
     })
   }
@@ -493,6 +552,16 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
       escribirDescripcion: true,
       enabled: false,
     })
+  })
+  // Fila fija del template "Donativo total realizado" (solo gasto, E39).
+  filas.push({
+    id: `cap5-${FILA_DONATIVO}`,
+    capitulo: "V",
+    fila: FILA_DONATIVO,
+    descripcion: "Donativo total realizado",
+    escribirDescripcion: false,
+    gasto: null,
+    enabled: false,
   })
 
   // Cap VI — otros (vacío por defecto)
@@ -560,6 +629,106 @@ export function computeValores(ctx: MemoriaContext, mapeo: MapeoConfig): {
   return { valores, avisos }
 }
 
+/**
+ * Valida el ejercicio: remanente + entradas − salidas del informe frente al
+ * dinero real de las cuentas. También detecta movimientos que ninguna fila
+ * recoge y los contados dos veces (madre + subcategoría en filas distintas).
+ */
+export function computeResumen(
+  ctx: MemoriaContext,
+  mapeo: MapeoConfig,
+  valores: Record<string, ValorFila>,
+): ResumenValidacion {
+  const excluidos = new Set<Capitulo>(mapeo.capitulosExcluidos ?? [])
+  const activa = (f: MapeoFila) => f.enabled && !excluidos.has(f.capitulo)
+
+  const remanenteBanco = saldoInicial(ctx, "banco")
+  const remanenteCaja = saldoInicial(ctx, "caja")
+  const remanenteReal = remanenteBanco + remanenteCaja
+
+  let realIngresos = 0
+  let realGastos = 0
+  for (const m of ctx.movs) {
+    if (!enPeriodo(ctx, m.fecha)) continue
+    if (m.importe >= 0) realIngresos += m.importe
+    else realGastos += -m.importe
+  }
+
+  // Totales del informe + cuántas filas recogen cada categoría (por columna)
+  let remanenteInforme = 0
+  let informeIngresos = 0
+  let informeGastos = 0
+  const ingresoCount = new Map<string, number>()
+  const gastoCount = new Map<string, number>()
+  for (const f of mapeo.filas) {
+    if (!activa(f)) continue
+    const v = valores[f.id] || {}
+    if (f.capitulo === "I") {
+      remanenteInforme += v.ingreso ?? 0
+      continue
+    }
+    informeIngresos += v.ingreso ?? 0
+    informeGastos += v.gasto ?? 0
+    if (f.ingreso?.tipo === "categoria") {
+      for (const id of descendantIds(ctx, f.ingreso.categoriaId)) {
+        ingresoCount.set(id, (ingresoCount.get(id) ?? 0) + 1)
+      }
+    }
+    if (f.gasto?.tipo === "categoria") {
+      for (const id of descendantIds(ctx, f.gasto.categoriaId)) {
+        gastoCount.set(id, (gastoCount.get(id) ?? 0) + 1)
+      }
+    }
+  }
+
+  let noRecogidoIngresos = 0
+  let noRecogidoGastos = 0
+  let noRecogidoMovs = 0
+  let dobleContadoIngresos = 0
+  let dobleContadoGastos = 0
+  for (const m of ctx.movs) {
+    if (!enPeriodo(ctx, m.fecha)) continue
+    const esIngreso = m.importe >= 0
+    const counts = esIngreso ? ingresoCount : gastoCount
+    const veces = m.categoria_id ? counts.get(m.categoria_id) ?? 0 : 0
+    const abs = Math.abs(m.importe)
+    if (veces === 0) {
+      noRecogidoMovs++
+      if (esIngreso) noRecogidoIngresos += abs
+      else noRecogidoGastos += abs
+    } else if (veces > 1) {
+      if (esIngreso) dobleContadoIngresos += (veces - 1) * abs
+      else dobleContadoGastos += (veces - 1) * abs
+    }
+  }
+
+  const balanceEjercicio = informeIngresos - informeGastos
+  const disponibleFinal = remanenteInforme + balanceEjercicio
+  const saldoFinalReal = remanenteReal + realIngresos - realGastos
+  const descuadre = disponibleFinal - saldoFinalReal
+
+  return {
+    remanenteBanco,
+    remanenteCaja,
+    remanenteReal,
+    remanenteInforme,
+    realIngresos,
+    realGastos,
+    saldoFinalReal,
+    informeIngresos,
+    informeGastos,
+    balanceEjercicio,
+    disponibleFinal,
+    noRecogidoIngresos,
+    noRecogidoGastos,
+    noRecogidoMovs,
+    dobleContadoIngresos,
+    dobleContadoGastos,
+    descuadre,
+    cuadra: Math.abs(descuadre) < 0.005,
+  }
+}
+
 export function buildPreview(ctx: MemoriaContext, mapeoEntrada?: MapeoConfig | null): PreviewResultado {
   const mapeo = mapeoEntrada ?? buildDefaultMapeo(ctx)
   const { valores, avisos } = computeValores(ctx, mapeo)
@@ -579,11 +748,18 @@ export function buildPreview(ctx: MemoriaContext, mapeoEntrada?: MapeoConfig | n
   }
 
   const corto = nombreCorto(ctx.delegacionNombre)
-  const prefijoPeriodo = ctx.periodoTipo === "curso" ? "Curso " : "Año "
-  const textos = {
-    titulo: `MCM ${corto} · Balance Económico · ${prefijoPeriodo}${ctx.rango.label}`,
+  const esCurso = ctx.periodoTipo === "curso"
+  const palabra = esCurso ? "CURSO" : "AÑO"
+  const palabraMin = esCurso ? "curso" : "año"
+  const fechaSaldo = esCurso ? "1 septiembre" : "1 enero"
+  const textos: TextosInforme = {
+    titulo: `MCM ${corto} · Balance Económico · ${esCurso ? "Curso " : "Año "}${ctx.rango.label}`,
+    capituloI: `CAPÍTULO I - SALDOS ${palabra} ANTERIOR`,
     capituloIV: `CAPÍTULO IV - ACTIVIDADES ${ctx.rango.labelHeader}`,
-    balance: `BALANCE CURSO ${ctx.rango.label}\n(sin remanente curso anterior)`,
+    saldoBanco: `Saldo Cuenta Bancaria - ${fechaSaldo}`,
+    saldoCaja: `Saldo Caja - ${fechaSaldo}`,
+    balance: `BALANCE ${palabra} ${ctx.rango.label}\n(sin remanente ${palabraMin} anterior)`,
+    remanente: `INCORPORANDO REMANENTE DEL ${palabra} ANTERIOR`,
   }
 
   const categorias: CategoriaCatalogo[] = ctx.categorias
@@ -600,6 +776,7 @@ export function buildPreview(ctx: MemoriaContext, mapeoEntrada?: MapeoConfig | n
     mapeo,
     valores,
     avisos,
+    resumen: computeResumen(ctx, mapeo, valores),
     textos,
     periodo: { inicio: ctx.rango.inicio, fin: ctx.rango.fin, label: ctx.rango.label },
     categorias,
@@ -612,10 +789,16 @@ export interface GenerarResultado {
   spreadsheetId: string
   webViewLink: string | null
   titulo: string
+  /** Remanente del curso anterior leído de la celda F3. */
+  remanente: number | null
   /** Balance anual leído de la celda F46 del documento generado. */
   balanceAnual: number | null
   /** Disponible final de año leído de la celda F49. */
   disponibleFinal: number | null
+  /** Validación calculada con los datos de la app. */
+  resumen: ResumenValidacion
+  /** true si F46/F49 de la hoja coinciden con lo esperado por la app. */
+  cuadraConHoja: boolean
 }
 
 export async function generarSheet(
@@ -663,8 +846,26 @@ export async function generarSheet(
   // 2. Preparar valores (saltando capítulos excluidos por completo)
   const updates: { range: string; values: any[][] }[] = []
   updates.push({ range: "C1", values: [[preview.textos.titulo]] })
+  updates.push({ range: "A3", values: [[preview.textos.capituloI]] })
+  updates.push({ range: "C4", values: [[preview.textos.saldoBanco]] })
+  updates.push({ range: "C5", values: [[preview.textos.saldoCaja]] })
   updates.push({ range: "A22", values: [[preview.textos.capituloIV]] })
   updates.push({ range: "C45", values: [[preview.textos.balance]] })
+  updates.push({ range: "C48", values: [[preview.textos.remanente]] })
+
+  // Corrección de fórmulas del template: D46 original suma también D3 (los
+  // saldos del curso anterior), con lo que F46 ("balance sin remanente") SÍ
+  // incluía el remanente y F49 (= F3 + F46) lo contaba DOS veces. Se reescriben
+  // los totales para que sumen solo los capítulos II–VI y todo cuadre:
+  //   F46 = balance del ejercicio · F49 = remanente + balance = disponible.
+  updates.push({ range: "D46", values: [["=D6+D12+D22+D33+D40"]] })
+  updates.push({ range: "E46", values: [["=E6+E12+E22+E33+E40"]] })
+
+  // Si el capítulo V va incluido, limpiar el placeholder "XXXXXXXX" de D39
+  // (fila "Donativo total realizado": su importe va como gasto en E39).
+  if (!excluidos.has("V")) {
+    updates.push({ range: `D${FILA_DONATIVO}`, values: [[""]] })
+  }
 
   for (const fila of mapeo.filas) {
     if (!fila.enabled || excluidos.has(fila.capitulo)) continue
@@ -672,10 +873,14 @@ export async function generarSheet(
     if (fila.escribirDescripcion && fila.descripcion) {
       updates.push({ range: `C${fila.fila}`, values: [[fila.descripcion]] })
     }
-    if (fila.ingreso && typeof v.ingreso === "number") {
+    // Los ceros no se escriben: en el template la celda vacía ya vale 0 para
+    // las fórmulas y el documento queda más limpio (salvo los saldos del
+    // capítulo I, que se muestran siempre aunque sean 0).
+    const esSaldo = fila.capitulo === "I"
+    if (fila.ingreso && typeof v.ingreso === "number" && (esSaldo || Math.abs(v.ingreso) >= 0.005)) {
       updates.push({ range: `D${fila.fila}`, values: [[v.ingreso]] })
     }
-    if (fila.gasto && typeof v.gasto === "number") {
+    if (fila.gasto && typeof v.gasto === "number" && (esSaldo || Math.abs(v.gasto) >= 0.005)) {
       updates.push({ range: `E${fila.fila}`, values: [[v.gasto]] })
     }
   }
@@ -711,25 +916,36 @@ export async function generarSheet(
 
   await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } })
 
-  // 4. Leer totales calculados (F46 = balance anual, F49 = disponible final)
+  // 4. Leer totales calculados (F3 = remanente, F46 = balance, F49 = disponible)
+  let remanente: number | null = null
   let balanceAnual: number | null = null
   let disponibleFinal: number | null = null
   try {
     const vals = await sheets.spreadsheets.values.batchGet({
       spreadsheetId,
-      ranges: ["F46", "F49"],
+      ranges: ["F3", "F46", "F49"],
       valueRenderOption: "UNFORMATTED_VALUE",
     })
     const ranges = vals.data.valueRanges ?? []
-    const f46 = ranges[0]?.values?.[0]?.[0]
-    const f49 = ranges[1]?.values?.[0]?.[0]
+    const f3 = ranges[0]?.values?.[0]?.[0]
+    const f46 = ranges[1]?.values?.[0]?.[0]
+    const f49 = ranges[2]?.values?.[0]?.[0]
+    if (typeof f3 === "number") remanente = f3
     if (typeof f46 === "number") balanceAnual = f46
     if (typeof f49 === "number") disponibleFinal = f49
   } catch {
     // no bloqueante: si no se pueden leer, se dejan en null
   }
 
-  // 5. Enlace
+  // 5. Verificar que la hoja calcula lo mismo que la app
+  const resumen = preview.resumen
+  const cuadraConHoja =
+    balanceAnual !== null &&
+    disponibleFinal !== null &&
+    Math.abs(balanceAnual - resumen.balanceEjercicio) < 0.01 &&
+    Math.abs(disponibleFinal - resumen.disponibleFinal) < 0.01
+
+  // 6. Enlace
   const file = await drive.files.get({
     fileId: spreadsheetId,
     fields: "webViewLink",
@@ -740,7 +956,10 @@ export async function generarSheet(
     spreadsheetId,
     webViewLink: file.data.webViewLink ?? null,
     titulo,
+    remanente,
     balanceAnual,
     disponibleFinal,
+    resumen,
+    cuadraConHoja,
   }
 }

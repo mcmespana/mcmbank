@@ -92,6 +92,14 @@ async function main() {
   console.log("\n✅ ¡Generado!")
   console.log("   Título:", res.titulo)
   console.log("   Link:  ", res.webViewLink)
+  console.log("   Remanente anterior (F3):   ", res.remanente)
+  console.log("   Balance del ejercicio (F46):", res.balanceAnual)
+  console.log("   Disponible final (F49):    ", res.disponibleFinal)
+  console.log("   ¿Hoja = app?:", res.cuadraConHoja ? "sí ✓" : "NO ✗")
+  console.log(
+    "   ¿Cuadra con el saldo real?:",
+    res.resumen.cuadra ? "sí ✓" : `NO (descuadre ${res.resumen.descuadre.toFixed(2)} €)`,
+  )
 }
 
 main().catch((err) => {

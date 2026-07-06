@@ -413,13 +413,13 @@ export function GenerarInformeDialog({
   }
 
   const setCategoria = (fila: MapeoFila, categoriaId: string | null, categoriaNombre?: string) => {
-    const modo = modoDeFila(fila)
+    if (modoDeFila(fila) === "saldo") return
     const fuente: Fuente | null = categoriaId ? { tipo: "categoria", categoriaId } : null
     // En IV/V/VI la descripción de la fila es el propio nombre de la categoría.
     const patchDesc = fila.escribirDescripcion ? { descripcion: categoriaNombre ?? "" } : {}
-    if (modo === "ingreso") updateFila(fila.id, { ingreso: fuente, gasto: null, ...patchDesc })
-    else if (modo === "gasto") updateFila(fila.id, { gasto: fuente, ingreso: null, ...patchDesc })
-    else if (modo === "ambos") updateFila(fila.id, { ingreso: fuente, gasto: fuente, ...patchDesc })
+    // Siempre ambos lados: cada fila del template calcula F = D − E, y si solo
+    // se sumara un lado los abonos/devoluciones se perderían y no cuadraría.
+    updateFila(fila.id, { ingreso: fuente, gasto: fuente, ...patchDesc })
   }
 
   const isCapExcluido = (cap: Capitulo) => (mapeo?.capitulosExcluidos ?? []).includes(cap)
@@ -806,10 +806,15 @@ export function GenerarInformeDialog({
                                   )}
                                 </div>
                                 <div className="shrink-0 space-y-0.5 text-right text-sm tabular-nums">
-                                  {(modo === "ingreso" || modo === "ambos" || modo === "saldo") && (
+                                  {(modo === "ingreso" ||
+                                    modo === "ambos" ||
+                                    modo === "saldo" ||
+                                    Math.abs(v?.ingreso ?? 0) >= 0.005) && (
                                     <div className="font-semibold text-emerald-600">{eur(v?.ingreso)}</div>
                                   )}
-                                  {(modo === "gasto" || modo === "ambos") && (
+                                  {(modo === "gasto" ||
+                                    modo === "ambos" ||
+                                    Math.abs(v?.gasto ?? 0) >= 0.005) && (
                                     <div className="font-semibold text-red-500">{eur(v?.gasto)}</div>
                                   )}
                                 </div>
@@ -826,8 +831,7 @@ export function GenerarInformeDialog({
                               )}
                               {usaPicker && !esSaldo && (
                                 <p className="mt-1 pl-7 text-[11px] text-muted-foreground">
-                                  Suma de la categoría
-                                  {modo === "ambos" ? " (ingresos y gastos)" : modo === "gasto" ? " (gastos)" : " (ingresos)"}
+                                  Suma de la categoría en el periodo (entradas y salidas)
                                 </p>
                               )}
                             </div>

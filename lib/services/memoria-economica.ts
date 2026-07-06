@@ -473,16 +473,23 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
   })
 
   // Cap II — cuotas y subvenciones
+  // Cada fila del template calcula F = D − E, así que todas las filas de
+  // categoría suman AMBOS lados (entradas en D y salidas en E). Si no, los
+  // abonos/devoluciones se pierden y el informe no cuadra con las cuentas.
   const cuotasMic = findCatByName(ctx, "Cuotas MIC-COM")
   const cuotasCom = findCatByName(ctx, "Cuotas COM-LC +18")
   const cuotaEce = findCatByName(ctx, "Cuota anual enviada al ECE")
+  const ambos = (cat: CategoriaRow | undefined): Pick<MapeoFila, "ingreso" | "gasto"> => ({
+    ingreso: cat ? { tipo: "categoria", categoriaId: cat.id } : null,
+    gasto: cat ? { tipo: "categoria", categoriaId: cat.id } : null,
+  })
   filas.push({
     id: "cap2-miccom",
     capitulo: "II",
     fila: 7,
     descripcion: "Cuotas - MIC y COM",
     escribirDescripcion: false,
-    ingreso: cuotasMic ? { tipo: "categoria", categoriaId: cuotasMic.id } : null,
+    ...ambos(cuotasMic),
     enabled: true,
   })
   filas.push({
@@ -491,7 +498,7 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
     fila: 8,
     descripcion: "Cuotas - COM y LC +18",
     escribirDescripcion: false,
-    ingreso: cuotasCom ? { tipo: "categoria", categoriaId: cuotasCom.id } : null,
+    ...ambos(cuotasCom),
     enabled: true,
   })
   filas.push({
@@ -500,7 +507,7 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
     fila: 10,
     descripcion: "Cuota anual enviada al ECE",
     escribirDescripcion: false,
-    gasto: cuotaEce ? { tipo: "categoria", categoriaId: cuotaEce.id } : null,
+    ...ambos(cuotaEce),
     enabled: true,
   })
 
@@ -513,7 +520,7 @@ export function buildDefaultMapeo(ctx: MemoriaContext): MapeoConfig {
       fila: g.fila,
       descripcion: g.nombre,
       escribirDescripcion: false,
-      gasto: cat ? { tipo: "categoria", categoriaId: cat.id } : null,
+      ...ambos(cat),
       enabled: true,
     })
   }
@@ -866,10 +873,14 @@ export async function generarSheet(
     if (fila.escribirDescripcion && fila.descripcion) {
       updates.push({ range: `C${fila.fila}`, values: [[fila.descripcion]] })
     }
-    if (fila.ingreso && typeof v.ingreso === "number") {
+    // Los ceros no se escriben: en el template la celda vacía ya vale 0 para
+    // las fórmulas y el documento queda más limpio (salvo los saldos del
+    // capítulo I, que se muestran siempre aunque sean 0).
+    const esSaldo = fila.capitulo === "I"
+    if (fila.ingreso && typeof v.ingreso === "number" && (esSaldo || Math.abs(v.ingreso) >= 0.005)) {
       updates.push({ range: `D${fila.fila}`, values: [[v.ingreso]] })
     }
-    if (fila.gasto && typeof v.gasto === "number") {
+    if (fila.gasto && typeof v.gasto === "number" && (esSaldo || Math.abs(v.gasto) >= 0.005)) {
       updates.push({ range: `E${fila.fila}`, values: [[v.gasto]] })
     }
   }

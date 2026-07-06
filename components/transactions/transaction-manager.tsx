@@ -535,6 +535,17 @@ export function TransactionManager() {
       }
     }
 
+    // Rango de fechas por URL (p. ej. desde la conciliación de informes)
+    const desde = searchParams.get("desde")
+    const hasta = searchParams.get("hasta")
+    if (desde || hasta) {
+      setFilters((prev) => ({
+        ...prev,
+        dateFrom: desde ?? prev.dateFrom,
+        dateTo: hasta ?? prev.dateTo,
+      }))
+    }
+
     const movId = searchParams.get("mov")
     if (movId) {
       const found = movements.find((m) => m.id === movId)

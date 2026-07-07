@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select"
 import { InformesService } from "@/lib/services/informes"
 import { CategoriaPickerDialog } from "./categoria-picker-dialog"
+import { ConciliacionSheet } from "./conciliacion-sheet"
 import { useCategorias } from "@/hooks/use-categorias"
 import { getCategoryColorTokens } from "@/lib/utils/category-colors"
 import { formatCurrency } from "@/lib/utils/format"
@@ -54,6 +55,7 @@ import {
   Check,
   Scale,
   ChevronDown,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react"
 
@@ -110,7 +112,7 @@ const STEPS = [
 function Stepper({ step }: { step: (typeof STEPS)[number]["key"] }) {
   const idx = STEPS.findIndex((s) => s.key === step)
   return (
-    <div className="flex items-center gap-1.5 pt-1">
+    <div className="flex flex-wrap items-center gap-1.5 pt-1">
       {STEPS.map((s, i) => {
         const done = i < idx
         const current = i === idx
@@ -147,7 +149,15 @@ function Stepper({ step }: { step: (typeof STEPS)[number]["key"] }) {
 
 // ---------- Panel de validación (cuadre del ejercicio) ----------
 
-function ValidacionPanel({ resumen, finLabel }: { resumen: ResumenValidacion; finLabel: string }) {
+function ValidacionPanel({
+  resumen,
+  finLabel,
+  onConciliar,
+}: {
+  resumen: ResumenValidacion
+  finLabel: string
+  onConciliar: () => void
+}) {
   const [detalle, setDetalle] = useState(false)
   const r = resumen
   const remananteDistinto = Math.abs(r.remanenteInforme - r.remanenteReal) >= 0.005
@@ -230,6 +240,14 @@ function ValidacionPanel({ resumen, finLabel }: { resumen: ResumenValidacion; fi
               ¿Por qué? <ChevronDown className={cn("h-3 w-3 transition-transform", detalle && "rotate-180")} />
             </button>
           </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={onConciliar}
+            className="h-8 w-full gap-1.5 bg-amber-600 text-white hover:bg-amber-700 sm:w-auto"
+          >
+            <ListChecks className="h-4 w-4" /> Conciliar movimientos
+          </Button>
           {detalle && (
             <ul className="space-y-1 rounded-md bg-background/70 p-2.5 text-xs text-muted-foreground">
               {hayNoRecogido && (
@@ -334,6 +352,7 @@ export function GenerarInformeDialog({
     cuadraConHoja: boolean
   } | null>(null)
   const [pickerFila, setPickerFila] = useState<MapeoFila | null>(null)
+  const [conciliarOpen, setConciliarOpen] = useState(false)
 
   const informeId = initialInforme?.id ?? null
 
@@ -464,6 +483,49 @@ export function GenerarInformeDialog({
   const filasLibres = (cap: Capitulo) =>
     (mapeo?.filas ?? []).some((f) => f.capitulo === cap && !f.enabled && f.fila !== FILA_DONATIVO)
 
+  const capsConFilasLibres = useMemo(() => {
+    const caps: Capitulo[] = []
+    for (const cap of ["IV", "V", "VI"] as Capitulo[]) {
+      if ((mapeo?.filas ?? []).some((f) => f.capitulo === cap && !f.enabled && f.fila !== FILA_DONATIVO)) {
+        caps.push(cap)
+      }
+    }
+    return caps
+  }, [mapeo])
+
+  /** Añade una fila con la categoría al capítulo (desde la conciliación). */
+  const addCategoriaAlInforme = (cap: Capitulo, categoriaId: string): boolean => {
+    if (!mapeo) return false
+    const libre = mapeo.filas.find(
+      (f) => f.capitulo === cap && !f.enabled && f.fila !== FILA_DONATIVO,
+    )
+    if (!libre) {
+      toast.error("No quedan filas libres en ese capítulo")
+      return false
+    }
+    const fuente: Fuente = { tipo: "categoria", categoriaId }
+    const nombre = catNameById.get(categoriaId) ?? ""
+    const next: MapeoConfig = {
+      ...mapeo,
+      filas: mapeo.filas.map((f) =>
+        f.id === libre.id
+          ? {
+              ...f,
+              enabled: true,
+              ingreso: fuente,
+              gasto: fuente,
+              ...(f.escribirDescripcion ? { descripcion: nombre } : {}),
+            }
+          : f,
+      ),
+      // Si el capítulo estaba excluido, se incluye (solo con esta fila activa).
+      capitulosExcluidos: (mapeo.capitulosExcluidos ?? []).filter((c) => c !== cap),
+    }
+    setMapeo(next)
+    recompute(next)
+    return true
+  }
+
   const handleGenerar = async () => {
     if (!google.connected) {
       toast.error("Conecta tu cuenta de Google primero")
@@ -570,7 +632,10 @@ export function GenerarInformeDialog({
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("max-w-4xl", step === "mapeo" && "flex h-[95vh] flex-col gap-3")}
+        className={cn(
+          "max-w-4xl overflow-x-hidden",
+          step === "mapeo" && "flex h-[92dvh] flex-col gap-3 sm:h-[95vh]",
+        )}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -588,7 +653,7 @@ export function GenerarInformeDialog({
         {/* PASO 1 — CONFIG */}
         {step === "config" && (
           <div className="space-y-5 py-2">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Tipo de periodo</Label>
                 <Select value={periodoTipo} onValueChange={(v) => setPeriodoTipo(v as PeriodoTipo)}>
@@ -620,17 +685,17 @@ export function GenerarInformeDialog({
 
             {/* Conexión Google */}
             <div className="rounded-lg border p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-muted p-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="shrink-0 rounded-lg bg-muted p-2">
                     <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium">Google Drive</p>
                     {google.loading ? (
                       <p className="text-xs text-muted-foreground">Comprobando…</p>
                     ) : google.connected ? (
-                      <p className="text-xs text-emerald-600">
+                      <p className="break-all text-xs text-emerald-600">
                         Conectado{google.email ? ` · ${google.email}` : ""}
                       </p>
                     ) : (
@@ -642,14 +707,14 @@ export function GenerarInformeDialog({
                 </div>
                 {!google.loading &&
                   (google.connected ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       <Button variant="ghost" size="sm" asChild>
                         <a href="/api/google/connect?switch=1">Cambiar cuenta</a>
                       </Button>
                       <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
                     </div>
                   ) : (
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" className="shrink-0" asChild>
                       <a href="/api/google/connect">Conectar Google</a>
                     </Button>
                   ))}
@@ -658,7 +723,7 @@ export function GenerarInformeDialog({
               {google.connected && (
                 <div className="mt-3 flex items-start gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>
+                  <span className="min-w-0 break-words">
                     Se generará un archivo de Google Sheets en la carpeta{" "}
                     <span className="font-medium text-foreground">«Mi unidad»</span> de esta cuenta
                     {google.email ? ` (${google.email})` : ""} y luego tendrás que moverlo a su sitio.
@@ -858,13 +923,19 @@ export function GenerarInformeDialog({
               })}
             </div>
 
-            {preview.resumen && <ValidacionPanel resumen={preview.resumen} finLabel={finLabel} />}
+            {preview.resumen && (
+              <ValidacionPanel
+                resumen={preview.resumen}
+                finLabel={finLabel}
+                onConciliar={() => setConciliarOpen(true)}
+              />
+            )}
 
-            <div className="flex items-center justify-between border-t pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
               <Button variant="ghost" onClick={() => setStep("config")}>
                 <ChevronLeft className="mr-1 h-4 w-4" /> Atrás
               </Button>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={handleGuardarBorrador} disabled={savingDraft}>
                   {savingDraft ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Guardar borrador
@@ -997,6 +1068,21 @@ export function GenerarInformeDialog({
         if (pickerFila) setCategoria(pickerFila, id, id ? catNameById.get(id) : undefined)
       }}
       subtitle={pickerFila ? CAP_LABEL[pickerFila.capitulo] : undefined}
+    />
+
+    <ConciliacionSheet
+      open={conciliarOpen}
+      onOpenChange={setConciliarOpen}
+      delegacionId={delegacionId}
+      periodoTipo={periodoTipo}
+      anio={anio}
+      mapeo={mapeo}
+      categorias={dbCategorias}
+      capsConFilasLibres={capsConFilasLibres}
+      onAddCategoria={addCategoriaAlInforme}
+      onDatosCambiados={() => {
+        if (mapeo) fetchPreview(mapeo, { recompute: true })
+      }}
     />
     </>
   )

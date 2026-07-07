@@ -171,8 +171,10 @@ interface CategoriaRow {
   categoria_padre_id: string | null
 }
 interface MovRow {
+  id: string
   cuenta_id: string | null
   fecha: string
+  concepto: string
   importe: number
   categoria_id: string | null
 }
@@ -197,7 +199,7 @@ async function fetchAllMovimientos(supabase: any, delegacionId: string, finISO: 
   for (;;) {
     const { data, error } = await supabase
       .from("movimiento")
-      .select("cuenta_id, fecha, importe, categoria_id, ignorado")
+      .select("id, cuenta_id, fecha, concepto, importe, categoria_id, ignorado")
       .eq("delegacion_id", delegacionId)
       .lt("fecha", finISO)
       .range(from, from + pageSize - 1)
@@ -205,8 +207,10 @@ async function fetchAllMovimientos(supabase: any, delegacionId: string, finISO: 
     const rows = (data || []).filter((r: any) => !r.ignorado)
     for (const r of rows) {
       all.push({
+        id: r.id,
         cuenta_id: r.cuenta_id,
         fecha: r.fecha,
+        concepto: r.concepto || "",
         importe: Number(r.importe) || 0,
         categoria_id: r.categoria_id,
       })
@@ -630,6 +634,73 @@ export function computeValores(ctx: MemoriaContext, mapeo: MapeoConfig): {
 }
 
 /**
+ * Cuántas filas activas del informe recogen cada categoría (con descendientes),
+ * por columna. Un movimiento del periodo queda recogido si su categoría aparece
+ * en el mapa de su signo: >0 en ingresoCount para importes positivos, etc.
+ */
+function buildCaptureCounts(ctx: MemoriaContext, mapeo: MapeoConfig) {
+  const excluidos = new Set<Capitulo>(mapeo.capitulosExcluidos ?? [])
+  const ingresoCount = new Map<string, number>()
+  const gastoCount = new Map<string, number>()
+  for (const f of mapeo.filas) {
+    if (!f.enabled || excluidos.has(f.capitulo) || f.capitulo === "I") continue
+    if (f.ingreso?.tipo === "categoria") {
+      for (const id of descendantIds(ctx, f.ingreso.categoriaId)) {
+        ingresoCount.set(id, (ingresoCount.get(id) ?? 0) + 1)
+      }
+    }
+    if (f.gasto?.tipo === "categoria") {
+      for (const id of descendantIds(ctx, f.gasto.categoriaId)) {
+        gastoCount.set(id, (gastoCount.get(id) ?? 0) + 1)
+      }
+    }
+  }
+  return { ingresoCount, gastoCount }
+}
+
+export type DescuadreMotivo = "sin_categoria" | "categoria_sin_fila" | "doble_contado"
+
+export interface MovimientoDescuadre {
+  id: string
+  fecha: string
+  concepto: string
+  importe: number
+  categoriaId: string | null
+  categoriaNombre: string | null
+  motivo: DescuadreMotivo
+  /** Nº de filas del informe que lo cuentan (>1 solo en doble_contado). */
+  veces: number
+}
+
+/**
+ * Lista los movimientos del periodo que descuadran el informe: sin categoría,
+ * con categoría que ninguna fila recoge, o contados en más de una fila.
+ * Ordenados por importe absoluto descendente (primero lo gordo).
+ */
+export function computeDescuadres(ctx: MemoriaContext, mapeo: MapeoConfig): MovimientoDescuadre[] {
+  const { ingresoCount, gastoCount } = buildCaptureCounts(ctx, mapeo)
+  const out: MovimientoDescuadre[] = []
+  for (const m of ctx.movs) {
+    if (!enPeriodo(ctx, m.fecha)) continue
+    const counts = m.importe >= 0 ? ingresoCount : gastoCount
+    const veces = m.categoria_id ? counts.get(m.categoria_id) ?? 0 : 0
+    if (veces === 1) continue
+    out.push({
+      id: m.id,
+      fecha: m.fecha,
+      concepto: m.concepto,
+      importe: m.importe,
+      categoriaId: m.categoria_id,
+      categoriaNombre: m.categoria_id ? ctx.catById.get(m.categoria_id)?.nombre ?? null : null,
+      motivo: !m.categoria_id ? "sin_categoria" : veces === 0 ? "categoria_sin_fila" : "doble_contado",
+      veces,
+    })
+  }
+  out.sort((a, b) => Math.abs(b.importe) - Math.abs(a.importe))
+  return out
+}
+
+/**
  * Valida el ejercicio: remanente + entradas − salidas del informe frente al
  * dinero real de las cuentas. También detecta movimientos que ninguna fila
  * recoge y los contados dos veces (madre + subcategoría en filas distintas).
@@ -654,12 +725,10 @@ export function computeResumen(
     else realGastos += -m.importe
   }
 
-  // Totales del informe + cuántas filas recogen cada categoría (por columna)
+  // Totales del informe
   let remanenteInforme = 0
   let informeIngresos = 0
   let informeGastos = 0
-  const ingresoCount = new Map<string, number>()
-  const gastoCount = new Map<string, number>()
   for (const f of mapeo.filas) {
     if (!activa(f)) continue
     const v = valores[f.id] || {}
@@ -669,17 +738,9 @@ export function computeResumen(
     }
     informeIngresos += v.ingreso ?? 0
     informeGastos += v.gasto ?? 0
-    if (f.ingreso?.tipo === "categoria") {
-      for (const id of descendantIds(ctx, f.ingreso.categoriaId)) {
-        ingresoCount.set(id, (ingresoCount.get(id) ?? 0) + 1)
-      }
-    }
-    if (f.gasto?.tipo === "categoria") {
-      for (const id of descendantIds(ctx, f.gasto.categoriaId)) {
-        gastoCount.set(id, (gastoCount.get(id) ?? 0) + 1)
-      }
-    }
   }
+
+  const { ingresoCount, gastoCount } = buildCaptureCounts(ctx, mapeo)
 
   let noRecogidoIngresos = 0
   let noRecogidoGastos = 0

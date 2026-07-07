@@ -64,7 +64,7 @@ const eur = (n: number | undefined) => (typeof n === "number" ? formatCurrency(n
 // Fila fija "Donativo total realizado" del capítulo V (misma constante que en
 // lib/services/memoria-economica.ts — no se importa para no meter googleapis
 // en el bundle del cliente).
-const FILA_DONATIVO = 39
+const FILA_DONATIVO = 49
 
 const CAP_LABEL: Record<Capitulo, string> = {
   I: "Capítulo I · Saldos curso anterior",
@@ -802,7 +802,7 @@ export function GenerarInformeDialog({
                     {opcional && excluido ? (
                       <p className="mx-3 mb-3 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
                         Capítulo desactivado: sus filas se ocultarán y no aparecerán en el PDF
-                        exportado (filas {cap === "V" ? "33–39" : "40–43"} de la plantilla).
+                        exportado (filas {cap === "V" ? "43–49" : "50–53"} de la plantilla).
                       </p>
                     ) : (
                       <div className="space-y-2 border-t px-3 py-3">

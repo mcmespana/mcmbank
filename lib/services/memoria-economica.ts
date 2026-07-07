@@ -87,7 +87,7 @@ export interface ResumenValidacion {
   informeIngresos: number
   informeGastos: number
   balanceEjercicio: number
-  /** remanenteInforme + balanceEjercicio = F49 de la hoja generada. */
+  /** remanenteInforme + balanceEjercicio = F59 de la hoja generada. */
   disponibleFinal: number
   /** Movimientos del periodo que ninguna fila del informe recoge. */
   noRecogidoIngresos: number
@@ -394,18 +394,18 @@ const GASTOS_FUNCIONAMIENTO: { fila: number; nombre: string }[] = [
   { fila: 21, nombre: "Otros" },
 ]
 
-// Filas disponibles por capítulo en el template
-export const FILAS_ACTIVIDADES = [23, 24, 25, 26, 27, 28, 29, 30, 31, 32]
-export const FILAS_CAMPANAS = [34, 35, 36, 37, 38]
-/** Fila fija "Donativo total realizado" del capítulo V (gasto en E39). */
-export const FILA_DONATIVO = 39
-export const FILAS_CAP6 = [41, 42, 43]
+// Filas disponibles por capítulo en el template (versión con 20 actividades).
+export const FILAS_ACTIVIDADES = Array.from({ length: 20 }, (_, i) => 23 + i) // 23–42
+export const FILAS_CAMPANAS = [44, 45, 46, 47, 48]
+/** Fila fija "Donativo total realizado" del capítulo V (gasto en E49). */
+export const FILA_DONATIVO = 49
+export const FILAS_CAP6 = [51, 52, 53]
 
 // Rango COMPLETO de cada capítulo opcional (cabecera + contenido + subtotal).
 // Si el capítulo se excluye, se eliminan TODAS estas filas del documento.
 export const CAP_RANGES: Partial<Record<Capitulo, number[]>> = {
-  V: [33, 34, 35, 36, 37, 38, 39],
-  VI: [40, 41, 42, 43],
+  V: [43, 44, 45, 46, 47, 48, 49],
+  VI: [50, 51, 52, 53],
 }
 
 function wordTokens(s: string): string[] {
@@ -852,13 +852,13 @@ export interface GenerarResultado {
   titulo: string
   /** Remanente del curso anterior leído de la celda F3. */
   remanente: number | null
-  /** Balance anual leído de la celda F46 del documento generado. */
+  /** Balance anual leído de la celda F56 del documento generado. */
   balanceAnual: number | null
-  /** Disponible final de año leído de la celda F49. */
+  /** Disponible final de año leído de la celda F59. */
   disponibleFinal: number | null
   /** Validación calculada con los datos de la app. */
   resumen: ResumenValidacion
-  /** true si F46/F49 de la hoja coinciden con lo esperado por la app. */
+  /** true si F56/F59 de la hoja coinciden con lo esperado por la app. */
   cuadraConHoja: boolean
 }
 
@@ -911,19 +911,19 @@ export async function generarSheet(
   updates.push({ range: "C4", values: [[preview.textos.saldoBanco]] })
   updates.push({ range: "C5", values: [[preview.textos.saldoCaja]] })
   updates.push({ range: "A22", values: [[preview.textos.capituloIV]] })
-  updates.push({ range: "C45", values: [[preview.textos.balance]] })
-  updates.push({ range: "C48", values: [[preview.textos.remanente]] })
+  updates.push({ range: "C55", values: [[preview.textos.balance]] })
+  updates.push({ range: "C58", values: [[preview.textos.remanente]] })
 
-  // Corrección de fórmulas del template: D46 original suma también D3 (los
-  // saldos del curso anterior), con lo que F46 ("balance sin remanente") SÍ
-  // incluía el remanente y F49 (= F3 + F46) lo contaba DOS veces. Se reescriben
+  // Corrección de fórmulas del template: D56 original suma también D3 (los
+  // saldos del curso anterior), con lo que F56 ("balance sin remanente") SÍ
+  // incluía el remanente y F59 (= F3 + F56) lo contaba DOS veces. Se reescriben
   // los totales para que sumen solo los capítulos II–VI y todo cuadre:
-  //   F46 = balance del ejercicio · F49 = remanente + balance = disponible.
-  updates.push({ range: "D46", values: [["=D6+D12+D22+D33+D40"]] })
-  updates.push({ range: "E46", values: [["=E6+E12+E22+E33+E40"]] })
+  //   F56 = balance del ejercicio · F59 = remanente + balance = disponible.
+  updates.push({ range: "D56", values: [["=D6+D12+D22+D43+D50"]] })
+  updates.push({ range: "E56", values: [["=E6+E12+E22+E43+E50"]] })
 
-  // Si el capítulo V va incluido, limpiar el placeholder "XXXXXXXX" de D39
-  // (fila "Donativo total realizado": su importe va como gasto en E39).
+  // Si el capítulo V va incluido, limpiar el placeholder "XXXXXXXX" de D49
+  // (fila "Donativo total realizado": su importe va como gasto en E49).
   if (!excluidos.has("V")) {
     updates.push({ range: `D${FILA_DONATIVO}`, values: [[""]] })
   }
@@ -977,14 +977,14 @@ export async function generarSheet(
 
   await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } })
 
-  // 4. Leer totales calculados (F3 = remanente, F46 = balance, F49 = disponible)
+  // 4. Leer totales calculados (F3 = remanente, F56 = balance, F59 = disponible)
   let remanente: number | null = null
   let balanceAnual: number | null = null
   let disponibleFinal: number | null = null
   try {
     const vals = await sheets.spreadsheets.values.batchGet({
       spreadsheetId,
-      ranges: ["F3", "F46", "F49"],
+      ranges: ["F3", "F56", "F59"],
       valueRenderOption: "UNFORMATTED_VALUE",
     })
     const ranges = vals.data.valueRanges ?? []

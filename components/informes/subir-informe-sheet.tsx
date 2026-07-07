@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { MoneyInput, formatMoney, parseMoney } from "@/components/ui/money-input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -103,8 +104,8 @@ export function SubirInformeSheet({
       setTituloTouched(true)
       setEstado(informe.estado as InformeEstado)
       setNotas(informe.notas ?? "")
-      setBalanceAnual(informe.balance_anual != null ? String(informe.balance_anual) : "")
-      setDisponibleFinal(informe.disponible_final != null ? String(informe.disponible_final) : "")
+      setBalanceAnual(formatMoney(informe.balance_anual))
+      setDisponibleFinal(formatMoney(informe.disponible_final))
     } else {
       setPeriodo({ periodicidad: "anual", periodo_tipo: "curso", anio: currentYear, sub_periodo: null })
       setTitulo("")
@@ -150,14 +151,6 @@ export function SubirInformeSheet({
   })
 
   const removeFile = (idx: number) => setFiles((prev) => prev.filter((_, i) => i !== idx))
-
-  /** "1.234,56" / "1234.56" / "" -> number | null */
-  const parseMoney = (raw: string): number | null => {
-    const s = raw.trim().replace(/\s|€/g, "").replace(/\./g, "").replace(",", ".")
-    if (!s) return null
-    const n = Number(s)
-    return Number.isFinite(n) ? n : null
-  }
 
   const doSave = async (driveMode: "keep" | "replace") => {
     setSaving(true)
@@ -281,11 +274,10 @@ export function SubirInformeSheet({
             <div className="space-y-1.5">
               <Label className="text-xs">Balance anual (opcional)</Label>
               <div className="relative">
-                <Input
+                <MoneyInput
                   value={balanceAnual}
-                  onChange={(e) => setBalanceAnual(e.target.value)}
+                  onValueChange={setBalanceAnual}
                   placeholder="0,00"
-                  inputMode="decimal"
                   className="pr-7"
                 />
                 <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -296,11 +288,10 @@ export function SubirInformeSheet({
             <div className="space-y-1.5">
               <Label className="text-xs">Disponible final de año (opcional)</Label>
               <div className="relative">
-                <Input
+                <MoneyInput
                   value={disponibleFinal}
-                  onChange={(e) => setDisponibleFinal(e.target.value)}
+                  onValueChange={setDisponibleFinal}
                   placeholder="0,00"
-                  inputMode="decimal"
                   className="pr-7"
                 />
                 <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">

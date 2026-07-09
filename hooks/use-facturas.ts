@@ -117,8 +117,8 @@ export function useFacturas(delegacionId?: string | null, options: UseFacturasOp
     await fetchRef.current()
   }, [])
 
-  const unlinkFromMovimiento = useCallback(async (facturaId: string) => {
-    await DatabaseService.unlinkFacturaFromMovimiento(facturaId)
+  const unlinkFromMovimiento = useCallback(async (facturaId: string, movimientoId: string) => {
+    await DatabaseService.unlinkFacturaFromMovimiento(facturaId, movimientoId)
     await fetchRef.current()
   }, [])
 
@@ -126,6 +126,7 @@ export function useFacturas(delegacionId?: string | null, options: UseFacturasOp
     const base = {
       bandeja: 0,
       sin_pagar: 0,
+      pagada_parcial: 0,
       pagada: 0,
       pagada_fuera: 0,
       total: 0,
@@ -134,7 +135,9 @@ export function useFacturas(delegacionId?: string | null, options: UseFacturasOp
     for (const f of facturas) {
       base[f.estado] += 1
       base.total += 1
-      if (f.estado === "sin_pagar" && f.importe != null) base.sinPagarImporte += Number(f.importe)
+      if ((f.estado === "sin_pagar" || f.estado === "pagada_parcial") && f.importe != null) {
+        base.sinPagarImporte += Number(f.importe)
+      }
     }
     return base
   }, [facturas])

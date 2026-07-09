@@ -65,6 +65,7 @@ export interface TransactionFilters {
   amountFrom?: number
   amountTo?: number
   uncategorized?: boolean
+  facturaPendiente?: boolean
 }
 
 export function TransactionManager() {
@@ -126,6 +127,7 @@ export function TransactionManager() {
     amountFrom: filters.amountFrom,
     amountTo: filters.amountTo,
     uncategorized: filters.uncategorized,
+    facturaPendiente: filters.facturaPendiente,
   })
 
   // Notify on fetch error
@@ -489,6 +491,27 @@ export function TransactionManager() {
     filters.amountTo,
   ])
 
+  const [facturaPendienteCount, setFacturaPendienteCount] = useState(0)
+
+  useEffect(() => {
+    if (!selectedDelegation) {
+      setFacturaPendienteCount(0)
+      return
+    }
+    let countQuery = supabase
+      .from("movimiento")
+      .select("id", { count: "exact", head: true })
+      .eq("delegacion_id", selectedDelegation)
+      .eq("ignorado", false)
+      .eq("factura_pendiente", true)
+
+    if (filters.dateFrom) countQuery = countQuery.gte("fecha", filters.dateFrom)
+    if (filters.dateTo) countQuery = countQuery.lte("fecha", filters.dateTo)
+    if (filters.accountId) countQuery = countQuery.eq("cuenta_id", filters.accountId)
+
+    countQuery.then(({ count }) => setFacturaPendienteCount(count ?? 0))
+  }, [selectedDelegation, filters.dateFrom, filters.dateTo, filters.accountId, movements])
+
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
     if (key === "dateFrom" || key === "dateTo") return false
     if (key === "categoryIds" || key === "contactoIds" || key === "contactoTipos") {
@@ -606,6 +629,7 @@ export function TransactionManager() {
               accounts={accounts}
               contactos={contactos}
               uncategorizedCount={uncategorizedCount}
+              facturaPendienteCount={facturaPendienteCount}
             />
           </div>
         )}
@@ -828,6 +852,7 @@ export function TransactionManager() {
                 accounts={accounts}
                 contactos={contactos}
                 uncategorizedCount={uncategorizedCount}
+                facturaPendienteCount={facturaPendienteCount}
               />
             </Card>
           )}

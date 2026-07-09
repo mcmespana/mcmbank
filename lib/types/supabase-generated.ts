@@ -700,7 +700,6 @@ export type Database = {
           id: string
           importe: number | null
           moneda: string
-          movimiento_id: string | null
           notas: string | null
           numero: string | null
           origen: string
@@ -719,7 +718,6 @@ export type Database = {
           id?: string
           importe?: number | null
           moneda?: string
-          movimiento_id?: string | null
           notas?: string | null
           numero?: string | null
           origen?: string
@@ -738,7 +736,6 @@ export type Database = {
           id?: string
           importe?: number | null
           moneda?: string
-          movimiento_id?: string | null
           notas?: string | null
           numero?: string | null
           origen?: string
@@ -756,13 +753,6 @@ export type Database = {
             columns: ["delegacion_id"]
             isOneToOne: false
             referencedRelation: "delegacion"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "factura_movimiento_id_fkey"
-            columns: ["movimiento_id"]
-            isOneToOne: true
-            referencedRelation: "movimiento"
             referencedColumns: ["id"]
           },
         ]
@@ -971,6 +961,7 @@ export type Database = {
           external_id_source: string | null
           external_raw: Json | null
           factura_id: string | null
+          factura_pendiente: boolean
           fecha: string
           id: string
           ignorado: boolean
@@ -1001,6 +992,7 @@ export type Database = {
           external_id_source?: string | null
           external_raw?: Json | null
           factura_id?: string | null
+          factura_pendiente?: boolean
           fecha: string
           id?: string
           ignorado?: boolean
@@ -1031,6 +1023,7 @@ export type Database = {
           external_id_source?: string | null
           external_raw?: Json | null
           factura_id?: string | null
+          factura_pendiente?: boolean
           fecha?: string
           id?: string
           ignorado?: boolean
@@ -1076,7 +1069,7 @@ export type Database = {
           {
             foreignKeyName: "movimiento_factura_id_fkey"
             columns: ["factura_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "factura"
             referencedColumns: ["id"]
           },

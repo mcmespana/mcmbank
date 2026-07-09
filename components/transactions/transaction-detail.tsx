@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -88,6 +89,7 @@ export function TransactionDetail({
       descripcion: movement.descripcion || "",
       categoria_id: movement.categoria_id,
       contacto_id: movement.contacto_id ?? null,
+      factura_pendiente: movement.factura_pendiente ?? false,
     }
   }, [movement])
 
@@ -559,6 +561,31 @@ export function TransactionDetail({
                       </p>
                     )}
                   </div>
+
+                  <label
+                    htmlFor="factura-pendiente"
+                    className={cn(
+                      "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors",
+                      formData.factura_pendiente
+                        ? "border-amber-300/70 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30"
+                        : "border-border/60 bg-muted/20 hover:bg-muted/30",
+                    )}
+                  >
+                    <Checkbox
+                      id="factura-pendiente"
+                      checked={Boolean(formData.factura_pendiente)}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({ ...prev, factura_pendiente: Boolean(checked) }))
+                      }
+                      className="mt-0.5"
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium">Falta la factura</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        Márcalo para acordarte de subirla o vincularla más tarde.
+                      </span>
+                    </span>
+                  </label>
 
                   <div className="space-y-2">
                     <Label htmlFor="descripcion" className="text-sm font-medium">

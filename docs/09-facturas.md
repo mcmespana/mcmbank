@@ -15,9 +15,19 @@ mínimos clicks posibles.
 3. **Vincula el movimiento**: el botón *Vincular movimiento* busca gastos con un importe parecido
    (con un pelín de margen), afinando por fecha y contacto. Si hay un candidato claro, se marca
    como **Match directo** y viene preseleccionado. Al vincular:
-   - La factura pasa a **Pagada**.
+   - La factura pasa a **Pagada** (o **Pago parcial** si el movimiento no cubre el importe total).
    - El movimiento hereda el contacto de la factura (y viceversa si faltaba).
    - Los archivos de la factura aparecen también en el movimiento.
+
+### Pagos en varios plazos
+
+Una factura puede tener **0, 1 o varios movimientos vinculados**. Por ejemplo, una factura de
+3.000 € pagada en dos transferencias de 1.500 € se concilia vinculando ambos movimientos a la
+misma factura: tras el primero queda en **Pago parcial** (indicando cuánto falta por cubrir);
+tras el segundo, la suma alcanza el importe y pasa a **Pagada**. El botón para vincular sigue
+disponible mientras la factura no esté completamente cubierta, y la búsqueda de candidatos usa
+el importe **pendiente**, no el total, para sugerir el siguiente plazo. Cada movimiento vinculado
+se puede desvincular individualmente sin afectar a los demás.
 
 ## Estados
 
@@ -25,10 +35,13 @@ mínimos clicks posibles.
 |--------|-------------|
 | En bandeja | Recién subida, pendiente de revisar/completar datos |
 | Sin pagar | Registrada, pendiente de pago |
-| Pagada | Pagada y vinculada a un movimiento de MCM Bank |
+| Pago parcial | Vinculada a uno o varios movimientos que no cubren aún el importe total |
+| Pagada | Pagada y vinculada a movimiento(s) de MCM Bank que cubren el importe total |
 | Pagada fuera | Pagada, pero el pago se hizo fuera de MCM Bank (no hay movimiento que vincular) |
 
-Al desvincular un movimiento, la factura vuelve a *Sin pagar*.
+El estado (salvo *Pagada fuera*, marca manual) se recalcula automáticamente en base de datos cada
+vez que se vincula o desvincula un movimiento, comparando la suma de sus importes con el importe
+de la factura. Al desvincular el único/último movimiento, la factura vuelve a *Sin pagar*.
 
 ## Desde el lado movimiento
 
@@ -37,16 +50,31 @@ En el detalle de un movimiento (pestaña Archivos):
 - **Subir una factura** al movimiento crea automáticamente la entidad factura al otro lado, ya
   conciliada y con los datos del movimiento (fecha, importe, contacto).
 - **Vincular una factura de la bandeja**: si la factura ya estaba subida en la sección Facturas,
-  se elige de una lista de candidatas compatibles por importe.
+  se elige de una lista de candidatas compatibles por importe pendiente.
+- **Falta factura**: un movimiento no vinculado a ninguna factura se puede marcar a mano como
+  "Falta factura" (checkbox en el detalle del movimiento). No todos los movimientos llevan
+  factura (nóminas, comisiones bancarias…), así que la marca es manual, nunca automática. Los
+  movimientos marcados muestran un icono de aviso en la lista y se pueden filtrar con el botón
+  *Falta factura* en el panel de filtros de Movimientos.
 
 ## Modelo de datos
 
-- Tabla `factura` (migración `scripts/047_create_factura.sql`), con RLS por delegación
-  (lectura: cualquier miembro; escritura: tesorero / gestor_central).
-- Vínculo 1-a-1 con `movimiento` (`factura.movimiento_id` + `movimiento.factura_id`). Un trigger
-  sincroniza el estado (`pagada` al vincular, `sin_pagar` al desvincular).
+- Tabla `factura` (migración `scripts/047_create_factura.sql`, ampliada en
+  `scripts/048_factura_pagos_multiples.sql`), con RLS por delegación (lectura: cualquier
+  miembro; escritura: tesorero / gestor_central).
+- Vínculo **1 factura → N movimientos** vía `movimiento.factura_id` (varios movimientos pueden
+  apuntar a la misma factura; un movimiento, como mucho, a una). La función
+  `recalcular_estado_factura()` y sus triggers mantienen `factura.estado` sincronizado con la
+  suma de los movimientos vinculados (`pagada_parcial` / `pagada`), tanto al cambiar el vínculo
+  como al editar el importe de la factura.
+- `movimiento.factura_pendiente` (boolean, default `false`): marca manual e independiente del
+  vínculo, para señalar movimientos a los que les falta subir/vincular su factura.
 - Archivos en `archivo_adjunto` con `entidad='factura'` (bucket `facturas` de Storage). Al
   conciliar se replican en `movimiento_archivo` apuntando al mismo path.
+- Los contactos (`contacto`) son una única tabla compartida por toda la app: el mismo proveedor
+  usado en una factura aparece igual en movimientos, Pagos MCM y en la sección Contactos, sin
+  duplicados. Un pequeño indicador ⚠️ (en el selector de contacto, en las tarjetas de factura y
+  en la ficha de contacto) avisa cuando un proveedor no tiene NIF/CIF guardado.
 
 ---
 

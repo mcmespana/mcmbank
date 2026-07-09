@@ -793,7 +793,7 @@ export class DatabaseService {
       email,
       identificador_fiscal
     ),
-    movimiento:movimiento_id (
+    movimientos:movimiento (
       id,
       fecha,
       concepto,
@@ -881,13 +881,14 @@ export class DatabaseService {
 
   static async getFacturaByMovimiento(movimientoId: string): Promise<FacturaConRelaciones | null> {
     const supabase = this.getClient() as any
-    const { data, error } = await supabase
-      .from("factura")
-      .select(this.FACTURA_SELECT)
-      .eq("movimiento_id", movimientoId)
+    const { data: movimiento, error: movErr } = await supabase
+      .from("movimiento")
+      .select("factura_id")
+      .eq("id", movimientoId)
       .maybeSingle()
-    if (error) throw error
-    return (data ?? null) as FacturaConRelaciones | null
+    if (movErr) throw movErr
+    if (!movimiento?.factura_id) return null
+    return this.getFacturaById(movimiento.factura_id)
   }
 
   static async createFactura(
@@ -907,21 +908,14 @@ export class DatabaseService {
 
   /**
    * Elimina una factura y sus adjuntos (registros; el borrado en Storage lo
-   * hace el hook de archivos antes de llamar aquí, si procede). Si estaba
-   * vinculada a un movimiento, lo desvincula primero.
+   * hace el hook de archivos antes de llamar aquí, si procede). Desvincula
+   * todos los movimientos que tuviera asociados (puede haber varios: pagos
+   * en varios plazos).
    */
   static async deleteFactura(id: string): Promise<void> {
     const supabase = this.getClient() as any
 
-    const { data: factura } = await supabase
-      .from("factura")
-      .select("movimiento_id")
-      .eq("id", id)
-      .maybeSingle()
-    if (factura?.movimiento_id) {
-      await supabase.from("movimiento").update({ factura_id: null }).eq("id", factura.movimiento_id)
-    }
-
+    await supabase.from("movimiento").update({ factura_id: null }).eq("factura_id", id)
     await supabase.from("archivo_adjunto").delete().eq("entidad", "factura").eq("entidad_id", id)
 
     const { error } = await supabase.from("factura").delete().eq("id", id)
@@ -929,10 +923,13 @@ export class DatabaseService {
   }
 
   /**
-   * Vincula una factura a un movimiento existente (conciliación).
-   * - El trigger de BD pasa la factura a 'pagada'.
+   * Vincula una factura a un movimiento existente (conciliación). Una factura
+   * puede tener varios movimientos vinculados (pago en varios plazos); un
+   * movimiento, como mucho, uno.
+   * - El trigger de BD recalcula el estado de la factura (pagada / pagada_parcial)
+   *   comparando su importe con la suma de los movimientos vinculados.
    * - Sincroniza el contacto en ambos sentidos (sin machacar el que exista).
-   * - Adopta importe/fecha del movimiento si la factura no los tenía.
+   * - Rellena importe/fecha de la factura desde el movimiento solo si estaban vacíos.
    * - Replica los adjuntos de la factura en movimiento_archivo (mismo Storage).
    */
   static async linkFacturaToMovimiento(
@@ -950,19 +947,7 @@ export class DatabaseService {
     if (movErr) throw movErr
     if (!factura) throw new Error("Factura no encontrada")
     if (!movimiento) throw new Error("Movimiento no encontrado")
-    if (factura.movimiento_id) throw new Error("Esta factura ya está vinculada a un movimiento")
     if (movimiento.factura_id) throw new Error("Ese movimiento ya tiene una factura vinculada")
-
-    const facturaUpdates: Record<string, unknown> = { movimiento_id: movimientoId }
-    if (factura.importe == null) facturaUpdates.importe = Math.abs(Number(movimiento.importe))
-    if (!factura.fecha_emision && movimiento.fecha) facturaUpdates.fecha_emision = movimiento.fecha
-    if (!factura.contacto_id && movimiento.contacto_id) facturaUpdates.contacto_id = movimiento.contacto_id
-
-    const { error: updFacturaErr } = await supabase
-      .from("factura")
-      .update(facturaUpdates)
-      .eq("id", facturaId)
-    if (updFacturaErr) throw updFacturaErr
 
     const movimientoUpdates: Record<string, unknown> = { factura_id: facturaId }
     if (factura.contacto_id && !movimiento.contacto_id) movimientoUpdates.contacto_id = factura.contacto_id
@@ -971,10 +956,16 @@ export class DatabaseService {
       .from("movimiento")
       .update(movimientoUpdates)
       .eq("id", movimientoId)
-    if (updMovErr) {
-      // rollback best-effort del lado factura
-      await supabase.from("factura").update({ movimiento_id: null }).eq("id", facturaId)
-      throw updMovErr
+    if (updMovErr) throw updMovErr
+
+    // Relleno best-effort de datos de la factura (no bloquea el vínculo si falla).
+    const facturaUpdates: Record<string, unknown> = {}
+    if (factura.importe == null) facturaUpdates.importe = Math.abs(Number(movimiento.importe))
+    if (!factura.fecha_emision && movimiento.fecha) facturaUpdates.fecha_emision = movimiento.fecha
+    if (!factura.contacto_id && movimiento.contacto_id) facturaUpdates.contacto_id = movimiento.contacto_id
+    if (Object.keys(facturaUpdates).length > 0) {
+      const { error } = await supabase.from("factura").update(facturaUpdates).eq("id", facturaId)
+      if (error) console.warn("No se pudieron rellenar los datos de la factura:", error)
     }
 
     let userId = creadoPor
@@ -990,29 +981,18 @@ export class DatabaseService {
   }
 
   /**
-   * Desvincula una factura de su movimiento (el trigger la deja en 'sin_pagar').
+   * Desvincula un movimiento concreto de una factura (una factura puede tener
+   * varios; hay que indicar cuál se desvincula). El trigger recalcula el
+   * estado de la factura con los movimientos restantes.
    */
-  static async unlinkFacturaFromMovimiento(facturaId: string): Promise<void> {
+  static async unlinkFacturaFromMovimiento(facturaId: string, movimientoId: string): Promise<void> {
     const supabase = this.getClient() as any
-    const { data: factura } = await supabase
-      .from("factura")
-      .select("movimiento_id")
-      .eq("id", facturaId)
-      .maybeSingle()
-    if (!factura?.movimiento_id) return
-
-    const movimientoId = factura.movimiento_id
-    const { error: e1 } = await supabase
-      .from("factura")
-      .update({ movimiento_id: null })
-      .eq("id", facturaId)
-    if (e1) throw e1
-
-    const { error: e2 } = await supabase
+    const { error } = await supabase
       .from("movimiento")
       .update({ factura_id: null })
       .eq("id", movimientoId)
-    if (e2) throw e2
+      .eq("factura_id", facturaId)
+    if (error) throw error
   }
 
   /**
@@ -1089,7 +1069,6 @@ export class DatabaseService {
       concepto: movimiento.concepto,
       fecha_emision: movimiento.fecha,
       importe: Math.abs(Number(movimiento.importe)) || null,
-      movimiento_id: movimiento.id,
       origen: "movimiento",
       creado_por: options.creadoPor ?? null,
     }
@@ -1222,7 +1201,9 @@ export class DatabaseService {
 
   /**
    * Busca facturas candidatas para conciliar con un movimiento (lado movimiento).
-   * Solo facturas sin movimiento vinculado; el importe manda.
+   * Excluye facturas ya completamente pagadas. El importe manda, pero comparado
+   * contra el importe PENDIENTE de la factura (importe total menos lo ya
+   * vinculado en otros movimientos), para soportar pagos en varios plazos.
    */
   static async findCandidatosFacturaParaMovimiento(
     movimientoId: string,
@@ -1242,7 +1223,7 @@ export class DatabaseService {
       .from("factura")
       .select(this.FACTURA_SELECT)
       .eq("delegacion_id", movimiento.delegacion_id)
-      .is("movimiento_id", null)
+      .not("estado", "in", "(pagada,pagada_fuera)")
       .order("creado_en", { ascending: false })
       .limit(opts.limit ?? 40)
     if (opts.signal) query = query.abortSignal(opts.signal)
@@ -1254,13 +1235,14 @@ export class DatabaseService {
     const importeMov = Math.abs(Number(movimiento.importe))
     const scored = facturas
       .map((f) => {
+        const pagado = (f.movimientos ?? []).reduce((sum, m) => sum + Math.abs(Number(m.importe)), 0)
+        const pendiente = f.importe != null ? Math.max(Number(f.importe) - pagado, 0) : null
         const score = scoreCandidatoMovimiento(
-          { importe: f.importe, fecha_emision: f.fecha_emision, contacto_id: f.contacto_id },
+          { importe: pendiente, fecha_emision: f.fecha_emision, contacto_id: f.contacto_id },
           { importe: movimiento.importe, fecha: movimiento.fecha, contacto_id: movimiento.contacto_id } as any,
         )
-        // Descarta las que se van mucho de precio (si ambas tienen importe)
-        const fueraDeMargen =
-          f.importe != null && Math.abs(Number(f.importe) - importeMov) > margenImporteFactura(importeMov)
+        // Descarta las que se van mucho de precio (si el pendiente es conocido)
+        const fueraDeMargen = pendiente != null && Math.abs(pendiente - importeMov) > margenImporteFactura(importeMov)
         return { f, score, fueraDeMargen }
       })
       .filter(({ fueraDeMargen }) => !fueraDeMargen)

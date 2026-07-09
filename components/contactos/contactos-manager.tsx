@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   Trash2,
+  TriangleAlert,
   Users,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -315,8 +316,19 @@ function ContactoCard({
                 </span>
               )}
             </div>
-            {contacto.identificador_fiscal && (
+            {contacto.identificador_fiscal ? (
               <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{contacto.identificador_fiscal}</div>
+            ) : (
+              contacto.tipo === "proveedor" &&
+              !contacto.archivado && (
+                <div
+                  className="mt-1 flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400"
+                  title="Falta el NIF/CIF de este proveedor"
+                >
+                  <TriangleAlert className="h-3 w-3 shrink-0" />
+                  <span>Sin NIF/CIF</span>
+                </div>
+              )
             )}
           </div>
         </div>

@@ -81,8 +81,8 @@ export function VincularFacturaDialog({
             Vincular una factura existente
           </DialogTitle>
           <DialogDescription>
-            Facturas de la bandeja sin movimiento vinculado, con importe compatible, ordenadas por
-            afinidad.
+            Facturas de la bandeja aún no cubiertas del todo, con importe pendiente compatible,
+            ordenadas por afinidad.
           </DialogDescription>
         </DialogHeader>
 

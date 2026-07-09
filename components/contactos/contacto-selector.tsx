@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Check, ChevronsUpDown, Plus, Users, X } from "lucide-react"
+import { Check, ChevronsUpDown, Plus, TriangleAlert, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
@@ -104,6 +104,11 @@ export function ContactoSelector({
                   <span className={cn("h-1 w-1 rounded-full", CONTACTO_TIPO_INFO[selected.tipo].dotClass)} aria-hidden />
                   {CONTACTO_TIPO_INFO[selected.tipo].shortLabel}
                 </span>
+                {selected.tipo === "proveedor" && !selected.identificador_fiscal && (
+                  <span title="Falta el NIF/CIF" className="shrink-0">
+                    <TriangleAlert className="h-3.5 w-3.5 text-amber-500" aria-label="Falta el NIF/CIF" />
+                  </span>
+                )}
               </>
             ) : (
               <>
@@ -168,7 +173,14 @@ export function ContactoSelector({
                           className="mr-2"
                         />
                         <div className="flex-1 truncate">
-                          <div className="truncate font-medium">{c.nombre}</div>
+                          <div className="flex items-center gap-1 truncate">
+                            <span className="truncate font-medium">{c.nombre}</span>
+                            {c.tipo === "proveedor" && !c.identificador_fiscal && (
+                              <span title="Falta el NIF/CIF" className="shrink-0">
+                                <TriangleAlert className="h-3 w-3 text-amber-500" aria-label="Falta el NIF/CIF" />
+                              </span>
+                            )}
+                          </div>
                           {(c.email || c.identificador_fiscal) && (
                             <div className="truncate text-[11px] text-muted-foreground">
                               {c.identificador_fiscal ?? c.email}

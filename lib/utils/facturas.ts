@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react"
-import { BadgeCheck, CheckCircle2, Clock, ExternalLink, Inbox, Mail, Upload } from "lucide-react"
-import type { FacturaEstado, FacturaOrigen, MovimientoConRelaciones } from "@/lib/types/database"
+import { BadgeCheck, CheckCircle2, Clock, ExternalLink, Inbox, Mail, PieChart, Upload } from "lucide-react"
+import type { FacturaConRelaciones, FacturaEstado, FacturaOrigen, MovimientoConRelaciones } from "@/lib/types/database"
 
 export interface FacturaEstadoInfo {
   value: FacturaEstado
@@ -37,10 +37,21 @@ export const FACTURA_ESTADO_INFO: Record<FacturaEstado, FacturaEstadoInfo> = {
     textClass: "text-amber-700 dark:text-amber-300",
     borderClass: "border-amber-200/70 dark:border-amber-900/60",
   },
+  pagada_parcial: {
+    value: "pagada_parcial",
+    label: "Pago parcial",
+    descripcion: "Vinculada a uno o varios movimientos, pero aún no cubren el importe total.",
+    icon: PieChart,
+    tone: "amber",
+    dotClass: "bg-orange-500",
+    bgClass: "bg-orange-50 dark:bg-orange-950/30",
+    textClass: "text-orange-700 dark:text-orange-300",
+    borderClass: "border-orange-200/70 dark:border-orange-900/60",
+  },
   pagada: {
     value: "pagada",
     label: "Pagada",
-    descripcion: "Pagada y vinculada a un movimiento de MCM Bank.",
+    descripcion: "Pagada y vinculada a uno o varios movimientos de MCM Bank.",
     icon: CheckCircle2,
     tone: "emerald",
     dotClass: "bg-emerald-500",
@@ -64,9 +75,26 @@ export const FACTURA_ESTADO_INFO: Record<FacturaEstado, FacturaEstadoInfo> = {
 export const FACTURA_ESTADO_ORDER: readonly FacturaEstado[] = [
   "bandeja",
   "sin_pagar",
+  "pagada_parcial",
   "pagada",
   "pagada_fuera",
 ]
+
+/** Suma de los movimientos ya vinculados a una factura (valor absoluto). */
+export function importePagadoFactura(factura: Pick<FacturaConRelaciones, "movimientos">): number {
+  return (factura.movimientos ?? []).reduce((sum, m) => sum + Math.abs(Number(m.importe)), 0)
+}
+
+/**
+ * Importe que le falta a la factura por cubrir (null si no tiene importe
+ * definido). Nunca negativo.
+ */
+export function importePendienteFactura(
+  factura: Pick<FacturaConRelaciones, "movimientos" | "importe">,
+): number | null {
+  if (factura.importe == null) return null
+  return Math.max(Number(factura.importe) - importePagadoFactura(factura), 0)
+}
 
 export interface FacturaOrigenInfo {
   value: FacturaOrigen

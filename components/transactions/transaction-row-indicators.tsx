@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { FileText, HandCoins, MessageSquare } from "lucide-react"
+import { AlertTriangle, FileText, HandCoins, MessageSquare } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -11,6 +11,7 @@ interface TransactionRowIndicatorsProps {
   description?: string | null
   fileCount?: number
   pagoMcmId?: string | null
+  facturaPendiente?: boolean
   className?: string
   onOpenFiles?: () => void
 }
@@ -19,6 +20,7 @@ export function TransactionRowIndicators({
   description,
   fileCount = 0,
   pagoMcmId,
+  facturaPendiente,
   className,
   onOpenFiles,
 }: TransactionRowIndicatorsProps) {
@@ -27,7 +29,7 @@ export function TransactionRowIndicators({
   const hasFiles = fileCount > 0
   const hasPagoMcm = Boolean(pagoMcmId)
 
-  if (!hasDescription && !hasFiles && !hasPagoMcm) {
+  if (!hasDescription && !hasFiles && !hasPagoMcm && !facturaPendiente) {
     return null
   }
 
@@ -119,6 +121,23 @@ export function TransactionRowIndicators({
               </div>
             </TooltipTrigger>
             <TooltipContent side="top">Vinculado a un Pago MCM</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+
+      {/* Indicador de factura pendiente (marca manual) */}
+      {facturaPendiente && (
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center"
+                aria-label="Falta factura"
+              >
+                <AlertTriangle className="h-3 w-3 text-amber-700 dark:text-amber-300" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">Falta la factura de este movimiento</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       )}

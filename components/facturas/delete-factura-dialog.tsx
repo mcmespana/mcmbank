@@ -51,10 +51,10 @@ export function DeleteFacturaDialog({ factura, open, onOpenChange, onDelete }: D
           </DialogTitle>
           <DialogDescription>
             Esta acción no se puede deshacer. La factura y sus archivos adjuntos se eliminarán.
-            {factura.movimiento && (
+            {factura.movimientos && factura.movimientos.length > 0 && (
               <span className="mt-2 block text-amber-700 dark:text-amber-300">
-                Está vinculada a un movimiento bancario. El movimiento NO se eliminará, solo perderá el
-                vínculo.
+                Está vinculada a {factura.movimientos.length === 1 ? "un movimiento bancario" : `${factura.movimientos.length} movimientos bancarios`}.
+                {factura.movimientos.length === 1 ? " El movimiento NO se eliminará" : " Los movimientos NO se eliminarán"}, solo perderán el vínculo.
               </span>
             )}
           </DialogDescription>

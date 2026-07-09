@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { DatabaseService } from "@/lib/services/database"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
-import { esMatchDirecto, scoreCandidatoMovimiento } from "@/lib/utils/facturas"
+import { esMatchDirecto, importePagadoFactura, importePendienteFactura, scoreCandidatoMovimiento } from "@/lib/utils/facturas"
 import type { FacturaConRelaciones, MovimientoConRelaciones } from "@/lib/types/database"
 
 interface VincularMovimientoDialogProps {
@@ -42,6 +42,12 @@ export function VincularMovimientoDialog({
   const [seleccion, setSeleccion] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // Importe que le falta cubrir a la factura (total menos lo ya vinculado en
+  // otros movimientos). Se busca por este valor, no por el importe total, para
+  // soportar pagos en varios plazos.
+  const importePendiente = useMemo(() => (factura ? importePendienteFactura(factura) : null), [factura])
+  const yaPagado = useMemo(() => (factura ? importePagadoFactura(factura) : 0), [factura])
+
   // Cargar candidatos al abrir
   useEffect(() => {
     if (!open || !factura) return
@@ -49,7 +55,7 @@ export function VincularMovimientoDialog({
     DatabaseService.findCandidatosMovimientoParaFactura(
       delegacionId,
       {
-        importe: factura.importe,
+        importe: importePendiente,
         fecha_emision: factura.fecha_emision,
         contacto_id: factura.contacto_id,
       },
@@ -58,7 +64,7 @@ export function VincularMovimientoDialog({
       .then((list) => setCandidatos(list))
       .catch(() => setCandidatos([]))
       .finally(() => setCandidatosLoading(false))
-  }, [open, factura, delegacionId])
+  }, [open, factura, delegacionId, importePendiente])
 
   // Reset al cerrar
   useEffect(() => {
@@ -71,11 +77,11 @@ export function VincularMovimientoDialog({
     if (!factura) return []
     return candidatos.map((m) =>
       scoreCandidatoMovimiento(
-        { importe: factura.importe, fecha_emision: factura.fecha_emision, contacto_id: factura.contacto_id },
+        { importe: importePendiente, fecha_emision: factura.fecha_emision, contacto_id: factura.contacto_id },
         m,
       ),
     )
-  }, [candidatos, factura])
+  }, [candidatos, factura, importePendiente])
 
   const matchDirecto = useMemo(() => esMatchDirecto(scores), [scores])
 
@@ -124,7 +130,7 @@ export function VincularMovimientoDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5 text-primary" />
-            Vincular factura a un movimiento
+            {yaPagado > 0 ? "Vincular otro pago a la factura" : "Vincular factura a un movimiento"}
           </DialogTitle>
           <DialogDescription>
             {titulo}
@@ -137,8 +143,15 @@ export function VincularMovimientoDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {yaPagado > 0 && importePendiente != null && (
+          <p className="rounded-md bg-orange-50 px-2.5 py-1.5 text-xs text-orange-800 dark:bg-orange-950/30 dark:text-orange-200">
+            Ya hay {formatCurrency(yaPagado)} vinculados. Buscando movimientos por el resto:{" "}
+            <span className="font-semibold">{formatCurrency(importePendiente)}</span>.
+          </p>
+        )}
+
         <p className="text-xs text-muted-foreground">
-          {factura.importe != null
+          {importePendiente != null
             ? "Gastos con un importe parecido (con un pelín de margen) sin factura vinculada, ordenados por afinidad."
             : "Últimos gastos sin factura vinculada. Añade el importe a la factura para afinar la búsqueda."}
         </p>

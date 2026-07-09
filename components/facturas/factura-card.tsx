@@ -8,7 +8,7 @@ import { StatusPill } from "@/components/ui/status-pill"
 import { cn } from "@/lib/utils"
 import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
-import { FACTURA_ESTADO_INFO, FACTURA_ORIGEN_INFO } from "@/lib/utils/facturas"
+import { FACTURA_ESTADO_INFO, FACTURA_ORIGEN_INFO, importePendienteFactura } from "@/lib/utils/facturas"
 import type { FacturaConRelaciones } from "@/lib/types/database"
 
 interface FacturaCardProps {
@@ -17,7 +17,7 @@ interface FacturaCardProps {
   onEdit: () => void
   onDelete: () => void
   onVincular?: () => void
-  onDesvincular?: () => void
+  onDesvincular?: (movimientoId: string) => void
   onMarcarPagadaFuera?: () => void
 }
 
@@ -35,6 +35,10 @@ export function FacturaCard({
   const OrigenIcon = origenInfo.icon
   const contactoTipoInfo = factura.contacto ? CONTACTO_TIPO_INFO[factura.contacto.tipo] : null
   const archivoPrincipal = factura.archivos?.[0] ?? null
+  const movimientos = factura.movimientos ?? []
+  const pendiente = importePendienteFactura(factura)
+  // "Sigue abierta" = puede admitir más vínculos (bandeja, sin_pagar, pago parcial)
+  const abierta = factura.estado !== "pagada" && factura.estado !== "pagada_fuera"
 
   const titulo =
     factura.concepto?.trim() ||
@@ -87,6 +91,11 @@ export function FacturaCard({
               {factura.numero && <span className="ml-1.5">· Nº {factura.numero}</span>}
             </span>
           </div>
+          {factura.estado === "pagada_parcial" && pendiente != null && (
+            <div className="text-[11px] font-medium text-orange-700 dark:text-orange-300">
+              Quedan {formatCurrency(pendiente)} por cubrir
+            </div>
+          )}
         </div>
 
         {/* Proveedor */}
@@ -109,6 +118,14 @@ export function FacturaCard({
                     aria-hidden
                     title={contactoTipoInfo.label}
                   />
+                )}
+                {factura.contacto.tipo === "proveedor" && !factura.contacto.identificador_fiscal && (
+                  <span
+                    className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[9px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                    title="Falta el NIF/CIF de este proveedor"
+                  >
+                    !
+                  </span>
                 )}
               </div>
               {factura.contacto.identificador_fiscal && (
@@ -143,24 +160,41 @@ export function FacturaCard({
           </div>
         )}
 
-        {/* Movimiento vinculado */}
-        {factura.movimiento && (
-          <div className="flex items-center gap-1.5 rounded-md border border-emerald-200/70 bg-emerald-50/60 px-2 py-1 text-[11px] text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-            <ExternalLink className="h-3 w-3 shrink-0" />
-            <span className="truncate">
-              {formatDate(factura.movimiento.fecha)} · {formatCurrency(Number(factura.movimiento.importe))} ·{" "}
-              {factura.movimiento.concepto}
-            </span>
+        {/* Movimientos vinculados (puede haber varios: pago en varios plazos) */}
+        {movimientos.length > 0 && (
+          <div className="space-y-1">
+            {movimientos.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center gap-1.5 rounded-md border border-emerald-200/70 bg-emerald-50/60 px-2 py-1 text-[11px] text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">
+                  {formatDate(m.fecha)} · {formatCurrency(Number(m.importe))} · {m.concepto}
+                </span>
+                {canEdit && onDesvincular && (
+                  <button
+                    type="button"
+                    onClick={() => onDesvincular(m.id)}
+                    className="shrink-0 rounded p-0.5 text-emerald-700/70 hover:bg-emerald-100 hover:text-emerald-900 dark:text-emerald-300/70 dark:hover:bg-emerald-900/40"
+                    title="Desvincular este movimiento"
+                  >
+                    <Unlink className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
         {/* Acción principal: vincular movimiento */}
-        {canEdit && !factura.movimiento_id && onVincular && (
+        {canEdit && abierta && onVincular && (
           <div className="flex gap-2">
             <Button type="button" onClick={onVincular} size="sm" className="flex-1">
-              <Link2 className="mr-1.5 h-3.5 w-3.5" /> Vincular movimiento
+              <Link2 className="mr-1.5 h-3.5 w-3.5" />
+              {movimientos.length > 0 ? "Vincular otro pago" : "Vincular movimiento"}
             </Button>
-            {factura.estado !== "pagada_fuera" && onMarcarPagadaFuera && (
+            {onMarcarPagadaFuera && (
               <Button
                 type="button"
                 onClick={onMarcarPagadaFuera}
@@ -183,17 +217,6 @@ export function FacturaCard({
           </span>
           {canEdit && (
             <div className="flex items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
-              {factura.movimiento_id && onDesvincular && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onDesvincular}
-                  className="h-7 w-7 p-0"
-                  title="Desvincular movimiento"
-                >
-                  <Unlink className="h-3.5 w-3.5" />
-                </Button>
-              )}
               <Button variant="ghost" size="sm" onClick={onEdit} className="h-7 w-7 p-0" title="Editar">
                 <Edit3 className="h-3.5 w-3.5" />
               </Button>

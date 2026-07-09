@@ -1,5 +1,5 @@
 "use client"
-import { X, Tag, Building2, PiggyBank, Search } from "lucide-react"
+import { X, Tag, Building2, PiggyBank, Search, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,6 +21,7 @@ interface TransactionFiltersProps {
   accounts?: CuentaConDelegacion[]
   contactos?: ContactoConCategoriaPredeterminada[]
   uncategorizedCount: number
+  facturaPendienteCount?: number
 }
 
 export function TransactionFiltersComponent({
@@ -31,6 +32,7 @@ export function TransactionFiltersComponent({
   accounts = [],
   contactos = [],
   uncategorizedCount,
+  facturaPendienteCount = 0,
 }: TransactionFiltersProps) {
   const updateFilter = (key: keyof Filters, value: any) => {
     onFiltersChange({ ...filters, [key]: value })
@@ -43,7 +45,7 @@ export function TransactionFiltersComponent({
   }
 
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
-    if (key === "uncategorized" || key === "dateRange") return false
+    if (key === "uncategorized" || key === "facturaPendiente" || key === "dateRange") return false
     if (key === "categoryIds" || key === "contactoIds" || key === "contactoTipos") {
       return Array.isArray(value) && value.length > 0
     }
@@ -97,6 +99,32 @@ export function TransactionFiltersComponent({
             }`}
           >
             {uncategorizedCount}
+          </Badge>
+        )}
+      </Button>
+
+      <Button
+        variant={filters.facturaPendiente ? "default" : "outline"}
+        size="sm"
+        onClick={() => updateFilter("facturaPendiente", !filters.facturaPendiente)}
+        className={`w-full justify-start gap-2 ${
+          filters.facturaPendiente
+            ? "bg-amber-500 hover:bg-amber-600 text-white"
+            : "bg-background hover:bg-amber-50 border-amber-200 text-amber-700 dark:hover:bg-amber-950/20 dark:text-amber-400"
+        }`}
+      >
+        <AlertTriangle className="h-4 w-4" />
+        <span>Falta factura</span>
+        {facturaPendienteCount > 0 && (
+          <Badge
+            variant="secondary"
+            className={`ml-auto ${
+              filters.facturaPendiente
+                ? "bg-amber-600 text-amber-100"
+                : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+            }`}
+          >
+            {facturaPendienteCount}
           </Badge>
         )}
       </Button>

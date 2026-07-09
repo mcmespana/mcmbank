@@ -194,7 +194,8 @@ export function FacturaForm({
             <SelectContent>
               {FACTURA_ESTADO_ORDER.map((s) => {
                 const info = FACTURA_ESTADO_INFO[s]
-                const lockedPagada = s === "pagada" && !factura?.movimiento_id
+                const tieneMovimientos = Boolean(factura?.movimientos && factura.movimientos.length > 0)
+                const lockedPagada = (s === "pagada" || s === "pagada_parcial") && !tieneMovimientos
                 return (
                   <SelectItem key={s} value={s} disabled={lockedPagada}>
                     <span className="inline-flex items-center gap-2">

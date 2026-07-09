@@ -44,14 +44,14 @@ const TAB_ORDER: TabValue[] = ["bandeja", "sin_pagar", "pagadas", "todas"]
 
 const TAB_LABELS: Record<TabValue, string> = {
   bandeja: "Bandeja",
-  sin_pagar: "Sin pagar",
+  sin_pagar: "Sin cerrar",
   pagadas: "Pagadas",
   todas: "Todas",
 }
 
 const TAB_ESTADOS: Record<Exclude<TabValue, "todas">, FacturaEstado[]> = {
   bandeja: ["bandeja"],
-  sin_pagar: ["sin_pagar"],
+  sin_pagar: ["sin_pagar", "pagada_parcial"],
   pagadas: ["pagada", "pagada_fuera"],
 }
 
@@ -173,9 +173,15 @@ export function FacturasManager() {
           accent="sky"
         />
         <KpiCard
-          label="Sin pagar"
-          value={String(globalTotals.sin_pagar)}
-          sub={globalTotals.sinPagarImporte > 0 ? formatCurrency(globalTotals.sinPagarImporte) : "pendientes de pago"}
+          label="Sin cerrar"
+          value={String(globalTotals.sin_pagar + globalTotals.pagada_parcial)}
+          sub={
+            globalTotals.pagada_parcial > 0
+              ? `${globalTotals.pagada_parcial} con pago parcial`
+              : globalTotals.sinPagarImporte > 0
+                ? formatCurrency(globalTotals.sinPagarImporte)
+                : "pendientes de pago"
+          }
           icon={Clock}
           accent="amber"
         />
@@ -211,7 +217,7 @@ export function FacturasManager() {
                 : t === "bandeja"
                   ? globalTotals.bandeja
                   : t === "sin_pagar"
-                    ? globalTotals.sin_pagar
+                    ? globalTotals.sin_pagar + globalTotals.pagada_parcial
                     : globalTotals.pagada + globalTotals.pagada_fuera
             return (
               <TabsTrigger key={t} value={t} className="gap-1.5">
@@ -289,9 +295,9 @@ export function FacturasManager() {
                   toast.error("No se pudo actualizar: " + (err instanceof Error ? err.message : "error"))
                 }
               }}
-              onDesvincular={async () => {
+              onDesvincular={async (movimientoId) => {
                 try {
-                  await unlinkFromMovimiento(factura.id)
+                  await unlinkFromMovimiento(factura.id, movimientoId)
                   await refetchTotals()
                   toast.success("Movimiento desvinculado")
                 } catch (err) {

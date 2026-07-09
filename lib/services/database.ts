@@ -9,6 +9,11 @@ import type {
   ContactoInsert,
   ContactoTipo,
   ContactoUpdate,
+  Factura,
+  FacturaConRelaciones,
+  FacturaEstado,
+  FacturaInsert,
+  FacturaUpdate,
   FinancialSummary,
   MonthlyTrendRow,
   MovimientoConRelaciones,
@@ -18,6 +23,7 @@ import type {
   PagoMcmInsert,
   PagoMcmUpdate,
 } from "@/lib/types/database"
+import { margenImporteFactura, scoreCandidatoMovimiento } from "@/lib/utils/facturas"
 
 type CategoriaWithOverrides = Categoria & {
   overrides?: CategoriaOrdenDelegacion[] | null
@@ -770,6 +776,498 @@ export class DatabaseService {
     }
 
     return list
+  }
+
+  // ---------------------------------------------------------------------------
+  // Factura operations (client-side)
+  // ---------------------------------------------------------------------------
+
+  private static readonly FACTURA_SELECT = `
+    *,
+    contacto:contacto_id (
+      id,
+      nombre,
+      tipo,
+      emoji,
+      color,
+      email,
+      identificador_fiscal
+    ),
+    movimiento:movimiento_id (
+      id,
+      fecha,
+      concepto,
+      importe,
+      cuenta_id
+    )
+  `
+
+  /**
+   * archivo_adjunto es polimórfico (sin FK a factura), así que los adjuntos
+   * se cargan aparte y se mezclan en memoria.
+   */
+  private static async attachArchivosToFacturas(
+    facturas: FacturaConRelaciones[],
+    signal?: AbortSignal,
+  ): Promise<FacturaConRelaciones[]> {
+    if (facturas.length === 0) return facturas
+    const supabase = this.getClient() as any
+    let query = supabase
+      .from("archivo_adjunto")
+      .select("id, entidad_id, nombre_original, tipo_mime, url_publica, path_storage, bucket, tamano_bytes, subido_en")
+      .eq("entidad", "factura")
+      .in("entidad_id", facturas.map((f) => f.id))
+      .order("subido_en", { ascending: false })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+
+    const porFactura = new Map<string, any[]>()
+    for (const archivo of data ?? []) {
+      const list = porFactura.get(archivo.entidad_id) ?? []
+      list.push(archivo)
+      porFactura.set(archivo.entidad_id, list)
+    }
+    return facturas.map((f) => ({ ...f, archivos: porFactura.get(f.id) ?? [] }))
+  }
+
+  static async getFacturasByDelegacion(
+    delegacionId: string,
+    options: {
+      estados?: FacturaEstado[]
+      contactoId?: string
+      busqueda?: string
+      signal?: AbortSignal
+    } = {},
+  ): Promise<FacturaConRelaciones[]> {
+    const supabase = this.getClient() as any
+    let query = supabase
+      .from("factura")
+      .select(this.FACTURA_SELECT)
+      .eq("delegacion_id", delegacionId)
+      .order("creado_en", { ascending: false })
+
+    if (options.estados && options.estados.length > 0) {
+      query = query.in("estado", options.estados)
+    }
+    if (options.contactoId) {
+      query = query.eq("contacto_id", options.contactoId)
+    }
+    if (options.busqueda) {
+      const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
+      query = query.or(`concepto.ilike.%${term}%,numero.ilike.%${term}%,notas.ilike.%${term}%`)
+    }
+    if (options.signal) {
+      query = query.abortSignal(options.signal)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return this.attachArchivosToFacturas((data ?? []) as FacturaConRelaciones[], options.signal)
+  }
+
+  static async getFacturaById(id: string): Promise<FacturaConRelaciones | null> {
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase
+      .from("factura")
+      .select(this.FACTURA_SELECT)
+      .eq("id", id)
+      .maybeSingle()
+    if (error) throw error
+    if (!data) return null
+    const [conArchivos] = await this.attachArchivosToFacturas([data as FacturaConRelaciones])
+    return conArchivos
+  }
+
+  static async getFacturaByMovimiento(movimientoId: string): Promise<FacturaConRelaciones | null> {
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase
+      .from("factura")
+      .select(this.FACTURA_SELECT)
+      .eq("movimiento_id", movimientoId)
+      .maybeSingle()
+    if (error) throw error
+    return (data ?? null) as FacturaConRelaciones | null
+  }
+
+  static async createFactura(
+    factura: Omit<FacturaInsert, "creado_en" | "actualizado_en">,
+  ): Promise<Factura> {
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase.from("factura").insert(factura).select().single()
+    if (error) throw error
+    return data as Factura
+  }
+
+  static async updateFactura(id: string, updates: FacturaUpdate): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase.from("factura").update(updates).eq("id", id)
+    if (error) throw error
+  }
+
+  /**
+   * Elimina una factura y sus adjuntos (registros; el borrado en Storage lo
+   * hace el hook de archivos antes de llamar aquí, si procede). Si estaba
+   * vinculada a un movimiento, lo desvincula primero.
+   */
+  static async deleteFactura(id: string): Promise<void> {
+    const supabase = this.getClient() as any
+
+    const { data: factura } = await supabase
+      .from("factura")
+      .select("movimiento_id")
+      .eq("id", id)
+      .maybeSingle()
+    if (factura?.movimiento_id) {
+      await supabase.from("movimiento").update({ factura_id: null }).eq("id", factura.movimiento_id)
+    }
+
+    await supabase.from("archivo_adjunto").delete().eq("entidad", "factura").eq("entidad_id", id)
+
+    const { error } = await supabase.from("factura").delete().eq("id", id)
+    if (error) throw error
+  }
+
+  /**
+   * Vincula una factura a un movimiento existente (conciliación).
+   * - El trigger de BD pasa la factura a 'pagada'.
+   * - Sincroniza el contacto en ambos sentidos (sin machacar el que exista).
+   * - Adopta importe/fecha del movimiento si la factura no los tenía.
+   * - Replica los adjuntos de la factura en movimiento_archivo (mismo Storage).
+   */
+  static async linkFacturaToMovimiento(
+    facturaId: string,
+    movimientoId: string,
+    creadoPor?: string,
+  ): Promise<void> {
+    const supabase = this.getClient() as any
+
+    const [{ data: factura, error: facturaErr }, { data: movimiento, error: movErr }] = await Promise.all([
+      supabase.from("factura").select("*").eq("id", facturaId).maybeSingle(),
+      supabase.from("movimiento").select("id, fecha, importe, contacto_id, factura_id").eq("id", movimientoId).maybeSingle(),
+    ])
+    if (facturaErr) throw facturaErr
+    if (movErr) throw movErr
+    if (!factura) throw new Error("Factura no encontrada")
+    if (!movimiento) throw new Error("Movimiento no encontrado")
+    if (factura.movimiento_id) throw new Error("Esta factura ya está vinculada a un movimiento")
+    if (movimiento.factura_id) throw new Error("Ese movimiento ya tiene una factura vinculada")
+
+    const facturaUpdates: Record<string, unknown> = { movimiento_id: movimientoId }
+    if (factura.importe == null) facturaUpdates.importe = Math.abs(Number(movimiento.importe))
+    if (!factura.fecha_emision && movimiento.fecha) facturaUpdates.fecha_emision = movimiento.fecha
+    if (!factura.contacto_id && movimiento.contacto_id) facturaUpdates.contacto_id = movimiento.contacto_id
+
+    const { error: updFacturaErr } = await supabase
+      .from("factura")
+      .update(facturaUpdates)
+      .eq("id", facturaId)
+    if (updFacturaErr) throw updFacturaErr
+
+    const movimientoUpdates: Record<string, unknown> = { factura_id: facturaId }
+    if (factura.contacto_id && !movimiento.contacto_id) movimientoUpdates.contacto_id = factura.contacto_id
+
+    const { error: updMovErr } = await supabase
+      .from("movimiento")
+      .update(movimientoUpdates)
+      .eq("id", movimientoId)
+    if (updMovErr) {
+      // rollback best-effort del lado factura
+      await supabase.from("factura").update({ movimiento_id: null }).eq("id", facturaId)
+      throw updMovErr
+    }
+
+    let userId = creadoPor
+    if (!userId) {
+      const { data } = await supabase.auth.getUser()
+      userId = data?.user?.id ?? undefined
+    }
+    if (userId) {
+      await this.replicateArchivosFacturaToMovimiento(facturaId, movimientoId, userId).catch((err) =>
+        console.warn("No se pudieron replicar adjuntos de la factura al movimiento:", err),
+      )
+    }
+  }
+
+  /**
+   * Desvincula una factura de su movimiento (el trigger la deja en 'sin_pagar').
+   */
+  static async unlinkFacturaFromMovimiento(facturaId: string): Promise<void> {
+    const supabase = this.getClient() as any
+    const { data: factura } = await supabase
+      .from("factura")
+      .select("movimiento_id")
+      .eq("id", facturaId)
+      .maybeSingle()
+    if (!factura?.movimiento_id) return
+
+    const movimientoId = factura.movimiento_id
+    const { error: e1 } = await supabase
+      .from("factura")
+      .update({ movimiento_id: null })
+      .eq("id", facturaId)
+    if (e1) throw e1
+
+    const { error: e2 } = await supabase
+      .from("movimiento")
+      .update({ factura_id: null })
+      .eq("id", movimientoId)
+    if (e2) throw e2
+  }
+
+  /**
+   * Inserta copias de los adjuntos de la factura en movimiento_archivo
+   * apuntando al mismo path de Storage (idempotente por UNIQUE).
+   */
+  private static async replicateArchivosFacturaToMovimiento(
+    facturaId: string,
+    movimientoId: string,
+    subidoPor: string,
+  ): Promise<void> {
+    const supabase = this.getClient() as any
+
+    const { data: adjuntos, error } = await supabase
+      .from("archivo_adjunto")
+      .select("*")
+      .eq("entidad", "factura")
+      .eq("entidad_id", facturaId)
+    if (error) throw error
+    if (!Array.isArray(adjuntos) || adjuntos.length === 0) return
+
+    const inserts = adjuntos.map((a: any) => ({
+      movimiento_id: movimientoId,
+      nombre_original: a.nombre_original,
+      nombre_archivo: a.nombre_archivo,
+      tipo_mime: a.tipo_mime,
+      "tamaño_bytes": a.tamano_bytes,
+      bucket: a.bucket,
+      path_storage: a.path_storage,
+      url_publica: a.url_publica,
+      es_factura: true,
+      descripcion: a.descripcion,
+      subido_por: subidoPor,
+    }))
+
+    await supabase
+      .from("movimiento_archivo")
+      .upsert(inserts, { onConflict: "movimiento_id,path_storage", ignoreDuplicates: true })
+  }
+
+  /**
+   * Crea (si no existe) la entidad factura para un movimiento al que se le ha
+   * subido una factura. Copia fecha, importe y contacto del movimiento y queda
+   * vinculada y 'pagada'. Devuelve la factura (existente o recién creada).
+   */
+  static async ensureFacturaForMovimiento(
+    movimientoId: string,
+    options: { creadoPor?: string } = {},
+  ): Promise<Factura> {
+    const supabase = this.getClient() as any
+
+    const { data: movimiento, error: movErr } = await supabase
+      .from("movimiento")
+      .select("id, delegacion_id, fecha, concepto, importe, contacto_id, factura_id")
+      .eq("id", movimientoId)
+      .maybeSingle()
+    if (movErr) throw movErr
+    if (!movimiento) throw new Error("Movimiento no encontrado")
+
+    if (movimiento.factura_id) {
+      const { data: existente, error } = await supabase
+        .from("factura")
+        .select("*")
+        .eq("id", movimiento.factura_id)
+        .maybeSingle()
+      if (error) throw error
+      if (existente) return existente as Factura
+    }
+    if (!movimiento.delegacion_id) throw new Error("El movimiento no tiene delegación")
+
+    const insert: Record<string, unknown> = {
+      delegacion_id: movimiento.delegacion_id,
+      contacto_id: movimiento.contacto_id,
+      concepto: movimiento.concepto,
+      fecha_emision: movimiento.fecha,
+      importe: Math.abs(Number(movimiento.importe)) || null,
+      movimiento_id: movimiento.id,
+      origen: "movimiento",
+      creado_por: options.creadoPor ?? null,
+    }
+
+    const { data: creada, error: insertErr } = await supabase
+      .from("factura")
+      .insert(insert)
+      .select()
+      .single()
+    if (insertErr) throw insertErr
+
+    const { error: updErr } = await supabase
+      .from("movimiento")
+      .update({ factura_id: creada.id })
+      .eq("id", movimientoId)
+    if (updErr) {
+      await supabase.from("factura").delete().eq("id", creada.id)
+      throw updErr
+    }
+
+    return creada as Factura
+  }
+
+  /**
+   * Registra en archivo_adjunto (entidad='factura') un archivo ya subido a
+   * Storage (desde la bandeja o replicado desde movimiento_archivo). Idempotente.
+   */
+  static async registrarArchivoFactura(
+    facturaId: string,
+    delegacionId: string,
+    archivo: {
+      nombre_original: string
+      nombre_archivo: string
+      tipo_mime: string
+      tamanoBytes: number
+      bucket: string
+      path_storage: string
+      url_publica: string
+      descripcion?: string | null
+      subido_por: string
+    },
+  ): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase.from("archivo_adjunto").upsert(
+      [
+        {
+          entidad: "factura",
+          entidad_id: facturaId,
+          delegacion_id: delegacionId,
+          nombre_original: archivo.nombre_original,
+          nombre_archivo: archivo.nombre_archivo,
+          tipo_mime: archivo.tipo_mime,
+          tamano_bytes: archivo.tamanoBytes,
+          bucket: archivo.bucket,
+          path_storage: archivo.path_storage,
+          url_publica: archivo.url_publica,
+          es_factura: true,
+          descripcion: archivo.descripcion ?? null,
+          subido_por: archivo.subido_por,
+        },
+      ],
+      { onConflict: "entidad,entidad_id,path_storage", ignoreDuplicates: true },
+    )
+    if (error) throw error
+  }
+
+  /**
+   * Busca movimientos candidatos para conciliar con una factura.
+   * El importe manda (con un pequeño margen); la fecha y el contacto afinan.
+   * Devuelve la lista ordenada por puntuación (mejor primero).
+   */
+  static async findCandidatosMovimientoParaFactura(
+    delegacionId: string,
+    factura: { importe?: number | null; fecha_emision?: string | null; contacto_id?: string | null },
+    opts: { limit?: number; signal?: AbortSignal } = {},
+  ): Promise<MovimientoConRelaciones[]> {
+    const supabase = this.getClient() as any
+    let query = supabase
+      .from("movimiento")
+      .select(`
+        id,
+        delegacion_id,
+        cuenta_id,
+        fecha,
+        concepto,
+        descripcion,
+        importe,
+        notas,
+        ignorado,
+        categoria_id,
+        contacto_id,
+        factura_id,
+        creado_en,
+        cuenta:cuenta_id (
+          id,
+          nombre,
+          banco_nombre,
+          color
+        )
+      `)
+      .eq("delegacion_id", delegacionId)
+      .is("factura_id", null)
+      .eq("ignorado", false)
+      .lt("importe", 0)
+      .order("fecha", { ascending: false })
+
+    if (factura.importe != null && factura.importe > 0) {
+      // Facturas son gastos: el movimiento tendrá importe negativo.
+      const margen = margenImporteFactura(factura.importe)
+      query = query
+        .gte("importe", -(Number(factura.importe) + margen))
+        .lte("importe", -(Number(factura.importe) - margen))
+        .limit(opts.limit ?? 30)
+    } else {
+      // Sin importe conocido: últimos gastos sin factura.
+      query = query.limit(opts.limit ?? 30)
+    }
+
+    if (opts.signal) query = query.abortSignal(opts.signal)
+
+    const { data, error } = await query
+    if (error) throw error
+    const list = (data ?? []) as MovimientoConRelaciones[]
+
+    return list
+      .map((m) => ({ m, s: scoreCandidatoMovimiento(factura, m) }))
+      .sort((a, b) => b.s.score - a.s.score || (a.m.fecha < b.m.fecha ? 1 : -1))
+      .map(({ m }) => m)
+  }
+
+  /**
+   * Busca facturas candidatas para conciliar con un movimiento (lado movimiento).
+   * Solo facturas sin movimiento vinculado; el importe manda.
+   */
+  static async findCandidatosFacturaParaMovimiento(
+    movimientoId: string,
+    opts: { limit?: number; signal?: AbortSignal } = {},
+  ): Promise<FacturaConRelaciones[]> {
+    const supabase = this.getClient() as any
+
+    const { data: movimiento, error: movErr } = await supabase
+      .from("movimiento")
+      .select("id, delegacion_id, fecha, importe, contacto_id")
+      .eq("id", movimientoId)
+      .maybeSingle()
+    if (movErr) throw movErr
+    if (!movimiento?.delegacion_id) return []
+
+    let query = supabase
+      .from("factura")
+      .select(this.FACTURA_SELECT)
+      .eq("delegacion_id", movimiento.delegacion_id)
+      .is("movimiento_id", null)
+      .order("creado_en", { ascending: false })
+      .limit(opts.limit ?? 40)
+    if (opts.signal) query = query.abortSignal(opts.signal)
+
+    const { data, error } = await query
+    if (error) throw error
+    const facturas = (data ?? []) as FacturaConRelaciones[]
+
+    const importeMov = Math.abs(Number(movimiento.importe))
+    const scored = facturas
+      .map((f) => {
+        const score = scoreCandidatoMovimiento(
+          { importe: f.importe, fecha_emision: f.fecha_emision, contacto_id: f.contacto_id },
+          { importe: movimiento.importe, fecha: movimiento.fecha, contacto_id: movimiento.contacto_id } as any,
+        )
+        // Descarta las que se van mucho de precio (si ambas tienen importe)
+        const fueraDeMargen =
+          f.importe != null && Math.abs(Number(f.importe) - importeMov) > margenImporteFactura(importeMov)
+        return { f, score, fueraDeMargen }
+      })
+      .filter(({ fueraDeMargen }) => !fueraDeMargen)
+      .sort((a, b) => b.score.score - a.score.score)
+      .map(({ f }) => f)
+
+    return this.attachArchivosToFacturas(scored, opts.signal)
   }
 
   // ---------------------------------------------------------------------------

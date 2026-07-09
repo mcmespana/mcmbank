@@ -8,3 +8,5 @@
 * [5. Movimientos](05-movimientos.md)
 * [6. Panel de Control](06-dashboard.md)
 * [7. Centro de diagnóstico](07-diagnostico.md)
+* [8. API externa](08-api-externa.md)
+* [9. Facturas](09-facturas.md)

@@ -79,6 +79,34 @@ export type PagoMcmConRelaciones = PagoMcm & {
   > | null
 }
 
+export type Factura = Database["public"]["Tables"]["factura"]["Row"]
+export type FacturaInsert = Database["public"]["Tables"]["factura"]["Insert"]
+export type FacturaUpdate = Database["public"]["Tables"]["factura"]["Update"]
+// factura.estado y factura.origen son text en la BD; la app los restringe aquí.
+export type FacturaEstado = "bandeja" | "sin_pagar" | "pagada" | "pagada_fuera"
+export type FacturaOrigen = "subida" | "movimiento" | "email"
+
+export const FACTURA_ESTADOS: readonly FacturaEstado[] = [
+  "bandeja",
+  "sin_pagar",
+  "pagada",
+  "pagada_fuera",
+] as const
+
+export type FacturaConRelaciones = Omit<Factura, "estado" | "origen"> & {
+  estado: FacturaEstado
+  origen: FacturaOrigen
+  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "email" | "identificador_fiscal"> | null
+  movimiento?: Pick<
+    Database["public"]["Tables"]["movimiento"]["Row"],
+    "id" | "fecha" | "concepto" | "importe" | "cuenta_id"
+  > | null
+  archivos?: Pick<
+    ArchivoAdjunto,
+    "id" | "nombre_original" | "tipo_mime" | "url_publica" | "path_storage" | "bucket" | "tamano_bytes" | "subido_en"
+  >[] | null
+}
+
 export type BancoSyncLogStep = {
   t: string
   level: "info" | "warn" | "error" | "debug"

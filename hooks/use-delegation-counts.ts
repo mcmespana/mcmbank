@@ -12,6 +12,7 @@ export interface DelegationCounts {
   cuentas: number | null
   contactos: number | null
   pagosMcmPendientes: number | null
+  facturasBandeja: number | null
 }
 
 const INITIAL_COUNTS: DelegationCounts = {
@@ -20,6 +21,7 @@ const INITIAL_COUNTS: DelegationCounts = {
   cuentas: null,
   contactos: null,
   pagosMcmPendientes: null,
+  facturasBandeja: null,
 }
 
 const QUERY_TIMEOUT_MS = 10000
@@ -58,7 +60,7 @@ export function useDelegationCounts() {
     const organizacionId = delegation?.organizacion_id ?? null
 
     try {
-      const [movimientosRes, cuentasRes, categoriasRes, contactosRes, pagosMcmRes] = await Promise.all([
+      const [movimientosRes, cuentasRes, categoriasRes, contactosRes, pagosMcmRes, facturasRes] = await Promise.all([
         runQuery<{ count: number | null }>({
           label: "count-movimientos",
           table: "movimiento",
@@ -129,6 +131,20 @@ export function useDelegationCounts() {
             return { data: { count: typeof count === "number" ? count : 0 }, error }
           },
         }),
+        runQuery<{ count: number | null }>({
+          label: "count-facturas-bandeja",
+          table: "factura",
+          timeoutMs: QUERY_TIMEOUT_MS,
+          build: async (signal) => {
+            const { count, error } = await supabase
+              .from("factura")
+              .select("id", { head: true, count: "exact" })
+              .eq("delegacion_id", delegationId)
+              .eq("estado", "bandeja")
+              .abortSignal(signal)
+            return { data: { count: typeof count === "number" ? count : 0 }, error }
+          },
+        }),
       ])
 
       if (requestRef.current !== fetchId) return
@@ -144,6 +160,7 @@ export function useDelegationCounts() {
               : categoriasRes.data?.count ?? 0,
         contactos: contactosRes.error ? null : contactosRes.data?.count ?? 0,
         pagosMcmPendientes: pagosMcmRes.error ? null : pagosMcmRes.data?.count ?? 0,
+        facturasBandeja: facturasRes.error ? null : facturasRes.data?.count ?? 0,
       }
 
       const hasError =
@@ -151,7 +168,8 @@ export function useDelegationCounts() {
         Boolean(cuentasRes.error) ||
         (organizacionId !== null && Boolean(categoriasRes.error)) ||
         Boolean(contactosRes.error) ||
-        Boolean(pagosMcmRes.error)
+        Boolean(pagosMcmRes.error) ||
+        Boolean(facturasRes.error)
 
       if (hasError) {
         console.warn("⚠️ useDelegationCounts: error loading counts", {

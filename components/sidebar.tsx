@@ -82,8 +82,8 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
       name: "Facturas",
       href: "/facturas",
       icon: FileText,
-      count: null,
-      enabled: false,
+      count: getCountBadge(counts.facturasBandeja),
+      enabled: true,
     },
     {
       name: "Informes",

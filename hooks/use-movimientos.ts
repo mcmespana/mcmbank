@@ -18,6 +18,7 @@ interface MovimientosFilters {
   amountFrom?: number
   amountTo?: number
   uncategorized?: boolean
+  facturaPendiente?: boolean
 }
 
 const DEFAULT_PAGE_SIZE = 100
@@ -163,6 +164,8 @@ export function useMovimientos(
             categoria_id,
             contacto_id,
             pago_mcm_id,
+            factura_id,
+            factura_pendiente,
             adjunto_principal_url,
             creado_por,
             creado_en,
@@ -238,6 +241,9 @@ export function useMovimientos(
           query = applyAbsoluteAmountFilter(query, memoizedFilters.amountFrom, memoizedFilters.amountTo)
           if (memoizedFilters.uncategorized) {
             query = query.is("categoria_id", null)
+          }
+          if (memoizedFilters.facturaPendiente) {
+            query = query.eq("factura_pendiente", true)
           }
         }
 

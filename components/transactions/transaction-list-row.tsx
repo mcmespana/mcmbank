@@ -194,6 +194,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                       description={movement.descripcion}
                       fileCount={movement.archivos?.length || 0}
                       pagoMcmId={(movement as any).pago_mcm_id}
+                      facturaPendiente={movement.factura_pendiente}
                       onOpenFiles={() => onOpenFiles?.(movement)}
                     />
                   </div>

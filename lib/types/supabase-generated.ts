@@ -685,6 +685,78 @@ export type Database = {
           },
         ]
       }
+      factura: {
+        Row: {
+          actualizado_en: string
+          concepto: string | null
+          contacto_id: string | null
+          creado_en: string
+          creado_por: string | null
+          datos_ia: Json | null
+          delegacion_id: string
+          email_remitente: string | null
+          estado: string
+          fecha_emision: string | null
+          id: string
+          importe: number | null
+          moneda: string
+          notas: string | null
+          numero: string | null
+          origen: string
+        }
+        Insert: {
+          actualizado_en?: string
+          concepto?: string | null
+          contacto_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          datos_ia?: Json | null
+          delegacion_id: string
+          email_remitente?: string | null
+          estado?: string
+          fecha_emision?: string | null
+          id?: string
+          importe?: number | null
+          moneda?: string
+          notas?: string | null
+          numero?: string | null
+          origen?: string
+        }
+        Update: {
+          actualizado_en?: string
+          concepto?: string | null
+          contacto_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          datos_ia?: Json | null
+          delegacion_id?: string
+          email_remitente?: string | null
+          estado?: string
+          fecha_emision?: string | null
+          id?: string
+          importe?: number | null
+          moneda?: string
+          notas?: string | null
+          numero?: string | null
+          origen?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factura_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contacto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factura_delegacion_id_fkey"
+            columns: ["delegacion_id"]
+            isOneToOne: false
+            referencedRelation: "delegacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_credencial: {
         Row: {
           actualizado_en: string
@@ -888,6 +960,8 @@ export type Database = {
           external_id: string | null
           external_id_source: string | null
           external_raw: Json | null
+          factura_id: string | null
+          factura_pendiente: boolean
           fecha: string
           id: string
           ignorado: boolean
@@ -917,6 +991,8 @@ export type Database = {
           external_id?: string | null
           external_id_source?: string | null
           external_raw?: Json | null
+          factura_id?: string | null
+          factura_pendiente?: boolean
           fecha: string
           id?: string
           ignorado?: boolean
@@ -946,6 +1022,8 @@ export type Database = {
           external_id?: string | null
           external_id_source?: string | null
           external_raw?: Json | null
+          factura_id?: string | null
+          factura_pendiente?: boolean
           fecha?: string
           id?: string
           ignorado?: boolean
@@ -986,6 +1064,13 @@ export type Database = {
             columns: ["cuenta_id"]
             isOneToOne: false
             referencedRelation: "cuenta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimiento_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "factura"
             referencedColumns: ["id"]
           },
           {

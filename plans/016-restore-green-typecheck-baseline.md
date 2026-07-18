@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bc851b..HEAD -- app/api/bank-sync/ app/api/admin/users/ lib/types/database.ts lib/enable-banking/ package.json`
+> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- app/api/bank-sync/ app/api/admin/users/ lib/types/database.ts lib/enable-banking/ package.json`
 > On drift, compare "Current state" excerpts before proceeding; mismatch = STOP.
 
 ## Status
@@ -16,7 +16,7 @@
 - **Risk**: LOW — type-level changes only; no runtime behavior change intended
 - **Depends on**: none (do before or alongside 015; plan 011's Step 1 and plan 019's CI gate depend on this)
 - **Category**: bug / dx
-- **Planned at**: commit `0bc851b`, 2026-07-17
+- **Planned at**: commit `d759ec9`, 2026-07-18
 
 ## Why this matters
 

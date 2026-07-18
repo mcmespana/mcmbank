@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bc851b..HEAD -- components/transactions/transaction-import-panel.tsx lib/utils/`
+> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- components/transactions/transaction-import-panel.tsx lib/utils/`
 > On drift, compare "Current state" excerpts before proceeding; mismatch = STOP.
 
 ## Status
@@ -16,7 +16,7 @@
 - **Risk**: MED — changes money-import behavior (dates); mitigated by extraction-first + tests
 - **Depends on**: plans/015-test-baseline-vitest-characterization.md (DONE required)
 - **Category**: bug / tech-debt
-- **Planned at**: commit `0bc851b`, 2026-07-17
+- **Planned at**: commit `d759ec9`, 2026-07-18
 
 ## Why this matters
 

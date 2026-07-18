@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bc851b..HEAD -- package.json pnpm-lock.yaml package-lock.json README.md .github/ .husky/`
+> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- package.json pnpm-lock.yaml package-lock.json README.md .github/ .husky/`
 > On drift, compare "Current state" before proceeding; mismatch = STOP.
 
 ## Status
@@ -16,7 +16,7 @@
 - **Risk**: LOW-MED (the Next.js bump is the only behavioral change; gated by build+smoke)
 - **Depends on**: plans/016-restore-green-typecheck-baseline.md (for the CI typecheck gate; if 016 isn't DONE, wire CI without the typecheck step and note it). Best after plan 010 (pinning) to avoid lockfile churn — sequencing only.
 - **Category**: dx / dependencies / docs
-- **Planned at**: commit `0bc851b`, 2026-07-17
+- **Planned at**: commit `d759ec9`, 2026-07-18
 
 ## Why this matters
 

@@ -17,12 +17,12 @@ cualquier orden o en paralelo. No pisan a los planes funcionales de `plans/`
 | [001](001-contactos-section-header-alignment.md) | Cabecera de Contactos alineada al patrón de sección | /contactos | DONE (2026-07-17) |
 | [002](002-contacto-selector-reuse-tipo-badge.md) | ContactoSelector reutiliza ContactoTipoBadge y pill Global | movimientos | DONE (2026-07-17) |
 | [003](003-delete-contacto-dialog-destructive-title.md) | Título destructivo rojo en DeleteContactoDialog | /contactos | DONE (2026-07-17) |
-| [004](004-unify-amount-display-owner.md) | Unificar los dos `AmountDisplay` duplicados (tokens `transaction-amount-*`) | movimientos + categorías | TODO |
-| [005](005-use-loading-spinner-owner.md) | Spinners de página → owner `LoadingSpinner` | movimientos + categorías | TODO |
-| [006](006-file-delete-dialog-destructive-title.md) | Título destructivo rojo en "¿Eliminar archivo?" | movimientos | TODO |
-| [007](007-animate-bulk-selection-toolbar.md) | Animar entrada de la barra de selección masiva | movimientos | TODO |
-| [008](008-animate-mobile-filters-panel.md) | Animar apertura del panel de filtros móvil | movimientos | TODO |
-| [009](009-animate-empty-state-entrance.md) | Entrada suave de EmptyState (toda la app) | global | TODO |
-| [010](010-animate-import-success-message.md) | Entrada del mensaje de éxito de importación | movimientos | TODO |
+| [004](004-unify-amount-display-owner.md) | Unificar los dos `AmountDisplay` duplicados (tokens `transaction-amount-*`) | movimientos + categorías | DONE (2026-07-18) |
+| [005](005-use-loading-spinner-owner.md) | Spinners de página → owner `LoadingSpinner` | movimientos + categorías | DONE (2026-07-18) |
+| [006](006-file-delete-dialog-destructive-title.md) | Título destructivo rojo en "¿Eliminar archivo?" | movimientos | DONE (2026-07-18) |
+| [007](007-animate-bulk-selection-toolbar.md) | Animar entrada de la barra de selección masiva | movimientos | DONE (2026-07-18) |
+| [008](008-animate-mobile-filters-panel.md) | Animar apertura del panel de filtros móvil | movimientos | DONE (2026-07-18) |
+| [009](009-animate-empty-state-entrance.md) | Entrada suave de EmptyState (toda la app) | global | DONE (2026-07-18) |
+| [010](010-animate-import-success-message.md) | Entrada del mensaje de éxito de importación | movimientos | DONE (2026-07-18) |
 
 Estados: TODO | IN PROGRESS | DONE (fecha) | BLOCKED (motivo en una línea)

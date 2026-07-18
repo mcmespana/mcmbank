@@ -3,7 +3,7 @@
 import { useState, memo } from "react"
 import { BankAvatar } from "./bank-avatar"
 import { CategoryChip } from "./category-chip"
-import { AmountDisplay } from "@/components/ui/amount-display"
+import { AmountDisplay } from "@/components/amount-display"
 import { AccountTooltip } from "./account-tooltip"
 import { TransactionRowIndicators } from "./transaction-row-indicators"
 import { formatDate } from "@/lib/utils/format"

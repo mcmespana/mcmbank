@@ -847,7 +847,7 @@ export function TransactionImportPanel({
 
           {/* Status Messages */}
           {!isImporting && message && (
-            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-3">
+            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-3 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-300 motion-reduce:zoom-in-100 motion-reduce:slide-in-from-bottom-0">
               <p className="text-sm text-green-800 dark:text-green-300 font-medium">✅ {message}</p>
             </div>
           )}

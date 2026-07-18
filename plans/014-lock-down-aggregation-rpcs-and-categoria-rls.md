@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bc851b..HEAD -- scripts/ lib/services/database.ts`
+> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- scripts/ lib/services/database.ts`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -18,7 +18,7 @@
 - **Risk**: LOW (SQL-only, additive checks; the one behavioral risk is called out in Step 3)
 - **Depends on**: none
 - **Category**: security
-- **Planned at**: commit `0bc851b`, 2026-07-17
+- **Planned at**: commit `d759ec9`, 2026-07-18
 
 ## Why this matters
 

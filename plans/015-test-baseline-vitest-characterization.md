@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bc851b..HEAD -- package.json lib/enable-banking/dedup.ts hooks/use-categorias.ts hooks/use-movimientos.ts`
+> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- package.json lib/enable-banking/dedup.ts hooks/use-categorias.ts hooks/use-movimientos.ts`
 > On any in-scope drift, compare "Current state" excerpts before proceeding;
 > on a mismatch, STOP.
 
@@ -17,7 +17,7 @@
 - **Risk**: LOW (purely additive — no production code changes except optional named exports)
 - **Depends on**: none
 - **Category**: tests
-- **Planned at**: commit `0bc851b`, 2026-07-17
+- **Planned at**: commit `d759ec9`, 2026-07-18
 
 ## Why this matters
 

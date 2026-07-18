@@ -15,7 +15,7 @@ export function EmptyState({ title, description, icon, className, children }: Em
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-lg border bg-card p-8 text-center shadow-sm",
+        "flex flex-col items-center justify-center gap-3 rounded-lg border bg-card p-8 text-center shadow-sm animate-in fade-in-0 zoom-in-95 duration-200 motion-reduce:zoom-in-100",
         className
       )}
     >

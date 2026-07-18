@@ -584,7 +584,7 @@ export function TransactionManager() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando delegaciones...</p>
         </div>
       </div>
@@ -755,7 +755,7 @@ export function TransactionManager() {
           </div>
 
           {selectionActive && (
-            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 sm:p-4 shadow-sm">
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 sm:p-4 shadow-sm animate-in fade-in-0 slide-in-from-top-2 duration-200 motion-reduce:animate-none">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-1 items-start gap-3">
                   <Checkbox
@@ -828,7 +828,7 @@ export function TransactionManager() {
           )}
 
           {filtersOpen && isMobile && (
-            <Card className="lg:hidden p-4 border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+            <Card className="lg:hidden p-4 border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800 animate-in fade-in-0 slide-in-from-top-2 duration-200 motion-reduce:animate-none">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-blue-600" />

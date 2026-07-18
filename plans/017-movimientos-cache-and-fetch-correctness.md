@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bc851b..HEAD -- contexts/movimientos-cache-context.tsx hooks/use-movimientos.ts lib/services/`
+> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- contexts/movimientos-cache-context.tsx hooks/use-movimientos.ts lib/services/`
 > On drift, compare "Current state" excerpts before proceeding; mismatch = STOP.
 
 ## Status
@@ -16,7 +16,7 @@
 - **Risk**: MED — touches the two hottest data paths in the app
 - **Depends on**: plans/015-test-baseline-vitest-characterization.md (DONE required)
 - **Category**: bug
-- **Planned at**: commit `0bc851b`, 2026-07-17
+- **Planned at**: commit `d759ec9`, 2026-07-18
 
 ## Why this matters
 

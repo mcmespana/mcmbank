@@ -24,6 +24,7 @@ import useDelegationRole from "@/hooks/use-delegation-role"
 import { DatabaseService } from "@/lib/services/database"
 import { Search, Plus, X, HelpCircle } from "lucide-react"
 import autoAnimate from "@formkit/auto-animate"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import { CategoryCard } from "./category-card"
@@ -900,7 +901,7 @@ export function CategoryList() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando categorías...</p>
         </div>
       </div>

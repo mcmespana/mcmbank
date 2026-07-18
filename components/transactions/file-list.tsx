@@ -10,7 +10,8 @@ import {
   Save, 
   X,
   FileIcon,
-  Eye
+  Eye,
+  AlertTriangle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -258,7 +259,10 @@ export function FileList({
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>¿Eliminar archivo?</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              ¿Eliminar archivo?
+            </DialogTitle>
             <DialogDescription>
               Esta acción eliminará permanentemente el archivo &quot;{fileToDelete?.nombre_original}&quot;. 
               Esta acción no se puede deshacer.

@@ -1,4 +1,4 @@
-# Plan 015: Establish a Vitest verification baseline with characterization tests on money-critical pure logic
+# Plan 015: Characterization tests for Enable Banking dedupe/money mapping and category ordering
 
 > **Executor instructions**: Follow this plan step by step. Run every
 > verification command and confirm the expected result before moving to the
@@ -6,216 +6,173 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- package.json lib/enable-banking/dedup.ts hooks/use-categorias.ts hooks/use-movimientos.ts`
+> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- package.json lib/enable-banking/dedup.ts hooks/use-categorias.ts vitest.config.*`
 > On any in-scope drift, compare "Current state" excerpts before proceeding;
 > on a mismatch, STOP.
 
 ## Status
 
 - **Priority**: P1 — prerequisite: plans 017 and 018 must not start before this lands.
-- **Effort**: M
-- **Risk**: LOW (purely additive — no production code changes except optional named exports)
+- **Effort**: S (rescoped 2026-07-18: the Vitest harness now already exists in the repo)
+- **Risk**: LOW (purely additive — no production code changes except one named export)
 - **Depends on**: none
 - **Category**: tests
 - **Planned at**: commit `d759ec9`, 2026-07-18
 
 ## Why this matters
 
-This repo has **zero tests and no test runner** (`package.json` scripts:
-only `build`, `dev`, `lint`, `lint:fix`, `start`; no `*.test.*` files
-exist), while `next.config.mjs` sets `typescript.ignoreBuildErrors: true`
-— so there is currently no automated signal at all that a change broke
-something. That is untenable for a banking ledger app: the functions that
-decide whether a synced bank transaction is a duplicate, whether an amount
-is income or expense, and which transactions a filter returns are all
-pure, cheap to test, and currently unguarded. This plan adds Vitest, a
-`test` script, and characterization tests that lock in **current**
-behavior (including two known quirks documented below, asserted as-is so
-later fix-plans can flip the assertions deliberately).
+As of `d759ec9` the repo has Vitest (`vitest ^4.1.8`, script
+`"test": "vitest run"`) and four test files (`lib/utils/date-input.test.ts`,
+`lib/utils/format.test.ts`, `lib/utils/category-permissions.test.ts`,
+`lib/db/amount-filter.test.ts`) — but the **money-critical Enable Banking
+logic has zero tests**: the function that decides whether a synced bank
+transaction is a duplicate (`resolveExternalId`) and the one that decides
+its sign and date (`mapTransactionToMovimiento`) are unguarded. So is the
+category-ordering helper (`sortCategorias`). A regression in any of these
+silently corrupts the ledger or the UI ordering. These are pure functions
+— the cheapest, highest-value tests in the codebase. This plan adds
+characterization tests that lock in **current** behavior, including two
+known quirks asserted as-is so later fix-plans can flip the assertions
+deliberately.
 
 ## Current state
 
-- `package.json` — `"type": "module"`, pnpm, no test infra. Node >= 20.
-- `lib/enable-banking/dedup.ts` — two pure exported functions:
+- Test infra exists: run `pnpm test` first and record the passing
+  baseline; open `lib/db/amount-filter.test.ts` and one of the
+  `lib/utils/*.test.ts` files and **match their structure and style**
+  (describe/it naming, fixture style, import conventions).
+- `lib/enable-banking/dedup.ts` (unchanged between 0bc851b and d759ec9;
+  re-verify via the drift check) — two pure exported functions:
   - `resolveExternalId(tx)` (lines 29-69): 3-tier dedupe id —
     `transaction_id` → `tid:` prefix; else `entry_reference` → `eref:`;
     else sha256 over 10 joined fields (booking/value/transaction dates,
     currency, amount, `credit_debit_indicator`, counterparty fallback
-    chain, joined `remittance_information`, `reference_number`,
-    `bank_transaction_code`) truncated to 32 hex chars with `ch:` prefix.
-  - `mapTransactionToMovimiento(tx, ctx)` (lines 75-138): notable current
-    behaviors to characterize:
+    chain iban→bban→`other.identification`→name, joined
+    `remittance_information`, `reference_number`, `bank_transaction_code`)
+    truncated to 32 hex chars with `ch:` prefix.
+  - `mapTransactionToMovimiento(tx, ctx)` (lines 75-138): behaviors to
+    characterize:
     - line 99: `const isDebit = tx.credit_debit_indicator === "DBIT"` —
       anything else (including `undefined` or `"dbit"`) counts as credit.
     - line 101: non-finite `parseFloat` result → `importe = 0` (silent).
-    - line 104: missing all three dates → today's date via `new Date()`.
-    - line 127: `concepto` truncated to 500 chars.
-  - Types come from `./types` (`EBTransaction`) — build fixtures as plain
-    objects cast with `as EBTransaction` if optional fields fight you.
-- `hooks/use-categorias.ts:14` — exported? Check: the audit found a
-  `sortCategorias` helper at the top of this file plus
-  `orden_efectivo`/override resolution around lines 107-118. If the helper
-  is module-local, add a named `export` (allowed production change).
-- `hooks/use-movimientos.ts:31` — `applyAbsoluteAmountFilter(query, from, to)`,
-  already exported; builds PostgREST `.or()` clauses matching absolute
-  values of `importe` (both sign ranges). It takes a Supabase query
-  builder; test it with a minimal stub object that records `gte`/`lte`/`or`
-  calls and returns itself.
-- Convention: kebab-case filenames, `@/` imports, 2-space indent, ESLint 9
-  flat config at `eslint.config.js` (ignores `.next/`, `node_modules/`,
-  `scripts/`).
+    - line 104: missing all three dates → today's date via `new Date()`
+      (in tests, always pass at least one date to avoid clock dependence).
+    - line 127: `concepto` truncated to 500 chars; fallback chain
+      remittance[0] → creditor.name → debtor.name → reference_number →
+      `"Movimiento bancario"`.
+  - Types from `./types` (`EBTransaction`) — build fixtures as plain
+    objects cast `as EBTransaction` if optional fields fight you.
+- `hooks/use-categorias.ts:14` — `sortCategorias` is a module-local
+  `const`; export it (named export, no behavior change) to test it. Read
+  the surrounding orden-efectivo/override resolution before writing
+  expectations.
+- Note: `applyAbsoluteAmountFilter` already lives in
+  `lib/db/amount-filter.ts` **with tests** — do NOT duplicate them.
 
 ## Commands you will need
 
 | Purpose   | Command                        | Expected on success |
 |-----------|---------------------------------|----------------------|
-| Install   | `npx pnpm install`              | exit 0 |
-| Add deps  | `npx pnpm add -D vitest`        | exit 0 (pin the resolved version, never `"latest"`) |
-| Tests     | `pnpm test`                     | all pass |
+| Tests     | `pnpm test`                     | all pass (existing baseline + new) |
 | Lint      | `pnpm lint`                     | exit 0 |
-| Typecheck | `npx tsc --noEmit`              | error count unchanged vs. before this plan (pre-existing failures are plan 016's job) |
+| Typecheck | `npx tsc --noEmit`              | error count unchanged vs. before this plan (a failing baseline is plan 016's job) |
 
 ## Scope
 
 **In scope**:
-- `package.json` (+ `pnpm-lock.yaml`): add `vitest` devDependency (pinned
-  semver, NOT `"latest"`), add `"test": "vitest run"` and
-  `"test:watch": "vitest"` scripts.
-- `vitest.config.ts` (create): node environment, include
-  `lib/**/*.test.ts` and `hooks/**/*.test.ts`, alias `@/` → repo root.
-- New test files:
-  - `lib/enable-banking/dedup.test.ts`
-  - `hooks/use-categorias.sort.test.ts` (tests only the pure sort helper)
-  - `hooks/use-movimientos.filter.test.ts` (tests only `applyAbsoluteAmountFilter`)
-- `hooks/use-categorias.ts` — ONLY if the sort helper is not exported: add
-  `export` to it. No behavior change.
-- `eslint.config.js` — only if lint flags the new test files in a way that
-  needs a targeted override; prefer conforming the tests instead.
+- New test files: `lib/enable-banking/dedup.test.ts`,
+  `hooks/use-categorias.sort.test.ts`.
+- `hooks/use-categorias.ts` — ONLY adding `export` to `sortCategorias`.
+- `vitest.config.*` — only if `hooks/**` is excluded from test discovery
+  and needs adding to the include globs.
 
 **Out of scope**:
-- React Testing Library / component or hook rendering tests — pure
-  functions only in this baseline.
+- Component/hook rendering tests; React Testing Library.
 - Fixing ANY behavior the tests reveal (the `importe → 0` fallback, the
-  missing-indicator-means-credit rule). Characterize, don't fix — fixes
-  are plans 017/018 and a future EB-hardening pass.
-- CI wiring (plan 019 consumes `pnpm test`).
-- `components/transactions/transaction-import-panel.tsx` — its parsing
-  logic is not yet importable; plan 018 extracts it and adds its tests.
+  missing-indicator-means-credit rule). Characterize, don't fix.
+- The existing four test files.
+- `components/transactions/transaction-import-panel.tsx` (plan 018 covers
+  its parsing).
 
 ## Git workflow
 
-- Branch: `advisor/015-vitest-baseline`
-- Conventional commits, e.g. `test: add vitest baseline and characterization tests for EB dedupe and money mapping`
+- Branch: `advisor/015-eb-characterization-tests`
+- Conventional commits, e.g. `test: characterize EB dedupe id resolution and money mapping`
 - Do NOT push or open a PR unless explicitly instructed.
 
 ## Steps
 
-### Step 1: Install and configure Vitest
+### Step 1: Record the baseline
 
-`npx pnpm add -D vitest`, then create `vitest.config.ts`:
+Run `pnpm test` and note the current pass count. Open the existing test
+files listed above and note the structural conventions to copy.
 
-```ts
-import { defineConfig } from "vitest/config"
-import path from "node:path"
+**Verify**: `pnpm test` → exit 0 (record N passing).
 
-export default defineConfig({
-  resolve: { alias: { "@": path.resolve(__dirname) } },
-  test: {
-    environment: "node",
-    include: ["lib/**/*.test.ts", "hooks/**/*.test.ts"],
-  },
-})
-```
+### Step 2: `lib/enable-banking/dedup.test.ts` — `resolveExternalId`
 
-Add scripts `"test": "vitest run"`, `"test:watch": "vitest"`.
-
-**Verify**: `pnpm test` → exit 0 with "no test files found" (or 0 tests) —
-runner works.
-
-### Step 2: Characterization tests for `resolveExternalId`
-
-In `lib/enable-banking/dedup.test.ts`, table-driven cases:
-
+Table-driven cases:
 1. `transaction_id` present → `tid:<id>`, source `transaction_id`
-   (whitespace-only `transaction_id` falls through).
+   (whitespace-only id falls through to the next tier).
 2. No `transaction_id`, `entry_reference` present → `eref:` / `entry_reference`.
-3. Neither → `ch:` prefix, 32-hex-char hash, source `composite_hash`.
+3. Neither → `ch:` prefix, 32 hex chars, source `composite_hash`.
 4. Determinism: same input twice → identical id.
 5. Sensitivity: two same-day/same-amount transactions differing only in
-   `creditor_account.iban` OR in `remittance_information` produce
+   `creditor_account.iban` OR only in `remittance_information` →
    **different** hashes (the documented "5 identical monthly payments"
-   case, see the comment block at `dedup.ts:11-28`).
-6. Counterparty fallback order: iban beats bban beats
-   `other.identification` beats `creditor.name` (assert via hash
-   inequality when higher-priority field changes).
+   case, comment block at `dedup.ts:11-28`).
+6. Counterparty priority: changing a higher-priority field (iban) changes
+   the hash even when a lower one (name) is constant.
 
-### Step 3: Characterization tests for `mapTransactionToMovimiento`
+### Step 3: same file — `mapTransactionToMovimiento`
 
-Cases (assert CURRENT behavior, with a `// characterization:` comment on
-the two quirks):
+1. `"DBIT"` + `"100.50"` → `importe === -100.5`.
+2. `"CRDT"` + `"100.50"` → `+100.5`; `"CRDT"` + `"-100.50"` → `+100.5`.
+3. Missing indicator → positive (characterization of a suspected bug —
+   comment it `// characterization: see plans/README.md deferred list`).
+4. Unparseable amount `"abc"` → `0` (same characterization comment).
+5. `fecha` preference: booking_date → value_date → transaction_date.
+6. `concepto` fallback chain and 500-char truncation.
+7. `descripcion` = remittance lines 2+ joined with `\n`; `null` when none.
 
-1. `credit_debit_indicator: "DBIT"`, amount `"100.50"` → `importe === -100.5`.
-2. `"CRDT"`, `"100.50"` → `+100.5`; negative raw string `"-100.50"` with
-   `"CRDT"` → `+100.5` (Math.abs behavior).
-3. Missing indicator → treated as credit (positive) — characterization of
-   the known LOW-confidence risk; do not "fix".
-4. Unparseable amount (`"abc"`) → `importe === 0` — characterization.
-5. `fecha` prefers `booking_date`, then `value_date`, then
-   `transaction_date` (pass all three, then progressively omit).
-6. `concepto` = first remittance line; falls back to creditor name, debtor
-   name, reference_number, then literal `"Movimiento bancario"`; truncated
-   at 500 chars.
-7. `descripcion` = remittance lines 2+ joined by `\n`, `null` when none.
+### Step 4: `hooks/use-categorias.sort.test.ts`
 
-### Step 4: Tests for the category sort helper and `applyAbsoluteAmountFilter`
+Export `sortCategorias`, then cover (after reading the implementation):
+effective-order precedence (override beats base), alphabetical tiebreak,
+and whatever inactive/visibility handling the function actually implements
+— assert current behavior.
 
-- `hooks/use-categorias.sort.test.ts`: read `hooks/use-categorias.ts`
-  first; export the pure sort/orden-efectivo helper if needed. Cover:
-  override order beats base order; equal effective order falls back to
-  alphabetical; inactive/visibility override handling as implemented.
-- `hooks/use-movimientos.filter.test.ts`: stub builder
-  `{ calls: [], gte(...a){this.calls.push(["gte",...a]);return this}, lte(...){...}, or(...){...} }`.
-  Cover: no bounds → untouched; from-only; to-only; both bounds — assert
-  the exact clause strings produced for each branch (read the
-  implementation at `hooks/use-movimientos.ts:31` and lock in its current
-  output, including the single-level `.or()` PostgREST workaround noted in
-  commit 60b6fd8).
-
-**Verify (steps 2-4)**: `pnpm test` → all tests pass (expect ~20+).
+**Verify (2-4)**: `pnpm test` → all pass (baseline N + ≥ 15 new).
 
 ## Test plan
 
 This plan IS the test plan. Final: `pnpm test` green, `pnpm lint` green,
-`npx tsc --noEmit` unchanged error count.
+tsc error count unchanged.
 
 ## Done criteria
 
-- [ ] `pnpm test` exits 0 with ≥ 20 passing tests across 3 files
-- [ ] `grep -n '"test"' package.json` shows the vitest script
-- [ ] `grep -c '"latest"' package.json` did not increase
-- [ ] Production-code diff is empty except (optionally) one added `export` keyword in `hooks/use-categorias.ts`
+- [ ] `pnpm test` exits 0 with ≥ 15 new passing tests in the 2 new files
+- [ ] Production-code diff is exactly one added `export` keyword (`git diff --stat` shows only `hooks/use-categorias.ts` ±1 line outside tests/config)
 - [ ] `pnpm lint` exits 0
 - [ ] `plans/README.md` status row updated
 
 ## STOP conditions
 
-- `vitest` cannot resolve the `@/` alias or ESM setup after two config
-  attempts — report the exact error rather than restructuring source files.
-- The sort helper in `hooks/use-categorias.ts` turns out not to be pure
-  (touches React state or Supabase) — skip that test file, note it, and
-  finish the other two.
+- `lib/enable-banking/dedup.ts` no longer matches the excerpts (drifted
+  since d759ec9) — re-read and re-derive expectations from the current
+  code; if the functions were removed/renamed, STOP and report.
+- `sortCategorias` turns out not to be pure — skip that file, note it,
+  finish the dedup tests.
 - Any test you write fails against current behavior — your expectation is
-  wrong, not the code: re-read the implementation. Characterization tests
-  must encode what the code DOES today. If you cannot reconcile, report
-  the input/output pair instead of "fixing" production code.
+  wrong, not the code: characterization tests encode what the code DOES.
+  If you cannot reconcile, report the input/output pair instead of
+  "fixing" production code.
 
 ## Maintenance notes
 
-- Plans 017/018 depend on this baseline and will extend it. Plan 019 wires
-  `pnpm test` into CI.
-- The two characterized quirks (missing `credit_debit_indicator` → credit;
-  unparseable amount → 0) are candidate real bugs pending verification
-  against live Enable Banking payloads — when fixed, flip those specific
-  assertions in the same commit as the fix.
-- Reviewers: check no fixture contains real bank data — fixtures must be
-  synthetic.
+- Plans 017/018 depend on this baseline. Plan 019's CI runs `pnpm test`.
+- The two characterized quirks (missing indicator → credit; unparseable
+  amount → 0) are candidate real bugs pending verification against live
+  Enable Banking payloads — when fixed, flip those assertions in the same
+  commit as the fix.
+- Reviewers: fixtures must be synthetic — no real bank data.

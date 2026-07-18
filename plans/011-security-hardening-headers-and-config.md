@@ -6,6 +6,34 @@
 >
 > **Drift check**: `git diff --stat 0bc851b..HEAD -- next.config.mjs app/api/admin/users/route.ts lib/supabase/middleware.ts`
 
+## ADDENDUM 2026-07-18 (advisor re-audit at commit `d759ec9`)
+
+1. **Sequencing update**: run plan 016 (green `tsc --noEmit` baseline +
+   `typecheck` script) BEFORE this plan — it makes Step 1's
+   `ignoreBuildErrors` removal a non-event instead of a STOP.
+2. **Additional error-leak sinks to include in the sanitization step**
+   (verified at `0bc851b`; re-locate by grep, the bank-sync files have
+   since grown): the Enable Banking routes stringify provider error
+   bodies into client-visible surfaces —
+   `app/api/bank-sync/callback/route.ts` builds
+   `err.message + JSON.stringify(err.body).slice(0,500)` and puts it in
+   BOTH the `?bank_sync_error=` redirect query param and the
+   `banco_conexion.ultimo_error` column; `app/api/bank-sync/auth/route.ts`
+   and `disconnect/route.ts` return `JSON.stringify(err.body)` /
+   `err.message` in a `detalle` JSON field. Replace with a generic Spanish
+   user-facing message + a short correlation id; log the full body
+   server-side only (`console.error` is acceptable here).
+3. **New hardening item — bank-sync callback consistency check** (same
+   file, same theme): the callback parses `state` as
+   `conexionId:cuentaId` and uses BOTH with the service-role admin client
+   without verifying the two rows share a `delegacion_id` or that the
+   conexión is still pending. Add, before the `cuenta` update: load the
+   `banco_conexion` row, assert
+   `cuenta.delegacion_id === conexion.delegacion_id` (and ideally
+   `conexion.estado` is the expected pre-link state); on mismatch redirect
+   with a generic error and do not link. Add these files to the in-scope
+   list and the drift check.
+
 ## Status
 
 - **Priority**: P2

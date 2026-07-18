@@ -20,10 +20,9 @@
 
 ## Why this matters
 
-The repo has an active PR-based workflow (PRs #138-#141 merged recently)
-but **no CI** — nothing runs lint, typecheck, tests, or build before
-merge. Meanwhile: **two lockfiles** are committed (`package-lock.json` AND
-`pnpm-lock.yaml`) though the documented workflow is pnpm; `husky` +
+The repo has an active PR-based workflow (18 PRs merged in one day
+between commits 0bc851b and d759ec9) but **no CI** — nothing runs lint, typecheck, tests, or build before
+merge. Meanwhile `husky` +
 `lint-staged` are installed but wired to nothing (no `.husky/`, no
 `prepare` script, no lint-staged config); there is **no `.env.example`**
 and the README documents only 4 of the ~14 env vars the code reads — a
@@ -36,12 +35,10 @@ lockfile pins the resolved version).
 ## Current state
 
 - No `.github/` directory (verified). No `.husky/`. No `.env.example`.
-- `package.json`: scripts `build/dev/lint/lint:fix/start` (+ `typecheck`
-  and `test` if plans 015/016 landed); devDeps include `husky ^9.1.7`,
-  `lint-staged ^16.1.6`; no `packageManager` field; `pnpm.overrides`
-  block exists (so pnpm is the intended manager); `next: ^16.1.6`.
-- Tracked lockfiles: both `package-lock.json` and `pnpm-lock.yaml`
-  (`git ls-files | grep lock`).
+- `package.json`: scripts `build/dev/lint/lint:fix/start` (+ `test`; `typecheck` only once plan 016 lands); devDeps include `husky ^9.1.7`,
+  `lint-staged ^16.1.6`; `pnpm.overrides` block exists; `next: ^16.1.6`.
+- Lockfile state at d759ec9: only `pnpm-lock.yaml` tracked;
+  `packageManager: pnpm@10.33.0` set (Step 1 just verifies this held).
 - Env vars read by code (grep `process.env` across `app lib scripts`):
   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
   `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL`,
@@ -70,9 +67,10 @@ lockfile pins the resolved version).
 
 **In scope**:
 - `.github/workflows/ci.yml` (create)
-- Delete `package-lock.json`; add it to `.gitignore`; add
-  `"packageManager": "pnpm@<installed major.minor.patch>"` to `package.json`
-  (get the version from `npx pnpm --version`).
+- (RESOLVED UPSTREAM at d759ec9 — verify and skip: `package-lock.json` is
+  no longer tracked and `"packageManager": "pnpm@10.33.0"` exists. If the
+  drift check shows this regressed, restore it as originally specified:
+  delete the npm lockfile, gitignore it, keep the `packageManager` field.)
 - `"prepare": "husky"` script; `.husky/pre-commit` running
   `npx lint-staged`; a `lint-staged` key in `package.json` running
   `eslint --fix` on staged `*.{ts,tsx}`.
@@ -95,19 +93,18 @@ lockfile pins the resolved version).
 
 - Branch: `advisor/019-ci-and-dx`
 - One commit per step (5 commits), conventional commits:
-  `chore(ci): add GitHub Actions pipeline`, `chore: standardize on pnpm lockfile`,
-  `chore: wire husky + lint-staged pre-commit`, `docs: add .env.example and complete README env vars`,
+  `chore(ci): add GitHub Actions pipeline`, `chore: wire husky + lint-staged pre-commit`, `docs: add .env.example and complete README env vars`,
   `fix(deps): bump next to 16.2.x (security)`.
 - Do NOT push or open a PR unless explicitly instructed.
 
 ## Steps
 
-### Step 1: Single lockfile + packageManager
+### Step 1: Confirm single lockfile + packageManager (done upstream)
 
-Delete `package-lock.json`, append `package-lock.json` to `.gitignore`,
-add the `packageManager` field. Run `npx pnpm install`.
-
-**Verify**: `git ls-files | grep -c package-lock.json` → 0; `npx pnpm install` exit 0 with no lockfile diff.
+**Verify**: `git ls-files | grep -c package-lock.json` → 0 and
+`grep -c packageManager package.json` → 1. If either fails, do the
+restore described in Scope, then re-verify. Ensure `package-lock.json` is
+listed in `.gitignore` (add it if absent — one-line change).
 
 ### Step 2: CI workflow
 

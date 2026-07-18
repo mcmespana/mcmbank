@@ -44,7 +44,7 @@ and has already diverged (the hook paginates; the cache doesn't).
 ## Current state
 
 - `contexts/movimientos-cache-context.tsx`:
-  - lines 140-233: builds the query — full select string with embedded
+  - (line numbers from 0bc851b; the file changed only 7 lines to d759ec9 — re-locate landmarks by content) lines ~140-233: builds the query — full select string with embedded
     `cuenta`/`categoria`/`contacto`, `{ count: "exact" }` (line 191),
     filters, `.order(...)`, then `await query.abortSignal(ac.signal)`
     with **no `.range()`**.
@@ -58,16 +58,29 @@ and has already diverged (the hook paginates; the cache doesn't).
   - lines 282-300 `invalidateCache(delegacionId?)`: already exists and
     correctly deletes entries by delegation prefix — the fix for (3)
     builds on this.
-- `hooks/use-movimientos.ts`:
-  - lines 122-126: early return `if (fetchingRef.current)` sits BEFORE the
-    abort-previous-request logic (lines 129-135); combined with the main
-    effect (lines 320-333) which sets `lastFetchKeyRef.current = fetchKey`
-    *before* calling `fetchMovimientosRef.current(0, false)`, a fetch
-    issued while one is in flight is silently skipped AND the key is
-    marked as fetched — so it never retries for that key.
-  - lines 351-359 `revalidate`: skips while fetching (acceptable for
-    focus revalidation; do not change).
-  - The hook's own query pipeline (lines ~155-267) duplicates the cache's.
+- `hooks/use-movimientos.ts` (line numbers re-verified at d759ec9):
+  - line 97: early return `if (fetchingRef.current)` sits BEFORE the
+    abort-previous-request logic (the `fetchingRef.current = true`
+    assignment is at line 113, after the abort block); combined with the
+    main effect which sets `lastFetchKeyRef.current = fetchKey` *before*
+    calling `fetchMovimientosRef.current(0, false)`, a fetch issued while
+    one is in flight is silently skipped AND the key is marked as fetched
+    — so it never retries for that key.
+  - line 333 `revalidate`: skips while fetching (acceptable for focus
+    revalidation; do not change).
+  - The hook's own query pipeline duplicates the cache's (same select
+    string, filters, contacto lookup — diff the two before extracting).
+  - `applyAbsoluteAmountFilter` ALREADY lives in `lib/db/amount-filter.ts`
+    (with tests) and is imported + re-exported by this hook — do not move
+    it again; the new shared builder should import it from `lib/db`.
+- **Repo direction (new since the audit)**: `@tanstack/react-query` is now
+  installed with `contexts/query-provider.tsx`, and `hooks/use-cuentas.ts`
+  / `use-category-breakdown.ts` / `use-informes.ts` already use it. The
+  movimientos path has NOT migrated. This plan intentionally fixes the
+  existing bespoke path (smallest safe diff for a money-critical surface)
+  — but shape Step 1's extraction so it can serve as the `queryFn` of a
+  future React Query migration (pure async function taking
+  `{ delegacionId, filters, page, signal }`).
 - Conventions: services layer in `lib/services/database.ts`
   (`DatabaseService` static methods, client-side); `@/` imports; Spanish
   domain names (`movimiento`, `delegacion`).
@@ -87,8 +100,7 @@ and has already diverged (the hook paginates; the cache doesn't).
 - New file `lib/services/movimientos-query.ts` — the single shared query
   builder (select string + filter application + contacto-id resolution),
   pure/injectable enough to unit-test filter application with a stub
-  builder (same technique as `hooks/use-movimientos.filter.test.ts` from
-  plan 015).
+  builder (same technique as the existing `lib/db/amount-filter.test.ts`).
 - `contexts/movimientos-cache-context.tsx` — consume the shared builder;
   add an explicit `.range()`; read `count`; replace filter-blind mutation.
 - `hooks/use-movimientos.ts` — consume the shared builder; fix the
@@ -123,17 +135,17 @@ Create `lib/services/movimientos-query.ts` exporting:
 - `applyMovimientoFilters(query, filters, contactoIdsExtra)` — the filter
   chain (fecha range, categoriaIds, cuentaId, contactoIds, contactoTipos
   incl. the `00000000-...` sentinel, busqueda `.or()` escaping, absolute
-  amount via the existing `applyAbsoluteAmountFilter` from
-  `hooks/use-movimientos.ts:31` — move that function here and re-export it
-  from the hook for compatibility), `uncategorized`.
+  amount via `applyAbsoluteAmountFilter` imported from
+  `lib/db/amount-filter.ts` — already extracted there, just import it),
+  `uncategorized`.
 - `resolveContactoIdsExtra(supabase, filters, signal)` — the contacto
   name/tipo lookup currently duplicated.
 
 Switch BOTH `use-movimientos.ts` and the cache context to these. Behavior
 must be identical — this step is pure extraction.
 
-**Verify**: `pnpm test` (plan 015's filter tests still pass — update their
-import path), `pnpm typecheck` / unchanged tsc count, `pnpm lint`.
+**Verify**: `pnpm test` (existing suite stays green), `pnpm typecheck` /
+unchanged tsc count, `pnpm lint`.
 
 ### Step 2: Fix truncation in the cache
 
@@ -155,12 +167,13 @@ matches the real count for a small delegation.
 ### Step 3: Fix the dropped-fetch race in `use-movimientos.ts`
 
 Reorder so a new fetch for a NEW key aborts the in-flight one instead of
-bailing: move the `if (fetchingRef.current) return` guard so it applies
-only to same-key duplicate calls (e.g. pass the triggering `fetchKey` into
-`fetchMovimientos` and compare, or track `inFlightKeyRef`). The abort
-logic at lines 129-135 already exists — the fix is to reach it. Preserve:
-the Strict-Mode cleanup behavior (lines 335-347), the revalidate guard
-(line 353), `loadMore`'s guard (line 364).
+bailing: move the `if (fetchingRef.current) return` guard (line 97 at
+d759ec9 — re-locate with `grep -n "fetchingRef.current" hooks/use-movimientos.ts`)
+so it applies only to same-key duplicate calls (e.g. pass the triggering
+`fetchKey` into `fetchMovimientos` and compare, or track `inFlightKeyRef`).
+The abort-previous logic just below it already exists — the fix is to
+reach it. Preserve: the Strict-Mode cleanup in the main effect's return,
+the revalidate guard (line 333), and `loadMore`'s guard.
 
 **Verify**: manual — `pnpm dev`, `/transacciones`, rapidly toggle two
 category filters while throttling network in devtools ("Slow 3G"): final

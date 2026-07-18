@@ -6,15 +6,17 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- app/api/bank-sync/ app/api/admin/users/ lib/types/database.ts lib/enable-banking/ package.json`
-> On drift, compare "Current state" excerpts before proceeding; mismatch = STOP.
+> **Drift check (run first)**: `git diff --stat d759ec9..HEAD -- package.json lib/types/database.ts app/ components/`
+> The error inventory below was taken at `d759ec9` (2026-07-18); your first
+> action is to regenerate it (Step 1) — the inventory drifts fast in this
+> repo, the method below does not.
 
 ## Status
 
 - **Priority**: P1
-- **Effort**: S/M (bounded: the full current error list is enumerated below)
+- **Effort**: S/M
 - **Risk**: LOW — type-level changes only; no runtime behavior change intended
-- **Depends on**: none (do before or alongside 015; plan 011's Step 1 and plan 019's CI gate depend on this)
+- **Depends on**: none (plan 011's Step 1 and plan 019's CI typecheck gate depend on THIS)
 - **Category**: bug / dx
 - **Planned at**: commit `d759ec9`, 2026-07-18
 
@@ -22,145 +24,138 @@
 
 `npx tsc --noEmit` currently **fails**, and nobody notices because
 `next.config.mjs` sets `typescript.ignoreBuildErrors: true` and
-`package.json` has no `typecheck` script. The failures are not noise: the
-entire `app/api/bank-sync/*` route family — the code that writes synced
-bank transactions — types its Supabase rows as `never`, meaning the
-compiler has been fully overruled on the app's newest money-writing
-surface. Until this is green, no other plan can use typecheck as a
-verification gate.
+`package.json` has no `typecheck` script. History shows why this rots:
+between commits `0bc851b` and `d759ec9` (one day, 18 merged PRs) an entire
+family of `never`-typed Supabase queries in `app/api/bank-sync/*` appeared
+and was fixed again without the gate ever existing — and a NEW batch of
+errors (missing module + implicit-any parameters in the new
+facturas/cuentas code) shipped in its place. Until `tsc --noEmit` is green
+and scripted, no plan in this directory can use typechecking as a
+verification gate, and every merge can silently regress types on
+money-handling code.
 
 ## Current state
 
-Verified by running `npx tsc --noEmit` at commit `0bc851b` (2026-07-17).
-Two error families:
+Inventory at `d759ec9` — `npx tsc --noEmit` prints 56 error lines, two
+families (regenerate before trusting):
 
-1. **Next.js 16 async route params** — `.next/dev/types/validator.ts`
-   rejects `app/api/admin/users/[id]/route.ts`: its `PUT` (and check
-   `DELETE`/other verbs in the same file) is declared as
-   `(req: Request, { params }: { params: { id: string } })` but Next 16
-   requires `context: { params: Promise<{ id: string }> }` (await it in
-   the body).
-2. **`never`-typed Supabase rows across `app/api/bank-sync/{auth,callback,disconnect,run?}/route.ts`**
-   — e.g. `auth/route.ts:51` `Property 'delegacion_id' does not exist on
-   type 'never'`, `:64` insert into `"banco_conexion"` rejects the payload;
-   `callback/route.ts:49,72-116` same pattern. Diagnose before fixing:
-   `lib/types/database.ts` DOES define `banco_conexion` (line 409) and
-   `banco_sync_log` (line 462), so the table types exist. Likely causes,
-   in order of probability: (a) columns referenced by the routes (e.g.
-   `session_id`, `external_account_uid`, `sync_enabled`, `origen` on
-   `cuenta`; fields on `banco_conexion`) are missing/misnamed in
-   `lib/types/database.ts` relative to `scripts/038_enable_banking_schema.sql`,
-   which makes supabase-js collapse the row type to `never`; (b) the
-   client construction in those routes (see `lib/supabase/admin.ts`) loses
-   the `Database` generic. Read the actual error chain top-down — the
-   FIRST missing column named by tsc is usually the root cause.
-3. `.next/dev/types/` and `.next/types/` duplicates of family 1 — they
-   disappear when the source file is fixed; never edit `.next/`.
+1. `app/layout.tsx(5,31): error TS2307: Cannot find module
+   '@vercel/speed-insights/next'` — the dep IS in `package.json`
+   (`@vercel/speed-insights ^2.0.0`); most likely `node_modules` is stale.
+   `npx pnpm install` first; only if the error survives a fresh install is
+   there a real problem.
+2. `TS7006` implicit-`any` parameters clustered in recently merged
+   feature code: `components/cuentas/cuentas-manager.tsx` (~10 sites:
+   callbacks like `(item)`, `(cuenta)`, `(a, b)` in sorts/maps),
+   `components/dashboard/category-analysis.tsx` (`(row)`, `(sum, r)`
+   reducers), and possibly siblings — get the full list from the fresh
+   run. These are annotation-only fixes: give each callback parameter the
+   type of the array element it iterates (the arrays are typed a few lines
+   up; hover/inspect the source collection).
 
-Schema source of truth for the missing columns:
-`scripts/038_enable_banking_schema.sql` (tables `banco_conexion`,
-`banco_sync_log`, plus `ALTER TABLE cuenta ADD COLUMN` statements). Confirm
-against the live DB if reachable (Supabase MCP `list_tables`, project
-`bnmgfkyfwcdvyhuqbaah`) — the live DB, not the SQL file, wins on conflict.
+Also missing: a `"typecheck"` script in `package.json` (verify — scripts
+at `d759ec9`: `build/dev/lint/lint:fix/start/test`).
+
+Note: `eslint.config.js` sets `@typescript-eslint/no-explicit-any: off` —
+adding `any` annotations would "fix" tsc but is forbidden here: use real
+element types.
 
 ## Commands you will need
 
 | Purpose   | Command             | Expected on success |
 |-----------|----------------------|----------------------|
+| Install   | `npx pnpm install`   | exit 0 |
 | Typecheck | `npx tsc --noEmit`   | exit 0 at the end of this plan |
 | Lint      | `pnpm lint`          | exit 0 |
+| Tests     | `pnpm test`          | all pass |
 | Build     | `pnpm build`         | exit 0 |
 
 ## Scope
 
 **In scope**:
-- `lib/types/database.ts` — add/correct column definitions for
-  `banco_conexion`, `banco_sync_log`, and the `cuenta` columns added in
-  migration 038 (`banco_conexion_id`, `external_account_uid`,
-  `external_account_hash`, `sync_enabled`, `origen`, `iban`, …).
-- `app/api/bank-sync/auth/route.ts`, `callback/route.ts`,
-  `disconnect/route.ts`, `run/route.ts` (if it errors) — only type-level
-  adjustments (awaited params, removing now-unneeded `as any`).
-- `app/api/admin/users/[id]/route.ts` — async params signature.
+- Type annotations in the files the fresh inventory names (at plan time:
+  `components/cuentas/cuentas-manager.tsx`,
+  `components/dashboard/category-analysis.tsx`, `app/layout.tsx` only if
+  the module error survives reinstall).
 - `package.json` — add `"typecheck": "tsc --noEmit"`.
+- `lib/types/database.ts` — only if an error traces to a genuinely missing
+  column vs. the live schema (see STOP conditions).
 
 **Out of scope**:
-- Removing `ignoreBuildErrors: true` from `next.config.mjs` — that is plan
-  011 Step 1; this plan makes it possible.
-- Any runtime/behavioral change to the bank-sync flow. If a type error can
-  only be fixed by changing runtime logic, STOP and report.
-- The widespread `(supabase as any)` casts in hooks/components — a
-  separate cleanup; only touch casts inside the in-scope route files.
+- Removing `ignoreBuildErrors: true` from `next.config.mjs` — plan 011
+  Step 1; this plan makes it possible.
+- Any runtime/behavioral change. If a type error can only be fixed by
+  changing what the code does, STOP and report.
+- Sweeping the codebase for `(supabase as any)` casts or other latent
+  type debt not surfaced by `tsc --noEmit`.
 
 ## Git workflow
 
 - Branch: `advisor/016-green-typecheck`
-- Conventional commits, e.g. `fix(types): add Enable Banking columns to Database types; adopt Next 16 async route params`
+- Conventional commits, e.g. `fix(types): annotate implicit-any callbacks in cuentas/dashboard; add typecheck script`
 - Do NOT push or open a PR unless explicitly instructed.
 
 ## Steps
 
-### Step 1: Fix the admin route's async params
+### Step 1: Fresh install + fresh inventory
 
-In `app/api/admin/users/[id]/route.ts`, change every handler to
-`async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> })`
-and `const { id } = await context.params` at the top. Mirror the existing
-error-response style in the file.
+`npx pnpm install`, then `npx tsc --noEmit 2>&1 | tee /tmp/tsc-baseline.txt`.
+Group the errors by file. If the `@vercel/speed-insights` TS2307 is gone
+after install, note that and move on.
 
-**Verify**: `npx tsc --noEmit 2>&1 | grep "admin/users"` → no matches.
+**Verify**: inventory file exists; error count recorded.
 
-### Step 2: Diagnose and fix the `never` family
+### Step 2: Annotate implicit-any parameters file by file
 
-Run `npx tsc --noEmit 2>&1 | grep "bank-sync" | head -5`, open the first
-error, and compare the referenced table's type in `lib/types/database.ts`
-column-by-column against `scripts/038_enable_banking_schema.sql` (and the
-live DB if reachable). Add every missing column to Row/Insert/Update.
-Repeat until the bank-sync family is clean. Remove any `as any`/`as never`
-that the fixed types make unnecessary — but do not add new casts to
-silence residual errors.
+For each TS7006 site, derive the element type from the collection being
+iterated (e.g. if the array is `CuentaConDelegacion[]`, annotate
+`(cuenta: CuentaConDelegacion)`); prefer importing existing types from
+`lib/types/database.ts` / local interfaces over inventing new ones, and
+NEVER use `any`. Re-run tsc after each file.
 
-**Verify**: `npx tsc --noEmit 2>&1 | grep -c "bank-sync"` → `0`.
+**Verify**: `npx tsc --noEmit 2>&1 | grep -c TS7006` → `0`.
 
-### Step 3: Zero the remaining list, add the script
+### Step 3: Zero the remainder, add the script
 
-Fix any remaining errors the full run still shows (there should be none
-beyond families 1-2 at plan time; a small number of new ones may have
-accrued — bounded STOP condition below). Add
+Fix any residual errors (bounded per STOP conditions). Add
 `"typecheck": "tsc --noEmit"` to `package.json` scripts.
 
-**Verify**: `pnpm typecheck` → exit 0. `pnpm build` → exit 0. `pnpm lint` → exit 0.
+**Verify**: `pnpm typecheck` → exit 0. `pnpm build` → exit 0. `pnpm lint`
+→ exit 0. `pnpm test` → all pass.
 
 ## Test plan
 
-Type-only change; the gate is `pnpm typecheck` exiting 0 plus a manual
-smoke: `pnpm dev`, log in, open `/cuentas` and confirm no new runtime
-errors in the console (the bank-sync routes are exercised only with EB
-credentials — do not attempt a live sync for this plan).
+Type-only change; gates are the commands above plus a manual smoke:
+`pnpm dev`, log in, open `/cuentas` and the dashboard `/` — no new console
+errors, both render.
 
 ## Done criteria
 
 - [ ] `pnpm typecheck` exists and exits 0
-- [ ] `pnpm build` exits 0
-- [ ] No runtime-logic diffs: `git diff` on route files shows only signatures, awaited params, and removed casts
+- [ ] `pnpm build`, `pnpm lint`, `pnpm test` exit 0
+- [ ] `git diff` shows only type annotations / imports / the script line — no runtime-logic changes
+- [ ] No `any` added anywhere (`git diff | grep '^+' | grep -c ': any'` → 0)
 - [ ] `plans/README.md` status row updated
 
 ## STOP conditions
 
-- After fixing families 1-2 the full error list still exceeds ~10 errors
-  in files this plan doesn't scope — report the list; the maintainer may
-  want a dedicated cleanup plan instead of scope creep here.
-- A bank-sync error can only be silenced by changing what the code does at
-  runtime (e.g. the code writes a column that truly doesn't exist in the
-  live DB) — that's a real bug, not a type bug: STOP and report it
-  explicitly (table, column, call site).
-- `lib/types/database.ts` disagrees with the live DB in a way that implies
-  applied-but-uncommitted migrations beyond 038 — report the drift list.
+- The fresh inventory exceeds ~30 errors or spans files far beyond the
+  two named components — report the grouped list; the maintainer may want
+  it split into a dedicated cleanup plan.
+- An error traces to a column/table genuinely absent from
+  `lib/types/database.ts` vs. the live DB (schema drift) — report table +
+  column + call site; updating `database.ts` is in scope only when you can
+  confirm the live schema (Supabase MCP `list_tables`, project
+  `bnmgfkyfwcdvyhuqbaah`); never guess a column into the types.
+- The `@vercel/speed-insights` error survives a fresh `pnpm install` —
+  check whether `app/layout.tsx`'s import path matches the package's
+  exports for the installed v2; if the fix isn't an obvious import-path
+  correction, STOP and report.
 
 ## Maintenance notes
 
-- Plan 011 Step 1 (remove `ignoreBuildErrors`) becomes trivially safe once
-  this is green — recommend doing it immediately after.
-- Plan 019 adds `pnpm typecheck` to CI so this baseline can't rot again.
-- Whenever a migration lands in `scripts/`, `lib/types/database.ts` must be
-  updated in the same PR — that's the CLAUDE.md convention this plan
-  re-establishes.
+- Plan 011 Step 1 (remove `ignoreBuildErrors`) should follow immediately —
+  and plan 019 wires `pnpm typecheck` into CI so this can't rot a third
+  time.
+- Whenever a migration lands in `scripts/`, `lib/types/database.ts` must
+  be updated in the same PR (CLAUDE.md convention).

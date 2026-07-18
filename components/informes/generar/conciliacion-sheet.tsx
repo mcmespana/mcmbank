@@ -219,7 +219,7 @@ export function ConciliacionSheet({
       <div
         key={item.id}
         className={cn(
-          "flex items-center gap-2.5 rounded-lg border bg-background px-2.5 py-2 transition-all duration-300",
+          "flex items-center gap-2.5 rounded-lg border bg-background px-2.5 py-2 transition-[background-color,border-color,opacity] duration-200",
           item.arreglado && "border-emerald-200 bg-emerald-50/40 opacity-70 dark:border-emerald-900 dark:bg-emerald-900/10",
         )}
       >
@@ -293,8 +293,8 @@ export function ConciliacionSheet({
                 </div>
                 <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                    style={{ width: `${total ? (arreglados / total) * 100 : 0}%` }}
+                    className="h-full w-full origin-left rounded-full bg-emerald-500 transition-transform duration-500 ease-out"
+                    style={{ transform: `scaleX(${total ? arreglados / total : 0})` }}
                   />
                 </div>
               </div>

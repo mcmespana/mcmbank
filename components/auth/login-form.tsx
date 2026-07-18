@@ -73,7 +73,7 @@ export default function LoginForm() {
         <Cpu className="h-7 w-7 text-muted-foreground" />
       </div>
 
-      <Card className="backdrop-blur-2xl bg-card/90 border-2 border-border/30 shadow-2xl transition-shadow duration-500 hover:shadow-3xl">
+      <Card className="backdrop-blur-2xl bg-card/90 border-2 border-border/30 shadow-2xl transition-shadow duration-300 hover:shadow-3xl">
         <CardHeader className="space-y-2 text-center">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 transition-[transform,box-shadow] duration-300 hover:scale-110 hover:shadow-xl border border-primary/20">
             <Building2 className="h-10 w-10 text-primary" />

@@ -43,7 +43,11 @@ Two confirmed bugs live in it:
 
 ## Current state
 
-- `components/transactions/transaction-import-panel.tsx` (985 lines):
+- `components/transactions/transaction-import-panel.tsx` (~900 lines; the
+  file shed ~84 lines between 0bc851b and d759ec9, so ALL line numbers
+  below are approximate — re-locate every landmark by content/grep before
+  editing; `grep -c 25569` still returns 3 at d759ec9, confirming the
+  three date-parsing copies and the bug persist):
   - Date parsing appears in **three near-identical copies** at lines
     ~228-248, ~288-308, ~358-378 (per bank format). Each does:
     ```ts

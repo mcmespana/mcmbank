@@ -67,15 +67,15 @@ repo-vs-live drift for the objects it touches.
   - a live helper `is_gestor_central()` exists (SECURITY DEFINER):
     returns true when `membresia` has a row for `auth.uid()` with
     `rol = 'gestor_central'`.
-- Client call sites of the RPCs (must keep working for logged-in members):
-  - `lib/services/database.ts:401` — `client.rpc("get_financial_summary", {...})`
-  - `lib/services/database.ts:427` — `get_monthly_trend`
-  - `lib/services/database.ts:449` — `get_category_breakdown`
+- Client call sites of the RPCs (must keep working for logged-in members)
+  — locate with `grep -n 'rpc("get_' lib/services/database.ts` (line
+  numbers drift; at plan time all three `client.rpc("get_financial_summary" | "get_monthly_trend" | "get_category_breakdown")`
+  calls live in `DatabaseService`).
   These run in the browser with the *authenticated* user session
   (hooks `use-financial-summary.ts`, `use-monthly-trend-data.ts`,
   `use-category-breakdown.ts`).
 - Migration convention: numbered SQL files in `scripts/`, next free number
-  is `041` (highest existing is `040_create_contacto.sql`). Migrations are
+  is `049` (highest existing is `048_factura_pagos_multiples.sql`; note the repo also contains duplicate 036-038 numbers — re-check the max when you start). Migrations are
   applied by hand / via the Supabase SQL editor or MCP `apply_migration` —
   there is no automated migration runner in the repo.
 
@@ -94,10 +94,10 @@ with plain `execute_sql`.**
 ## Scope
 
 **In scope**:
-- New file `scripts/041_secure_aggregation_rpcs_and_categoria_rls.sql`
+- New file `scripts/049_secure_aggregation_rpcs_and_categoria_rls.sql`
 - `scripts/037_aggregation_functions.sql` — append a header comment noting
-  it is superseded by 041 (do not rewrite its body; history stays).
-- Applying 041 to the live project (with operator confirmation).
+  it is superseded by 049 (do not rewrite its body; history stays).
+- Applying 049 to the live project (with operator confirmation).
 
 **Out of scope**:
 - Any TypeScript/React change. The RPC signatures do not change.
@@ -117,12 +117,12 @@ with plain `execute_sql`.**
 
 ## Steps
 
-### Step 1: Write migration `scripts/041_secure_aggregation_rpcs_and_categoria_rls.sql`
+### Step 1: Write migration `scripts/049_secure_aggregation_rpcs_and_categoria_rls.sql`
 
 The migration must do exactly this:
 
 ```sql
--- 041: Cerrar exposición de datos: RPCs de agregación y RLS de categoria
+-- 049: Cerrar exposición de datos: RPCs de agregación y RLS de categoria
 -- (1) Las RPCs SECURITY DEFINER no comprobaban pertenencia y eran
 --     ejecutables por anon → cualquier poseedor de la anon key podía leer
 --     los totales financieros de cualquier delegación.
@@ -206,7 +206,7 @@ this plan).
 
 ### Step 2: Apply to the live project and test as a member
 
-Apply migration 041 to project `bnmgfkyfwcdvyhuqbaah` via
+Apply migration 049 to project `bnmgfkyfwcdvyhuqbaah` via
 `apply_migration` (or hand to the operator). Then verify:
 
 1. `select rowsecurity from pg_tables where tablename in ('categoria','categoria_orden_delegacion');`
@@ -224,7 +224,7 @@ Apply migration 041 to project `bnmgfkyfwcdvyhuqbaah` via
 ### Step 3: Mark 037 superseded and record advisor re-check
 
 Append to the top of `scripts/037_aggregation_functions.sql`:
-`-- SUPERSEDIDO por 041_secure_aggregation_rpcs_and_categoria_rls.sql (membership check + revoke anon).`
+`-- SUPERSEDIDO por 049_secure_aggregation_rpcs_and_categoria_rls.sql (membership check + revoke anon).`
 
 Re-run the Supabase security advisors (MCP `get_advisors`, type
 `security`) and record in your summary that
@@ -242,7 +242,7 @@ no new JS tests are required by this plan.
 
 ## Done criteria
 
-- [ ] `scripts/041_secure_aggregation_rpcs_and_categoria_rls.sql` committed
+- [ ] `scripts/049_secure_aggregation_rpcs_and_categoria_rls.sql` committed
 - [ ] Live: `rowsecurity = true` on `categoria` and `categoria_orden_delegacion`
 - [ ] Live: `anon` cannot execute the three aggregation functions; a non-member authenticated user calling them for a foreign delegation gets an error, a member gets data
 - [ ] Dashboard `/` and `/categorias` still render data for a logged-in member

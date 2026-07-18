@@ -139,7 +139,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                 }
               }}
               className={cn(
-                "absolute -inset-2 sm:-inset-2.5 flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer",
+                "absolute -inset-2 sm:-inset-2.5 flex items-center justify-center rounded-full transition-[opacity,background-color] duration-200 cursor-pointer",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 isSelected
                   ? "opacity-100 pointer-events-auto bg-primary/5 hover:bg-primary/10"
@@ -150,7 +150,7 @@ export const TransactionListRow = memo(function TransactionListRow({
             >
               <span
                 className={cn(
-                  "h-9 w-9 rounded-full border-2 flex items-center justify-center transition-all shadow-md",
+                  "h-9 w-9 rounded-full border-2 flex items-center justify-center transition-[background-color,border-color,color,box-shadow] duration-150 shadow-md",
                   isSelected
                     ? "bg-primary border-primary text-primary-foreground shadow-lg"
                     : "bg-background border-input text-transparent",

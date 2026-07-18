@@ -11,6 +11,43 @@
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
 
+---
+
+## ADDENDUM 2026-07-18 (advisor re-audit at commit `d759ec9`) — READ FIRST, it changes this plan's premise
+
+Live verification with Supabase access (project `bnmgfkyfwcdvyhuqbaah`)
+resolved the ambiguity this plan hedged on:
+
+1. **The buckets ARE public**: the Supabase security advisor reports
+   `public_bucket_allows_listing` for `facturas`, `documentos` (and
+   `candidate-photos`). So invoice access is NOT broken — it is
+   **publicly exposed**: financial documents are readable and listable by
+   anyone, no auth. The plan's fix direction (signed URLs, stop trusting
+   `url_publica`) is unchanged and MORE urgent, but reframe severity:
+   this is a security exposure, not a broken feature.
+2. **STOP-condition conversion**: the original STOP condition "you find
+   evidence a bucket was manually set to public" is now a known fact — do
+   NOT stop for it. Execute the signed-URL code path as written (it works
+   against public buckets too), and add a final coordination step: report
+   to the operator that `facturas` and `documentos` must be flipped to
+   **private** in the Supabase dashboard AND `storage.objects` RLS
+   policies added (delegation-membership-scoped) immediately after this
+   plan's code deploys. The flip itself stays out of executor scope (infra
+   change, human-gated) — but the plan is not DONE-DONE until the operator
+   confirms it, so mark the status row `DONE (pendiente flip de buckets)`.
+3. **Drift warning**: between `0bc851b` and `d759ec9`,
+   `lib/services/file-service.ts` changed (~34 lines) and a new facturas
+   section shipped (`scripts/047_create_factura.sql`,
+   `scripts/048_factura_pagos_multiples.sql`, `scripts/042_create_archivo_adjunto.sql`,
+   `lib/services/informes.ts`, etc.). `getPublicUrl` is still present in
+   `file-service.ts` (verified at d759ec9: lines 103 and 145 — note there
+   are now TWO call sites, not one). Before executing: re-run
+   `grep -rn "getPublicUrl" lib/ components/ app/ hooks/` and extend the
+   in-scope list to EVERY current call site, including any in the new
+   facturas/archivo_adjunto code — the original scope list predates that
+   feature. Update the drift-check SHA to `d759ec9` mentally; excerpt line
+   numbers in "Current state" are approximate.
+
 ## Status
 
 - **Priority**: P1

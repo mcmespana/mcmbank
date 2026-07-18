@@ -6,6 +6,23 @@
 >
 > **Drift check**: `git diff --stat 0bc851b..HEAD -- package.json pnpm-lock.yaml`
 
+## ADDENDUM 2026-07-18 (advisor re-audit at commit `d759ec9`)
+
+Still valid: `grep -c '"latest"' package.json` → 27 at `d759ec9`. Two
+additions to scope:
+
+1. **Remove (don't pin) `path` and `url`**: `package.json` lists
+   `"path": "latest"` and `"url": "latest"` as dependencies. These are npm
+   registry packages that shadow Node.js built-in modules — they serve no
+   purpose (bundlers/Node resolve the builtins regardless) and a floating
+   `latest` on them is pure supply-chain attack surface. Delete both lines
+   instead of pinning them, then verify `pnpm build` still exits 0.
+2. `pnpm audit --prod` (2026-07-17) reported 28 advisories (11 high). Most
+   trace to floating/stale transitives; after pinning, re-run it and paste
+   the residual high/critical list into your summary. The `next` HIGH
+   advisory is handled separately by plan 019 Step 5 — do not bump `next`
+   here (out of scope rule stands).
+
 ## Status
 
 - **Priority**: P1

@@ -59,8 +59,8 @@ export function DeleteContactoDialog({ contacto, open, onOpenChange, onDelete, o
     <Dialog open={open} onOpenChange={(v) => !busy && onOpenChange(v)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="h-5 w-5" />
             Eliminar contacto
           </DialogTitle>
           <DialogDescription>

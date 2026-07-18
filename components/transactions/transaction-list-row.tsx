@@ -26,7 +26,6 @@ interface TransactionListRowProps {
   isSelected: boolean
   selectionActive: boolean
   onSelectionChange: (selected: boolean, rangeFromAnchor?: boolean) => void
-  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -40,7 +39,6 @@ export const TransactionListRow = memo(function TransactionListRow({
   isSelected,
   selectionActive,
   onSelectionChange,
-  onRequestCreateCategory,
 }: TransactionListRowProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -90,7 +88,7 @@ export const TransactionListRow = memo(function TransactionListRow({
     <div className="relative" data-testid="transaction-row">
       <div
         className={cn(
-          "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-200 cursor-pointer shadow-sm hover:shadow-md",
+          "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-150 cursor-pointer shadow-sm hover:shadow-md",
           !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10",
           isSelected && "border-primary/60 bg-primary/5 ring-1 ring-primary/40 hover:bg-primary/10",
         )}
@@ -141,7 +139,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                 }
               }}
               className={cn(
-                "absolute -inset-2 sm:-inset-2.5 flex items-center justify-center rounded-full transition-[opacity,background-color] duration-200 cursor-pointer",
+                "absolute -inset-2 sm:-inset-2.5 flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 isSelected
                   ? "opacity-100 pointer-events-auto bg-primary/5 hover:bg-primary/10"
@@ -152,7 +150,7 @@ export const TransactionListRow = memo(function TransactionListRow({
             >
               <span
                 className={cn(
-                  "h-9 w-9 rounded-full border-2 flex items-center justify-center transition-[color,background-color,border-color,box-shadow] shadow-md",
+                  "h-9 w-9 rounded-full border-2 flex items-center justify-center transition-all shadow-md",
                   isSelected
                     ? "bg-primary border-primary text-primary-foreground shadow-lg"
                     : "bg-background border-input text-transparent",
@@ -171,8 +169,6 @@ export const TransactionListRow = memo(function TransactionListRow({
                   <Input
                     value={conceptValue}
                     onChange={(e) => setConceptValue(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
                     onFocus={(e) => e.target.select()}
                     onBlur={handleConceptSave}
                     onKeyDown={(e) => {
@@ -190,11 +186,9 @@ export const TransactionListRow = memo(function TransactionListRow({
                     >
                       {movement.concepto}
                     </h3>
-                    <TransactionRowIndicators
-                      description={movement.descripcion}
+                    <TransactionRowIndicators 
+                      description={movement.descripcion} 
                       fileCount={movement.archivos?.length || 0}
-                      pagoMcmId={(movement as any).pago_mcm_id}
-                      facturaPendiente={movement.factura_pendiente}
                       onOpenFiles={() => onOpenFiles?.(movement)}
                     />
                   </div>
@@ -213,11 +207,6 @@ export const TransactionListRow = memo(function TransactionListRow({
                       movement={movement}
                       account={account}
                       onCategoryChange={(categoryId) => handleCategoryChange(categoryId)}
-                      onCreateCategory={
-                        onRequestCreateCategory
-                          ? () => onRequestCreateCategory(handleCategoryChange)
-                          : undefined
-                      }
                     />
                   )}
                   {movement.contacto && (

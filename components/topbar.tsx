@@ -22,9 +22,6 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Guard de hidratación: marcamos "montado" en cliente para evitar desajustes
-    // SSR al pintar el tema. Es el patrón estándar, no estado derivable.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 
@@ -135,7 +132,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           variant="ghost"
           size="sm"
           onClick={handleManualClick}
-          className="hidden sm:inline-flex gap-2 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors duration-300"
+          className="hidden sm:inline-flex gap-2 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors duration-150"
         >
           <BookOpen className="h-4 w-4" />
           <span>Manual</span>
@@ -146,7 +143,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           <Button
             variant="ghost"
             size="sm"
-            className="w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-[color,background-color,transform] duration-300 hover:scale-110 flex-shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-[transform,background-color,color] duration-150 hover:scale-110 flex-shrink-0"
             onClick={handleThemeCycle}
             title={`Cambiar tema (actual: ${currentThemeLabel})`}
           >
@@ -181,7 +178,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
-            className="text-muted-foreground hover:text-red-600 hover:bg-red-500/10 w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl transition-[color,background-color,transform] duration-300 hover:scale-110 flex-shrink-0"
+            className="text-muted-foreground hover:text-red-600 hover:bg-red-500/10 w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl transition-[transform,background-color,color] duration-150 hover:scale-110 flex-shrink-0"
             title="Cerrar sesión"
           >
             <LogOut className="h-4 w-4" />

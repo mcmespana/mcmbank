@@ -18,33 +18,24 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [isRedirecting, setIsRedirecting] = useState(false)
-  // El estado del sidebar arranca en `false` (igual en servidor y cliente) y se
-  // hidrata desde localStorage en un efecto, evitando leer localStorage durante
-  // el render (causa de mismatch de hidratación).
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [sidebarHydrated, setSidebarHydrated] = useState(false)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('mcmbank-sidebar-collapsed')
-    if (saved === 'true') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSidebarCollapsed(true)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // Load from localStorage on mount
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mcmbank-sidebar-collapsed')
+      return saved === 'true'
     }
-    setSidebarHydrated(true)
-  }, [])
+    return false
+  })
 
-  // Persist sidebar state to localStorage (solo tras hidratar, para no
-  // sobrescribir el valor guardado con el `false` inicial).
+  // Persist sidebar state to localStorage
   useEffect(() => {
-    if (!sidebarHydrated) return
-    localStorage.setItem('mcmbank-sidebar-collapsed', sidebarCollapsed.toString())
-  }, [sidebarCollapsed, sidebarHydrated])
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mcmbank-sidebar-collapsed', sidebarCollapsed.toString())
+    }
+  }, [sidebarCollapsed])
 
   useEffect(() => {
     if (!loading && !user && !isRedirecting) {
-      // Reacción a un cambio de estado de auth asíncrono + navegación; es un
-      // efecto legítimo, no estado derivable durante el render.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsRedirecting(true)
       router.push("/auth/login")
     }
@@ -53,8 +44,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   // If a user appears (e.g., after sign-in finishes), clear redirecting state
   useEffect(() => {
     if (user && isRedirecting) {
-      // Idem: sincroniza el flag de redirección con el estado de auth.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsRedirecting(false)
     }
   }, [user, isRedirecting])
@@ -109,7 +98,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       />
 
       {/* Main Content */}
-      <div className={cn("transition-[padding] duration-300 relative z-10", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
+      <div className={cn("transition-[padding] duration-200 ease-out relative z-10", sidebarCollapsed ? "lg:pl-16" : "lg:pl-72")}>
         {/* Topbar */}
         <Topbar selectedDelegation={selectedDelegation} onDelegationChange={(id) => setSelectedDelegation(id)} />
 

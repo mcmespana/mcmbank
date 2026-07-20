@@ -31,11 +31,12 @@ conditions, and update your row when done.
   `movimiento`, `delegacion`, `membresia`, `organizacion` — but those
   policies exist only in the live DB, not in `scripts/` (reproducibility
   gap, noted in plan 014's maintenance notes).
-- RLS is **disabled** on `categoria` / `categoria_orden_delegacion`
-  (policies exist but inert) — plan 014.
-- The 3 dashboard aggregation RPCs are SECURITY DEFINER, anon-executable,
-  no membership check → unauthenticated cross-delegation financial reads —
-  plan 014.
+- ~~RLS disabled on `categoria` / `categoria_orden_delegacion`~~ — FIXED
+  2026-07-18 (`scripts/050`): RLS enabled with a new delegation-scoped
+  write policy for tesoreros; fully tested live.
+- ~~The 3 dashboard aggregation RPCs anon-executable without membership
+  check~~ — FIXED 2026-07-18 (`scripts/049`): membership guard + revoke
+  anon, tested live with real tesorero/gestor/anon identities.
 - Storage buckets `facturas` / `documentos` are **public and listable** —
   plan 002 (see its addendum; premise changed from "broken" to "exposed").
 - Ops (dashboard-only): Postgres has pending security patches;
@@ -45,7 +46,7 @@ conditions, and update your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| [014](014-lock-down-aggregation-rpcs-and-categoria-rls.md) | Lock down anon-callable aggregation RPCs; enable RLS on categoria tables | P1 | S | — | TODO |
+| [014](014-lock-down-aggregation-rpcs-and-categoria-rls.md) | Lock down anon-callable aggregation RPCs; enable RLS on categoria tables | P1 | S | — | DONE (2026-07-18). Parte 1: RPCs con guard de membresía + revoke anon, verificado en vivo (`scripts/049`). Parte 2: RLS ACTIVADO en categoria y categoria_orden_delegacion tras añadir la política que faltaba para tesoreros (locales de su delegación); batería completa de pruebas simulando tesorero/gestor/anon en verde (`scripts/050`). Rollback documentado en el propio script. |
 | [002](002-fix-broken-invoice-file-access.md) | Signed URLs for invoice/document files (+ operator bucket flip — see 2026-07-18 addendum) | P1 | M | — | TODO |
 | [001](001-protect-admin-and-diagnostic-endpoints.md) | Protect admin API routes, diagnostic endpoint, middleware coverage | P1 | M | — | TODO |
 | [016](016-restore-green-typecheck-baseline.md) | Green `tsc --noEmit` baseline + `typecheck` script | P1 | S/M | — | TODO |

@@ -1,0 +1,56 @@
+# 10. Panel de Control
+
+Nada más entrar verás el Panel de Control (Dashboard), un resumen rápido de la situación económica de tu Delegación Local, con tres pestañas.
+
+📸 _Captura del Panel de Control_
+
+{% hint style="warning" %}
+🟠 Si tienes una cuenta bancaria conectada (capítulo 4) cuyo permiso está a punto de caducar o ya caducó, verás aquí arriba un aviso con un botón **"Renovar conexión"** — visible solo para roles **Gestor Central** y **Tesorería**.
+{% endhint %}
+
+## Las tres pestañas
+
+{% tabs %}
+{% tab title="🏠 Resumen" %}
+La vista general. Incluye:
+
+- **Resumen financiero**: Ingresos 🟢, Gastos 🔴, Balance, Transacciones totales y Sin categorizar del periodo elegido. Toca cualquier tarjeta para ir directamente al listado correspondiente.
+- **Tendencia mensual**: evolución de ingresos y gastos mes a mes.
+- **Actividad reciente**: los últimos movimientos registrados.
+- **Acciones rápidas**: accesos directos a *Ver Transacciones*, *Nueva Transacción*, *Importar Datos* (Excel, CSV o conexión bancaria) y *Gestionar Categorías*.
+
+📸 _Captura del resumen financiero_
+{% endtab %}
+
+{% tab title="📈 Balance" %}
+Compara ingresos y gastos en un gráfico de barras:
+
+1. Elige el periodo (mes, trimestre, curso escolar…).
+2. Filtra por una o varias categorías.
+3. Observa cómo evoluciona el balance día a día.
+
+📸 _Captura del gráfico de balance_
+
+{% hint style="info" %}
+📉 Si no hay movimientos en el periodo seleccionado, te sugerimos limpiar los filtros.
+{% endhint %}
+{% endtab %}
+
+{% tab title="🥧 Análisis" %}
+Descubre cuánto se ingresa y gasta en cada categoría mediante gráficos de tarta y una tabla resumen.
+
+1. Selecciona el periodo y, si quieres, limita a ciertas categorías.
+2. Consulta los porcentajes y cantidades de ingresos y gastos.
+3. Revisa la tabla para ver los totales de cada etiqueta.
+
+📸 _Captura del análisis por categorías_
+
+{% hint style="success" %}
+🔍 Combinado con **Informes** (capítulo 9), esta vista es ideal para preparar la memoria económica de un vistazo.
+{% endhint %}
+{% endtab %}
+{% endtabs %}
+
+{% hint style="info" %}
+Cada pestaña recuerda su propio filtro de periodo. El botón **"Eliminar todos los filtros"** los resetea los tres a la vez.
+{% endhint %}

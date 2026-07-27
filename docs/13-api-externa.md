@@ -1,12 +1,14 @@
-# API externa (consulta de movimientos)
+# 13. API externa (consulta de movimientos)
 
 MCM Bank expone una pequeña API de solo lectura para consultar movimientos
 desde otras aplicaciones internas (por ejemplo, un **Google Apps Script**).
 
+{% hint style="info" %}
 La idea es simple: copias el **ID de un movimiento** desde la aplicación y lo
 consultas desde fuera para recibir toda su información y sus archivos adjuntos.
 Como el ID es único en toda la base de datos, **no hace falta indicar la
 delegación**.
+{% endhint %}
 
 ## Documentación interactiva y recursos para agentes de IA
 
@@ -40,8 +42,10 @@ La clave se configura en el servidor mediante variables de entorno:
 - Si no está definida, se reutiliza `CRON_SECRET` (el secreto que ya usa el cron
   de sincronización bancaria).
 
-> Para rotar la clave, cambia el valor en las variables de entorno del proyecto
-> (Vercel) y vuelve a desplegar.
+{% hint style="warning" %}
+Para rotar la clave, cambia el valor en las variables de entorno del proyecto
+(Vercel) y vuelve a desplegar.
+{% endhint %}
 
 ## Cómo obtener el ID de un movimiento
 
@@ -160,15 +164,17 @@ Formato de error:
 { "ok": false, "error": "Movimiento no encontrado." }
 ```
 
-## Ejemplo con `curl`
+## Ejemplos de uso
 
+{% tabs %}
+{% tab title="curl" %}
 ```bash
 curl -H "x-api-key: TU_CLAVE" \
   https://TU-DOMINIO/api/v1/movimientos/9f1c0000-0000-0000-0000-000000000000
 ```
+{% endtab %}
 
-## Ejemplo con Google Apps Script
-
+{% tab title="Google Apps Script" %}
 ```javascript
 const BASE = "https://TU-DOMINIO/api/v1";
 const API_KEY = "TU_CLAVE"; // mejor en PropertiesService
@@ -202,7 +208,11 @@ function ejemplo() {
   Logger.log(`${mov.fecha} · ${mov.concepto} · ${mov.importe} €`);
 }
 ```
+{% endtab %}
+{% endtabs %}
 
-> Recomendación: guarda la clave con
-> `PropertiesService.getScriptProperties().getProperty("MCM_API_KEY")` en lugar
-> de escribirla directamente en el código.
+{% hint style="success" %}
+Recomendación: guarda la clave con
+`PropertiesService.getScriptProperties().getProperty("MCM_API_KEY")` en lugar
+de escribirla directamente en el código.
+{% endhint %}

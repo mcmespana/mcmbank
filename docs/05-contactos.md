@@ -1,0 +1,59 @@
+# 5. Contactos
+
+Tu agenda para los movimientos: proveedores, personas MCM (socios, voluntarios) y destinatarios. Guarda IBAN, teléfono y notas, y vincúlalos a los movimientos, facturas y pagos MCM para no repetir datos.
+
+📸 _Captura de la lista de contactos_
+
+## Tipos de contacto
+
+{% tabs %}
+{% tab title="🏢 Proveedor" %}
+Empresa o autónomo que nos vende o factura. Es el tipo relevante para **Facturas** (capítulo 7): si le falta el NIF/CIF, verás un aviso ⚠️.
+{% endtab %}
+
+{% tab title="🧑 Persona MCM" %}
+Socio, voluntario, monitor o miembro de equipo. Es el tipo habitual para los reembolsos de **Pagos MCM** (capítulo 8).
+{% endtab %}
+
+{% tab title="🎯 Destinatario MCM" %}
+Destinatario final de nuestras actividades, o su familia. Suele ser origen de ingresos (cuotas, aportaciones).
+{% endtab %}
+{% endtabs %}
+
+Una pestaña **"Todos"** arriba de la lista muestra el total, con un contador junto a cada tipo.
+
+## Crear o editar un contacto
+
+1. Pulsa **Nuevo contacto** (o el icono ✏️ para editar uno existente).
+2. Elige el tipo, un nombre, emoji y color.
+3. Rellena lo que tengas a mano — todo es opcional salvo el nombre:
+   - **CIF / NIF / DNI**
+   - **IBAN** (se valida el dígito de control) y **mail** y **teléfono** (con botón de copiar)
+   - Dirección postal (colapsable)
+   - **Categoría sugerida**: se propondrá sola al crear un movimiento vinculado a este contacto
+   - Notas internas
+
+{% hint style="warning" %}
+🔐 Crear, editar o archivar contactos requiere rol **Gestor Central** o **Tesorería**. Con rol de solo lectura puedes consultarlos, pero no modificarlos.
+{% endhint %}
+
+{% hint style="info" %}
+Un contacto puede marcarse como **global** (visible en todas las delegaciones) — esa casilla solo la puede activar un administrador.
+{% endhint %}
+
+## Archivar en vez de borrar
+
+Si un contacto ya no está activo pero no quieres perder su histórico, **archívalo** (icono 📦) en lugar de eliminarlo. Los contactos archivados se ocultan de la lista por defecto; un botón **"Ver archivados"** los muestra de nuevo.
+
+{% hint style="danger" %}
+🗑️ Eliminar un contacto no se puede deshacer. Los movimientos ya vinculados se mantienen, pero pierden la referencia al contacto.
+{% endhint %}
+
+## Ficha de detalle
+
+Al tocar un contacto se abre su ficha con dos pestañas:
+
+- **Información**: todos los datos guardados, cada uno con botón de copiar.
+- **Movimientos**: ingresos, gastos y neto de ese contacto, con el listado completo de movimientos vinculados.
+
+📸 _Captura de la ficha de un contacto_

@@ -1,9 +1,11 @@
-# Facturas
+# 7. Facturas
 
 La sección **Facturas** es la bandeja de entrada de las facturas de cada delegación. No es una
 lista de "pendientes de pagar": casi siempre la factura ya está pagada cuando llega. Lo importante
 es guardarla, apuntar los datos básicos y **conciliarla con su movimiento bancario** con los
 mínimos clicks posibles.
+
+📸 _Captura de la bandeja de facturas_
 
 ## Flujo básico
 
@@ -39,9 +41,11 @@ se puede desvincular individualmente sin afectar a los demás.
 | Pagada | Pagada y vinculada a movimiento(s) de MCM Bank que cubren el importe total |
 | Pagada fuera | Pagada, pero el pago se hizo fuera de MCM Bank (no hay movimiento que vincular) |
 
-El estado (salvo *Pagada fuera*, marca manual) se recalcula automáticamente en base de datos cada
-vez que se vincula o desvincula un movimiento, comparando la suma de sus importes con el importe
-de la factura. Al desvincular el único/último movimiento, la factura vuelve a *Sin pagar*.
+{% hint style="info" %}
+El estado (salvo *Pagada fuera*, marca manual) se recalcula solo cada vez que se vincula o
+desvincula un movimiento, comparando la suma de sus importes con el importe de la factura. Al
+desvincular el único/último movimiento, la factura vuelve a *Sin pagar*.
+{% endhint %}
 
 ## Desde el lado movimiento
 
@@ -57,7 +61,19 @@ En el detalle de un movimiento (pestaña Archivos):
   movimientos marcados muestran un icono de aviso en la lista y se pueden filtrar con el botón
   *Falta factura* en el panel de filtros de Movimientos.
 
-## Modelo de datos
+{% hint style="warning" %}
+🔐 Subir, editar o vincular facturas requiere rol **Tesorería** o **Gestor Central**. Con rol de
+solo lectura puedes consultarlas, pero no modificarlas.
+{% endhint %}
+
+---
+
+## Para el equipo técnico
+
+Esta parte no es necesaria para el uso diario — documenta cómo está construida la sección por
+dentro, útil si tocas código o preparas una integración.
+
+### Modelo de datos
 
 - Tabla `factura` (migración `scripts/047_create_factura.sql`, ampliada en
   `scripts/048_factura_pagos_multiples.sql`), con RLS por delegación (lectura: cualquier
@@ -76,14 +92,12 @@ En el detalle de un movimiento (pestaña Archivos):
   duplicados. Un pequeño indicador ⚠️ (en el selector de contacto, en las tarjetas de factura y
   en la ficha de contacto) avisa cuando un proveedor no tiene NIF/CIF guardado.
 
----
-
-## Integraciones futuras (estructura ya preparada)
+### Integraciones futuras (estructura ya preparada)
 
 La tabla `factura` ya incluye las columnas necesarias para estas dos integraciones: `origen`
 (`subida | movimiento | email`), `email_remitente` y `datos_ia` (JSONB).
 
-### a) Buzón de email por delegación
+#### a) Buzón de email por delegación
 
 **Objetivo**: crear una dirección tipo `facturas-valencia@movimientoconsolacion.com` (Google
 Workspace) a la que cualquiera reenvía facturas, y que aparezcan solas en la bandeja de la
@@ -112,7 +126,7 @@ delegación con estado *En bandeja* y `origen='email'`.
 4. **UI**: no requiere cambios; las facturas con `origen='email'` ya muestran el remitente en la
    tarjeta y caen en la pestaña Bandeja con su contador en el sidebar.
 
-### b) Lectura automática con IA (rellenar datos básicos)
+#### b) Lectura automática con IA (rellenar datos básicos)
 
 **Objetivo**: al subir un archivo (o al llegar por email), extraer proveedor, fecha de emisión,
 importe total y nº de factura — **sin IVA ni desglose fiscal** — y dejar la factura casi lista:

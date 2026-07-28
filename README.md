@@ -75,7 +75,7 @@ pnpm lint:fix
 
 ## 📚 Recursos útiles
 - Manual funcional: `docs/README.md` y capítulos numerados para cada módulo.
-- Guía rápida de categorías, cuentas y movimientos en `docs/03-categorias.md`, `docs/04-cuentas.md` y `docs/05-movimientos.md`.
+- Guía rápida de categorías, cuentas y movimientos en `docs/03-categorias.md`, `docs/04-cuentas.md` y `docs/06-movimientos.md`.
 - Configuración detallada del proyecto y convenciones internas en `AGENTS.md`.
 
 ## 🤝 Cómo contribuir

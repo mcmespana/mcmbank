@@ -3,6 +3,7 @@
 import type React from "react"
 import { Sidebar } from "./sidebar"
 import { Topbar } from "./topbar"
+import { AvisosWidget } from "./avisos/avisos-widget"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
@@ -105,6 +106,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Page Content */}
         <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8">{children}</main>
       </div>
+
+      {/* Avisos y tareas: botón flotante disponible en toda la app */}
+      <AvisosWidget />
     </div>
   )
 }

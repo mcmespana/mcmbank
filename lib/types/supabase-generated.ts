@@ -76,6 +76,91 @@ export type Database = {
           },
         ]
       }
+      aviso: {
+        Row: {
+          actualizado_en: string
+          completado_en: string | null
+          completado_por: string | null
+          contenido: string
+          creado_en: string
+          creado_por: string
+          delegacion_id: string
+          destinatario: string
+          estado: string
+          id: string
+          notificado_en: string | null
+          notificado_por: string | null
+          referencia: string | null
+          tipo: string
+        }
+        Insert: {
+          actualizado_en?: string
+          completado_en?: string | null
+          completado_por?: string | null
+          contenido: string
+          creado_en?: string
+          creado_por?: string
+          delegacion_id: string
+          destinatario: string
+          estado?: string
+          id?: string
+          notificado_en?: string | null
+          notificado_por?: string | null
+          referencia?: string | null
+          tipo: string
+        }
+        Update: {
+          actualizado_en?: string
+          completado_en?: string | null
+          completado_por?: string | null
+          contenido?: string
+          creado_en?: string
+          creado_por?: string
+          delegacion_id?: string
+          destinatario?: string
+          estado?: string
+          id?: string
+          notificado_en?: string | null
+          notificado_por?: string | null
+          referencia?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aviso_delegacion_id_fkey"
+            columns: ["delegacion_id"]
+            isOneToOne: false
+            referencedRelation: "delegacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aviso_lectura: {
+        Row: {
+          aviso_id: string
+          leido_en: string
+          usuario_id: string
+        }
+        Insert: {
+          aviso_id: string
+          leido_en?: string
+          usuario_id: string
+        }
+        Update: {
+          aviso_id?: string
+          leido_en?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aviso_lectura_aviso_id_fkey"
+            columns: ["aviso_id"]
+            isOneToOne: false
+            referencedRelation: "aviso"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       banco_conexion: {
         Row: {
           actualizado_en: string

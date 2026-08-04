@@ -41,6 +41,8 @@ The app uses Supabase with a hierarchical structure:
 - **propuesta_mejora**: Improvement proposals (ideas and bug reports)
 - **propuesta_mejora_comentario**: Comments on proposals
 - **propuesta_mejora_voto**: Votes/reactions on proposals
+- **aviso**: Notices and tasks per delegation (technical office ↔ treasurers)
+- **aviso_lectura**: Read receipts for notices (one row per aviso/user)
 
 Type definitions for all tables are in `lib/types/database.ts` (Row/Insert/Update types for each table).
 
@@ -100,6 +102,7 @@ Also includes: `ThemeStateWatcher`, `ConnectionMonitor`, `Toaster` (Sonner).
 | `use-is-admin.ts` | Admin check |
 | `use-perfil.ts` | User profile |
 | `use-improvement-proposals.ts` | Proposals CRUD, voting, commenting |
+| `use-avisos.ts` | Notices/tasks per delegation, unread + pending counters |
 | `use-movimiento-archivos.ts` | Transaction file attachments |
 | `use-delegation-counts.ts` | Counts of items per delegation |
 | `use-app-status.ts` | App status with debounced revalidation |
@@ -125,6 +128,16 @@ Full feature for submitting ideas and bug reports:
 - **Features**: Comments, voting/reactions, author tracking, Kanban board view
 - **Components**: `components/improvement-proposals/` (7 components including board, cards, dialogs)
 - **Service**: `lib/services/improvement-proposals.ts`
+
+### Notices & Tasks (Avisos y tareas)
+Short notes between the central technical office (`gestor_central`) and each delegation's treasurers:
+- **Types**: `"tarea"` (has `estado` pendiente/hecha) and `"nota"` (informational; `hecha` = archived)
+- **Recipient** (`destinatario`): `"oficina_tecnica"` or `"delegacion"`
+- **Isolation**: every aviso belongs to a delegation; RLS only grants access to `membresia` holders of that delegation, so delegation A never sees B's notes
+- **Unread**: `aviso_lectura` holds one row per (aviso, user); the badge counts avisos with no receipt for the current user
+- **Email**: `POST /api/avisos/notificar` sends it with Resend (needs `RESEND_API_KEY`) to the treasurers of the delegation or to all central managers, never to the author
+- **UI**: floating button bottom-right, mounted once in `components/app-layout.tsx` (`components/avisos/`), opens with ⌘/Ctrl+I
+- **Types/service/hook**: `lib/types/avisos.ts`, `lib/services/avisos.ts`, `hooks/use-avisos.ts`
 
 ### File Uploads
 - Files uploaded to Supabase Storage buckets
@@ -162,12 +175,13 @@ components/                 # Reusable React components
   cuentas/                  # Account management (manager, edit form, delete dialog)
   categories/               # Category management (list, edit form, delete dialog)
   improvement-proposals/    # Proposals system (board, cards, comments, creation)
+  avisos/                   # Notices & tasks (floating widget, panel, composer, item)
   configuracion/            # Configuration page component
   diagnostics/              # Diagnostic center component
   debug/                    # Debug call stats viewer
 lib/                        # Business logic, utilities, types
   supabase/                 # Supabase clients (client, server, admin, middleware, redirect)
-  services/                 # Data service layer (database, server-database, file-service, improvement-proposals)
+  services/                 # Data service layer (database, server-database, file-service, avisos)
   types/                    # TypeScript types (database.ts, improvement-proposals.ts)
   utils/                    # Utilities (format, category-colors, export-to-excel, date-input, etc.)
   db/                       # Query execution and telemetry (query.ts, telemetry.ts)
@@ -193,6 +207,7 @@ docs/                       # End-user documentation in Spanish
 | `/auth/login` | Login page |
 | `/auth/sign-up` | Registration page |
 | `/auth/callback` | OAuth callback |
+| `/api/avisos/notificar` | Sends a notice/task by email via Resend |
 | `/api/admin/users` | Admin user management API |
 | `/api/supabase-sanity` | Supabase health check API |
 
@@ -293,7 +308,7 @@ This returns `CategoriaConOrdenEfectivo[]` with proper ordering and visibility.
 
 ## Documentation
 
-- **User manual**: `docs/README.md` and numbered chapters (`docs/01-acceso.md` through `docs/13-api-externa.md`, see `docs/SUMMARY.md` for the full index)
+- **User manual**: `docs/README.md` and numbered chapters (`docs/01-acceso.md` through `docs/14-avisos-tareas.md`, see `docs/SUMMARY.md` for the full index)
 - **Pending work (single backlog)**: `docs/ANALISIS_MEJORAS.md` — la lista única de desarrollos pendientes (seguridad, rendimiento, bugs, UI, funcionalidades y deuda técnica)
 - **Technical docs**: `docs/SUMMARY.md`, `docs/NEXTJS_16_UPGRADE.md`, `docs/OPTIMIZACIONES_REALIZADAS.md` (registro histórico de lo ya optimizado)
 - **Agent guidelines**: `AGENTS.md` for contributor coding conventions (in Spanish)

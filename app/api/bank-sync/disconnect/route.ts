@@ -57,8 +57,10 @@ export async function POST(request: Request) {
       try {
         await enableBanking.revokeSession(conn.session_id)
       } catch (err) {
-        revocationError =
-          err instanceof EnableBankingError ? err.message : err instanceof Error ? err.message : String(err)
+        const fullDetail =
+          err instanceof EnableBankingError ? `${err.message}: ${JSON.stringify(err.body)}` : String(err)
+        console.error("bank-sync disconnect: error revocando sesión EB:", fullDetail)
+        revocationError = "No se pudo revocar el consentimiento en el banco. La conexión se ha desactivado igualmente."
       }
     }
     await admin

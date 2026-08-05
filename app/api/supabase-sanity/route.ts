@@ -19,12 +19,14 @@ async function probeTable(client: ReturnType<typeof createClient>, table: string
       .limit(3)
 
     if (error) {
-      return { table, count: null, sample: [], error: error.message }
+      console.error(`supabase-sanity probe error (${table}):`, error)
+      return { table, count: null, sample: [], error: "Error al consultar la tabla." }
     }
 
     return { table, count: count ?? null, sample: data ?? [] }
   } catch (e: any) {
-    return { table, count: null, sample: [], error: e?.message || "Unknown error" }
+    console.error(`supabase-sanity probe error (${table}):`, e)
+    return { table, count: null, sample: [], error: "Error al consultar la tabla." }
   }
 }
 
@@ -45,13 +47,9 @@ export async function GET() {
       results,
     })
   } catch (e: any) {
+    console.error("supabase-sanity route error:", e)
     return NextResponse.json(
-      {
-        ok: false,
-        error:
-          e?.message ||
-          "Supabase environment variables are missing or the server client could not be created.",
-      },
+      { ok: false, error: "Ha ocurrido un error. Inténtalo de nuevo." },
       { status: 500 },
     )
   }

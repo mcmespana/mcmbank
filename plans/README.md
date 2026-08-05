@@ -63,6 +63,7 @@ conditions, and update your row when done.
 | [012](012-ux-consistent-confirmations-and-error-feedback.md) | Consistent confirmations, visible file-action errors | P2 | S | — | TODO |
 | [003](003-bulk-export-facturas.md) | Bulk export of invoice files | P2 | L | 002 | TODO — **maintainer review first** (PR #159 facturas section may supersede parts) |
 | [004](004-flag-synced-transactions-missing-invoice.md) | Flag synced transactions missing invoice | P2 | M | — | TODO — **maintainer review first** (same reason) |
+| [021](021-redesign-facturas-pagos.md) | Redesign /facturas + /pagos-mcm: dense rows, single detail panel, readable mobile tabs, React Query + summary RPCs, RLS `WITH CHECK` | P2 | L | — | TODO |
 | [020](020-design-spike-auto-categorization-and-contacto-matching.md) | DESIGN SPIKE: rules engine (`regla`) + contacto↔sync matching | P3 | M | — | TODO |
 | [006](006-bank-sync-multi-account-picker.md) | Manual account picker on multi-account EB match | P3 | M | — | TODO |
 | [013](013-ux-investigate-upload-affordance-and-contacto-selector.md) | Investigate upload affordance / contacto selector issues | P3 | M | — | TODO |
@@ -137,3 +138,14 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rational
    **this is now the largest unaudited surface and the top candidate for
    the next `improve branch` run**), mobile testing, the propuestas
    Kanban, Excel-import edge cases beyond the date/partial-failure bugs.
+4. 2026-08-05: the facturas + pagos-mcm half of that gap is now covered by
+   **plan 021**, written against `6046c7a` from a fresh read of both
+   sections (UX, hooks, services, `scripts/041/042/047/048`, live schema).
+   It carries the correctness/security findings that a formal audit would
+   have raised — dead partial index after `048` dropped
+   `factura.movimiento_id`, UPDATE policies with `USING` but no
+   `WITH CHECK` on `factura`/`pago_mcm`/`archivo_adjunto`, `string`-widened
+   `PagoMcmEstado` dereferenced unguarded, stale totals from a second
+   never-refetched hook instance, and an N+1 count fan-out in
+   `getCuentaConMasMovimientos`. Informes and memoria-economica remain
+   unaudited.

@@ -47,7 +47,7 @@ conditions, and update your row when done.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | [014](014-lock-down-aggregation-rpcs-and-categoria-rls.md) | Lock down anon-callable aggregation RPCs; enable RLS on categoria tables | P1 | S | — | DONE (2026-07-18). Parte 1: RPCs con guard de membresía + revoke anon, verificado en vivo (`scripts/049`). Parte 2: RLS ACTIVADO en categoria y categoria_orden_delegacion tras añadir la política que faltaba para tesoreros (locales de su delegación); batería completa de pruebas simulando tesorero/gestor/anon en verde (`scripts/050`). Rollback documentado en el propio script. |
-| [002](002-fix-broken-invoice-file-access.md) | Signed URLs for invoice/document files (+ operator bucket flip — see 2026-07-18 addendum) | P1 | M | — | TODO |
+| [002](002-fix-broken-invoice-file-access.md) | Signed URLs for invoice/document files (+ operator bucket flip — see 2026-07-18 addendum) | P1 | M | — | DONE (2026-08-05, código); pendiente flip de buckets `facturas`/`documentos` a privado + políticas RLS de `storage.objects` por el operador |
 | [001](001-protect-admin-and-diagnostic-endpoints.md) | Protect admin API routes, diagnostic endpoint, middleware coverage | P1 | M | — | TODO |
 | [016](016-restore-green-typecheck-baseline.md) | Green `tsc --noEmit` baseline + `typecheck` script | P1 | S/M | — | TODO |
 | [015](015-test-baseline-vitest-characterization.md) | Characterization tests: EB dedupe/money mapping, category sort | P1 | S | — | TODO |

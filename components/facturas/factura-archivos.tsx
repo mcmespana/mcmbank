@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { FileService } from "@/lib/services/file-service"
+import { getSignedFileUrl } from "@/lib/utils/signed-file-url"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useFacturaArchivos } from "@/hooks/use-factura-archivos"
 import type { ArchivoAdjunto } from "@/lib/types/database"
@@ -57,6 +58,15 @@ export function FacturaArchivos({ facturaId, delegacionId }: FacturaArchivosProp
     }
   }
 
+  const handleOpen = async (archivo: ArchivoAdjunto) => {
+    try {
+      const url = await getSignedFileUrl(archivo.path_storage, archivo.bucket as "facturas" | "documentos")
+      window.open(url, "_blank", "noopener,noreferrer")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo abrir el archivo")
+    }
+  }
+
   return (
     <div className="space-y-2">
       <div
@@ -104,15 +114,14 @@ export function FacturaArchivos({ facturaId, delegacionId }: FacturaArchivosProp
               {FileService.formatFileSize(a.tamano_bytes)}
             </div>
           </div>
-          <a
-            href={a.url_publica}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => handleOpen(a)}
             className="text-muted-foreground hover:text-foreground"
             aria-label="Abrir archivo"
           >
             <Download className="h-3.5 w-3.5" />
-          </a>
+          </button>
           <Button
             type="button"
             variant="ghost"

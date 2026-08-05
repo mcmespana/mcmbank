@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { FileService } from "@/lib/services/file-service"
+import { getSignedFileUrl } from "@/lib/utils/signed-file-url"
+import { toast } from "sonner"
 import type { MovimientoArchivo } from "@/lib/types/database"
 
 interface FileListProps {
@@ -91,21 +93,23 @@ export function FileList({
     setDeleteDialogOpen(true)
   }
 
+  const openArchivo = async (archivo: MovimientoArchivo) => {
+    try {
+      const url = await getSignedFileUrl(archivo.path_storage, archivo.bucket as 'facturas' | 'documentos')
+      window.open(url, '_blank')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo abrir el archivo")
+    }
+  }
+
   const handleDownload = (archivo: MovimientoArchivo) => {
-    window.open(archivo.url_publica, '_blank')
+    openArchivo(archivo)
   }
 
   const handleView = (archivo: MovimientoArchivo) => {
-    // Para PDFs e imágenes, abrir en nueva pestaña
-    const isPdf = archivo.tipo_mime === 'application/pdf'
-    const isImage = archivo.tipo_mime.startsWith('image/')
-    
-    if (isPdf || isImage) {
-      window.open(archivo.url_publica, '_blank')
-    } else {
-      // Para otros tipos, descargar
-      handleDownload(archivo)
-    }
+    // Para PDFs e imágenes, abrir en nueva pestaña; para el resto, descargar
+    // (ambos casos usan la misma signed URL bajo demanda).
+    openArchivo(archivo)
   }
 
   if (loading) {

@@ -1,6 +1,7 @@
 "use client"
 
 import { BadgeCheck, Edit3, ExternalLink, FileText, Link2, Trash2, Unlink } from "lucide-react"
+import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EntityAvatar } from "@/components/ui/entity-avatar"
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { FACTURA_ESTADO_INFO, FACTURA_ORIGEN_INFO, importePendienteFactura } from "@/lib/utils/facturas"
+import { getSignedFileUrl } from "@/lib/utils/signed-file-url"
 import type { FacturaConRelaciones } from "@/lib/types/database"
 
 interface FacturaCardProps {
@@ -44,6 +46,15 @@ export function FacturaCard({
     factura.concepto?.trim() ||
     archivoPrincipal?.nombre_original ||
     "Factura sin título"
+
+  const handleOpenArchivo = async (archivo: NonNullable<FacturaConRelaciones["archivos"]>[number]) => {
+    try {
+      const url = await getSignedFileUrl(archivo.path_storage, archivo.bucket as "facturas" | "documentos")
+      window.open(url, "_blank", "noopener,noreferrer")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo abrir el archivo")
+    }
+  }
 
   return (
     <Card
@@ -145,17 +156,16 @@ export function FacturaCard({
         {factura.archivos && factura.archivos.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {factura.archivos.map((a) => (
-              <a
+              <button
                 key={a.id}
-                href={a.url_publica}
-                target="_blank"
-                rel="noopener noreferrer"
+                type="button"
+                onClick={() => handleOpenArchivo(a)}
                 className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-background px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
                 title={a.nombre_original}
               >
                 <FileText className="h-3 w-3 shrink-0" />
                 <span className="truncate">{a.nombre_original}</span>
-              </a>
+              </button>
             ))}
           </div>
         )}

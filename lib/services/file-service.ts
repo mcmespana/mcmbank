@@ -100,8 +100,9 @@ export class FileService {
 
     if (error) throw new Error(`Error al subir archivo: ${error.message}`)
 
-    const { data: urlData } = supabase.storage.from(bucketType).getPublicUrl(data.path)
-    return { url: urlData.publicUrl, path: data.path, bucket: bucketType }
+    // El acceso se sirve vía signed URL bajo demanda (ver /api/files/signed-url);
+    // ya no se persiste una URL pública real.
+    return { url: "", path: data.path, bucket: bucketType }
   }
 
   static async uploadFile(
@@ -139,13 +140,10 @@ export class FileService {
         throw new Error(`Error al subir archivo: ${error.message}`)
       }
 
-      // Obtener URL pública del archivo
-      const { data: urlData } = supabase.storage
-        .from(bucketType)
-        .getPublicUrl(data.path)
-
+      // El acceso se sirve vía signed URL bajo demanda (ver /api/files/signed-url);
+      // ya no se persiste una URL pública real.
       return {
-        url: urlData.publicUrl,
+        url: "",
         path: data.path,
         bucket: bucketType
       }
@@ -166,26 +164,6 @@ export class FileService {
       }
     } catch (error) {
       console.error('Error deleting file:', error)
-      throw error
-    }
-  }
-
-  static async listFiles(movimientoId: string, bucket: 'facturas' | 'documentos'): Promise<any[]> {
-    try {
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .list(movimientoId, {
-          limit: 100,
-          offset: 0
-        })
-
-      if (error) {
-        throw new Error(`Error al listar archivos: ${error.message}`)
-      }
-
-      return data || []
-    } catch (error) {
-      console.error('Error listing files:', error)
       throw error
     }
   }

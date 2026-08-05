@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { FileService } from "@/lib/services/file-service"
+import { getSignedFileUrl } from "@/lib/utils/signed-file-url"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { usePagoMcmArchivos } from "@/hooks/use-pago-mcm-archivos"
 import type { ArchivoAdjunto } from "@/lib/types/database"
@@ -53,6 +54,15 @@ export function PagoMcmArchivos({ pagoId, delegacionId }: PagoMcmArchivosProps) 
       toast.error(err instanceof Error ? err.message : "No se pudo eliminar")
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleOpen = async (archivo: ArchivoAdjunto) => {
+    try {
+      const url = await getSignedFileUrl(archivo.path_storage, archivo.bucket as "facturas" | "documentos")
+      window.open(url, "_blank", "noopener,noreferrer")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo abrir el archivo")
     }
   }
 
@@ -105,15 +115,14 @@ export function PagoMcmArchivos({ pagoId, delegacionId }: PagoMcmArchivosProps) 
               {FileService.formatFileSize(a.tamano_bytes)}
             </div>
           </div>
-          <a
-            href={a.url_publica}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => handleOpen(a)}
             className="text-muted-foreground hover:text-foreground"
             aria-label="Descargar"
           >
             <Download className="h-3.5 w-3.5" />
-          </a>
+          </button>
           <Button
             type="button"
             variant="ghost"

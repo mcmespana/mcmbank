@@ -53,8 +53,17 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/auth")
 
-  // Only protect specific routes, not everything
-  const protectedRoutes = ["/transacciones", "/categorias", "/cuentas", "/delegaciones", "/movimientos", "/contactos", "/pagos-mcm", "/facturas"]
+  // Only protect specific routes, not everything.
+  // NOTE: this list is for page routes only. It does not distinguish page
+  // routes from API routes (an unauthenticated match here gets redirected to
+  // /auth/login, which is wrong for an API response) — /api/admin and
+  // /api/supabase-sanity are intentionally NOT listed here; they are guarded
+  // server-side by requireAdmin() in their own route handlers instead.
+  const protectedRoutes = [
+    "/transacciones", "/categorias", "/cuentas", "/delegaciones",
+    "/movimientos", "/contactos", "/pagos-mcm", "/facturas",
+    "/configuracion", "/propuestas",
+  ]
   const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
 
   if (isProtectedRoute && !user) {

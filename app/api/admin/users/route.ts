@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { requireAdmin } from "@/lib/auth/require-admin"
 
 export async function GET() {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const supabase = createAdminClient()
     const { data, error } = await supabase.auth.admin.listUsers()
     if (error) {
@@ -32,6 +36,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const supabase = createAdminClient()
     const { email, password, name, memberships } = await req.json()
 

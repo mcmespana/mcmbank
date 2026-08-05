@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { requireAdmin } from "@/lib/auth/require-admin"
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const { id } = await params
     const supabase = createAdminClient()
     const { password, name, memberships } = await req.json()
@@ -54,6 +58,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const { id } = await params
     const supabase = createAdminClient()
     const { error: authErr } = await supabase.auth.admin.deleteUser(id)

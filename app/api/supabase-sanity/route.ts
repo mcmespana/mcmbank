@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { requireAdmin } from "@/lib/auth/require-admin"
 
 type TableProbe = {
   table: string
@@ -29,6 +30,9 @@ async function probeTable(client: ReturnType<typeof createClient>, table: string
 
 export async function GET() {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const client = createClient()
 
     const tables = ["categoria", "cuenta", "movimiento", "delegacion", "membresia"]

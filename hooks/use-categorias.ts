@@ -11,7 +11,7 @@ type CategoriaOrdenChange = {
   orden: number | null
 }
 
-const sortCategorias = (categorias: CategoriaConOrdenEfectivo[]) =>
+export const sortCategorias = (categorias: CategoriaConOrdenEfectivo[]) =>
   [...categorias].sort((a, b) => {
     if (a.orden_efectivo !== b.orden_efectivo) {
       return a.orden_efectivo - b.orden_efectivo

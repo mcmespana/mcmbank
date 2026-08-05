@@ -45,7 +45,6 @@ export function TransactionList({
   onOpenFiles,
   selectedMovementIds,
   onMovementSelectionChange,
-  onRequestCreateCategory,
 }: TransactionListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 

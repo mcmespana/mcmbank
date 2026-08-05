@@ -131,8 +131,10 @@ export function TransactionFiles({ movementId, delegacionId, onCountChange }: Tr
       if (bucketType === "facturas") {
         await registrarFacturaEntidad(archivo)
       }
+      toast.success("Archivo subido correctamente")
     } catch (error) {
       console.error("Error uploading file:", error)
+      toast.error(error instanceof Error ? error.message : "No se pudo subir el archivo. Inténtalo de nuevo.")
     } finally {
       setUploadingFile(false)
     }

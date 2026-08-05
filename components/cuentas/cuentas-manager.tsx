@@ -13,6 +13,7 @@ import { CuentaEditForm } from "./cuenta-edit-form"
 import { DeleteAccountDialog } from "./delete-account-dialog"
 import { CuentaSyncDialog } from "./cuenta-sync-dialog"
 import { CuentaConnectDialog } from "./cuenta-connect-dialog"
+import { CuentaConfirmDialog } from "./cuenta-confirm-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import type { Cuenta } from "@/lib/types/database"
 import { useCuentas } from "@/hooks/use-cuentas"
@@ -51,6 +52,8 @@ export function CuentasManager() {
   const [viewingAccount, setViewingAccount] = useState<Cuenta | null>(null)
   const [connectingCuenta, setConnectingCuenta] = useState<Cuenta | null>(null)
   const [syncingCuenta, setSyncingCuenta] = useState<Cuenta | null>(null)
+  const [disconnectingCuenta, setDisconnectingCuenta] = useState<Cuenta | null>(null)
+  const [deactivatingCuenta, setDeactivatingCuenta] = useState<Cuenta | null>(null)
 
   // Función para actualizar el estado de una operación
   const setOperationState = useCallback((cuentaId: string, state: 'creating' | 'updating' | 'deleting' | null) => {
@@ -133,10 +136,13 @@ export function CuentasManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleDisconnect = async (cuenta: Cuenta) => {
-    if (!confirm(`¿Desconectar "${cuenta.nombre}" del banco? Los movimientos ya importados se mantienen.`)) {
-      return
-    }
+  const handleDisconnect = (cuenta: Cuenta) => {
+    setDisconnectingCuenta(cuenta)
+  }
+
+  const confirmDisconnect = async () => {
+    if (!disconnectingCuenta) return
+    const cuenta = disconnectingCuenta
     try {
       const res = await fetch("/api/bank-sync/disconnect", {
         method: "POST",
@@ -158,16 +164,7 @@ export function CuentasManager() {
     }
   }
 
-  const handleToggleActiva = async (cuenta: Cuenta) => {
-    const activar = (cuenta as any).activa === false
-    if (
-      !activar &&
-      !confirm(
-        `¿Desactivar "${cuenta.nombre}"? La cuenta y sus movimientos dejarán de aparecer en transacciones y estadísticas, pero se conservan como copia. Puedes reactivarla cuando quieras.`,
-      )
-    ) {
-      return
-    }
+  const applyToggleActiva = async (cuenta: Cuenta, activar: boolean) => {
     try {
       const { error } = await (supabase as any)
         .from("cuenta")
@@ -182,6 +179,21 @@ export function CuentasManager() {
     } catch (e) {
       toast.error("Error: " + (e instanceof Error ? e.message : String(e)))
     }
+  }
+
+  const handleToggleActiva = (cuenta: Cuenta) => {
+    const activar = (cuenta as any).activa === false
+    if (!activar) {
+      // Desactivar requiere confirmación explícita; reactivar no.
+      setDeactivatingCuenta(cuenta)
+      return
+    }
+    applyToggleActiva(cuenta, true)
+  }
+
+  const confirmDeactivate = async () => {
+    if (!deactivatingCuenta) return
+    await applyToggleActiva(deactivatingCuenta, false)
   }
 
   const handleCreateCuenta = async (cuentaData: Partial<Cuenta>) => {
@@ -942,6 +954,32 @@ export function CuentasManager() {
           if (!open) setViewingAccount(null)
         }}
       />
+
+      {/* Disconnect from bank confirmation */}
+      {disconnectingCuenta && (
+        <CuentaConfirmDialog
+          open={!!disconnectingCuenta}
+          onOpenChange={(o) => !o && setDisconnectingCuenta(null)}
+          title="Desconectar del banco"
+          description={`¿Desconectar "${disconnectingCuenta.nombre}" del banco? Los movimientos ya importados se mantienen.`}
+          confirmLabel="Desconectar"
+          confirmingLabel="Desconectando…"
+          onConfirm={confirmDisconnect}
+        />
+      )}
+
+      {/* Deactivate account confirmation */}
+      {deactivatingCuenta && (
+        <CuentaConfirmDialog
+          open={!!deactivatingCuenta}
+          onOpenChange={(o) => !o && setDeactivatingCuenta(null)}
+          title="Desactivar cuenta"
+          description={`¿Desactivar "${deactivatingCuenta.nombre}"? La cuenta y sus movimientos dejarán de aparecer en transacciones y estadísticas, pero se conservan como copia. Puedes reactivarla cuando quieras.`}
+          confirmLabel="Desactivar"
+          confirmingLabel="Desactivando…"
+          onConfirm={confirmDeactivate}
+        />
+      )}
     </div>
   )
 }

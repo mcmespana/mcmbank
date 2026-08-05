@@ -2,10 +2,8 @@
 
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
-import { parse, format } from "date-fns"
 import * as XLSX from "xlsx"
 
-import { es } from "date-fns/locale"
 import { supabase } from "@/lib/supabase/client"
 import type { Cuenta } from "@/lib/types/database"
 import { useCategorias } from "@/hooks/use-categorias"
@@ -27,6 +25,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { formatCurrency } from "@/lib/utils/format"
 import { parseEuropeanNumber } from "@/lib/utils/number"
+import { parseImportDate, parseCsv } from "@/lib/utils/import-parsing"
 import { FileDropzone } from "@/components/ui/file-dropzone"
 
 interface TransactionImportPanelProps {
@@ -172,23 +171,10 @@ export function TransactionImportPanel({
       // Verificar que no sean solo celdas vacías
       if (String(dateStr).trim() === '' || String(conceptStr).trim() === '' || String(amountStr).trim() === '') continue
 
-      // Manejar fechas de Excel - pueden ser números seriales o texto
-      let date: Date
-      if (typeof dateStr === 'number') {
-        // Convertir número serial de Excel a fecha
-        date = new Date((dateStr - 25569) * 86400 * 1000)
-      } else {
-        // Intentar parsear como texto en varios formatos
-        const dateString = String(dateStr).trim()
-        if (dateString.includes('/')) {
-          // Formato dd/MM/yyyy o d/M/yyyy
-          date = parse(dateString, dateString.length <= 9 ? "d/M/yyyy" : "dd/MM/yyyy", new Date(), { locale: es })
-        } else {
-          date = new Date(dateString)
-        }
-      }
-
-      if (isNaN(date.getTime())) {
+      let fecha: string
+      try {
+        fecha = parseImportDate(dateStr)
+      } catch {
         const err: any = new Error(`Fecha inválida: "${dateStr}" (fila ${i + 1})`)
         err.row = i + 1
         err.code = "INVALID_DATE"
@@ -204,7 +190,7 @@ export function TransactionImportPanel({
       }
 
       result.push({
-        fecha: format(date, "yyyy-MM-dd"),
+        fecha,
         concepto: formatConcept(String(conceptStr)),
         importe,
         descripcion: null,
@@ -232,23 +218,10 @@ export function TransactionImportPanel({
       // Verificar que no sean solo celdas vacías
       if (String(dateStr).trim() === '' || String(conceptStr).trim() === '' || String(amountStr).trim() === '') continue
 
-      // Manejar fechas de Excel - pueden ser números seriales o texto
-      let date: Date
-      if (typeof dateStr === 'number') {
-        // Convertir número serial de Excel a fecha
-        date = new Date((dateStr - 25569) * 86400 * 1000)
-      } else {
-        // Intentar parsear como texto en varios formatos
-        const dateString = String(dateStr).trim()
-        if (dateString.includes('/')) {
-          // Formato dd/MM/yyyy o d/M/yyyy
-          date = parse(dateString, dateString.length <= 9 ? "d/M/yyyy" : "dd/MM/yyyy", new Date(), { locale: es })
-        } else {
-          date = new Date(dateString)
-        }
-      }
-
-      if (isNaN(date.getTime())) {
+      let fecha: string
+      try {
+        fecha = parseImportDate(dateStr)
+      } catch {
         const err: any = new Error(`Fecha inválida: "${dateStr}" (fila ${i + 1})`)
         err.row = i + 1
         err.code = "INVALID_DATE"
@@ -268,7 +241,7 @@ export function TransactionImportPanel({
         .filter((v) => v !== "" && !/^\d+$/.test(v))
       const descripcion = [descStr, extras.join("\n")].filter(Boolean).join("\n")
       result.push({
-        fecha: format(date, "yyyy-MM-dd"),
+        fecha,
         concepto: formatConcept(String(conceptStr)),
         importe,
         descripcion: descripcion || null,
@@ -277,7 +250,9 @@ export function TransactionImportPanel({
     return result
   }
 
-  const parseManual = (rows: any[][]): ParsedTransaction[] => {
+  const parseManual = (
+    rows: any[][],
+  ): { transactions: ParsedTransaction[]; skippedRows: number[]; categoriesFound: number; categoriesNotFound: string[] } => {
     const result: ParsedTransaction[] = []
     const skippedRows: number[] = []
     let categoriesFound = 0
@@ -302,23 +277,10 @@ export function TransactionImportPanel({
         continue
       }
 
-      // Manejar fechas de Excel - pueden ser números seriales o texto
-      let date: Date
-      if (typeof dateStr === 'number') {
-        // Convertir número serial de Excel a fecha
-        date = new Date((dateStr - 25569) * 86400 * 1000)
-      } else {
-        // Intentar parsear como texto en varios formatos
-        const dateString = String(dateStr).trim()
-        if (dateString.includes('/')) {
-          // Formato dd/MM/yyyy o d/M/yyyy
-          date = parse(dateString, dateString.length <= 9 ? "d/M/yyyy" : "dd/MM/yyyy", new Date(), { locale: es })
-        } else {
-          date = new Date(dateString)
-        }
-      }
-
-      if (isNaN(date.getTime())) {
+      let fecha: string
+      try {
+        fecha = parseImportDate(dateStr)
+      } catch {
         skippedRows.push(i + 1)
         continue
       }
@@ -370,7 +332,7 @@ export function TransactionImportPanel({
       const descripcion = extraFields.length > 0 ? extraFields.join('\n') : null
 
       result.push({
-        fecha: format(date, "yyyy-MM-dd"),
+        fecha,
         concepto,
         importe,
         descripcion,
@@ -379,17 +341,7 @@ export function TransactionImportPanel({
       })
     }
 
-    // Mostrar información sobre el procesamiento
-    if (skippedRows.length > 0) {
-    }
-
-    if (categoriesFound > 0) {
-    }
-
-    if (categoriesNotFound.length > 0) {
-    }
-
-    return result
+    return { transactions: result, skippedRows, categoriesFound, categoriesNotFound }
   }
 
   const handleImport = async () => {
@@ -409,28 +361,7 @@ export function TransactionImportPanel({
       // Manejar archivos CSV de manera diferente
       if (file.name.toLowerCase().endsWith('.csv')) {
         const text = await file.text()
-        // Parsear CSV simple (asumiendo separador por comas)
-        const lines = text.split('\n')
-        rows = lines.map(line => {
-          // Parseo simple de CSV - podrías usar una librería más robusta si es necesario
-          const cells: string[] = []
-          let currentCell = ''
-          let inQuotes = false
-
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i]
-            if (char === '"') {
-              inQuotes = !inQuotes
-            } else if (char === ',' && !inQuotes) {
-              cells.push(currentCell.trim())
-              currentCell = ''
-            } else {
-              currentCell += char
-            }
-          }
-          cells.push(currentCell.trim()) // Añadir la última celda
-          return cells
-        }).filter(row => row.some(cell => cell.length > 0)) // Filtrar filas completamente vacías
+        rows = parseCsv(text)
       } else {
         // Manejar archivos Excel (XLSX/XLS)
         const data = await file.arrayBuffer()
@@ -449,8 +380,20 @@ export function TransactionImportPanel({
       }
 
       let parsed: ParsedTransaction[]
+      let importSummary = ""
       if (source === "manual") {
-        parsed = parseManual(rows)
+        const manualResult = parseManual(rows)
+        parsed = manualResult.transactions
+        const summaryParts: string[] = []
+        if (manualResult.skippedRows.length > 0) {
+          summaryParts.push(`${manualResult.skippedRows.length} filas omitidas (vacías/inválidas)`)
+        }
+        if (manualResult.categoriesNotFound.length > 0) {
+          summaryParts.push(`${manualResult.categoriesNotFound.length} categorías no encontradas: ${manualResult.categoriesNotFound.join(", ")}`)
+        }
+        if (summaryParts.length > 0) {
+          importSummary = ` (${summaryParts.join("; ")})`
+        }
       } else if (source === "sabadell") {
         parsed = parseSabadell(rows)
       } else {
@@ -504,6 +447,12 @@ export function TransactionImportPanel({
           if (insertError.code === '23505' && insertError.message.includes('ux_mov_dedupe')) {
             let successCount = 0
             duplicates = 0
+            // Fila (índice) y error donde se detuvo el bucle por un fallo
+            // distinto de duplicado — ya NO se relanza a mitad de bucle,
+            // para no perder el recuento de lo que sí se llegó a insertar
+            // en esta pasada.
+            let failedRow: number | null = null
+            let failedError: any = null
 
             for (let i = 0; i < toInsert.length; i++) {
               const transaction = toInsert[i]
@@ -543,8 +492,11 @@ export function TransactionImportPanel({
                     conflictReason
                   })
                 } else {
-                  // Error diferente, relanzar
-                  throw singleError
+                  // Error distinto de duplicado: detenemos el bucle pero
+                  // conservamos successCount/duplicates de lo ya insertado.
+                  failedRow = i
+                  failedError = singleError
+                  break
                 }
               } else {
                 successCount++
@@ -554,13 +506,21 @@ export function TransactionImportPanel({
             setDuplicateCount(duplicates)
             setDuplicateTransactions(duplicateList)
 
-            if (duplicates > 0) {
-              setMessage(`Se han importado ${successCount} transacciones. ${duplicates} posibles duplicados detectados.`)
-            } else {
-              setMessage(`Se han importado ${successCount} transacciones`)
+            const summaryParts: string[] = []
+            if (successCount > 0) summaryParts.push(`Se han importado ${successCount} transacciones`)
+            if (duplicates > 0) summaryParts.push(`${duplicates} posibles duplicados detectados`)
+            setMessage(
+              (summaryParts.length > 0 ? summaryParts.join(". ") + "." : "No se importó ninguna transacción.") +
+                importSummary,
+            )
+
+            if (failedError) {
+              setError(`Fila ${failedRow! + 1}: ${failedError.message}`)
+              setErrorCode(failedError.code || "UNKNOWN")
             }
 
-            // Llamar a onImported si se importaron transacciones exitosamente
+            // Llamar a onImported si se importaron transacciones exitosamente,
+            // incluso si el bucle se detuvo antes de tiempo por otro error.
             if (successCount > 0 && onImported) {
               setTimeout(() => onImported(successCount), 500) // Pequeño delay para asegurar que la DB esté actualizada
             }
@@ -571,7 +531,7 @@ export function TransactionImportPanel({
         } else {
           // Todas las transacciones se insertaron correctamente
           const insertCount = insertedData?.length || toInsert.length
-          setMessage(`Se han importado ${insertCount} transacciones`)
+          setMessage(`Se han importado ${insertCount} transacciones${importSummary}`)
 
           // Llamar a onImported si se importaron transacciones exitosamente
           if (insertCount > 0 && onImported) {
@@ -579,7 +539,7 @@ export function TransactionImportPanel({
           }
         }
       } else {
-        setMessage(`No se encontraron transacciones para importar`)
+        setMessage(`No se encontraron transacciones para importar${importSummary}`)
       }
     } catch (err: any) {
       console.error('Error durante la importación:', err)

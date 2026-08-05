@@ -38,6 +38,8 @@ export function useConsentAlerts(delegacionId: string | null): UseConsentAlertsR
     let mounted = true
 
     if (!delegacionId) {
+      // Resetea el estado derivado cuando cambia/desaparece la delegación.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAlerts([])
       setLoading(false)
       return

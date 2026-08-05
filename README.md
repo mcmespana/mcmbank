@@ -33,14 +33,26 @@
 ```
 
 ### Variables de entorno
-Crea un archivo `.env.local` en la raíz con las siguientes claves (añade valores reales de Supabase):
+Copia `.env.example` a `.env.local` en la raíz y rellena los valores reales:
 
+```bash
+cp .env.example .env.local
+```
+
+Mínimo para arrancar en local (Supabase):
 ```bash
 NEXT_PUBLIC_SUPABASE_URL="https://tu-proyecto.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="tu-clave-anon"
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL="http://localhost:3000/auth/callback"
 ```
+
+El resto de variables (`SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `RESEND_API_KEY`,
+`MCM_API_KEY`, las de Enable Banking y las de la integración con Google) solo
+son necesarias para funcionalidades concretas (admin, avisos por email, API
+externa, sincronización bancaria, memorias económicas) — ver `.env.example`
+para la lista completa con comentarios, y `docs/ENABLE_BANKING.md` para el
+detalle de las variables de Enable Banking.
 
 > 💡 Después de añadir o cambiar variables, reinicia el servidor de desarrollo.
 

@@ -73,7 +73,7 @@ The app uses a **DelegationContext** (`contexts/delegation-context.tsx`) that:
 ### Provider Hierarchy
 All providers are composed in `contexts/app-providers.tsx`:
 ```
-ThemeProvider → AuthProvider → DelegationProvider → MovimientosCacheProvider
+ThemeProvider → QueryProvider → AuthProvider → DelegationProvider
 ```
 Also includes: `ThemeStateWatcher`, `ConnectionMonitor`, `Toaster` (Sonner).
 
@@ -87,7 +87,7 @@ Also includes: `ThemeStateWatcher`, `ConnectionMonitor`, `Toaster` (Sonner).
   - `file-service.ts`: File upload/download via Supabase Storage
   - `improvement-proposals.ts`: Proposal CRUD, voting, and comments
 - **Query utilities** (`lib/db/`): Query execution with timeout handling (`query.ts`) and telemetry (`telemetry.ts`)
-- **Caching**: TTL-based caching in hooks (e.g., `useCuentas` uses 30s TTL), plus `MovimientosCacheContext` for transaction caching
+- **Caching**: TTL-based caching in hooks (e.g., `useCuentas` uses 30s TTL); `useMovimientos` handles its own pagination/abort/dedupe internally
 - **Performance**: Debounced state updates, query revalidation on focus with jitter, pagination support (100 items default)
 
 ### Core Hooks

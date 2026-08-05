@@ -141,7 +141,6 @@ export function TransactionList({
           onSelectionChange={(selected, rangeFromAnchor) =>
             onMovementSelectionChange(movement.id, selected, rangeFromAnchor)
           }
-          onRequestCreateCategory={onRequestCreateCategory}
         />
       ))}
       {hasMore && (

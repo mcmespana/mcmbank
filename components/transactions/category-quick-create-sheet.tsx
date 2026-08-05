@@ -40,7 +40,6 @@ export function CategoryQuickCreateSheet({
       creado_en: "",
       es_global: false,
       esta_activa: true,
-      activa: true,
     }),
     [organizacionId, delegacionId],
   )
@@ -80,7 +79,6 @@ export function CategoryQuickCreateSheet({
         categoria_padre_id: null,
         es_global: targetIsGlobal,
         esta_activa: true,
-        activa: true,
       })
 
       await onCreated(created)

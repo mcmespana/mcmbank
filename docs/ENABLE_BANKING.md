@@ -233,6 +233,15 @@ FROM public.cuenta
 WHERE sync_enabled = true;
 ```
 
+Si `last_sync_status = 'parcial'`, revisa `last_sync_error`: puede deberse a
+un error de upsert puntual, o a que la paginación se truncó tras 50 páginas
+(`DEFAULT_MAX_PAGES` en `lib/enable-banking/sync.ts`) porque el banco todavía
+tenía más transacciones (`continuation_key` presente) — en ese caso el
+mensaje lo indica explícitamente y da el rango de fechas afectado. La sync
+incremental (ventana de 10 días) **no repara sola** ese hueco: si necesitas
+el histórico completo, relanza una sync manual acotando `sync_desde_fecha` a
+un rango más corto que quepa en menos de 50 páginas.
+
 ---
 
 ## 5. Limitaciones conocidas

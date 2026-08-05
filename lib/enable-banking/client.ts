@@ -128,17 +128,25 @@ export const enableBanking = {
     accountUid: string,
     params: { date_from?: string; date_to?: string; transaction_status?: "BOOK" | "PDNG" | "INFO" } = {},
     opts: { maxPages?: number; onPage?: (page: EBTransactionsResponse, index: number) => void } = {},
-  ): Promise<EBTransactionsResponse[]> {
+  ): Promise<{ pages: EBTransactionsResponse[]; truncated: boolean }> {
     const maxPages = opts.maxPages ?? 50
     const pages: EBTransactionsResponse[] = []
     let continuation_key: string | undefined
+    let truncated = false
     for (let i = 0; i < maxPages; i++) {
       const page = await this.getTransactions(accountUid, { ...params, continuation_key })
       pages.push(page)
       opts.onPage?.(page, i)
-      if (!page.continuation_key) break
+      if (!page.continuation_key) {
+        continuation_key = undefined
+        break
+      }
       continuation_key = page.continuation_key
+      // Salimos del bucle por agotar maxPages, no porque el banco haya
+      // terminado — el banco todavía tenía continuation_key. Esto se debe
+      // reportar, nunca descartar en silencio (ver plan 007).
+      if (i === maxPages - 1) truncated = true
     }
-    return pages
+    return { pages, truncated }
   },
 }

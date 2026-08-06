@@ -138,6 +138,11 @@ Verifica:
 SELECT * FROM cron.job WHERE jobname = 'mcmbank_bank_sync_daily';
 ```
 
+**Verificación conjunta**: en vez de comprobar cada paso suelto, `scripts/052_enable_banking_setup_verify.sql`
+ejecuta esta misma verificación (extensiones + settings + cron) en una sola
+pasada — pégalo y ejecútalo en el SQL Editor después de haber aplicado 038 y
+039 para confirmar que todo quedó bien encadenado.
+
 ### 3.7 Deploy en Vercel
 
 ```bash
@@ -155,6 +160,27 @@ Vercel despliega. Comprueba que las rutas `/api/bank-sync/*` responden (al menos
 5. Pulsa **Conectar** → redirige al banco → aprueba el SCA.
 6. Vuelves a `/cuentas` con un toast "Cuenta conectada correctamente".
 7. Ahora la cuenta muestra iconos verde 🔄 (sincronizar) y naranja 🔓 (desconectar).
+
+### 3.8bis Probar sin una cuenta bancaria real
+
+El desplegable de bancos de `/cuentas` (diálogo "Conectar con el banco")
+muestra directamente los ASPSPs que devuelve `/api/bank-sync/aspsps`,
+incluyendo los que Enable Banking marca como `sandbox`/`beta` — no hace
+falta ninguna configuración extra para verlos. Esos ASPSPs de prueba
+permiten recorrer el flujo completo (autorización → callback → primera
+sincronización) sin una cuenta bancaria real ni un consentimiento SCA real.
+
+Para saber qué ASPSPs de sandbox están disponibles y qué credenciales de
+prueba usar en cada uno, consulta la documentación oficial de Enable
+Banking (§8 "Referencias" más abajo) — no hay una lista fija aquí porque
+cambia según el ASPSP y la región contratada.
+
+Antes de intentarlo, puedes descartar problemas de configuración con
+`/api/bank-sync/health` (autenticado, solo `gestor_central`) o la sección
+"Diagnóstico Enable Banking" en `/configuracion`: confirma que
+`ENABLE_BANKING_APP_ID`/`ENABLE_BANKING_PRIVATE_KEY` están presentes y que
+la clave privada firma JWTs correctamente, sin necesidad de llegar hasta el
+banco para descubrirlo.
 
 ### 3.9 Forzar una primera sincronización para ver el log
 
@@ -251,8 +277,8 @@ un rango más corto que quepa en menos de 50 páginas.
 3. **Múltiples cuentas en una sola autorización**: si el banco devuelve varias cuentas y la cuenta de MCM Bank no tiene IBAN ni hay match de 1:1, el callback retorna un error pidiendo que pongas el IBAN. Mejora futura: UI para elegir cuenta manualmente.
 4. **Timeout de Vercel**: el cron agrupa todas las cuentas en una sola request. Si la delegación tiene muchas cuentas con histórico grande y Vercel devuelve 504, la solución es partirlo (un `net.http_post` por cuenta desde pg_cron). No implementado todavía.
 5. **Solo transacciones booked**: ignoramos PDNG (pendientes) porque cambian de `transaction_id` al confirmarse y generan ruido.
-7. **Histórico previo limitado por el banco**: por mucho que intentemos ir 2 años atrás, el ASPSP puede limitar la ventana a 90 días. Esto es una restricción de PSD2 / del propio banco, no nuestra. Cuando ocurre, el log lo deja claro y el usuario debe importar el histórico antiguo desde Excel.
-6. **Autorización tiene que iniciarse desde MCM Bank**: no podemos reaprovechar sesiones pre-existentes del dashboard de EB — el `session_id` solo se devuelve en la llamada a `/sessions` tras el callback.
+6. **Histórico previo limitado por el banco**: por mucho que intentemos ir 2 años atrás, el ASPSP puede limitar la ventana a 90 días. Esto es una restricción de PSD2 / del propio banco, no nuestra. Cuando ocurre, el log lo deja claro y el usuario debe importar el histórico antiguo desde Excel.
+7. **Autorización tiene que iniciarse desde MCM Bank**: no podemos reaprovechar sesiones pre-existentes del dashboard de EB — el `session_id` solo se devuelve en la llamada a `/sessions` tras el callback.
 
 ---
 

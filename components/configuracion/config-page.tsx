@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import type { Delegacion } from "@/lib/types/database"
 import { useIsAdmin } from "@/hooks/use-is-admin"
 import { PlantillaMemoriaSection } from "@/components/configuracion/plantilla-memoria-section"
+import { EnableBankingHealthSection } from "@/components/configuracion/enable-banking-health-section"
 
 interface DelegacionWithCount extends Delegacion {
   movimientos?: number
@@ -122,6 +123,7 @@ export function ConfigPage() {
   return (
     <div className="space-y-10">
       <PlantillaMemoriaSection />
+      <EnableBankingHealthSection />
 
       {/* Delegaciones Section */}
       <section>

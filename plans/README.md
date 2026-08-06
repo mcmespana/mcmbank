@@ -63,7 +63,7 @@ conditions, and update your row when done.
 | [012](012-ux-consistent-confirmations-and-error-feedback.md) | Consistent confirmations, visible file-action errors | P2 | S | — | TODO |
 | [003](003-bulk-export-facturas.md) | Bulk export of invoice files | P2 | L | 002 | TODO — **maintainer review first** (PR #159 facturas section may supersede parts) |
 | [004](004-flag-synced-transactions-missing-invoice.md) | Flag synced transactions missing invoice | P2 | M | — | TODO — **maintainer review first** (same reason) |
-| [021](021-redesign-facturas-pagos.md) | Redesign /facturas + /pagos-mcm: dense rows, single detail panel, readable mobile tabs, React Query + summary RPCs, RLS `WITH CHECK` | P2 | L | — | TODO |
+| [021](021-redesign-facturas-pagos.md) | Redesign /facturas + /pagos-mcm: dense rows, single detail panel, readable mobile tabs, React Query + summary RPCs, RLS `WITH CHECK` | P2 | L | — | IN PROGRESS |
 | [020](020-design-spike-auto-categorization-and-contacto-matching.md) | DESIGN SPIKE: rules engine (`regla`) + contacto↔sync matching | P3 | M | — | TODO |
 | [006](006-bank-sync-multi-account-picker.md) | Manual account picker on multi-account EB match | P3 | M | — | TODO |
 | [013](013-ux-investigate-upload-affordance-and-contacto-selector.md) | Investigate upload affordance / contacto selector issues | P3 | M | — | TODO |

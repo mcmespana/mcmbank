@@ -20,6 +20,7 @@ import { useDebouncedState } from "@/hooks/use-debounced-state"
 import { useDelegationRole } from "@/hooks/use-delegation-role"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { usePagosMcm } from "@/hooks/use-pagos-mcm"
+import { usePagosMcmResumen } from "@/hooks/use-pagos-mcm-resumen"
 import { formatCurrency } from "@/lib/utils/format"
 import { COPY_FORMATS, type CopyFormatId } from "@/lib/utils/copy-formats"
 import { PAGO_MCM_ESTADO_INFO } from "@/lib/utils/pago-mcm"
@@ -76,8 +77,9 @@ export function PagosMcmManager() {
     busqueda: busquedaDebounced || undefined,
   })
 
-  // El recuento total no depende del filtro de tab. Lo pedimos sin filtro de estado.
-  const { totals: globalTotals } = usePagosMcm(selectedDelegation, {})
+  // El recuento total no depende del filtro de tab, calculado en la base de
+  // datos (get_pagos_mcm_resumen) en vez de repetir la lista completa.
+  const { resumen: globalTotals } = usePagosMcmResumen(selectedDelegation)
 
   const { contactos } = useContactos(selectedDelegation, { incluirGlobales: true })
   const { categorias } = useCategorias(selectedDelegation, { includeGlobal: true, includeInactive: false })

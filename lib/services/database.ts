@@ -14,6 +14,7 @@ import type {
   FacturaEstado,
   FacturaInsert,
   FacturaUpdate,
+  FacturaResumenRow,
   FinancialSummary,
   MonthlyTrendRow,
   MovimientoConRelaciones,
@@ -21,6 +22,7 @@ import type {
   PagoMcmConRelaciones,
   PagoMcmEstado,
   PagoMcmInsert,
+  PagoMcmResumenRow,
   PagoMcmUpdate,
 } from "@/lib/types/database"
 import { margenImporteFactura, scoreCandidatoMovimiento } from "@/lib/utils/facturas"
@@ -414,6 +416,8 @@ export class DatabaseService {
       estados?: PagoMcmEstado[]
       contactoId?: string
       busqueda?: string
+      offset?: number
+      limit?: number
       signal?: AbortSignal
     } = {},
   ): Promise<PagoMcmConRelaciones[]> {
@@ -447,7 +451,6 @@ export class DatabaseService {
         )
       `)
       .eq("delegacion_id", delegacionId)
-      .order("estado", { ascending: true })
       .order("creado_en", { ascending: false })
 
     if (options.estados && options.estados.length > 0) {
@@ -461,6 +464,10 @@ export class DatabaseService {
     if (options.busqueda) {
       const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
       query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%,notas.ilike.%${term}%`)
+    }
+
+    if (options.offset != null && options.limit != null) {
+      query = query.range(options.offset, options.offset + options.limit - 1)
     }
 
     if (options.signal) {
@@ -837,6 +844,8 @@ export class DatabaseService {
       estados?: FacturaEstado[]
       contactoId?: string
       busqueda?: string
+      offset?: number
+      limit?: number
       signal?: AbortSignal
     } = {},
   ): Promise<FacturaConRelaciones[]> {
@@ -845,6 +854,7 @@ export class DatabaseService {
       .from("factura")
       .select(this.FACTURA_SELECT)
       .eq("delegacion_id", delegacionId)
+      .order("fecha_emision", { ascending: false, nullsFirst: false })
       .order("creado_en", { ascending: false })
 
     if (options.estados && options.estados.length > 0) {
@@ -856,6 +866,9 @@ export class DatabaseService {
     if (options.busqueda) {
       const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
       query = query.or(`concepto.ilike.%${term}%,numero.ilike.%${term}%,notas.ilike.%${term}%`)
+    }
+    if (options.offset != null && options.limit != null) {
+      query = query.range(options.offset, options.offset + options.limit - 1)
     }
     if (options.signal) {
       query = query.abortSignal(options.signal)
@@ -1326,6 +1339,35 @@ export class DatabaseService {
       categoria_color: row.categoria_color ?? null,
       ingresos: Number(row.ingresos ?? 0),
       gastos: Number(row.gastos ?? 0),
+    }))
+  }
+
+  /** Resumen de facturas por estado (contadores de pestaña + KPI de /facturas). */
+  static async getFacturasResumen(delegacionId: string, signal?: AbortSignal): Promise<FacturaResumenRow[]> {
+    const client = this.getClient() as any
+    let query = client.rpc("get_facturas_resumen", { p_delegacion_id: delegacionId })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    return ((data as any[]) ?? []).map((row) => ({
+      estado: row.estado as FacturaResumenRow["estado"],
+      n: Number(row.n ?? 0),
+      importe_total: Number(row.importe_total ?? 0),
+      importe_pendiente: Number(row.importe_pendiente ?? 0),
+    }))
+  }
+
+  /** Resumen de pagos MCM por estado (contadores de pestaña + línea de resumen de /pagos-mcm). */
+  static async getPagosMcmResumen(delegacionId: string, signal?: AbortSignal): Promise<PagoMcmResumenRow[]> {
+    const client = this.getClient() as any
+    let query = client.rpc("get_pagos_mcm_resumen", { p_delegacion_id: delegacionId })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    return ((data as any[]) ?? []).map((row) => ({
+      estado: row.estado as PagoMcmResumenRow["estado"],
+      n: Number(row.n ?? 0),
+      importe_total: Number(row.importe_total ?? 0),
     }))
   }
 }

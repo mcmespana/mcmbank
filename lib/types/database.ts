@@ -52,9 +52,11 @@ export type ArchivoAdjuntoEntidad = ArchivoAdjunto["entidad"]
 export type PagoMcm = Database["public"]["Tables"]["pago_mcm"]["Row"]
 export type PagoMcmInsert = Database["public"]["Tables"]["pago_mcm"]["Insert"]
 export type PagoMcmUpdate = Database["public"]["Tables"]["pago_mcm"]["Update"]
-export type PagoMcmEstado = PagoMcm["estado"]
-export type PagoMcmTipoCalculo = PagoMcm["tipo_calculo"]
-export type PagoMcmGasolinaPreset = NonNullable<PagoMcm["gasolina_preset"]>
+// pago_mcm.estado / tipo_calculo / gasolina_preset son text en la BD (el tipo
+// generado los colapsa a string); la app los restringe aquí, igual que FacturaEstado.
+export type PagoMcmEstado = "borrador" | "pendiente" | "pagado" | "cancelado"
+export type PagoMcmTipoCalculo = "manual" | "gasolina_tickets" | "gasolina_km" | "gasolina_avanzado"
+export type PagoMcmGasolinaPreset = "ivaj_0_12" | "min_0_18" | "max_0_20" | "estandar_0_26" | "personalizado"
 
 export const PAGO_MCM_ESTADOS: readonly PagoMcmEstado[] = [
   "borrador",
@@ -70,7 +72,10 @@ export const PAGO_MCM_TIPOS_CALCULO: readonly PagoMcmTipoCalculo[] = [
   "gasolina_avanzado",
 ] as const
 
-export type PagoMcmConRelaciones = PagoMcm & {
+export type PagoMcmConRelaciones = Omit<PagoMcm, "estado" | "tipo_calculo" | "gasolina_preset"> & {
+  estado: PagoMcmEstado
+  tipo_calculo: PagoMcmTipoCalculo
+  gasolina_preset: PagoMcmGasolinaPreset | null
   contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "iban" | "email" | "telefono"> | null
   categoria_sugerida?: Pick<Categoria, "id" | "nombre" | "emoji" | "color"> | null
   movimiento?: Pick<
@@ -157,6 +162,19 @@ export type MonthlyTrendRow = {
   mes: string // 'YYYY-MM'
   ingresos: number
   gastos: number
+}
+
+export type FacturaResumenRow = {
+  estado: FacturaEstado
+  n: number
+  importe_total: number
+  importe_pendiente: number
+}
+
+export type PagoMcmResumenRow = {
+  estado: PagoMcmEstado
+  n: number
+  importe_total: number
 }
 
 export type CategoryBreakdownRow = {

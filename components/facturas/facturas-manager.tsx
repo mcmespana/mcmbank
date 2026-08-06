@@ -29,6 +29,7 @@ import { useDebouncedState } from "@/hooks/use-debounced-state"
 import { useDelegationRole } from "@/hooks/use-delegation-role"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { useFacturas } from "@/hooks/use-facturas"
+import { useFacturasResumen } from "@/hooks/use-facturas-resumen"
 import { formatCurrency } from "@/lib/utils/format"
 import { FACTURA_ESTADO_INFO } from "@/lib/utils/facturas"
 import type { FacturaConRelaciones, FacturaEstado } from "@/lib/types/database"
@@ -86,8 +87,9 @@ export function FacturasManager() {
     busqueda: busquedaDebounced || undefined,
   })
 
-  // Recuento global independiente del filtro de tab/búsqueda.
-  const { totals: globalTotals, refetch: refetchTotals } = useFacturas(selectedDelegation, {})
+  // Recuento global independiente del filtro de tab/búsqueda, calculado en la
+  // base de datos (get_facturas_resumen) en vez de repetir la lista completa.
+  const { resumen: globalTotals, refetch: refetchTotals } = useFacturasResumen(selectedDelegation)
 
   const { contactos, createContacto } = useContactos(selectedDelegation, { incluirGlobales: true })
   const { categorias } = useCategorias(selectedDelegation, { includeGlobal: true, includeInactive: false })

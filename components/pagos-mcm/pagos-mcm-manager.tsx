@@ -1,16 +1,18 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { CheckCircle2, ChevronDown, CircleDashed, Clock, Coins, Copy, HandCoins, Loader2, Plus, Search, Wallet, type LucideIcon } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { CheckCircle2, Copy, Plus, Search, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { PageHeader } from "@/components/ui/page-header"
+import { FilterTabs } from "@/components/ui/filter-tabs"
+import { ListHeaderRow } from "@/components/ui/list-row"
+import { ActionMenu } from "@/components/ui/action-menu"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
@@ -20,20 +22,18 @@ import { useDebouncedState } from "@/hooks/use-debounced-state"
 import { useDelegationRole } from "@/hooks/use-delegation-role"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { usePagosMcm } from "@/hooks/use-pagos-mcm"
+import { usePagosMcmResumen } from "@/hooks/use-pagos-mcm-resumen"
 import { formatCurrency } from "@/lib/utils/format"
-import { COPY_FORMATS, type CopyFormatId } from "@/lib/utils/copy-formats"
+import { COPY_FORMATS, getPagosTransferibles, type CopyFormatId } from "@/lib/utils/copy-formats"
 import { PAGO_MCM_ESTADO_INFO } from "@/lib/utils/pago-mcm"
-import type {
-  PagoMcmConRelaciones,
-  PagoMcmEstado,
-  PagoMcmInsert,
-  PagoMcmUpdate,
-} from "@/lib/types/database"
-import { PagoMcmCard } from "./pago-mcm-card"
+import type { Categoria, PagoMcmConRelaciones, PagoMcmEstado } from "@/lib/types/database"
+import { PagoMcmRow, PAGO_MCM_ROW_COLS } from "./pago-mcm-row"
 import { PagoMcmForm, type PagoMcmFormSubmit } from "./pago-mcm-form"
+import { PagoMcmDetailSheet } from "./pago-mcm-detail-sheet"
 import { DeletePagoMcmDialog } from "./delete-pago-mcm-dialog"
 import { MarcarPagadoDialog } from "./marcar-pagado-dialog"
 import { TransferRunDialog } from "./transfer-run-dialog"
+import { CategoryQuickCreateSheet } from "@/components/transactions/category-quick-create-sheet"
 
 type TabValue = "pendiente" | "borrador" | "pagado" | "todos"
 
@@ -47,7 +47,7 @@ const TAB_LABELS: Record<TabValue, string> = {
 }
 
 export function PagosMcmManager() {
-  const { selectedDelegation } = useDelegationContext()
+  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
   const { user } = useAuth()
   const isAdmin = useIsAdmin()
   const { role } = useDelegationRole(selectedDelegation)
@@ -65,6 +65,8 @@ export function PagosMcmManager() {
     pagos,
     loading,
     error,
+    hasMore,
+    onLoadMore,
     createPago,
     updatePago,
     deletePago,
@@ -76,8 +78,12 @@ export function PagosMcmManager() {
     busqueda: busquedaDebounced || undefined,
   })
 
-  // El recuento total no depende del filtro de tab. Lo pedimos sin filtro de estado.
-  const { totals: globalTotals } = usePagosMcm(selectedDelegation, {})
+  const { resumen: globalTotals } = usePagosMcmResumen(selectedDelegation)
+
+  // Pendientes con IBAN, independiente de la pestaña activa (antes se calculaba
+  // sobre `pagos`, que está filtrado por tab, así que en "Pagados" caía a 0).
+  const { pagos: pendientesRaw } = usePagosMcm(selectedDelegation, { estados: ["pendiente"] })
+  const pendientesConIban = useMemo(() => getPagosTransferibles(pendientesRaw), [pendientesRaw])
 
   const { contactos } = useContactos(selectedDelegation, { incluirGlobales: true })
   const { categorias } = useCategorias(selectedDelegation, { includeGlobal: true, includeInactive: false })
@@ -86,15 +92,36 @@ export function PagosMcmManager() {
   const [editing, setEditing] = useState<PagoMcmConRelaciones | null>(null)
   const [deleting, setDeleting] = useState<PagoMcmConRelaciones | null>(null)
   const [marcando, setMarcando] = useState<PagoMcmConRelaciones | null>(null)
+  const [detailPago, setDetailPago] = useState<PagoMcmConRelaciones | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
+  const [transferSubset, setTransferSubset] = useState<PagoMcmConRelaciones[] | null>(null)
   const [copyMenuOpen, setCopyMenuOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [categoryCreateOpen, setCategoryCreateOpen] = useState(false)
+  const pendingCategoryAssignRef = useRef<((categoryId: string) => void | Promise<void>) | null>(null)
 
   const { copy } = useClipboard()
 
-  const pendientesConIban = useMemo(
-    () => pagos.filter((p) => p.estado === "pendiente" && p.contacto?.iban),
-    [pagos],
+  const selectionActive = selectedIds.size > 0
+  const pagosSeleccionados = useMemo(() => pagos.filter((p) => selectedIds.has(p.id)), [pagos, selectedIds])
+  const borradoresSeleccionados = useMemo(
+    () => pagosSeleccionados.filter((p) => p.estado === "borrador"),
+    [pagosSeleccionados],
   )
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!hasMore) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) onLoadMore()
+    })
+    const current = loadMoreRef.current
+    if (current) observer.observe(current)
+    return () => {
+      if (current) observer.unobserve(current)
+    }
+  }, [hasMore, onLoadMore])
 
   const handleCopyFormat = async (formatId: CopyFormatId) => {
     setCopyMenuOpen(false)
@@ -106,14 +133,12 @@ export function PagosMcmManager() {
     const text = fmt.build(pendientesConIban)
     const ok = await copy(text)
     if (ok) {
-      toast.success(`${pendientesConIban.length} pagos copiados`, {
-        description: fmt.label,
-      })
+      toast.success(`${pendientesConIban.length} pagos copiados`, { description: fmt.label })
     }
   }
 
   const handleSubmitForm = async (payload: PagoMcmFormSubmit) => {
-    if (editing) {
+    if (editing?.id) {
       if (!payload.update) return
       await updatePago(editing.id, payload.update)
     } else {
@@ -132,135 +157,176 @@ export function PagosMcmManager() {
   const openEdit = (pago: PagoMcmConRelaciones) => {
     setEditing(pago)
     setFormOpen(true)
+    setDetailOpen(false)
+  }
+
+  const openDuplicate = (pago: PagoMcmConRelaciones) => {
+    setEditing({ ...pago, id: "", movimiento_id: null, movimiento: null })
+    setFormOpen(true)
+    setDetailOpen(false)
+  }
+
+  const openDetail = (pago: PagoMcmConRelaciones) => {
+    setDetailPago(pago)
+    setDetailOpen(true)
+  }
+
+  const handleCancelar = async (pago: PagoMcmConRelaciones) => {
+    try {
+      await updatePago(pago.id, { estado: "cancelado" })
+      toast.success("Pago cancelado")
+    } catch (err) {
+      toast.error("No se pudo cancelar: " + (err instanceof Error ? err.message : "error"))
+    }
+  }
+
+  const handleConfirmarBorrador = async (pago: PagoMcmConRelaciones) => {
+    try {
+      await updatePago(pago.id, { estado: "pendiente" })
+      toast.success("Pago confirmado como pendiente")
+    } catch (err) {
+      toast.error("No se pudo confirmar: " + (err instanceof Error ? err.message : "error"))
+    }
+  }
+
+  const handleConfirmarBorradoresSeleccionados = async () => {
+    try {
+      await Promise.all(borradoresSeleccionados.map((p) => updatePago(p.id, { estado: "pendiente" })))
+      toast.success(`${borradoresSeleccionados.length} borrador(es) confirmados`)
+      setSelectedIds(new Set())
+    } catch (err) {
+      toast.error("No se pudieron confirmar todos: " + (err instanceof Error ? err.message : "error"))
+    }
+  }
+
+  const handleDesvincular = async (pago: PagoMcmConRelaciones) => {
+    try {
+      await unlinkFromMovimiento(pago.id)
+      toast.success("Movimiento desvinculado")
+    } catch (err) {
+      toast.error("No se pudo desvincular: " + (err instanceof Error ? err.message : "error"))
+    }
+  }
+
+  const toggleSelection = (id: string, selected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (selected) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const openTransferencia = (subset?: PagoMcmConRelaciones[]) => {
+    setTransferSubset(subset ?? null)
+    setTransferOpen(true)
+  }
+
+  const requestCreateCategory = (assign: (categoryId: string) => void | Promise<void>) => {
+    pendingCategoryAssignRef.current = assign
+    setCategoryCreateOpen(true)
+  }
+
+  const handleCategoryCreated = async (newCategory: Categoria) => {
+    const assign = pendingCategoryAssignRef.current
+    pendingCategoryAssignRef.current = null
+    setCategoryCreateOpen(false)
+    if (assign) await assign(newCategory.id)
+    toast.success(`Categoría "${newCategory.nombre}" creada y asignada`)
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-2 rounded-full bg-gradient-to-b from-primary via-primary/70 to-primary/40 shadow-lg shadow-primary/30" />
-            <h1 className="text-3xl font-extrabold sm:text-4xl bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
-              Pagos MCM
-            </h1>
-          </div>
-          <p className="ml-5 max-w-2xl pl-4 text-sm text-muted-foreground">
-            Apúntate los pagos internos que tienes que hacer (reembolsos a personas, ayudas, etc.).
-            Ten a mano los IBAN, copia y pega para hacer las transferencias y, cuando estén hechas,
-            vincula el movimiento bancario y desaparecerán de la lista.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {pendientesConIban.length > 0 && canEdit && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setTransferOpen(true)}
-              title="Asistente paso a paso para hacer todas las transferencias"
-            >
-              <Wallet className="mr-1.5 h-3.5 w-3.5" /> Modo transferencia
-              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold tabular-nums text-primary">
-                {pendientesConIban.length}
-              </span>
-            </Button>
-          )}
-          {pendientesConIban.length > 0 && (
-            <Popover open={copyMenuOpen} onOpenChange={setCopyMenuOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar IBANes pendientes
-                  <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-72 p-1">
-                {(Object.keys(COPY_FORMATS) as CopyFormatId[]).map((id) => {
-                  const fmt = COPY_FORMATS[id]
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => handleCopyFormat(id)}
-                      className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus:bg-accent focus:outline-none"
-                    >
-                      <span className="font-medium">{fmt.label}</span>
-                      <span className="text-[11px] leading-tight text-muted-foreground">
-                        {fmt.description}
-                      </span>
-                    </button>
-                  )
-                })}
-              </PopoverContent>
-            </Popover>
-          )}
-          {canEdit && (
-            <Button onClick={openCreate}>
-              <Plus className="mr-1.5 h-4 w-4" /> Nuevo pago MCM
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Pagos MCM"
+        actions={
+          <>
+            {pendientesConIban.length > 0 && canEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:inline-flex"
+                onClick={() => openTransferencia()}
+                title="Asistente paso a paso para hacer todas las transferencias"
+              >
+                <Wallet className="mr-1.5 h-3.5 w-3.5" /> Modo transferencia
+                <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold tabular-nums text-primary">
+                  {pendientesConIban.length}
+                </span>
+              </Button>
+            )}
+            {pendientesConIban.length > 0 && (
+              <Popover open={copyMenuOpen} onOpenChange={setCopyMenuOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+                    <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar IBANes
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-1">
+                  {(Object.keys(COPY_FORMATS) as CopyFormatId[]).map((id) => {
+                    const fmt = COPY_FORMATS[id]
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => handleCopyFormat(id)}
+                        className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus:bg-accent focus:outline-none"
+                      >
+                        <span className="font-medium">{fmt.label}</span>
+                        <span className="text-[11px] leading-tight text-muted-foreground">{fmt.description}</span>
+                      </button>
+                    )
+                  })}
+                </PopoverContent>
+              </Popover>
+            )}
+            {pendientesConIban.length > 0 && (
+              <ActionMenu
+                ariaLabel="Más acciones de pagos pendientes"
+                items={[
+                  ...(canEdit
+                    ? [{ label: "Modo transferencia", icon: Wallet, onSelect: () => openTransferencia() }]
+                    : []),
+                  {
+                    label: "Copiar IBANes",
+                    icon: Copy,
+                    onSelect: () => handleCopyFormat(Object.keys(COPY_FORMATS)[0] as CopyFormatId),
+                  },
+                ]}
+              />
+            )}
+            {canEdit && (
+              <Button onClick={openCreate}>
+                <Plus className="mr-1.5 h-4 w-4" /> Nuevo pago
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard
-          label="Pendiente"
-          value={formatCurrency(globalTotals.pendienteImporte)}
-          sub={`${globalTotals.pendiente} pago${globalTotals.pendiente === 1 ? "" : "s"}`}
-          icon={Clock}
-          accent="amber"
-        />
-        <KpiCard
-          label="Borradores"
-          value={String(globalTotals.borrador)}
-          sub="por confirmar"
-          icon={CircleDashed}
-          accent="muted"
-        />
-        <KpiCard
-          label="Pagados"
-          value={String(globalTotals.pagado)}
-          sub={`${formatCurrency(globalTotals.pagadoImporte)} acumulado`}
-          icon={CheckCircle2}
-          accent="emerald"
-        />
-        <KpiCard
-          label="Total"
-          value={String(globalTotals.total)}
-          sub="registros"
-          icon={Coins}
-          accent="primary"
-        />
-      </div>
+      <FilterTabs
+        value={tab}
+        onValueChange={(v) => setTab(v as TabValue)}
+        items={TAB_ORDER.map((t) => ({
+          value: t,
+          label: TAB_LABELS[t],
+          dotClass: t === "todos" ? undefined : PAGO_MCM_ESTADO_INFO[t as PagoMcmEstado].dotClass,
+          count:
+            t === "todos"
+              ? globalTotals.total
+              : t === "pendiente"
+                ? globalTotals.pendiente
+                : t === "borrador"
+                  ? globalTotals.borrador
+                  : globalTotals.pagado,
+        }))}
+      />
 
-      {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
-        <TabsList className="grid w-full grid-cols-4 sm:mx-auto sm:flex sm:w-fit">
-          {TAB_ORDER.map((t) => {
-            const info = t === "todos" ? null : PAGO_MCM_ESTADO_INFO[t as PagoMcmEstado]
-            const n =
-              t === "todos"
-                ? globalTotals.total
-                : t === "pendiente"
-                  ? globalTotals.pendiente
-                  : t === "borrador"
-                    ? globalTotals.borrador
-                    : globalTotals.pagado
-            return (
-              <TabsTrigger key={t} value={t} className="gap-1.5">
-                {info ? (
-                  <span className={cn("h-1.5 w-1.5 rounded-full", info.dotClass)} aria-hidden />
-                ) : null}
-                <span className="hidden sm:inline">{TAB_LABELS[t]}</span>
-                <span className="sm:hidden">{TAB_LABELS[t].slice(0, 3)}</span>
-                {n > 0 && <span className="text-[10px] text-muted-foreground tabular-nums">{n}</span>}
-              </TabsTrigger>
-            )
-          })}
-        </TabsList>
-      </Tabs>
+      <p className="text-sm text-muted-foreground">
+        {globalTotals.pendiente} pago{globalTotals.pendiente === 1 ? "" : "s"} pendiente
+        {globalTotals.pendiente === 1 ? "" : "s"} · {formatCurrency(globalTotals.pendienteImporte)}
+      </p>
 
-      {/* Buscador */}
       <div className="relative max-w-xl">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -271,16 +337,43 @@ export function PagosMcmManager() {
         />
       </div>
 
-      {/* Lista */}
+      {selectionActive && (
+        <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 shadow-sm animate-in fade-in-0 slide-in-from-top-2 duration-200 motion-reduce:animate-none">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold tracking-tight">{selectedIds.size} pago(s) seleccionados</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {borradoresSeleccionados.length > 0 && (
+                <Button size="sm" variant="secondary" onClick={handleConfirmarBorradoresSeleccionados}>
+                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Confirmar borradores ({borradoresSeleccionados.length})
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  const subset = pagosSeleccionados.filter((p) => p.estado === "pendiente" && p.contacto?.iban)
+                  openTransferencia(subset.length > 0 ? subset : undefined)
+                }}
+              >
+                <Wallet className="mr-1.5 h-3.5 w-3.5" /> Modo transferencia ({selectedIds.size})
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                Cancelar selección
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading && pagos.length === 0 ? (
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Cargando pagos…
+          <LoadingSpinner size="sm" /> Cargando pagos…
         </div>
       ) : error ? (
         <EmptyState title="No se pudieron cargar los pagos" description={error} />
       ) : pagos.length === 0 ? (
         <EmptyState
-          icon={<HandCoins className="h-6 w-6" />}
+          icon={<Wallet className="h-6 w-6" />}
           title={
             tab === "pendiente"
               ? "No tienes pagos pendientes"
@@ -293,11 +386,7 @@ export function PagosMcmManager() {
           description={
             tab === "pendiente"
               ? "Cuando alguien adelante un gasto, créalo aquí para no olvidarte de devolverle el dinero."
-              : tab === "borrador"
-                ? "Los borradores te permiten dejar pagos a medio rellenar antes de confirmarlos."
-                : tab === "pagado"
-                  ? "Los pagos completados (con movimiento vinculado) aparecerán aquí."
-                  : "Crea tu primer pago MCM para empezar a registrar reembolsos y ayudas."
+              : "Crea tu primer pago MCM para empezar a registrar reembolsos y ayudas."
           }
         >
           {canEdit && tab !== "pagado" && (
@@ -307,25 +396,39 @@ export function PagosMcmManager() {
           )}
         </EmptyState>
       ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-1">
+          <ListHeaderRow className={PAGO_MCM_ROW_COLS}>
+            <span>Beneficiario</span>
+            <span>Concepto</span>
+            <span>Importe</span>
+            <span>Categoría</span>
+            <span>Fecha</span>
+            <span />
+          </ListHeaderRow>
           {pagos.map((pago) => (
-            <PagoMcmCard
+            <PagoMcmRow
               key={pago.id}
               pago={pago}
               canEdit={canEdit}
+              selected={selectedIds.has(pago.id)}
+              selectionActive={selectionActive}
+              onSelectionChange={(selected) => toggleSelection(pago.id, selected)}
+              onOpenDetail={() => openDetail(pago)}
               onEdit={() => openEdit(pago)}
+              onDuplicate={() => openDuplicate(pago)}
+              onCancel={() => handleCancelar(pago)}
               onDelete={() => setDeleting(pago)}
               onMarcarPagado={() => setMarcando(pago)}
-              onDesvincular={async () => {
-                try {
-                  await unlinkFromMovimiento(pago.id)
-                  toast.success("Movimiento desvinculado")
-                } catch (err) {
-                  toast.error("No se pudo desvincular: " + (err instanceof Error ? err.message : "error"))
-                }
-              }}
+              onConfirmarBorrador={() => handleConfirmarBorrador(pago)}
+              onDesvincular={() => handleDesvincular(pago)}
             />
           ))}
+        </div>
+      )}
+
+      {hasMore && (
+        <div ref={loadMoreRef} className="flex justify-center py-4">
+          <LoadingSpinner size="sm" />
         </div>
       )}
 
@@ -333,18 +436,56 @@ export function PagosMcmManager() {
       <Sheet open={formOpen} onOpenChange={(open) => { setFormOpen(open); if (!open) setEditing(null) }}>
         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader className="mb-2">
-            <SheetTitle>{editing ? "Editar pago MCM" : "Nuevo pago MCM"}</SheetTitle>
+            <SheetTitle>
+              {editing?.id ? "Editar pago MCM" : editing ? "Duplicar pago MCM" : "Nuevo pago MCM"}
+            </SheetTitle>
           </SheetHeader>
           <PagoMcmForm
             delegacionId={selectedDelegation}
             pago={editing}
             contactos={contactos}
             categorias={categorias}
+            onRequestCreateCategory={requestCreateCategory}
             onSubmit={handleSubmitForm}
             onCancel={() => { setFormOpen(false); setEditing(null) }}
           />
         </SheetContent>
       </Sheet>
+
+      <CategoryQuickCreateSheet
+        open={categoryCreateOpen}
+        onOpenChange={(open) => {
+          setCategoryCreateOpen(open)
+          if (!open) pendingCategoryAssignRef.current = null
+        }}
+        organizacionId={getCurrentDelegation()?.organizacion_id}
+        delegacionId={selectedDelegation}
+        canManageGlobal={isAdmin}
+        categories={categorias}
+        onCreated={handleCategoryCreated}
+      />
+
+      {/* Detalle */}
+      <PagoMcmDetailSheet
+        pago={detailPago}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        delegacionId={selectedDelegation}
+        canEdit={canEdit}
+        onEdit={openEdit}
+        onMarcarPagado={(pago) => {
+          setDetailOpen(false)
+          setMarcando(pago)
+        }}
+        onConfirmarBorrador={handleConfirmarBorrador}
+        onDesvincular={handleDesvincular}
+        onDuplicate={openDuplicate}
+        onCancel={handleCancelar}
+        onDelete={(pago) => {
+          setDetailOpen(false)
+          setDeleting(pago)
+        }}
+      />
 
       {/* Marcar como pagado */}
       {selectedDelegation && (
@@ -361,9 +502,15 @@ export function PagosMcmManager() {
       {/* Modo transferencia (wizard) */}
       {selectedDelegation && (
         <TransferRunDialog
-          pagos={pendientesConIban}
+          pagos={transferSubset ?? pendientesConIban}
           open={transferOpen}
-          onOpenChange={setTransferOpen}
+          onOpenChange={(open) => {
+            setTransferOpen(open)
+            if (!open) {
+              setTransferSubset(null)
+              setSelectedIds(new Set())
+            }
+          }}
           delegacionId={selectedDelegation}
           onConvert={convertToMovimiento}
         />
@@ -383,65 +530,3 @@ export function PagosMcmManager() {
     </div>
   )
 }
-
-type KpiAccent = "amber" | "emerald" | "muted" | "primary"
-
-const ACCENT_CLASSES: Record<KpiAccent, { bg: string; icon: string; border: string }> = {
-  amber: {
-    bg: "bg-amber-50/70 dark:bg-amber-950/20",
-    icon: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200/60 dark:border-amber-900/40",
-  },
-  emerald: {
-    bg: "bg-emerald-50/70 dark:bg-emerald-950/20",
-    icon: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-900/40",
-  },
-  muted: {
-    bg: "bg-muted/50",
-    icon: "text-muted-foreground",
-    border: "border-border/60",
-  },
-  primary: {
-    bg: "bg-primary/5",
-    icon: "text-primary",
-    border: "border-primary/20",
-  },
-}
-
-function KpiCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  accent,
-}: {
-  label: string
-  value: string
-  sub?: string
-  icon: LucideIcon
-  accent: KpiAccent
-}) {
-  const a = ACCENT_CLASSES[accent]
-  return (
-    <Card className={cn("border", a.border)}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-              {label}
-            </div>
-            <div className="truncate text-xl font-bold tracking-tight tabular-nums">{value}</div>
-            {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
-          </div>
-          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", a.bg)}>
-            <Icon className={cn("h-4 w-4", a.icon)} aria-hidden />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// Re-export submit type for parent usage if needed
-export type { PagoMcmInsert, PagoMcmUpdate }

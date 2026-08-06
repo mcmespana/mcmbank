@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   Copy,
   Loader2,
+  ShieldAlert,
   SkipForward,
   Wallet,
 } from "lucide-react"
@@ -19,16 +20,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DateField } from "@/components/ui/date-field"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { useClipboard } from "@/hooks/use-clipboard"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { DatabaseService } from "@/lib/services/database"
-import { formatCurrency } from "@/lib/utils/format"
+import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { formatearIban, normalizarIban } from "@/lib/utils/iban"
 import { formatImporteBanco, getConceptoTransferenciaSugerido } from "@/lib/utils/transferencia"
 import type { PagoMcmConRelaciones } from "@/lib/types/database"
@@ -109,7 +111,7 @@ export function TransferRunDialog({
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") return
       if (e.key === "ArrowRight") {
         e.preventDefault()
         handleSkip()
@@ -265,15 +267,16 @@ export function TransferRunDialog({
             <Label htmlFor="trf-fecha" className="text-xs">
               Fecha
             </Label>
-            <Input
-              id="trf-fecha"
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="w-[160px]"
-            />
+            <DateField id="trf-fecha" value={fecha} onChange={setFecha} className="w-[160px]" />
           </div>
         </div>
+
+        <Alert className="border-amber-300/60 bg-amber-50/60 py-2 dark:bg-amber-950/30">
+          <ShieldAlert className="h-4 w-4 text-amber-700 dark:text-amber-300" />
+          <AlertDescription className="text-xs text-amber-900 dark:text-amber-200">
+            Este asistente no realiza transferencias de verdad: sólo registra el pago como hecho.
+          </AlertDescription>
+        </Alert>
 
         {/* Campos copiables */}
         <div className="space-y-2">
@@ -342,7 +345,7 @@ export function TransferRunDialog({
         {cuentaActual && (
           <p className="text-[11px] text-muted-foreground">
             Al pulsar <span className="font-medium">Hecho</span> se creará el movimiento en{" "}
-            <span className="font-medium">{cuentaActual.nombre}</span> con fecha {fecha} y el pago
+            <span className="font-medium">{cuentaActual.nombre}</span> con fecha {formatDate(fecha)} y el pago
             quedará marcado como pagado.
           </p>
         )}

@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FilterTabs } from "@/components/ui/filter-tabs"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useDelegationContext } from "@/contexts/delegation-context"
@@ -135,25 +135,19 @@ export function ContactosManager() {
       </div>
 
       {/* Tipo tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
-        <TabsList className="grid w-full grid-cols-4 sm:mx-auto sm:flex sm:w-fit">
-          <TabsTrigger value="todos" className="gap-1.5">
-            <span>Todos</span>
-            {counts.total > 0 && <span className="text-[10px] text-muted-foreground tabular-nums">{counts.total}</span>}
-          </TabsTrigger>
-          {CONTACTO_TIPO_ORDER.map((t) => {
-            const info = CONTACTO_TIPO_INFO[t]
-            const n = counts[t]
-            return (
-              <TabsTrigger key={t} value={t} className="gap-1.5">
-                <span className={cn("h-1.5 w-1.5 rounded-full", info.dotClass)} aria-hidden />
-                <span className="hidden sm:inline">{info.shortLabel}</span>
-                {n > 0 && <span className="text-[10px] text-muted-foreground tabular-nums">{n}</span>}
-              </TabsTrigger>
-            )
-          })}
-        </TabsList>
-      </Tabs>
+      <FilterTabs
+        value={tab}
+        onValueChange={(v) => setTab(v as TabValue)}
+        items={[
+          { value: "todos", label: "Todos", count: counts.total },
+          ...CONTACTO_TIPO_ORDER.map((t) => ({
+            value: t,
+            label: CONTACTO_TIPO_INFO[t].label,
+            dotClass: CONTACTO_TIPO_INFO[t].dotClass,
+            count: counts[t],
+          })),
+        ]}
+      />
 
       {/* Buscador */}
       <div className="relative max-w-xl">

@@ -29,8 +29,10 @@ export function PagoMcmArchivos({ pagoId, delegacionId }: PagoMcmArchivosProps) 
   const onDrop = async (accepted: File[]) => {
     if (accepted.length === 0) return
     try {
-      await uploadFile(accepted[0], "documentos")
-      toast.success("Archivo subido")
+      for (const file of accepted) {
+        await uploadFile(file, "documentos")
+      }
+      toast.success(accepted.length === 1 ? "Archivo subido" : `${accepted.length} archivos subidos`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo subir")
     }
@@ -38,8 +40,7 @@ export function PagoMcmArchivos({ pagoId, delegacionId }: PagoMcmArchivosProps) 
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    maxFiles: 1,
-    multiple: false,
+    multiple: true,
     disabled: uploading || !delegacionCodigo,
     maxSize: 20 * 1024 * 1024,
   })
@@ -76,7 +77,7 @@ export function PagoMcmArchivos({ pagoId, delegacionId }: PagoMcmArchivosProps) 
           <>
             <Upload className="h-4 w-4" />
             <span>
-              {isDragActive ? "Suelta aquí" : "Arrastra o pulsa para subir un archivo"}
+              {isDragActive ? "Suelta aquí" : "Arrastra o pulsa para subir uno o varios archivos"}
             </span>
             <span className="text-[10px]">Máximo 20 MB</span>
           </>

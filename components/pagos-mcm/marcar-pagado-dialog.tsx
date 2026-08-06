@@ -13,10 +13,9 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
+import { DateField } from "@/components/ui/date-field"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { useCuentas } from "@/hooks/use-cuentas"
@@ -41,6 +40,8 @@ interface MarcarPagadoDialogProps {
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
+type Mode = "crear" | "vincular"
+
 export function MarcarPagadoDialog({
   pago,
   open,
@@ -51,7 +52,8 @@ export function MarcarPagadoDialog({
 }: MarcarPagadoDialogProps) {
   const { user } = useAuth()
   const { cuentas, loading: cuentasLoading } = useCuentas(delegacionId)
-  const [mode, setMode] = useState<"crear" | "vincular">("crear")
+  const [mode, setMode] = useState<Mode>("crear")
+  const [modeAutoSet, setModeAutoSet] = useState(false)
   const [cuentaId, setCuentaId] = useState<string>("")
   const [fecha, setFecha] = useState<string>(todayISO())
   const [candidatos, setCandidatos] = useState<MovimientoConRelaciones[]>([])
@@ -87,10 +89,19 @@ export function MarcarPagadoDialog({
       .finally(() => setCandidatosLoading(false))
   }, [open, pago, delegacionId])
 
+  // Preseleccionar "Vincular existente" si hay un candidato con importe exacto.
+  useEffect(() => {
+    if (!open || modeAutoSet || candidatosLoading || !pago) return
+    const hayExacto = candidatos.some((m) => Math.abs(Math.abs(Number(m.importe)) - Number(pago.importe)) < 0.005)
+    setMode(hayExacto ? "vincular" : "crear")
+    setModeAutoSet(true)
+  }, [open, modeAutoSet, candidatosLoading, candidatos, pago])
+
   // Reset al cerrar
   useEffect(() => {
     if (open) return
     setMode("crear")
+    setModeAutoSet(false)
     setCuentaId("")
     setFecha(todayISO())
     setCandidatos([])
@@ -149,24 +160,28 @@ export function MarcarPagadoDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "crear" | "vincular")}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="crear">Crear movimiento</TabsTrigger>
-            <TabsTrigger value="vincular">
-              Vincular existente
-              {candidatos.length > 0 && (
-                <span className="ml-1.5 text-[10px] text-muted-foreground">({candidatos.length})</span>
+        <div className="inline-flex w-full rounded-xl border border-border/60 bg-muted/40 p-1">
+          {(["crear", "vincular"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={cn(
+                "flex-1 rounded-lg px-3 py-1.5 text-xs font-medium tracking-tight transition-colors",
+                mode === m ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
-            </TabsTrigger>
-          </TabsList>
+            >
+              {m === "crear" ? "Crear movimiento" : `Vincular existente${candidatos.length > 0 ? ` (${candidatos.length})` : ""}`}
+            </button>
+          ))}
+        </div>
 
-          <TabsContent value="crear" className="space-y-4 pt-3">
+        {mode === "crear" ? (
+          <div className="space-y-4 pt-1">
             <Alert className="border-amber-300/60 bg-amber-50/60 dark:bg-amber-950/30">
               <AlertTriangle className="h-4 w-4 text-amber-700 dark:text-amber-300" />
               <AlertDescription className="text-xs text-amber-900 dark:text-amber-200">
-                Esto crea un movimiento <strong>manual</strong> en MCM Bank, <strong>no realiza la transferencia en el banco</strong>.
-                Recuerda hacerla tú. Si más tarde se importa el movimiento real del banco y lo ves duplicado, elimínalo manualmente
-                (o vincúlalo desde la pestaña anterior).
+                Esto crea un movimiento manual en MCM Bank; no realiza la transferencia en el banco.
               </AlertDescription>
             </Alert>
 
@@ -190,13 +205,13 @@ export function MarcarPagadoDialog({
 
             <div className="space-y-1.5">
               <Label>Fecha del movimiento</Label>
-              <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+              <DateField value={fecha} onChange={setFecha} />
             </div>
-          </TabsContent>
-
-          <TabsContent value="vincular" className="space-y-3 pt-3">
+          </div>
+        ) : (
+          <div className="space-y-3 pt-1">
             <p className="text-xs text-muted-foreground">
-              Movimientos con importe exacto {formatCurrency(Number(pago.importe))} sin pago vinculado.
+              Movimientos con un importe parecido a {formatCurrency(Number(pago.importe))} sin pago vinculado.
               {pago.contacto_id && " Los del mismo contacto aparecen primero."}
             </p>
 
@@ -206,7 +221,7 @@ export function MarcarPagadoDialog({
               </div>
             ) : candidatos.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-6 text-center text-sm text-muted-foreground">
-                No hay movimientos sin vincular con este importe.
+                No hay movimientos sin vincular con un importe parecido.
               </div>
             ) : (
               <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
@@ -245,8 +260,8 @@ export function MarcarPagadoDialog({
                 })}
               </div>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
 
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>

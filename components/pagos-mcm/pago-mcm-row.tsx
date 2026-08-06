@@ -162,8 +162,11 @@ export const PagoMcmRow = memo(function PagoMcmRow({
     </div>
   )
 
+  // borderClass, no dotClass: mismo bug que en factura-row.tsx — dotClass es
+  // un bg-* pensado para el puntito de estado, no para el accentClass de
+  // ListRow, y pintaba toda la fila del color sólido.
   return (
-    <ListRow accentClass={estadoInfo.dotClass} selected={selected} onClick={onOpenDetail}>
+    <ListRow accentClass={estadoInfo.borderClass} selected={selected} onClick={onOpenDetail}>
       {/* Móvil / tablet: dos líneas explícitas */}
       <div className="flex flex-col gap-1.5 lg:hidden">
         <div className="flex items-center justify-between gap-3">

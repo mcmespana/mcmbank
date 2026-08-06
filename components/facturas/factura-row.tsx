@@ -140,7 +140,11 @@ export const FacturaRow = memo(function FacturaRow({
 
   return (
     <>
-      <ListRow accentClass={estadoInfo.dotClass} onClick={onOpenDetail}>
+      {/* borderClass, no dotClass: dotClass es "bg-emerald-500" (para el puntito
+          de los badges) — pasado como accentClass, ListRow pintaba TODA la fila
+          de verde sólido en vez de solo el borde izquierdo, dejando el texto
+          casi ilegible. borderClass ya es un color de borde sutil. */}
+      <ListRow accentClass={estadoInfo.borderClass} onClick={onOpenDetail}>
         {/* Móvil / tablet: dos líneas explícitas */}
         <div className="flex flex-col gap-1.5 lg:hidden">
           <div className="flex items-center justify-between gap-3">

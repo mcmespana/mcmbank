@@ -493,7 +493,7 @@ export function CuentasManager() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Total Cuentas</div>
-                <div className="text-2xl sm:text-3xl font-bold text-blue-900 dark:text-blue-100">{cuentas.length}</div>
+                <div className="whitespace-nowrap text-2xl font-bold text-blue-900 dark:text-blue-100 lg:text-3xl">{cuentas.length}</div>
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -505,7 +505,10 @@ export function CuentasManager() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-green-700 dark:text-green-300 mb-1">Saldo Total</div>
-                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-green-900 dark:text-green-100">
+                {/* whitespace-nowrap + el salto a text-3xl movido a lg: a sm (3
+                    columnas ya activas) un saldo largo como "-11.982,51 €" partía
+                    en dos líneas dentro de la tarjeta. */}
+                <div className="whitespace-nowrap text-2xl font-bold tabular-nums text-green-900 dark:text-green-100 lg:text-3xl">
                   {formatCurrency(Object.values(balances).reduce((sum, balance) => sum + balance, 0))}
                 </div>
               </div>
@@ -519,7 +522,7 @@ export function CuentasManager() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Bancos</div>
-                <div className="text-2xl sm:text-3xl font-bold text-purple-900 dark:text-purple-100">
+                <div className="whitespace-nowrap text-2xl font-bold text-purple-900 dark:text-purple-100 lg:text-3xl">
                   {bancosCount}
                 </div>
               </div>

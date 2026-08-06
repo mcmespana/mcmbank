@@ -115,7 +115,7 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ### De valor medio
 
-- [ ] **56. Completar las páginas deshabilitadas del sidebar** — `sidebar.tsx:82-94`: **Facturas** e **Informes** están como stubs `enabled: false`. Implementarlas o retirarlas.
+- [x] **56. Completar las páginas deshabilitadas del sidebar** — corregido: era falso. `sidebar.tsx` tiene **Facturas** e **Informes** con `enabled: true`, ambas ya implementadas (y `plans/021-redesign-facturas-pagos.md` las acaba de rediseñar). El punto describía un estado que ya no existe.
 - [ ] **57. Mapeo de columnas configurable en la importación** — hoy solo hay parsers hardcodeados de Sabadell y CaixaBank; añadir UI de mapeo + plantillas guardadas por banco.
 - [ ] **58. Detector de duplicados "blandos"** — emparejamiento difuso (mismo importe ±0,01€, fecha ±1 día, concepto similar) con asistente de fusión; el `concepto_hash` actual solo pilla duplicados exactos.
 - [ ] **59. Notificaciones por email** — presupuesto excedido, huecos de conciliación, consentimiento PSD2 a punto de caducar (este banner ya está apuntado como pendiente en `docs/ENABLE_BANKING.md`).
@@ -135,7 +135,10 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 - [ ] **66. Debounce global de revalidaciones al cambiar de pestaña** — `hooks/use-app-status.ts`: las revalidaciones al volver al foco se disparan en ráfaga (jitter individual de 90-220ms). *Fix: agrupador `scheduleRevalidation` con ventana de ~500ms que ejecute los callbacks de forma escalonada.*
 - [ ] **67. Trocear `category-list.tsx` (1269 líneas)** — solo se extrajo `CategoryCard`. *Fix: separar tipos, helpers, dialogs y formularios a `components/categories/`, dejando el archivo principal como orquestador (<400 líneas). Refactor mecánico sin cambio de comportamiento.*
-- [ ] **68. Continuar la migración a TanStack Query** — el piloto cubre `useCategoryBreakdown`. *Fix: migrar el resto de hooks de fetching manteniendo el mismo contrato de salida, y retirar la gestión manual de abort/caché donde React Query ya lo cubra.*
+- [ ] **68. Continuar la migración a TanStack Query** — cubierto hasta ahora: `useCuentas`, `useCategoryBreakdown`, y (`plans/021-redesign-facturas-pagos.md`) `useFacturas`/`usePagosMcm` con `useInfiniteQuery`. *Fix: migrar el resto (`useMovimientos`, `useFinancialSummary`, `useMonthlyTrend`…) manteniendo el mismo contrato de salida, y retirar la gestión manual de abort/caché donde React Query ya lo cubra.*
+- [ ] **69. Miniaturas persistidas de los adjuntos** — `components/ui/file-thumbnail.tsx` (plan 021) renderiza el PDF en un `<iframe>` escalado en el cliente en vez de mostrar una miniatura real; funciona pero es un rodeo. *Fix: columna `miniatura_path` en `archivo_adjunto` generada por una Edge Function al subir el archivo (thumbnail real en Storage).*
+- [ ] **70. Búsqueda de facturas por nombre de proveedor** — `getFacturasByDelegacion` (`lib/services/database.ts`) sólo hace `ILIKE` sobre `concepto`/`numero`/`notas`; el nombre del proveedor vive en `contacto` y no se busca. *Fix: columna generada `tsvector` + índice GIN, o desnormalizar el nombre del proveedor en `factura` (ver comentario en `scripts/052_facturas_pagos_resumen_e_integridad.sql`).*
+- [ ] **71. Enlaces factura/pago ↔ movimiento no son transaccionales** — `linkFacturaToMovimiento`, `linkPagoToMovimiento` y `convertPagoToMovimiento` (`lib/services/database.ts`) hacen varias escrituras seguidas (update movimiento, update factura, replicar adjuntos) sin una transacción real; un fallo a mitad deja el vínculo a medias. *Fix: mover la lógica a una función `plpgsql` con `BEGIN`/`COMMIT` implícito de Postgres, expuesta como RPC.*
 
 ---
 

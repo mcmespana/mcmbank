@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client"
+import { FileService } from "@/lib/services/file-service"
 import type {
   Categoria,
   CategoryBreakdownRow,
@@ -14,6 +15,7 @@ import type {
   FacturaEstado,
   FacturaInsert,
   FacturaUpdate,
+  FacturaResumenRow,
   FinancialSummary,
   MonthlyTrendRow,
   MovimientoConRelaciones,
@@ -21,6 +23,7 @@ import type {
   PagoMcmConRelaciones,
   PagoMcmEstado,
   PagoMcmInsert,
+  PagoMcmResumenRow,
   PagoMcmUpdate,
 } from "@/lib/types/database"
 import { margenImporteFactura, scoreCandidatoMovimiento } from "@/lib/utils/facturas"
@@ -380,6 +383,8 @@ export class DatabaseService {
       estados?: PagoMcmEstado[]
       contactoId?: string
       busqueda?: string
+      offset?: number
+      limit?: number
       signal?: AbortSignal
     } = {},
   ): Promise<PagoMcmConRelaciones[]> {
@@ -413,7 +418,6 @@ export class DatabaseService {
         )
       `)
       .eq("delegacion_id", delegacionId)
-      .order("estado", { ascending: true })
       .order("creado_en", { ascending: false })
 
     if (options.estados && options.estados.length > 0) {
@@ -427,6 +431,10 @@ export class DatabaseService {
     if (options.busqueda) {
       const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
       query = query.or(`concepto.ilike.%${term}%,descripcion.ilike.%${term}%,notas.ilike.%${term}%`)
+    }
+
+    if (options.offset != null && options.limit != null) {
+      query = query.range(options.offset, options.offset + options.limit - 1)
     }
 
     if (options.signal) {
@@ -656,33 +664,25 @@ export class DatabaseService {
 
   /**
    * Devuelve la cuenta de la delegación con más movimientos (sugerencia por defecto
-   * para 'convertir pago a movimiento'). Si ninguna cuenta tiene movimientos,
-   * devuelve la primera disponible.
+   * para 'convertir pago a movimiento'), vía la RPC get_cuenta_con_mas_movimientos
+   * (una sola llamada, en vez de una query count por cuenta). NULL si la
+   * delegación no tiene movimientos; el caller cae a cuentas[0].
    */
   static async getCuentaConMasMovimientos(delegacionId: string): Promise<string | null> {
-    const supabase = this.getClient() as any
-    const { data: cuentas, error } = await supabase
-      .from("cuenta")
-      .select("id")
-      .eq("delegacion_id", delegacionId)
-    if (error || !Array.isArray(cuentas) || cuentas.length === 0) return null
-
-    const counts = await Promise.all(
-      cuentas.map(async (c: { id: string }) => {
-        const { count } = await supabase
-          .from("movimiento")
-          .select("id", { head: true, count: "exact" })
-          .eq("cuenta_id", c.id)
-        return { id: c.id, count: typeof count === "number" ? count : 0 }
-      }),
-    )
-    counts.sort((a, b) => b.count - a.count)
-    return counts[0]?.id ?? null
+    const client = this.getClient() as any
+    const { data, error } = await client.rpc("get_cuenta_con_mas_movimientos", {
+      p_delegacion_id: delegacionId,
+    })
+    if (error) return null
+    return (data as string | null) ?? null
   }
 
   /**
-   * Busca movimientos candidatos para vincular a un pago MCM por importe exacto.
-   * Excluye los que ya tienen pago_mcm_id.
+   * Busca movimientos candidatos para vincular a un pago MCM. Usa el mismo
+   * margen que la vía de facturas (margenImporteFactura: 2%, mínimo 0,50 €)
+   * en vez de exigir importe exacto, para que ambos flujos encuentren
+   * candidatos con diferencias de céntimos. Excluye los que ya tienen
+   * pago_mcm_id.
    */
   static async findCandidatosMovimientoParaPago(
     delegacionId: string,
@@ -692,6 +692,7 @@ export class DatabaseService {
     const supabase = this.getClient() as any
     // Pagos son gastos: el movimiento del banco tendrá importe negativo del mismo valor absoluto.
     const target = -Math.abs(importe)
+    const margen = margenImporteFactura(importe)
     let query = supabase
       .from("movimiento")
       .select(`
@@ -716,7 +717,8 @@ export class DatabaseService {
         )
       `)
       .eq("delegacion_id", delegacionId)
-      .eq("importe", target)
+      .gte("importe", target - margen)
+      .lte("importe", target + margen)
       .is("pago_mcm_id", null)
       .order("fecha", { ascending: false })
       .limit(opts.limit ?? 20)
@@ -803,6 +805,8 @@ export class DatabaseService {
       estados?: FacturaEstado[]
       contactoId?: string
       busqueda?: string
+      offset?: number
+      limit?: number
       signal?: AbortSignal
     } = {},
   ): Promise<FacturaConRelaciones[]> {
@@ -811,6 +815,7 @@ export class DatabaseService {
       .from("factura")
       .select(this.FACTURA_SELECT)
       .eq("delegacion_id", delegacionId)
+      .order("fecha_emision", { ascending: false, nullsFirst: false })
       .order("creado_en", { ascending: false })
 
     if (options.estados && options.estados.length > 0) {
@@ -822,6 +827,9 @@ export class DatabaseService {
     if (options.busqueda) {
       const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
       query = query.or(`concepto.ilike.%${term}%,numero.ilike.%${term}%,notas.ilike.%${term}%`)
+    }
+    if (options.offset != null && options.limit != null) {
+      query = query.range(options.offset, options.offset + options.limit - 1)
     }
     if (options.signal) {
       query = query.abortSignal(options.signal)
@@ -882,6 +890,17 @@ export class DatabaseService {
     const supabase = this.getClient() as any
 
     await supabase.from("movimiento").update({ factura_id: null }).eq("factura_id", id)
+
+    const { data: archivos } = await supabase
+      .from("archivo_adjunto")
+      .select("path_storage, bucket")
+      .eq("entidad", "factura")
+      .eq("entidad_id", id)
+    for (const archivo of (archivos ?? []) as { path_storage: string; bucket: "facturas" | "documentos" }[]) {
+      await FileService.deleteFile(archivo.path_storage, archivo.bucket).catch((err) =>
+        console.warn("No se pudo eliminar el archivo de Storage:", err),
+      )
+    }
     await supabase.from("archivo_adjunto").delete().eq("entidad", "factura").eq("entidad_id", id)
 
     const { error } = await supabase.from("factura").delete().eq("id", id)
@@ -1292,6 +1311,35 @@ export class DatabaseService {
       categoria_color: row.categoria_color ?? null,
       ingresos: Number(row.ingresos ?? 0),
       gastos: Number(row.gastos ?? 0),
+    }))
+  }
+
+  /** Resumen de facturas por estado (contadores de pestaña + KPI de /facturas). */
+  static async getFacturasResumen(delegacionId: string, signal?: AbortSignal): Promise<FacturaResumenRow[]> {
+    const client = this.getClient() as any
+    let query = client.rpc("get_facturas_resumen", { p_delegacion_id: delegacionId })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    return ((data as any[]) ?? []).map((row) => ({
+      estado: row.estado as FacturaResumenRow["estado"],
+      n: Number(row.n ?? 0),
+      importe_total: Number(row.importe_total ?? 0),
+      importe_pendiente: Number(row.importe_pendiente ?? 0),
+    }))
+  }
+
+  /** Resumen de pagos MCM por estado (contadores de pestaña + línea de resumen de /pagos-mcm). */
+  static async getPagosMcmResumen(delegacionId: string, signal?: AbortSignal): Promise<PagoMcmResumenRow[]> {
+    const client = this.getClient() as any
+    let query = client.rpc("get_pagos_mcm_resumen", { p_delegacion_id: delegacionId })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    return ((data as any[]) ?? []).map((row) => ({
+      estado: row.estado as PagoMcmResumenRow["estado"],
+      n: Number(row.n ?? 0),
+      importe_total: Number(row.importe_total ?? 0),
     }))
   }
 }

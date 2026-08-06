@@ -168,7 +168,8 @@ app/                        # Next.js App Router pages
   propuestas/               # Improvement proposals page
   api/                      # API routes (admin/users, supabase-sanity)
 components/                 # Reusable React components
-  ui/                       # 31 UI primitives (Radix UI + custom styling)
+  ui/                       # 41 UI primitives (Radix UI + custom styling), incl. PageHeader,
+                             # FilterTabs, ListRow (+ ListHeaderRow), ActionMenu, FileThumbnail
   auth/                     # Login/sign-up forms, animated background
   dashboard/                # Dashboard widgets (overview, charts, trends, insights)
   transactions/             # Transaction management (24 components: forms, tables, filters, import)
@@ -226,6 +227,9 @@ All non-auth routes use `<AppLayout>` for consistent navigation (sidebar + topba
 - Color system for accounts and categories using Tailwind color names (`lib/utils/category-colors.ts`)
 - Icon library: `lucide-react`
 - Toast notifications via `sonner`
+- No hidden or truncated navigation labels on mobile (no `hidden sm:inline`, no `.slice(0, 3)` tab
+  abbreviations): use `FilterTabs` (`components/ui/filter-tabs.tsx`), which scrolls horizontally
+  instead of truncating
 
 ## Code Style
 

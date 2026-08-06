@@ -274,7 +274,7 @@ un rango más corto que quepa en menos de 50 páginas.
 
 1. **Sin renovación silenciosa del consentimiento**: es una limitación de PSD2, no de Enable Banking. El usuario debe hacer SCA cada 90–180 días según el banco.
 2. **No existe API para "listar sesiones previas"**: si se pierde el `session_id` antes de guardarlo en DB, hay que re-autorizar. Para inspección manual están los **Request Logs** del Control Panel de EB.
-3. **Múltiples cuentas en una sola autorización**: si el banco devuelve varias cuentas y la cuenta de MCM Bank no tiene IBAN ni hay match de 1:1, el callback retorna un error pidiendo que pongas el IBAN. Mejora futura: UI para elegir cuenta manualmente.
+3. **Múltiples cuentas en una sola autorización**: si el banco devuelve varias cuentas y ninguna casa por IBAN con la cuenta de MCM Bank, el callback guarda las cuentas candidatas y `/cuentas` abre automáticamente un selector manual (`CuentaAccountPickerDialog`) para elegir la correcta sin reautorizar desde cero.
 4. **Timeout de Vercel**: el cron agrupa todas las cuentas en una sola request. Si la delegación tiene muchas cuentas con histórico grande y Vercel devuelve 504, la solución es partirlo (un `net.http_post` por cuenta desde pg_cron). No implementado todavía.
 5. **Solo transacciones booked**: ignoramos PDNG (pendientes) porque cambian de `transaction_id` al confirmarse y generan ruido.
 6. **Histórico previo limitado por el banco**: por mucho que intentemos ir 2 años atrás, el ASPSP puede limitar la ventana a 90 días. Esto es una restricción de PSD2 / del propio banco, no nuestra. Cuando ocurre, el log lo deja claro y el usuario debe importar el histórico antiguo desde Excel.

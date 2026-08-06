@@ -108,13 +108,20 @@ export async function GET(request: Request) {
 
     if (!match) {
       // Varios accounts y ninguno casa → dejamos la conexión autorizada pero
-      // la cuenta sin linkar. El frontend debería mostrar un selector manual
-      // posteriormente. De momento marcamos error parcial.
+      // la cuenta sin linkar. Persistimos la lista de candidatos para que el
+      // frontend ofrezca un selector manual (ver cuenta-account-picker-dialog)
+      // en vez de forzar reautorizar desde cero.
+      await admin
+        .from("banco_conexion")
+        .update({ accounts_pendientes: session.accounts })
+        .eq("id", conexionId)
+
+      const fallbackMessage = `Se autorizó la conexión pero hay ${session.accounts.length} cuentas y ninguna casa con el IBAN "${cuenta.iban || "sin IBAN"}". Elige la cuenta correcta manualmente.`
+
       return NextResponse.redirect(
-        `${redirectBase}?bank_sync_error=` +
-          encodeURIComponent(
-            `Se autorizó la conexión pero hay ${session.accounts.length} cuentas y ninguna casa con el IBAN "${cuenta.iban || "sin IBAN"}". Edita la cuenta y pega el IBAN, o contacta soporte.`,
-          ),
+        `${redirectBase}?bank_sync_error=multiple_accounts` +
+          `&banco_conexion_id=${conexionId}&cuenta_id=${cuentaId}` +
+          `&bank_sync_message=${encodeURIComponent(fallbackMessage)}`,
       )
     }
 

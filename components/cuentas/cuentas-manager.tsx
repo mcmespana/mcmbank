@@ -14,6 +14,7 @@ import { DeleteAccountDialog } from "./delete-account-dialog"
 import { CuentaSyncDialog } from "./cuenta-sync-dialog"
 import { CuentaConnectDialog } from "./cuenta-connect-dialog"
 import { CuentaConfirmDialog } from "./cuenta-confirm-dialog"
+import { CuentaAccountPickerDialog } from "./cuenta-account-picker-dialog"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import type { Cuenta } from "@/lib/types/database"
 import { useCuentas } from "@/hooks/use-cuentas"
@@ -54,6 +55,7 @@ export function CuentasManager() {
   const [syncingCuenta, setSyncingCuenta] = useState<Cuenta | null>(null)
   const [disconnectingCuenta, setDisconnectingCuenta] = useState<Cuenta | null>(null)
   const [deactivatingCuenta, setDeactivatingCuenta] = useState<Cuenta | null>(null)
+  const [accountPicker, setAccountPicker] = useState<{ bancoConexionId: string; cuentaId: string } | null>(null)
 
   // Función para actualizar el estado de una operación
   const setOperationState = useCallback((cuentaId: string, state: 'creating' | 'updating' | 'deleting' | null) => {
@@ -124,6 +126,17 @@ export function CuentasManager() {
     if (ok) {
       toast.success("Cuenta conectada con el banco correctamente")
       forceRefresh()
+      const url = new URL(window.location.href)
+      url.search = ""
+      window.history.replaceState({}, "", url.toString())
+    } else if (err === "multiple_accounts") {
+      const bancoConexionId = params.get("banco_conexion_id")
+      const cuentaId = params.get("cuenta_id")
+      const message = params.get("bank_sync_message")
+      if (bancoConexionId && cuentaId) {
+        setAccountPicker({ bancoConexionId, cuentaId })
+      }
+      if (message) toast.warning(message)
       const url = new URL(window.location.href)
       url.search = ""
       window.history.replaceState({}, "", url.toString())
@@ -978,6 +991,21 @@ export function CuentasManager() {
           confirmLabel="Desactivar"
           confirmingLabel="Desactivando…"
           onConfirm={confirmDeactivate}
+        />
+      )}
+
+      {/* Manual account picker cuando el callback de EB no pudo casar por IBAN */}
+      {accountPicker && (
+        <CuentaAccountPickerDialog
+          open={!!accountPicker}
+          onOpenChange={(o) => !o && setAccountPicker(null)}
+          bancoConexionId={accountPicker.bancoConexionId}
+          cuentaId={accountPicker.cuentaId}
+          cuentaNombre={cuentas.find((c) => c.id === accountPicker.cuentaId)?.nombre || "esta cuenta"}
+          onLinked={() => {
+            toast.success("Cuenta enlazada correctamente")
+            forceRefresh()
+          }}
         />
       )}
     </div>

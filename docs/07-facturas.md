@@ -9,17 +9,34 @@ mínimos clicks posibles.
 
 ## Flujo básico
 
+La pestaña **Bandeja** muestra cada factura como una tarjeta pequeña con la miniatura del
+documento (así se ve de un vistazo qué es sin abrir nada); el resto de pestañas (*Sin cerrar*,
+*Pagadas*, *Todas*) las lista como filas densas, una por factura, igual que en Movimientos.
+
 1. **Sube archivos a la bandeja**: arrastra uno o varios PDF/imágenes a la zona de subida. Se crea
    una factura por archivo en estado *En bandeja*.
-2. **Completa los datos**: proveedor (contacto), concepto, importe, fecha de emisión y nº de
+2. **Abre la tarjeta o la fila**: se abre un único panel con el documento, los datos y los
+   candidatos de conciliación juntos — no hace falta pasar por varias pantallas.
+3. **Completa los datos**: proveedor (contacto), concepto, importe, fecha de emisión y nº de
    factura. Si el proveedor no existe, se crea al vuelo desde el propio selector sin salir del
-   formulario.
-3. **Vincula el movimiento**: el botón *Vincular movimiento* busca gastos con un importe parecido
-   (con un pelín de margen), afinando por fecha y contacto. Si hay un candidato claro, se marca
-   como **Match directo** y viene preseleccionado. Al vincular:
+   panel.
+4. **Elige el movimiento**: la lista de candidatos (gastos con un importe parecido, con un pelín
+   de margen, afinando por fecha y contacto) se recalcula al momento según el importe que vayas
+   escribiendo, sin cerrar nada. Si hay un candidato claro, se marca como **Match directo** y
+   viene preseleccionado.
+5. **Guarda**: el botón del panel dice **Guardar y conciliar** cuando hay un candidato marcado, o
+   simplemente **Guardar** si no. Al conciliar:
    - La factura pasa a **Pagada** (o **Pago parcial** si el movimiento no cubre el importe total).
    - El movimiento hereda el contacto de la factura (y viceversa si faltaba).
    - Los archivos de la factura aparecen también en el movimiento.
+
+Desde el mismo panel, el menú **⋯** de la fila (o de la cabecera del panel) tiene además
+*Pagada fuera de MCM Bank* (para facturas pagadas sin movimiento que vincular), *Desvincular
+movimiento* y *Eliminar*. El estado no se elige a mano en ningún selector: lo calcula solo la
+base de datos a partir de los movimientos vinculados (ver más abajo).
+
+Junto al buscador hay tres pastillas de filtro para encontrar lo que impide cerrar una factura
+sin mirar tarjeta por tarjeta: **Sin proveedor**, **Sin importe** y **Falta NIF**.
 
 ### Pagos en varios plazos
 

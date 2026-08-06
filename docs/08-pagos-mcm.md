@@ -21,7 +21,7 @@ Un **Pago MCM** es una *promesa de pago pendiente*, no un movimiento bancario to
 | Pagado | Verde | Ya tiene un movimiento bancario vinculado |
 | Cancelado | Rosa | Descartado (solo visible en la pestaña "Todos") |
 
-La lista se organiza en pestañas **Pendientes / Borradores / Pagados / Todos**, cada una con su contador. Arriba tienes 4 indicadores rápidos: importe pendiente, borradores por confirmar, total pagado acumulado y número total de registros.
+La lista se organiza en pestañas **Pendientes / Borradores / Pagados / Todos**, cada una con su contador, y filas densas (una por pago) en vez de tarjetas. Debajo del título, una línea de resumen muestra cuántos pagos están pendientes y su importe total.
 
 ## Crear un pago MCM
 
@@ -51,8 +51,11 @@ El importe se calcula solo y se muestra en vivo.
 {% endtab %}
 {% endtabs %}
 
-4. Añade, si quieres, una descripción detallada, una categoría sugerida y notas internas.
-5. Guarda como **Borrador** o directamente como **Pendiente**.
+4. En **Detalles** (colapsado por defecto) puedes añadir una descripción detallada, una
+   categoría sugerida y notas internas.
+5. Guarda con uno de los dos botones del pie del formulario: **Guardar borrador** o
+   **Guardar como pendiente**. No hay un selector de "Estado" aparte: son directamente los dos
+   botones de guardar.
 
 📸 _Captura del formulario de un pago MCM_
 
@@ -62,25 +65,36 @@ No puedes marcar un pago como **Pagado** directamente desde el formulario: prime
 
 ## Marcar un pago como pagado
 
-Cuando ya has hecho la transferencia (o vas a hacerla), pulsa el botón verde de la tarjeta del pago. Se abre un diálogo con dos formas de resolverlo:
+Cuando ya has hecho la transferencia (o vas a hacerla), pulsa **Marcar pagado** en la fila o en el
+panel de detalle. Se abre un diálogo con un control segmentado con dos formas de resolverlo —
+**Crear movimiento** o **Vincular existente** —, que arranca ya en la que toca: si hay un
+movimiento con el importe exacto sin vincular, empieza en *Vincular existente*; si no, en
+*Crear movimiento*.
 
-{% tabs %}
-{% tab title="Crear movimiento" %}
-Eliges la cuenta de origen (por defecto, la más usada) y la fecha. MCM Bank crea un movimiento manual y lo vincula al pago.
+**Crear movimiento**: eliges la cuenta de origen (por defecto, la más usada) y la fecha. MCM Bank crea un movimiento manual y lo vincula al pago.
 
 {% hint style="warning" %}
 Esto crea el movimiento **en MCM Bank**, no hace la transferencia en el banco — recuerda hacerla tú. Si más tarde importas el movimiento real del banco y ves un duplicado, elimínalo a mano.
 {% endhint %}
-{% endtab %}
 
-{% tab title="Vincular existente" %}
-Busca movimientos ya registrados con el importe exacto que todavía no estén vinculados a ningún pago (los del mismo contacto aparecen primero, marcados como "mismo contacto") y eliges el correcto.
-{% endtab %}
-{% endtabs %}
+**Vincular existente**: busca movimientos ya registrados con un importe parecido al del pago (con
+un pelín de margen) que todavía no estén vinculados a ningún pago (los del mismo contacto
+aparecen primero, marcados como "mismo contacto") y eliges el correcto.
 
 ## Modo transferencia (varios pagos seguidos)
 
-Si tienes que hacer varias transferencias de una sentada, usa el botón **Modo transferencia** (con el contador de pagos pendientes que tienen IBAN).
+Si tienes que hacer varias transferencias de una sentada, usa el botón **Modo transferencia** (con el contador de pagos pendientes que tienen IBAN). En móvil este botón y **Copiar IBANes** se agrupan en el menú **⋯** del encabezado.
+
+Si antes seleccionas varios pagos con el checkbox de la fila, la barra de selección ofrece
+**Modo transferencia** limitado sólo a esos; si no seleccionas nada, recorre todos los pendientes
+con IBAN. Esa misma barra tiene también **Confirmar borradores** para pasar varios borradores a
+pendiente de una vez.
+
+{% hint style="warning" %}
+Este asistente **no realiza transferencias de verdad**: sólo te ayuda a copiar los datos y, al
+pulsar "Hecho", registra el pago como hecho en MCM Bank. La transferencia real la haces tú en la
+app o web de tu banco.
+{% endhint %}
 
 {% stepper %}
 {% step %}
@@ -109,9 +123,12 @@ La cuenta de origen y la fecha elegidas se mantienen entre pasos, con una barra 
 
 ## Otras acciones
 
+- **Copiar IBAN**: cada fila tiene su propio botón de copia, siempre visible (no hace falta pasar el ratón).
 - **Copiar IBANes pendientes**: copia en varios formatos todos los IBAN de los pagos pendientes de una vez.
 - **Desvincular**: si un pago ya pagado se vinculó al movimiento equivocado, puedes desvincularlo (vuelve a quedar pendiente).
-- **Editar** / **Eliminar** un pago desde sus iconos habituales.
+- **Duplicar**: crea un pago nuevo con los mismos datos, para repetir un gasto habitual sin volver a escribirlo todo.
+- **Cancelar**: descarta un pago sin eliminarlo (pasa a la pestaña "Todos" con estado Cancelado).
+- **Editar** / **Eliminar** un pago desde el menú **⋯** de la fila o del panel de detalle.
 
 {% hint style="success" %}
 💡 El badge junto a **Pagos MCM** en el menú lateral muestra siempre cuántos pagos están **pendientes** en tu delegación activa.

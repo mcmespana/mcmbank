@@ -17,6 +17,7 @@ import { CategorySelector } from "./category-selector"
 import { BankAvatar } from "@/components/bank-avatar"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
 import { ContactoForm } from "@/components/contactos/contacto-form"
+import { useCreateContactoInline } from "@/hooks/use-create-contacto-inline"
 import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 import type { Contacto, ContactoConCategoriaPredeterminada, Movimiento, Cuenta, Categoria } from "@/lib/types/database"
 
@@ -53,8 +54,13 @@ export function TransactionCreatePanel({
     cuenta_id: "",
   })
   const [isCreating, setIsCreating] = useState(false)
-  const [contactoCreateOpen, setContactoCreateOpen] = useState(false)
-  const [contactoInitialNombre, setContactoInitialNombre] = useState("")
+  const { onCreateNew: onCreateContactoNew, dialog: createContactoDialog } = useCreateContactoInline({
+    delegacionId,
+    categorias: categories,
+    canManageGlobal: canManageGlobalContact,
+    onCreateContacto,
+    onContactoCreated: (contactoId) => setFormData((prev) => ({ ...prev, contacto_id: contactoId })),
+  })
 
   const isFormValid = 
     formData.concepto?.trim() && 
@@ -326,14 +332,7 @@ export function TransactionCreatePanel({
                   return next
                 })
               }}
-              onCreateNew={
-                onCreateContacto
-                  ? (initialNombre) => {
-                      setContactoInitialNombre(initialNombre)
-                      setContactoCreateOpen(true)
-                    }
-                  : undefined
-              }
+              onCreateNew={onCreateContactoNew}
               placeholder="Sin contacto"
             />
             {formData.contacto_id && (() => {
@@ -386,31 +385,7 @@ export function TransactionCreatePanel({
         <div className="h-20 sm:hidden"></div>
       </SheetContent>
 
-      {onCreateContacto && (
-        <Sheet open={contactoCreateOpen} onOpenChange={setContactoCreateOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto z-[70]">
-            <SheetHeader className="mb-2">
-              <SheetTitle>Nuevo contacto</SheetTitle>
-            </SheetHeader>
-            <ContactoForm
-              delegacionId={delegacionId ?? null}
-              contacto={null}
-              categorias={categories as any}
-              canManageGlobal={Boolean(canManageGlobalContact)}
-              defaultNombre={contactoInitialNombre}
-              onSubmit={async (payload) => {
-                const created = (await onCreateContacto(payload)) as Contacto | void
-                if (created?.id) {
-                  setFormData((prev) => ({ ...prev, contacto_id: created.id }))
-                }
-                return created
-              }}
-              onCancel={() => setContactoCreateOpen(false)}
-              onSaved={() => setContactoCreateOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
-      )}
+      {createContactoDialog}
     </Sheet>
   )
 }

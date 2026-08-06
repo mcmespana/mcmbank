@@ -27,6 +27,7 @@ import type {
   PagoMcmUpdate,
 } from "@/lib/types/database"
 import { margenImporteFactura, scoreCandidatoMovimiento } from "@/lib/utils/facturas"
+import { upsertCategoriaOrden, upsertCategoriaVisibilidad } from "@/lib/services/categoria-queries"
 
 type CategoriaWithOverrides = Categoria & {
   overrides?: CategoriaOrdenDelegacion[] | null
@@ -173,27 +174,7 @@ export class DatabaseService {
     categoriaId: string,
     orden: number,
   ): Promise<void> {
-    const supabase = this.getClient() as any
-    const now = new Date().toISOString()
-
-    const { data, error } = await supabase
-      .from("categoria_orden_delegacion")
-      .update({ orden, actualizado_en: now } as any)
-      .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
-      .select("categoria_id")
-
-    if (error) throw error
-
-    if (!data || data.length === 0) {
-      const { error: insertError } = await supabase.from("categoria_orden_delegacion").insert({
-        delegacion_id: delegacionId,
-        categoria_id: categoriaId,
-        orden,
-        esta_activa: true,
-      } as any)
-
-      if (insertError) throw insertError
-    }
+    await upsertCategoriaOrden(this.getClient(), { delegacionId, categoriaId, orden })
   }
 
   static async setDelegacionCategoryVisibility(
@@ -202,27 +183,12 @@ export class DatabaseService {
     estaActiva: boolean,
     ordenFallback: number,
   ): Promise<void> {
-    const supabase = this.getClient() as any
-    const now = new Date().toISOString()
-
-    const { data, error } = await supabase
-      .from("categoria_orden_delegacion")
-      .update({ esta_activa: estaActiva, actualizado_en: now } as any)
-      .match({ delegacion_id: delegacionId, categoria_id: categoriaId })
-      .select("categoria_id")
-
-    if (error) throw error
-
-    if (!data || data.length === 0) {
-      const { error: insertError } = await supabase.from("categoria_orden_delegacion").insert({
-        delegacion_id: delegacionId,
-        categoria_id: categoriaId,
-        orden: ordenFallback,
-        esta_activa: estaActiva,
-      } as any)
-
-      if (insertError) throw insertError
-    }
+    await upsertCategoriaVisibilidad(this.getClient(), {
+      delegacionId,
+      categoriaId,
+      estaActiva,
+      ordenFallback,
+    })
   }
 
   static async clearDelegacionCategoryOrder(

@@ -16,16 +16,19 @@ import {
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Input } from "@/components/ui/input"
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { FileService } from "@/lib/services/file-service"
+import { getSignedFileUrl } from "@/lib/utils/signed-file-url"
+import { toast } from "sonner"
 import type { MovimientoArchivo } from "@/lib/types/database"
 
 interface FileListProps {
@@ -50,6 +53,7 @@ export function FileList({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [fileToDelete, setFileToDelete] = useState<MovimientoArchivo | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleStartEdit = (archivo: MovimientoArchivo) => {
     setEditingId(archivo.id)
@@ -58,13 +62,14 @@ export function FileList({
 
   const handleSaveEdit = async () => {
     if (!editingId) return
-    
+
     try {
       await onUpdateDescription(editingId, editingDescription)
       setEditingId(null)
       setEditingDescription("")
     } catch (error) {
       console.error("Error updating description:", error)
+      toast.error(error instanceof Error ? error.message : "No se pudo guardar la descripción. Inténtalo de nuevo.")
     }
   }
 
@@ -75,12 +80,15 @@ export function FileList({
 
   const handleDelete = async (archivo: MovimientoArchivo) => {
     setDeletingId(archivo.id)
+    setDeleteError(null)
     try {
       await onDelete(archivo)
       setDeleteDialogOpen(false)
       setFileToDelete(null)
     } catch (error) {
       console.error("Error deleting file:", error)
+      // No cerramos el diálogo: el usuario ve el error y puede reintentar o cancelar.
+      setDeleteError(error instanceof Error ? error.message : "No se pudo eliminar el archivo. Inténtalo de nuevo.")
     } finally {
       setDeletingId(null)
     }
@@ -88,24 +96,27 @@ export function FileList({
 
   const openDeleteDialog = (archivo: MovimientoArchivo) => {
     setFileToDelete(archivo)
+    setDeleteError(null)
     setDeleteDialogOpen(true)
   }
 
+  const openArchivo = async (archivo: MovimientoArchivo) => {
+    try {
+      const url = await getSignedFileUrl(archivo.path_storage, archivo.bucket as 'facturas' | 'documentos')
+      window.open(url, '_blank')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo abrir el archivo")
+    }
+  }
+
   const handleDownload = (archivo: MovimientoArchivo) => {
-    window.open(archivo.url_publica, '_blank')
+    openArchivo(archivo)
   }
 
   const handleView = (archivo: MovimientoArchivo) => {
-    // Para PDFs e imágenes, abrir en nueva pestaña
-    const isPdf = archivo.tipo_mime === 'application/pdf'
-    const isImage = archivo.tipo_mime.startsWith('image/')
-    
-    if (isPdf || isImage) {
-      window.open(archivo.url_publica, '_blank')
-    } else {
-      // Para otros tipos, descargar
-      handleDownload(archivo)
-    }
+    // Para PDFs e imágenes, abrir en nueva pestaña; para el resto, descargar
+    // (ambos casos usan la misma signed URL bajo demanda).
+    openArchivo(archivo)
   }
 
   if (loading) {
@@ -256,7 +267,13 @@ export function FileList({
       </div>
 
       {/* Dialog de confirmación de eliminación */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open)
+          if (!open) setDeleteError(null)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -264,12 +281,24 @@ export function FileList({
               ¿Eliminar archivo?
             </DialogTitle>
             <DialogDescription>
-              Esta acción eliminará permanentemente el archivo &quot;{fileToDelete?.nombre_original}&quot;. 
+              Esta acción eliminará permanentemente el archivo &quot;{fileToDelete?.nombre_original}&quot;.
               Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
+          {deleteError && (
+            <Alert className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800 dark:text-red-300">{deleteError}</AlertDescription>
+            </Alert>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false)
+                setDeleteError(null)
+              }}
+            >
               Cancelar
             </Button>
             <Button

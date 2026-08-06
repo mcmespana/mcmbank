@@ -37,6 +37,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   useEffect(() => {
     if (!loading && !user && !isRedirecting) {
+      // Sincroniza el flag de redirección con el estado de auth externo antes
+      // de disparar la navegación; no es derivable en el render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsRedirecting(true)
       router.push("/auth/login")
     }
@@ -45,6 +48,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   // If a user appears (e.g., after sign-in finishes), clear redirecting state
   useEffect(() => {
     if (user && isRedirecting) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsRedirecting(false)
     }
   }, [user, isRedirecting])

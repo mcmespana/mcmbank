@@ -43,6 +43,7 @@ export function useMovimientos(
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fetchingRef = useRef(false)
+  const inFlightKeyRef = useRef<string>("")
   const lastFetchKeyRef = useRef<string>("")
   const isRevalidatingRef = useRef(false)
 
@@ -93,9 +94,15 @@ export function useMovimientos(
         return
       }
 
-      // Prevent concurrent fetches
+      // Prevent concurrent fetches for the SAME key/page (duplicate calls,
+      // e.g. an accidental double-invoke). A fetch for a DIFFERENT key (the
+      // delegation or filters changed while a previous fetch was still in
+      // flight) must NOT be silently dropped — it aborts the stale one and
+      // proceeds, otherwise the list would keep showing the previous
+      // filter's data forever.
       if (fetchingRef.current) {
-        return
+        if (isAppend) return
+        if (inFlightKeyRef.current === fetchKey) return
       }
 
       // Cancel previous request and clear timeout
@@ -111,6 +118,9 @@ export function useMovimientos(
       abortRef.current = abortController
       registerAC(abortController)
       fetchingRef.current = true
+      if (!isAppend) {
+        inFlightKeyRef.current = fetchKey
+      }
 
       // Set safety timeout
       timeoutRef.current = setTimeout(() => {
@@ -277,18 +287,25 @@ export function useMovimientos(
         setError(errorMessage)
       } finally {
         unregisterAC(abortController)
-        if (!isRevalidatingRef.current) {
-          setLoading(false)
-        }
-        isRevalidatingRef.current = false
-        fetchingRef.current = false
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current)
-          timeoutRef.current = null
+        // Only the request that's still "current" (not superseded by a
+        // newer key's fetch, which reassigns abortRef.current before this
+        // runs) may clear the shared loading/fetching flags or the shared
+        // timeout — otherwise a stale request's cleanup could clobber the
+        // state of the request that replaced it.
+        if (abortRef.current === abortController) {
+          if (!isRevalidatingRef.current) {
+            setLoading(false)
+          }
+          isRevalidatingRef.current = false
+          fetchingRef.current = false
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
+          }
         }
       }
     },
-    [delegacionId, memoizedFilters, pageSize, timeoutMs]
+    [delegacionId, memoizedFilters, pageSize, timeoutMs, fetchKey]
   )
 
   // Keep a ref to the latest fetchMovimientos so the effect below does not
@@ -316,6 +333,7 @@ export function useMovimientos(
     // double-invoke) will re-fetch instead of skipping.
     return () => {
       lastFetchKeyRef.current = ""
+      inFlightKeyRef.current = ""
       fetchingRef.current = false
       isRevalidatingRef.current = false
       if (abortRef.current) {

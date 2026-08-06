@@ -8,9 +8,32 @@ export const isSupabaseConfigured =
   typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
 
+// Only protect specific routes, not everything.
+// NOTE: this list is for page routes only. It does not distinguish page
+// routes from API routes (an unauthenticated match here gets redirected to
+// /auth/login, which is wrong for an API response) — /api/admin and
+// /api/supabase-sanity are intentionally NOT listed here; they are guarded
+// server-side by requireAdmin() in their own route handlers instead.
+const protectedRoutes = [
+  "/transacciones", "/categorias", "/cuentas", "/delegaciones",
+  "/movimientos", "/contactos", "/pagos-mcm", "/facturas",
+  "/configuracion", "/propuestas",
+]
+
 export async function updateSession(request: NextRequest) {
-  // If Supabase is not configured, just continue without auth
+  const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
+
+  // If Supabase is not configured, fail closed on protected routes (a
+  // misconfigured deployment must not silently let requests through
+  // unauthenticated) but keep public/auth pages renderable so the
+  // misconfiguration is at least visible/debuggable.
   if (!isSupabaseConfigured) {
+    if (isProtectedRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/login"
+      url.searchParams.set("error", "config")
+      return NextResponse.redirect(url)
+    }
     return NextResponse.next({
       request,
     })
@@ -52,10 +75,6 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/auth")
-
-  // Only protect specific routes, not everything
-  const protectedRoutes = ["/transacciones", "/categorias", "/cuentas", "/delegaciones", "/movimientos", "/contactos", "/pagos-mcm", "/facturas"]
-  const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
 
   if (isProtectedRoute && !user) {
     // no user, potentially respond by redirecting the user to the login page

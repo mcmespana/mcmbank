@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 .gemini/
+package-lock.json
 # next.js
 /.next/
 /out/
@@ -18,6 +19,7 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.example
 
 # vercel
 .vercel

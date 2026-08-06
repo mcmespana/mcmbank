@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { requireAdmin } from "@/lib/auth/require-admin"
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const { id } = await params
     const supabase = createAdminClient()
     const { password, name, memberships } = await req.json()
@@ -16,7 +20,10 @@ export async function PUT(
         return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 })
       }
       const { error: passError } = await supabase.auth.admin.updateUserById(id, { password })
-      if (passError) return NextResponse.json({ error: passError.message }, { status: 400 })
+      if (passError) {
+        console.error("admin update password error:", passError)
+        return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 400 })
+      }
     }
 
     // Optional: update profile name
@@ -24,14 +31,20 @@ export async function PUT(
       const { error: profileError } = await (supabase as any)
         .from("perfil")
         .upsert({ usuario_id: id, nombre_completo: name })
-      if (profileError) return NextResponse.json({ error: profileError.message }, { status: 400 })
+      if (profileError) {
+        console.error("admin update perfil error:", profileError)
+        return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 400 })
+      }
     }
 
     // Optional: replace memberships with per-delegation roles
     if (Array.isArray(memberships)) {
       // Replace all memberships for the user
       const { error: delError } = await (supabase as any).from("membresia").delete().eq("usuario_id", id)
-      if (delError) return NextResponse.json({ error: delError.message }, { status: 400 })
+      if (delError) {
+        console.error("admin replace membresia (delete) error:", delError)
+        return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 400 })
+      }
 
       const rows = memberships
         .filter((m: any) => m && m.delegacion_id && m.rol)
@@ -39,13 +52,17 @@ export async function PUT(
 
       if (rows.length) {
         const { error: insError } = await (supabase as any).from("membresia").insert(rows)
-        if (insError) return NextResponse.json({ error: insError.message }, { status: 400 })
+        if (insError) {
+          console.error("admin replace membresia (insert) error:", insError)
+          return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 400 })
+        }
       }
     }
 
     return NextResponse.json({ ok: true })
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 })
+    console.error("admin users [id] PUT error:", err)
+    return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 500 })
   }
 }
 
@@ -54,14 +71,21 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const { id } = await params
     const supabase = createAdminClient()
     const { error: authErr } = await supabase.auth.admin.deleteUser(id)
-    if (authErr) return NextResponse.json({ error: authErr.message }, { status: 400 })
+    if (authErr) {
+      console.error("admin delete user error:", authErr)
+      return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 400 })
+    }
     await (supabase as any).from("membresia").delete().eq("usuario_id", id)
     await (supabase as any).from("perfil").delete().eq("usuario_id", id)
     return NextResponse.json({ ok: true })
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 })
+    console.error("admin users [id] DELETE error:", err)
+    return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 500 })
   }
 }

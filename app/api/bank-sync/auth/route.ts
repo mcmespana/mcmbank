@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
@@ -89,7 +90,8 @@ export async function POST(request: Request) {
     .single()
 
   if (conexErr || !conexion) {
-    return NextResponse.json({ error: "No se pudo crear la conexión", detalle: conexErr?.message }, { status: 500 })
+    console.error("bank-sync auth: error creando banco_conexion:", conexErr)
+    return NextResponse.json({ error: "No se pudo crear la conexión" }, { status: 500 })
   }
 
   // 3. Guardar pairing pending {state → cuenta_id} para que el callback sepa qué cuenta linkar
@@ -117,11 +119,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: res.url, banco_conexion_id: conexion.id })
   } catch (err) {
-    const errorMsg = err instanceof EnableBankingError ? `${err.message}: ${JSON.stringify(err.body)}` : String(err)
+    const correlationId = randomUUID().slice(0, 8)
+    const safeMessage = err instanceof Error ? err.message : String(err)
+    const fullDetail = err instanceof EnableBankingError ? `${err.message}: ${JSON.stringify(err.body)}` : safeMessage
+    console.error(`bank-sync auth error [${correlationId}]:`, fullDetail)
     await admin
       .from("banco_conexion")
-      .update({ estado: "error", ultimo_error: errorMsg })
+      .update({ estado: "error", ultimo_error: `[${correlationId}] ${safeMessage}` })
       .eq("id", conexion.id)
-    return NextResponse.json({ error: "Error iniciando autorización en EB", detalle: errorMsg }, { status: 502 })
+    return NextResponse.json(
+      { error: "Error iniciando autorización con el banco. Inténtalo de nuevo.", correlation_id: correlationId },
+      { status: 502 },
+    )
   }
 }

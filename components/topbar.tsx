@@ -22,6 +22,9 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // Flag de "ya hidratado en el cliente" para evitar mismatch de SSR con el
+    // tema; no hay forma de derivarlo sin un efecto.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 

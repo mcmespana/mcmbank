@@ -29,6 +29,7 @@ import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria, Contacto, 
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
 import { ContactoForm } from "@/components/contactos/contacto-form"
+import { useCreateContactoInline } from "@/hooks/use-create-contacto-inline"
 import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 
 interface TransactionDetailProps {
@@ -64,9 +65,14 @@ export function TransactionDetail({
   initialTab = "datos",
   onRequestCreateCategory,
 }: TransactionDetailProps) {
-  const [contactoCreateOpen, setContactoCreateOpen] = useState(false)
-  const [contactoInitialNombre, setContactoInitialNombre] = useState("")
   const [formData, setFormData] = useState<Partial<Movimiento>>({})
+  const { onCreateNew: onCreateContactoNew, dialog: createContactoDialog } = useCreateContactoInline({
+    delegacionId,
+    categorias: categories,
+    canManageGlobal: canManageGlobalContact,
+    onCreateContacto,
+    onContactoCreated: (contactoId) => setFormData((prev) => ({ ...prev, contacto_id: contactoId })),
+  })
   const [formMovementId, setFormMovementId] = useState<string | null>(movement?.id ?? null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
@@ -542,14 +548,7 @@ export function TransactionDetail({
                           return next
                         })
                       }}
-                      onCreateNew={
-                        onCreateContacto
-                          ? (initialNombre) => {
-                              setContactoInitialNombre(initialNombre)
-                              setContactoCreateOpen(true)
-                            }
-                          : undefined
-                      }
+                      onCreateNew={onCreateContactoNew}
                       placeholder="Sin contacto vinculado"
                     />
                     {movement?.contacto && (
@@ -673,31 +672,7 @@ export function TransactionDetail({
         )}
       </SheetContent>
 
-      {onCreateContacto && (
-        <Sheet open={contactoCreateOpen} onOpenChange={setContactoCreateOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto z-[70]">
-            <SheetHeader className="mb-2">
-              <SheetTitle>Nuevo contacto</SheetTitle>
-            </SheetHeader>
-            <ContactoForm
-              delegacionId={delegacionId ?? null}
-              contacto={null}
-              categorias={categories as any}
-              canManageGlobal={Boolean(canManageGlobalContact)}
-              defaultNombre={contactoInitialNombre}
-              onSubmit={async (payload) => {
-                const created = (await onCreateContacto(payload)) as Contacto | void
-                if (created?.id) {
-                  setFormData((prev) => ({ ...prev, contacto_id: created.id }))
-                }
-                return created
-              }}
-              onCancel={() => setContactoCreateOpen(false)}
-              onSaved={() => setContactoCreateOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
-      )}
+      {createContactoDialog}
     </Sheet>
   )
 }

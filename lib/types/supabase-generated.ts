@@ -163,6 +163,7 @@ export type Database = {
       }
       banco_conexion: {
         Row: {
+          accounts_pendientes: Json | null
           actualizado_en: string
           aspsp_country: string
           aspsp_name: string
@@ -180,6 +181,7 @@ export type Database = {
           ultimo_error: string | null
         }
         Insert: {
+          accounts_pendientes?: Json | null
           actualizado_en?: string
           aspsp_country: string
           aspsp_name: string
@@ -197,6 +199,7 @@ export type Database = {
           ultimo_error?: string | null
         }
         Update: {
+          accounts_pendientes?: Json | null
           actualizado_en?: string
           aspsp_country?: string
           aspsp_name?: string

@@ -45,7 +45,6 @@ export function TransactionList({
   onOpenFiles,
   selectedMovementIds,
   onMovementSelectionChange,
-  onRequestCreateCategory,
 }: TransactionListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
@@ -141,7 +140,6 @@ export function TransactionList({
           onSelectionChange={(selected, rangeFromAnchor) =>
             onMovementSelectionChange(movement.id, selected, rangeFromAnchor)
           }
-          onRequestCreateCategory={onRequestCreateCategory}
         />
       ))}
       {hasMore && (

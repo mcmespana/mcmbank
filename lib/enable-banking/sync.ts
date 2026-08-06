@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database, BancoSyncLogStep, Json } from "@/lib/types/database"
 import { enableBanking, EnableBankingError } from "./client"
 import { mapTransactionToMovimiento } from "./dedup"
+import type { EBTransactionsResponse } from "./types"
 
 const SYNC_OVERLAP_DAYS = 10 // En cada corrida incremental, re-leemos los últimos 10 días
 // Primera sync: intentamos ir lo más atrás posible. PSD2 limita el histórico persistente
@@ -430,16 +431,17 @@ export async function syncCuenta(
     // 5. Paginar transacciones con fallback de ventana
     // Intentamos en orden las fechas candidatas. Si el ASPSP rechaza la más antigua
     // (típicamente 400 por date_from fuera del histórico permitido), probamos la siguiente.
-    let pages: Awaited<ReturnType<typeof enableBanking.getAllTransactions>> = []
+    let pages: EBTransactionsResponse[] = []
     let ventanaUsada = dateFrom
     let ventanaLimitada = false
+    let paginacionTruncada = false
     let ultimoErrorVentana: EnableBankingError | null = null
 
     for (let wi = 0; wi < candidateWindows.length; wi++) {
       const cand = candidateWindows[wi]
       try {
         logger.info(`Intento ${wi + 1}/${candidateWindows.length} con ventana desde ${cand}`)
-        pages = await enableBanking.getAllTransactions(
+        const resultado = await enableBanking.getAllTransactions(
           cuenta.external_account_uid,
           { date_from: cand, date_to: dateTo, transaction_status: "BOOK" },
           {
@@ -452,6 +454,8 @@ export async function syncCuenta(
             },
           },
         )
+        pages = resultado.pages
+        paginacionTruncada = resultado.truncated
         ventanaUsada = cand
         ventanaLimitada = wi > 0
         break
@@ -478,6 +482,24 @@ export async function syncCuenta(
         `El banco limitó el histórico a partir de ${ventanaUsada}. Para movimientos anteriores, impórtalos manualmente desde Excel (pestaña "Importar" en Transacciones).`,
         { ventana_solicitada: candidateWindows[0], ventana_obtenida: ventanaUsada },
       )
+    }
+
+    if (paginacionTruncada) {
+      // El banco todavía tenía más páginas (continuation_key) cuando llegamos
+      // al límite de DEFAULT_MAX_PAGES: hay movimientos en esta ventana que NO
+      // se han traído. No lo descartamos en silencio (ver plan 007) — se
+      // marca la sync como "parcial" y se explica en error_mensaje.
+      // NOTA: el diseño de sync incremental (last_sync_at - 10 días) NO
+      // recupera este hueco por sí solo en una corrida posterior, porque la
+      // siguiente sync parte de "ahora - 10 días", no del punto exacto donde
+      // se truncó la paginación. Si esto ocurre en una sync real, hace falta
+      // una sync manual con un rango de fechas más corto (ver docs).
+      logger.warn(
+        `Paginación truncada tras ${DEFAULT_MAX_PAGES} páginas: el banco aún tenía más transacciones (continuation_key presente). Pueden faltar movimientos en esta ventana.`,
+        { ventana: ventanaUsada, date_to: dateTo, max_pages: DEFAULT_MAX_PAGES },
+      )
+      estado = "parcial"
+      errorMensaje = `Paginación truncada tras ${DEFAULT_MAX_PAGES} páginas; pueden faltar movimientos entre ${ventanaUsada} y ${dateTo}. Repite la sync con un rango de fechas más corto si necesitas ese histórico completo.`
     }
 
     const allTx = pages.flatMap((p) => p.transactions)

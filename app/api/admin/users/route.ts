@@ -1,17 +1,25 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { requireAdmin } from "@/lib/auth/require-admin"
 
 export async function GET() {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const supabase = createAdminClient()
     const { data, error } = await supabase.auth.admin.listUsers()
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error("admin.listUsers error:", error)
+      return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 500 })
     }
     const { data: memberships, error: mErr } = await (supabase as any)
       .from("membresia")
       .select("usuario_id, rol, delegacion:delegacion_id (id, nombre)")
-    if (mErr) return NextResponse.json({ error: mErr.message }, { status: 500 })
+    if (mErr) {
+      console.error("admin users membresia query error:", mErr)
+      return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 500 })
+    }
     const users = (data?.users || [])
       .map((u) => ({
         id: u.id,
@@ -26,12 +34,16 @@ export async function GET() {
       })
     return NextResponse.json({ users })
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 })
+    console.error("admin users API error:", err)
+    return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 500 })
   }
 }
 
 export async function POST(req: Request) {
   try {
+    const { error: authError } = await requireAdmin()
+    if (authError) return authError
+
     const supabase = createAdminClient()
     const { email, password, name, memberships } = await req.json()
 
@@ -41,7 +53,7 @@ export async function POST(req: Request) {
     if (typeof password !== 'string' || password.length < 6) {
       return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 })
     }
-    const emailRegex = /.+@.+\..+/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json({ error: "Email no válido" }, { status: 400 })
     }
@@ -54,7 +66,7 @@ export async function POST(req: Request) {
     })
     if (createError || !created?.user) {
       console.error('admin.createUser error:', createError)
-      return NextResponse.json({ error: createError?.message || "No se pudo crear el usuario", status: (createError as any)?.status }, { status: 400 })
+      return NextResponse.json({ error: "No se pudo crear el usuario. Inténtalo de nuevo." }, { status: 400 })
     }
 
     const userId = created.user.id
@@ -65,7 +77,8 @@ export async function POST(req: Request) {
         .from("perfil")
         .upsert({ usuario_id: userId, nombre_completo: name })
       if (profileError) {
-        return NextResponse.json({ error: profileError.message }, { status: 400 })
+        console.error("admin create perfil error:", profileError)
+        return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 400 })
       }
     }
 
@@ -77,13 +90,15 @@ export async function POST(req: Request) {
       if (rows.length) {
         const { error: insError } = await (supabase as any).from("membresia").insert(rows)
         if (insError) {
-          return NextResponse.json({ error: insError.message }, { status: 400 })
+          console.error("admin create membresia error:", insError)
+          return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 400 })
         }
       }
     }
 
     return NextResponse.json({ ok: true, user: { id: userId, email } }, { status: 201 })
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 })
+    console.error("admin users API error:", err)
+    return NextResponse.json({ error: "Ha ocurrido un error. Inténtalo de nuevo." }, { status: 500 })
   }
 }

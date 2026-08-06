@@ -9,7 +9,9 @@
 4. Crea `.env.local` con tus claves de Supabase (ver más abajo).
 5. Ejecuta `pnpm dev` y abre `http://localhost:3000`.
 
-> 🧪 Usuario demo: `admin@movimientoconsolacion.com` · contraseña `1234`.
+> 🧪 Para probar la app necesitas un usuario con membresía en alguna delegación.
+> Pide acceso al equipo de la oficina técnica; las credenciales **no se guardan
+> en el repositorio**.
 
 ## 📋 Requisitos
 - **Node.js ≥ 20** (el repo incluye `.nvmrc`).

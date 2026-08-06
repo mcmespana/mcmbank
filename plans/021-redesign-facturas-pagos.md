@@ -673,7 +673,7 @@ alguna ruta de la app dependía de poder mover filas entre delegaciones).
    `idx_factura_delegacion_importe_abierta` y ya no el roto.
 8. `mcp__Supabase__get_advisors` sin avisos nuevos de RLS ni de `search_path`.
 
-### Aplicación (`pnpm dev`, usuario demo `admin@movimientoconsolacion.com` / `1234`)
+### Aplicación (`pnpm dev`, con un usuario con membresía — pídele el acceso al usuario)
 
 **Facturas**
 9. Arrastrar un PDF y una imagen a la Bandeja → dos tarjetas con **miniatura visible**, no

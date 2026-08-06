@@ -334,7 +334,8 @@ Desactiva la optimización de imágenes de Next.js, lo que además de afectar re
 **Archivos:** `CLAUDE.md` (línea 52), `README.md` (línea 12)
 
 ```
-Demo user: admin@movimientoconsolacion.com / password 1234
+Demo user: <credenciales retiradas del repositorio>
+
 ```
 
 Aceptable para desarrollo, pero se debe verificar que estas credenciales no funcionan en producción.

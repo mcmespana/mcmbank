@@ -120,13 +120,16 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         <Sidebar showDesktop={false} />
       </div>
 
-      {/* Delegation selector - limited width */}
-      <div className="flex items-center min-w-0 overflow-hidden max-w-[160px] sm:max-w-[280px] md:max-w-[320px]">
+      {/* Delegation selector. En móvil ocupa todo el espacio libre (antes tenía
+          un max-w de 160px y el spacer se quedaba el resto, así que el nombre de
+          la delegación se truncaba a ~50px: "-T M..."). En sm+ recupera el ancho
+          acotado y es el spacer el que empuja las acciones a la derecha. */}
+      <div className="flex flex-1 items-center min-w-0 overflow-hidden sm:flex-none sm:max-w-[280px] md:max-w-[320px]">
         <DelegationSelector value={selectedDelegation} onValueChange={onDelegationChange} />
       </div>
 
       {/* Spacer */}
-      <div className="flex-1" />
+      <div className="hidden sm:block sm:flex-1" />
 
       {/* Right side actions */}
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -141,12 +144,14 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           <span>Manual</span>
         </Button>
 
-        {/* Theme toggle */}
+        {/* Theme toggle. Oculto en móvil (< sm): vive en el menú lateral
+            (hamburguesa), donde no compite por espacio con el nombre de la
+            delegación, que es la información que más importa poder leer. */}
         {mounted && (
           <Button
             variant="ghost"
             size="sm"
-            className="w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-[transform,background-color,color] duration-150 hover:scale-110 flex-shrink-0"
+            className="hidden sm:flex w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-[transform,background-color,color] duration-150 hover:scale-110 flex-shrink-0"
             onClick={handleThemeCycle}
             title={`Cambiar tema (actual: ${currentThemeLabel})`}
           >
@@ -155,8 +160,9 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           </Button>
         )}
 
-        {/* User info and logout */}
-        <div className="flex items-center gap-1 sm:gap-3 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border/30 flex-shrink-0">
+        {/* User info and logout. Oculto en móvil por el mismo motivo: ambos
+            están duplicados en el pie del menú lateral (components/sidebar.tsx). */}
+        <div className="hidden sm:flex items-center gap-1 sm:gap-3 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border/30 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 bg-card/50 backdrop-blur-sm rounded-2xl px-2 sm:px-3 py-1.5 border border-border/30 shadow-sm">
             <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-primary/20 ring-offset-0 sm:ring-offset-2 ring-offset-background flex-shrink-0">
               <AvatarImage src="" alt={getUserDisplayName()} />

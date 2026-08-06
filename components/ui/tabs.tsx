@@ -14,7 +14,10 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-12 items-center justify-center rounded-2xl bg-muted/60 backdrop-blur-xl p-1.5 text-muted-foreground border border-border/30 shadow-lg",
+      // min-h-12 (no h-12): el carril debe abrazar al trigger más alto. Con una
+      // altura fija, el trigger activo desbordaba el content box y la píldora
+      // quedaba descentrada (7px arriba / 3px abajo).
+      "inline-flex min-h-12 items-center justify-center rounded-2xl bg-muted/60 backdrop-blur-xl p-1.5 text-muted-foreground border border-border/30 shadow-lg",
       className
     )}
     {...props}
@@ -29,7 +32,11 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card/90 data-[state=active]:backdrop-blur-md data-[state=active]:text-foreground data-[state=active]:shadow-md data-[state=active]:border data-[state=active]:border-border/50 hover:bg-card/50 hover:text-foreground/80",
+      // `border border-transparent` en la base: antes el borde lo añadía solo el
+      // estado activo, así que la pestaña activa medía 2px más que las inactivas
+      // y el cambio de pestaña desplazaba el layout. Reservando el borde en
+      // ambos estados, todas miden igual y la píldora queda centrada.
+      "inline-flex items-center justify-center whitespace-nowrap rounded-xl border border-transparent px-4 py-2.5 text-sm font-semibold ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card/90 data-[state=active]:backdrop-blur-md data-[state=active]:text-foreground data-[state=active]:shadow-md data-[state=active]:border-border/50 hover:bg-card/50 hover:text-foreground/80",
       className
     )}
     {...props}

@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto"
+
 /**
  * Autenticación para la API externa (consumo desde Google Apps Script u otras
  * aplicaciones internas).
@@ -37,6 +39,19 @@ function extractRequestKey(request: Request): string | null {
   return null
 }
 
+/**
+ * Compara dos cadenas en tiempo constante para no filtrar cuántos caracteres
+ * iniciales coinciden. `timingSafeEqual` exige buffers del mismo tamaño, así
+ * que la diferencia de longitud se comprueba aparte (la longitud de la clave
+ * no es el secreto; su contenido sí).
+ */
+function timingSafeEqualString(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, "utf8")
+  const bufB = Buffer.from(b, "utf8")
+  if (bufA.length !== bufB.length) return false
+  return timingSafeEqual(bufA, bufB)
+}
+
 export type ApiAuthResult =
   | { ok: true }
   | { ok: false; status: 401 | 500; error: string }
@@ -60,7 +75,7 @@ export function verifyApiKey(request: Request): ApiAuthResult {
   }
 
   const providedKey = extractRequestKey(request)
-  if (!providedKey || providedKey !== configuredKey) {
+  if (!providedKey || !timingSafeEqualString(providedKey, configuredKey)) {
     return {
       ok: false,
       status: 401,

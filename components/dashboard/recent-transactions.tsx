@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useMovimientos } from "@/hooks/use-movimientos"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { ArrowUpRight, ArrowDownRight, Calendar, Tag } from "lucide-react"
+import { formatCurrency } from "@/lib/utils/format"
 
 interface Props {
   limit?: number
@@ -45,11 +46,11 @@ export function RecentTransactions({ limit = 5 }: Props) {
             {latest.map((mov) => (
               <div
                 key={mov.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`p-2 rounded-full ${
+                    className={`p-2 rounded-full shrink-0 ${
                       mov.importe >= 0 ? "bg-green-100 dark:bg-green-900/20" : "bg-red-100 dark:bg-red-900/20"
                     }`}
                   >
@@ -59,10 +60,15 @@ export function RecentTransactions({ limit = 5 }: Props) {
                       <ArrowDownRight className="h-4 w-4 text-red-600 dark:text-red-400" />
                     )}
                   </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-sm">{mov.concepto || "Sin concepto"}</span>
+                  {/* min-w-0 + truncate: sin esto, un concepto largo empujaba el
+                      importe fuera de la tarjeta (y en móvil, fuera de la pantalla). */}
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-medium text-sm truncate">{mov.concepto || "Sin concepto"}</span>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{format(new Date(mov.fecha), "d MMM", { locale: es })}</span>
+                      {/* parseISO, no `new Date("yyyy-MM-dd")`: este último parsea
+                          como UTC medianoche y en husos horarios por delante de
+                          UTC (España) la fecha se muestra un día antes. */}
+                      <span>{format(parseISO(mov.fecha), "d MMM", { locale: es })}</span>
                       {mov.categoria && (
                         <>
                           <span>•</span>
@@ -75,13 +81,18 @@ export function RecentTransactions({ limit = 5 }: Props) {
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <div
-                    className={`font-semibold ${
+                    className={`font-semibold tabular-nums ${
                       mov.importe >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                     }`}
                   >
-                    {mov.importe >= 0 ? "+" : "-"}€{Math.abs(mov.importe).toFixed(2)}
+                    {/* formatCurrency, no un `€${...toFixed(2)}` a mano: ese
+                        formato ("€54.06") no coincidía con el resto de la app
+                        (formato es-ES, "54,06 €") y el símbolo antes del signo
+                        quedaba raro ("-€54.06"). */}
+                    {mov.importe >= 0 ? "+" : ""}
+                    {formatCurrency(mov.importe)}
                   </div>
                   {!mov.categoria && (
                     <Badge variant="outline" className="text-xs mt-1">

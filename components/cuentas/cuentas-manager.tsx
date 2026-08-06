@@ -20,6 +20,7 @@ import type { Cuenta } from "@/lib/types/database"
 import { useCuentas } from "@/hooks/use-cuentas"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { supabase } from "@/lib/supabase/client"
+import { DatabaseService } from "@/lib/services/database"
 import { formatCurrency } from "@/lib/utils/format"
 import { formatearIban } from "@/lib/utils/iban"
 import { toast } from "sonner"
@@ -76,34 +77,34 @@ export function CuentasManager() {
     }, delay)
   }, [setOperationState])
 
+  // Los saldos se agregan en Postgres (RPC get_saldos_por_cuenta). Antes se
+  // hacía una query por cuenta sumando en cliente, lo que además truncaba la
+  // suma al superar el límite de filas de PostgREST.
   useEffect(() => {
-    async function fetchBalances() {
-      const entries = await Promise.all(
-        cuentas.map(async (c) => {
-          const { data, error } = await (supabase as any)
-            .from("movimiento")
-            .select("importe")
-            .eq("cuenta_id", c.id)
-
-          if (error) {
-            console.error("Error fetching balance:", error)
-            return [c.id, 0]
-          }
-
-          const balance = (data || []).reduce((sum: number, m: any) => sum + m.importe, 0)
-          return [c.id, balance]
-        }),
-      )
-
-      setBalances(Object.fromEntries(entries))
-    }
-
-    if (cuentas.length) {
-      fetchBalances()
-    } else {
+    if (!selectedDelegation || !cuentas.length) {
       setBalances({})
+      return
     }
-  }, [cuentas])
+
+    let cancelled = false
+
+    DatabaseService.getSaldosPorCuenta(selectedDelegation)
+      .then((saldos) => {
+        if (!cancelled) setBalances(saldos)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error("Error fetching balances:", err)
+        setBalances({})
+        toast.error("No se han podido calcular los saldos de las cuentas")
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // `cuentas` (memoizado) cambia de identidad tras cada forceRefresh, así que
+    // los saldos se recalculan al crear/borrar cuentas o movimientos.
+  }, [selectedDelegation, cuentas])
 
   // Limpiar estados de operación cuando cambie la delegación
   useEffect(() => {
@@ -548,7 +549,14 @@ export function CuentasManager() {
             )}
           </div>
         ) : (
-          <div className="grid gap-4">
+          // grid-cols-1, no un `grid` a secas: sin columnas explícitas el track
+          // implícito de CSS Grid usa min-width:auto, así que si CUALQUIER
+          // tarjeta tiene contenido que no puede envolver (el IBAN, un badge),
+          // el track entero —y con él, TODAS las tarjetas, incluso las de
+          // nombre corto— se ensancha más allá del viewport y la página entera
+          // queda con scroll horizontal en móvil. grid-cols-1 usa
+          // minmax(0,1fr), que sí permite encoger.
+          <div className="grid grid-cols-1 gap-4">
             {filteredCuentas.map((cuenta) => {
               const connectionStatus = getConnectionStatus(cuenta)
               const bankColor = getBankColor(cuenta)
@@ -561,7 +569,7 @@ export function CuentasManager() {
               return (
                 <Card
                   key={cuenta.id}
-                  className={`group hover:shadow-lg transition-[background-color,box-shadow] duration-200 border-border bg-card ${isCreating ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20' :
+                  className={`group min-w-0 hover:shadow-lg transition-[background-color,box-shadow] duration-200 border-border bg-card ${isCreating ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20' :
                     isUpdating ? 'ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
                       isDeleting ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''
                     } ${isInactive ? 'opacity-50 grayscale' : ''}`}
@@ -621,7 +629,13 @@ export function CuentasManager() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="text-lg sm:text-xl font-semibold text-foreground truncate leading-tight">
+                                {/* min-w-0: sin él, `truncate` no hace nada — como flex
+                                    item, el h3 tiene min-width:auto por defecto y nunca
+                                    se encoge por debajo de su contenido. Con un nombre
+                                    largo (p. ej. "Pruebas EnableBanking con cuenta AJ
+                                    Central xd") esto desbordaba la tarjeta y toda la
+                                    página quedaba con scroll horizontal en móvil. */}
+                                <h3 className="min-w-0 text-lg sm:text-xl font-semibold text-foreground truncate leading-tight">
                                   {cuenta.nombre}
                                   {isCreating && (
                                     <span className="ml-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-normal">

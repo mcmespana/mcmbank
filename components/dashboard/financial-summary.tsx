@@ -26,26 +26,26 @@ export function FinancialSummary({ from, to }: Props) {
     <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
       {/* Saldo actual en cuentas — independiente del periodo */}
       <Card className="border-primary/30">
-        <CardContent className="flex items-center gap-3 p-4">
+        <CardContent className="flex flex-col items-start gap-2 p-4 sm:flex-row sm:items-center sm:gap-3">
           <div className="rounded-full bg-primary/10 p-2">
             <Wallet className="h-5 w-5 text-primary" />
           </div>
-          <div className="min-w-0">
+          <div className="w-full min-w-0">
             <p className="text-xs text-muted-foreground">Saldo en cuentas</p>
-            <p className="truncate text-xl font-bold tabular-nums">{formatCurrency(allTime.balance)}</p>
+            <p className="whitespace-nowrap text-lg font-bold tabular-nums sm:text-xl">{formatCurrency(allTime.balance)}</p>
             <p className="text-[11px] text-muted-foreground">total actual</p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="flex items-center gap-3 p-4">
+        <CardContent className="flex flex-col items-start gap-2 p-4 sm:flex-row sm:items-center sm:gap-3">
           <div className="rounded-full bg-green-100 p-2 dark:bg-green-900/40">
             <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
-          <div className="min-w-0">
+          <div className="w-full min-w-0">
             <p className="text-xs text-muted-foreground">Ingresos</p>
-            <p className="truncate text-xl font-bold tabular-nums text-green-600 dark:text-green-400">
+            <p className="whitespace-nowrap text-lg font-bold tabular-nums sm:text-xl text-green-600 dark:text-green-400">
               {formatCurrency(summary.ingresos)}
             </p>
             <p className="text-[11px] text-muted-foreground">en el periodo</p>
@@ -54,13 +54,13 @@ export function FinancialSummary({ from, to }: Props) {
       </Card>
 
       <Card>
-        <CardContent className="flex items-center gap-3 p-4">
+        <CardContent className="flex flex-col items-start gap-2 p-4 sm:flex-row sm:items-center sm:gap-3">
           <div className="rounded-full bg-red-100 p-2 dark:bg-red-900/40">
             <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
           </div>
-          <div className="min-w-0">
+          <div className="w-full min-w-0">
             <p className="text-xs text-muted-foreground">Gastos</p>
-            <p className="truncate text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+            <p className="whitespace-nowrap text-lg font-bold tabular-nums sm:text-xl text-red-600 dark:text-red-400">
               {formatCurrency(summary.gastos)}
             </p>
             <p className="text-[11px] text-muted-foreground">en el periodo</p>
@@ -69,15 +69,15 @@ export function FinancialSummary({ from, to }: Props) {
       </Card>
 
       <Card>
-        <CardContent className="flex items-center gap-3 p-4">
+        <CardContent className="flex flex-col items-start gap-2 p-4 sm:flex-row sm:items-center sm:gap-3">
           <div className="rounded-full bg-muted p-2">
             <Scale className="h-5 w-5 text-foreground" />
           </div>
-          <div className="min-w-0">
+          <div className="w-full min-w-0">
             <p className="text-xs text-muted-foreground">Balance</p>
             <p
               className={cn(
-                "truncate text-xl font-bold tabular-nums",
+                "whitespace-nowrap text-lg font-bold tabular-nums sm:text-xl",
                 summary.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
               )}
             >
@@ -101,7 +101,7 @@ export function FinancialSummary({ from, to }: Props) {
         role="button"
         title="Ver transacciones sin categorizar"
       >
-        <CardContent className="flex items-center gap-3 p-4">
+        <CardContent className="flex flex-col items-start gap-2 p-4 sm:flex-row sm:items-center sm:gap-3">
           <div
             className={cn(
               "rounded-full p-2",
@@ -114,9 +114,9 @@ export function FinancialSummary({ from, to }: Props) {
               <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
             )}
           </div>
-          <div className="min-w-0">
+          <div className="w-full min-w-0">
             <p className="text-xs text-muted-foreground">Sin categorizar</p>
-            <p className="truncate text-xl font-bold tabular-nums">{pendientes}</p>
+            <p className="text-lg font-bold tabular-nums sm:text-xl">{pendientes}</p>
             <p className="text-[11px] text-muted-foreground">{pendientes > 0 ? "click para etiquetar" : "todo al día"}</p>
           </div>
         </CardContent>

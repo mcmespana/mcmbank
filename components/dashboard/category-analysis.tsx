@@ -83,7 +83,10 @@ function CategoryDataRow({
       onClick={onClick}
       className={cn(onClick && "group cursor-pointer hover:bg-muted/60")}
     >
-      <TableCell className={cn(indent && "pl-10")}>
+      {/* bg-card SIN opacidad (no bg-card/95): con transparencia, el número de
+          Ingresos que queda "debajo" al desplazar horizontalmente se veía como
+          un fantasma superpuesto al nombre de categoría. */}
+      <TableCell className={cn("sticky left-0 z-10 bg-card", indent && "pl-10")}>
         <div className="flex items-center gap-2">
           {!nameOverride && row.emoji && <span className="text-lg">{row.emoji}</span>}
           <span className={cn("font-medium", nameOverride && "italic text-muted-foreground")}>
@@ -94,29 +97,32 @@ function CategoryDataRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="whitespace-nowrap text-right tabular-nums">
         {row.income ? (
           <span className="font-medium text-green-600 dark:text-green-400">{formatCurrency(row.income)}</span>
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="hidden md:table-cell">
+      <TableCell className="hidden lg:table-cell">
         {row.income > 0 && <PctBar pct={row.incomePct} color="bg-green-500/80" />}
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="whitespace-nowrap text-right tabular-nums">
         {row.expense ? (
           <span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(row.expense)}</span>
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="hidden md:table-cell">
+      <TableCell className="hidden lg:table-cell">
         {row.expense > 0 && <PctBar pct={row.expensePct} color="bg-red-500/80" />}
       </TableCell>
+      {/* whitespace-nowrap: sin ella, valores anchos como "-16.501,15 €" partían
+          en dos líneas ("-16.501,15" / "€") en anchos intermedios (tablet/portátil
+          pequeño), aunque el resto de importes de la columna cupieran en una. */}
       <TableCell
         className={cn(
-          "text-right font-semibold tabular-nums",
+          "whitespace-nowrap text-right font-semibold tabular-nums",
           rowBalance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
         )}
       >
@@ -124,6 +130,89 @@ function CategoryDataRow({
         {formatCurrency(rowBalance)}
       </TableCell>
     </TableRow>
+  )
+}
+
+/**
+ * Variante para móvil de una fila de "Detalle por categoría". La tabla (4
+ * columnas: Categoría/Ingresos/Gastos/Balance) no cabe en ~350px ni siquiera
+ * fijando la columna de categoría — desplazarla en horizontal para ver
+ * Ingresos y Gastos es incómodo y poco descubrible. En vez de eso, en móvil
+ * cada categoría es una tarjeta de dos líneas: nombre + balance arriba,
+ * ingresos/gastos abajo. Mismos datos, sin scroll horizontal.
+ */
+function CategoryMobileRow({
+  name,
+  emoji,
+  income,
+  expense,
+  onClick,
+  nameOverride,
+  indent = false,
+  muted = false,
+  subLabel,
+}: {
+  name: string
+  emoji?: string
+  income: number
+  expense: number
+  onClick?: () => void
+  nameOverride?: string
+  indent?: boolean
+  muted?: boolean
+  subLabel?: string
+}) {
+  const balance = income - expense
+  return (
+    <div
+      onClick={onClick}
+      className={cn(
+        "rounded-xl border border-border/50 p-3",
+        muted ? "bg-muted/40" : "bg-card",
+        onClick && "cursor-pointer active:bg-muted/60",
+        indent && "ml-4",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          {!nameOverride && emoji && <span className="shrink-0 text-base">{emoji}</span>}
+          <span
+            className={cn(
+              "truncate",
+              muted ? "font-semibold" : "font-medium",
+              nameOverride && "italic text-muted-foreground",
+            )}
+          >
+            {nameOverride ?? name}
+          </span>
+          {subLabel && <span className="shrink-0 text-xs text-muted-foreground">{subLabel}</span>}
+          {onClick && <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />}
+        </div>
+        <span
+          className={cn(
+            "shrink-0 font-semibold tabular-nums",
+            balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
+          )}
+        >
+          {balance >= 0 ? "+" : ""}
+          {formatCurrency(balance)}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
+        <span>
+          Ingresos{" "}
+          <span className="font-medium text-green-600 dark:text-green-400">
+            {income ? formatCurrency(income) : "—"}
+          </span>
+        </span>
+        <span>
+          Gastos{" "}
+          <span className="font-medium text-red-600 dark:text-red-400">
+            {expense ? formatCurrency(expense) : "—"}
+          </span>
+        </span>
+      </div>
+    </div>
   )
 }
 
@@ -558,7 +647,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Ingresos</p>
-                  <p className="text-xl font-bold tabular-nums text-green-600 dark:text-green-400">
+                  <p className="whitespace-nowrap text-lg font-bold tabular-nums lg:text-xl text-green-600 dark:text-green-400">
                     {formatCurrency(totals.income)}
                   </p>
                 </div>
@@ -571,7 +660,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Gastos</p>
-                  <p className="text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+                  <p className="whitespace-nowrap text-lg font-bold tabular-nums lg:text-xl text-red-600 dark:text-red-400">
                     {formatCurrency(totals.expense)}
                   </p>
                 </div>
@@ -584,9 +673,14 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Balance</p>
+                  {/* whitespace-nowrap evita el salto a dos líneas, pero un
+                      text-2xl fijo seguía desbordando la propia tarjeta en anchos
+                      intermedios (tablet / portátil pequeño, grid de 3 columnas
+                      apretado) — el texto no tiene adónde encogerse con nowrap. El
+                      tamaño grande queda reservado a partir de lg (pantallas anchas). */}
                   <p
                     className={cn(
-                      "text-2xl font-bold tabular-nums",
+                      "whitespace-nowrap text-lg font-bold tabular-nums lg:text-2xl",
                       totals.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
                     )}
                   >
@@ -651,22 +745,98 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Móvil: tarjetas de dos líneas, sin scroll horizontal (ver
+                    CategoryMobileRow). Desktop/tablet: la tabla de siempre. */}
+                <div className="space-y-2 sm:hidden">
+                  {!grouped
+                    ? summary.map((s) => (
+                        <CategoryMobileRow
+                          key={s.id}
+                          name={s.name}
+                          emoji={s.emoji}
+                          income={s.income}
+                          expense={s.expense}
+                          onClick={() => openRow(s)}
+                        />
+                      ))
+                    : groupedSummary.map((g) => {
+                        const hasChildren = g.children.length > 0
+                        if (!hasChildren && g.ownRow) {
+                          return (
+                            <CategoryMobileRow
+                              key={g.key}
+                              name={g.ownRow.name}
+                              emoji={g.ownRow.emoji}
+                              income={g.ownRow.income}
+                              expense={g.ownRow.expense}
+                              onClick={() => openRow(g.ownRow!)}
+                            />
+                          )
+                        }
+                        return (
+                          <div key={g.key} className="space-y-2">
+                            <CategoryMobileRow
+                              name={g.name}
+                              emoji={g.emoji}
+                              income={g.income}
+                              expense={g.expense}
+                              onClick={() => openGroup(g)}
+                              muted
+                              subLabel={`${g.children.length} subcategoría${g.children.length !== 1 ? "s" : ""}`}
+                            />
+                            {g.ownRow && (
+                              <CategoryMobileRow
+                                name={g.ownRow.name}
+                                income={g.ownRow.income}
+                                expense={g.ownRow.expense}
+                                onClick={() => openRow(g.ownRow!)}
+                                nameOverride="(sin subcategoría)"
+                                indent
+                              />
+                            )}
+                            {g.children.map((child) => (
+                              <CategoryMobileRow
+                                key={child.id}
+                                name={child.name}
+                                emoji={child.emoji}
+                                income={child.income}
+                                expense={child.expense}
+                                onClick={() => openRow(child)}
+                                indent
+                              />
+                            ))}
+                          </div>
+                        )
+                      })}
+                  <CategoryMobileRow name="Total" income={totals.income} expense={totals.expense} muted />
+                </div>
+
+                {/* Table ya envuelve en un div overflow-auto; hidden va en ese
+                    wrapper (no en className, que solo llega al <table> interno). */}
+                <div className="hidden sm:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>
+                      {/* sticky: la tabla tiene 4 columnas numéricas visibles en móvil
+                          (Ingresos/Gastos/Balance no caben en 375px junto a Categoría) y
+                          se desplaza en horizontal. Sin fijar esta columna, al desplazar
+                          para ver Gastos se pierde de vista a qué categoría corresponde. */}
+                      <TableHead className="sticky left-0 z-10 bg-card">
                         <SortButton field="category">Categoría</SortButton>
                       </TableHead>
                       <TableHead className="text-right">
                         <SortButton field="income">Ingresos</SortButton>
                       </TableHead>
-                      <TableHead className="hidden w-[110px] md:table-cell">
+                      {/* lg (no md): a partir de 768px seguía sin caber "Balance" sin
+                          desplazar — quitando las barras de % hasta 1024px se libera
+                          espacio de sobra en tablet y portátiles pequeños. */}
+                      <TableHead className="hidden w-[110px] lg:table-cell">
                         <span className="text-xs text-muted-foreground">% ingresos</span>
                       </TableHead>
                       <TableHead className="text-right">
                         <SortButton field="expense">Gastos</SortButton>
                       </TableHead>
-                      <TableHead className="hidden w-[110px] md:table-cell">
+                      <TableHead className="hidden w-[110px] lg:table-cell">
                         <span className="text-xs text-muted-foreground">% gastos</span>
                       </TableHead>
                       <TableHead className="text-right">
@@ -700,7 +870,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                                 onClick={() => openGroup(g)}
                                 className="group cursor-pointer bg-muted/40 hover:bg-muted/60"
                               >
-                                <TableCell>
+                                <TableCell className="sticky left-0 z-10 bg-muted">
                                   <div className="flex items-center gap-2">
                                     {g.emoji && <span className="text-lg">{g.emoji}</span>}
                                     <span className="font-semibold">{g.name}</span>
@@ -710,7 +880,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right tabular-nums">
+                                <TableCell className="whitespace-nowrap text-right tabular-nums">
                                   {g.income ? (
                                     <span className="font-semibold text-green-600 dark:text-green-400">
                                       {formatCurrency(g.income)}
@@ -719,10 +889,10 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                                     <span className="text-muted-foreground">—</span>
                                   )}
                                 </TableCell>
-                                <TableCell className="hidden md:table-cell">
+                                <TableCell className="hidden lg:table-cell">
                                   {g.income > 0 && <PctBar pct={groupIncomePct} color="bg-green-500/80" />}
                                 </TableCell>
-                                <TableCell className="text-right tabular-nums">
+                                <TableCell className="whitespace-nowrap text-right tabular-nums">
                                   {g.expense ? (
                                     <span className="font-semibold text-red-600 dark:text-red-400">
                                       {formatCurrency(g.expense)}
@@ -731,12 +901,12 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                                     <span className="text-muted-foreground">—</span>
                                   )}
                                 </TableCell>
-                                <TableCell className="hidden md:table-cell">
+                                <TableCell className="hidden lg:table-cell">
                                   {g.expense > 0 && <PctBar pct={groupExpensePct} color="bg-red-500/80" />}
                                 </TableCell>
                                 <TableCell
                                   className={cn(
-                                    "text-right font-bold tabular-nums",
+                                    "whitespace-nowrap text-right font-bold tabular-nums",
                                     groupBalance >= 0
                                       ? "text-green-600 dark:text-green-400"
                                       : "text-red-600 dark:text-red-400",
@@ -768,18 +938,18 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                   </TableBody>
                   <TableFooter>
                     <TableRow>
-                      <TableCell className="font-semibold">Total</TableCell>
+                      <TableCell className="sticky left-0 z-10 bg-muted font-semibold">Total</TableCell>
                       <TableCell className="text-right font-semibold tabular-nums text-green-600 dark:text-green-400">
                         {formatCurrency(totals.income)}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell" />
+                      <TableCell className="hidden lg:table-cell" />
                       <TableCell className="text-right font-semibold tabular-nums text-red-600 dark:text-red-400">
                         {formatCurrency(totals.expense)}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell" />
+                      <TableCell className="hidden lg:table-cell" />
                       <TableCell
                         className={cn(
-                          "text-right font-bold tabular-nums",
+                          "whitespace-nowrap text-right font-bold tabular-nums",
                           totals.balance >= 0
                             ? "text-green-600 dark:text-green-400"
                             : "text-red-600 dark:text-red-400",
@@ -791,6 +961,7 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
                     </TableRow>
                   </TableFooter>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           )}

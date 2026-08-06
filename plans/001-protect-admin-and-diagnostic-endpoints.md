@@ -272,7 +272,7 @@ reviewer.
 - [ ] `curl -i http://localhost:3000/api/admin/users/<any-id>` PUT/DELETE (no auth cookie) returns 401
 - [ ] `curl -i http://localhost:3000/api/supabase-sanity` (no auth cookie) returns 401
 - [ ] `curl -i http://localhost:3000/configuracion` (no auth cookie) redirects to `/auth/login`
-- [ ] A logged-in `gestor_central` user can still successfully load `/configuracion` and use the admin user list (manual check in browser — log in with the demo user `admin@movimientoconsolacion.com` / `1234` per `CLAUDE.md` if that account has `gestor_central` role; if not, STOP and ask which account to test with)
+- [ ] A logged-in `gestor_central` user can still successfully load `/configuracion` and use the admin user list (manual check in browser — ask the user to log in with a `gestor_central` account — credentials are not stored in this repo)
 - [ ] No files outside the in-scope list are modified (`git status`)
 - [ ] `plans/README.md` status row updated
 

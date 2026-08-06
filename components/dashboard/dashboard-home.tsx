@@ -111,18 +111,22 @@ export function DashboardHome({ initialTab }: Props) {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
+          {/* Las etiquetas se muestran también en móvil: ocultarlas con
+              `hidden sm:inline` dejaba las pestañas sin nombre accesible (un
+              span display:none no llega al árbol de accesibilidad) y va contra
+              la convención del proyecto. px-2 en móvil para que quepan los tres. */}
           <TabsList className="grid w-full grid-cols-3 sm:mx-auto sm:flex sm:w-fit">
-            <TabsTrigger value="overview" className="flex items-center justify-center gap-2">
+            <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
               <Home className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Resumen</span>
+              <span>Resumen</span>
             </TabsTrigger>
-            <TabsTrigger value="actividad" className="flex items-center justify-center gap-2">
+            <TabsTrigger value="actividad" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
               <TrendingUp className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Balance</span>
+              <span>Balance</span>
             </TabsTrigger>
-            <TabsTrigger value="categorias" className="flex items-center justify-center gap-2">
+            <TabsTrigger value="categorias" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
               <PieChart className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Análisis</span>
+              <span>Análisis</span>
             </TabsTrigger>
           </TabsList>
 

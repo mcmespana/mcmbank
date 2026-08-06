@@ -280,7 +280,7 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Ingresos</p>
-                  <p className="text-xl font-bold tabular-nums text-green-600 dark:text-green-400">
+                  <p className="whitespace-nowrap text-xl font-bold tabular-nums text-green-600 dark:text-green-400">
                     {formatCurrency(summary.ingresos)}
                   </p>
                 </div>
@@ -293,7 +293,7 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Gastos</p>
-                  <p className="text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+                  <p className="whitespace-nowrap text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
                     {formatCurrency(summary.gastos)}
                   </p>
                 </div>
@@ -310,7 +310,7 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
                   </p>
                   <p
                     className={cn(
-                      "text-xl font-bold tabular-nums",
+                      "whitespace-nowrap text-xl font-bold tabular-nums",
                       summary.balance >= 0
                         ? "text-green-600 dark:text-green-400"
                         : "text-red-600 dark:text-red-400",
@@ -389,7 +389,7 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[90px]">Fecha</TableHead>
+                    <TableHead className="w-[64px] sm:w-[90px]">Fecha</TableHead>
                     <TableHead>Concepto</TableHead>
                     <TableHead className="hidden sm:table-cell">Categoría</TableHead>
                     <TableHead className="text-right">Importe</TableHead>
@@ -399,10 +399,16 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
                   {latestMovements.map((m) => (
                     <TableRow key={m.id}>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">
-                        {format(parseISO(m.fecha), "dd MMM yy", { locale: es })}
+                        {/* Sin año en móvil: "dd MMM yy" no cabía junto al importe y
+                            empujaba "Importe" fuera de la vista, sin ninguna pista
+                            visual de que la tabla se podía desplazar. */}
+                        <span className="sm:hidden">{format(parseISO(m.fecha), "dd MMM", { locale: es })}</span>
+                        <span className="hidden sm:inline">{format(parseISO(m.fecha), "dd MMM yy", { locale: es })}</span>
                       </TableCell>
-                      <TableCell className="max-w-[320px]">
-                        <span className="line-clamp-1 font-medium" title={m.concepto}>
+                      {/* max-w más ajustado en móvil (antes 320px fijo, más que el
+                          ancho total disponible): dejaba "Importe" fuera de pantalla. */}
+                      <TableCell className="max-w-[110px] sm:max-w-[320px]">
+                        <span className="block truncate font-medium" title={m.concepto}>
                           {m.concepto}
                         </span>
                       </TableCell>
@@ -418,9 +424,13 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
                           </Badge>
                         )}
                       </TableCell>
+                      {/* whitespace-nowrap: sin ella, en tablet (con Categoría ya
+                          visible compitiendo por espacio) el importe partía en dos
+                          líneas ("-16.200,00" / "€"). Concepto ya trunca con "…", así
+                          que es la columna correcta a la que quitarle espacio, no Importe. */}
                       <TableCell
                         className={cn(
-                          "text-right font-semibold tabular-nums",
+                          "whitespace-nowrap text-right font-semibold tabular-nums",
                           m.importe >= 0
                             ? "text-green-600 dark:text-green-400"
                             : "text-red-600 dark:text-red-400",

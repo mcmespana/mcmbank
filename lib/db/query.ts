@@ -55,6 +55,15 @@ export async function runQuery<T>({ label, table, timeoutMs = 15000, build, retr
     const ms = Date.now() - started
     const status: 'timeout' | 'aborted' | 'error' = ac.signal.aborted ? 'timeout' : 'error'
     addMetric({ at: Date.now(), label, table, ms, status, error: err?.message || String(err) })
+    // Si el abort fue nuestro (abortAllInFlight al recuperar el foco de la
+    // pestaña, o el timeout de arriba), `err` es el motivo interno que le
+    // pasamos a `ac.abort(...)` (p. ej. "tab-focus-reset") — no un error de
+    // red real. Sin normalizar, ese texto interno se cuela tal cual en la UI
+    // como "Ha ocurrido un problema: tab-focus-reset", que asusta al usuario
+    // sin motivo. Mismo mensaje que ya usan las rutas de abort de arriba.
+    if (ac.signal.aborted) {
+      return { data: null as T | null, error: new Error('Request aborted') }
+    }
     return { data: null as T | null, error: err }
   } finally {
     clearTimeout(timeout)

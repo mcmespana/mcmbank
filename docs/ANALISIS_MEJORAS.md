@@ -2,7 +2,11 @@
 
 > **Lista única de trabajo pendiente.** Análisis completo realizado el 12/06/2026
 > sobre seguridad, rendimiento, bugs funcionales, interfaz y nuevas funcionalidades.
-> Marca con `[x]` las mejoras que se vayan completando.
+> **Revisado y verificado contra código + BBDD en vivo el 06/08/2026** — varios
+> puntos que seguían como pendientes ya estaban resueltos; se han marcado `[x]`
+> y se han añadido los hallazgos nuevos de esa revisión (bugs de backend y una
+> pasada completa de UI/UX en móvil). Marca con `[x]` las mejoras que se vayan
+> completando.
 >
 > Consolida y sustituye a los antiguos `OPTIMIZACIONES_PENDIENTES.md`,
 > `FUTURE_DEVELOPMENTS.md` y `plan.md`. El registro de lo ya hecho vive en
@@ -25,24 +29,26 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ### Críticas (arreglar ya)
 
-- [ ] **1. API de admin sin autenticación (GET)** — `app/api/admin/users/route.ts:4`: lista todos los usuarios con emails y roles usando el cliente service-role, sin comprobar sesión ni rol. Cualquier persona puede descargar el directorio de usuarios. *Fix: verificar sesión + rol `gestor_central` server-side antes de operar.*
-- [ ] **2. API de admin sin autenticación (POST/PUT/DELETE)** — `app/api/admin/users/route.ts:33` y `app/api/admin/users/[id]/route.ts`: cualquiera puede crear usuarios con rol admin, modificarlos o borrarlos sin autenticarse. Escalada de privilegios trivial.
-- [ ] **3. Endpoint de diagnóstico público** — `app/supabase-sanity/route.ts`: expone estructura de tablas, contadores y muestras de datos sin autenticación. *Fix: exigir sesión o eliminarlo de producción.*
-- [ ] **4. Rutas sin proteger en el middleware** — `lib/supabase/middleware.ts:57`: `/configuracion`, `/propuestas`, `/diagnostico` y el dashboard `/` no están en la lista de rutas protegidas. *Fix: pasar a lista blanca de rutas públicas (solo `/auth/*`).*
+- [x] **1. API de admin sin autenticación (GET)** — resuelto: `requireAdmin()` guarda GET/POST/PUT/DELETE en `app/api/admin/users/route.ts` y `[id]/route.ts` (`lib/auth/require-admin.ts`).
+- [x] **2. API de admin sin autenticación (POST/PUT/DELETE)** — mismo fix que el punto 1.
+- [x] **3. Endpoint de diagnóstico público** — resuelto: `app/api/supabase-sanity/route.ts` exige `requireAdmin()`. (La ruta de página `app/supabase-sanity/` ya no existe.)
+- [ ] **4. Rutas sin proteger en el middleware** — `lib/supabase/middleware.ts`: `protectedRoutes` ya cubre `/configuracion`, `/propuestas`, `/contactos`, `/pagos-mcm`, `/facturas`, `/transacciones`, `/categorias`, `/cuentas`, `/delegaciones`, `/movimientos`. Sigue faltando el dashboard `/`. *Fix: añadirlo a la lista blanca o documentar por qué se deja fuera a propósito.*
 
 ### Altas
 
-- [ ] **5. Ficheros adjuntos con URL pública (IDOR)** — `lib/services/file-service.ts:103,143`: los adjuntos se sirven con `getPublicUrl`; con rutas predecibles (`código-delegación/año/mes/...`) son enumerables. *Fix: bucket privado + `createSignedUrl` con caducidad.*
-- [ ] **6. Validación de ficheros permisiva** — `file-service.ts:94`: sanitización débil del nombre, sin lista blanca de extensiones ni límite de tamaño verificado. *Fix: whitelist de extensiones + límite de tamaño.*
-- [ ] **7. Funciones RPC `SECURITY DEFINER` sin comprobar pertenencia** — `scripts/037_aggregation_functions.sql`: aceptan `p_delegacion_id` del cliente sin validar que `auth.uid()` sea miembro de esa delegación → posible lectura de resúmenes financieros de otras delegaciones. *Fix: añadir `EXISTS (SELECT 1 FROM membresia ...)` dentro de cada función.*
-- [ ] **8. Dependencia `xlsx` desde CDN y desactualizada** — `package.json`: versión 0.20.3 instalada desde URL de CDN, con vulnerabilidades conocidas. *Fix: actualizar e instalar desde npm, sanear datos importados.*
-- [x] **9. Cabeceras de seguridad** — `next.config.mjs` añade `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y HSTS vía `headers()`. (CSP se deja pendiente a propósito: requiere análisis aparte.)
+- [x] **5. Ficheros adjuntos con URL pública (IDOR)** — resuelto: `lib/services/file-service.ts` ya usa `createSignedUrl` (vía `app/api/files/signed-url/route.ts`, 300s), no `getPublicUrl`.
+- [ ] **6. Validación de ficheros permisiva** — pendiente de reverificar en detalle: revisar lista blanca de extensiones y límite de tamaño en `file-service.ts`.
+- [x] **7. Funciones RPC `SECURITY DEFINER` sin comprobar pertenencia** — resuelto: `scripts/049_secure_aggregation_rpcs.sql` añade `assert_delegacion_member()` a las 3 RPCs de agregación + `REVOKE EXECUTE FROM anon`. Aplicado en producción el 2026-07-18.
+- [ ] **8. Dependencia `xlsx` desde CDN y desactualizada** — sigue así: `package.json` instala `xlsx` desde `https://cdn.sheetjs.com/...`, versión 0.20.3. *Fix: mover a npm/registro propio y actualizar.*
+- [x] **9. Cabeceras de seguridad** — sin cambios, sigue hecho.
 
 ### Medias / bajas
 
-- [x] **10. Validación del redirect `next` en el callback OAuth** — `app/auth/callback/route.ts` resuelve `next` con `new URL()` contra el origin y solo acepta el mismo dominio (bloquea `//evil.com`).
-- [ ] **11. Roles solo comprobados en cliente** — `hooks/use-is-admin.ts` y `DatabaseService`: la autorización descansa al 100% en RLS + UI; operaciones sensibles no tienen verificación de pertenencia server-side. *Fix: revisar/endurecer políticas RLS y añadir checks en server actions.*
-- [ ] **12. Credenciales demo en el repo** — README/CLAUDE.md documentan `admin@movimientoconsolacion.com` / `1234`. *Fix: rotar contraseña y sacarla del repositorio.*
+- [x] **10. Validación del redirect `next` en el callback OAuth** — sin cambios, sigue hecho.
+- [ ] **11. Roles solo comprobados en cliente** — sigue pendiente.
+- [x] **12. Credenciales demo en el repo** — **[06/08/2026] Retiradas del working tree**: `README.md`, `CLAUDE.md`, `SECURITY-AUDIT.md` y `plans/001-*.md`/`plans/021-*.md` ya no mencionan la contraseña del usuario demo. **Sigue pendiente, y es tarea del mantenedor**: la contraseña **sigue en el historial de git** (commit `a7e2c6f` revirtió un intento previo de limpieza) y la cuenta `admin@movimientoconsolacion.com` está viva en producción con rol `gestor_central` en **17 delegaciones** y `last_sign_in_at` reciente. *Fix: rotar la contraseña desde el dashboard de Supabase Auth cuanto antes — cuatro dígitos protegen las finanzas de 17 delegaciones en un repo con historial expuesto.*
+- [ ] **NUEVO — 12b. Protección de contraseñas filtradas desactivada** — el advisor de seguridad de Supabase reporta `auth_leaked_password_protection` desactivado (no comprueba contra HaveIBeenPwned). *Fix: activarlo en Supabase Auth — settings → Password protection.*
+- [ ] **NUEVO — 12c. Postgres con parches de seguridad pendientes** — advisor `vulnerable_postgres_version`: `supabase-postgres-17.4.1.074` tiene actualizaciones de seguridad disponibles. *Fix: programar el upgrade desde el dashboard de Supabase.*
 
 ---
 
@@ -50,55 +56,60 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ### Alto impacto
 
-- [ ] **13. Doble consulta de resumen financiero en el dashboard** — `components/dashboard/financial-summary.tsx:17-21`: llama dos veces a `useFinancialSummary` (periodo + histórico desde 1970), sin caché compartida, y ambas se reejecutan en cada focus. *Fix: una sola RPC que devuelva ambos rangos, o caché interna por rango.*
-- [ ] **14. Patrón N+1 en `getCuentaConMasMovimientos`** — `lib/services/database.ts:687`: hace 1 query por cada cuenta para contar movimientos (50 cuentas = 51 queries). *Fix: una sola query agregada o RPC.*
-- [ ] **15. `getContactosByDelegacion` sin paginación** — `database.ts:233`: trae todos los contactos de la delegación sin `limit`. *Fix: paginación opcional.*
-- [ ] **16. Recargas de contadores en cada focus** — `hooks/use-delegation-counts.ts`: 5 count-queries por delegación en cada cambio de pestaña, sin TTL. *Fix: caché TTL de 30s como en `useCuentas`.*
-- [ ] **17. `useMonthlyTrendData` sin caché** — repite la agregación mensual completa en cada re-render/focus. *Fix: TTL como en `useCuentas`.*
-- [ ] **18. Recharts y xlsx en el bundle inicial** — los gráficos del dashboard y la librería de Excel se cargan eagerly. *Fix: `next/dynamic` para los charts e `import()` dinámico de xlsx solo al exportar/importar.*
-- [ ] **19. Re-renders en cascada desde `DelegationContext`** — `contexts/delegation-context.tsx:41`: `setSelectedDelegation` cambia de identidad en cada actualización, propagando renders a todos los consumidores. *Fix: limpiar dependencias del `useCallback` (functional update).*
+- [ ] **13. Doble consulta de resumen financiero en el dashboard** — sigue así: `components/dashboard/financial-summary.tsx` llama dos veces a `useFinancialSummary`.
+- [x] **14. Patrón N+1 en `getCuentaConMasMovimientos`** — resuelto: ya usa la RPC `get_cuenta_con_mas_movimientos` (una sola llamada), no N queries.
+- [ ] **15. `getContactosByDelegacion` sin paginación** — sigue pendiente.
+- [ ] **16. Recargas de contadores en cada focus** — sigue pendiente (`use-delegation-counts.ts` sin TTL).
+- [ ] **17. `useMonthlyTrendData` sin caché** — sigue pendiente.
+- [ ] **18. Recharts y xlsx en el bundle inicial** — sigue pendiente: cero usos de `next/dynamic` en todo el repo.
+- [x] **19. Re-renders en cascada desde `DelegationContext`** — resuelto: `setSelectedDelegation` ya es un `useCallback` con dependencias correctas (comprueba `delegationId === selectedDelegation` antes de actualizar).
 
 ### Medio impacto
 
-- [x] **20. Búsquedas O(n×m) en la tabla de transacciones** — `transaction-table.tsx` usa mapas `byId` memoizados en lugar de `accounts.find()`/`categories.find()` por fila.
-- [ ] **21. `hasChanges` con `JSON.stringify` en cada render** — `transaction-detail.tsx:93`. *Fix: comparación campo a campo memoizada.*
-- [ ] **22. Falta `React.memo` en componentes pesados del dashboard** — `activity-balance.tsx` y similares se re-renderizan cuando cambian hermanos. *Fix: memoizar componentes de gráficos.*
-- [ ] **23. Fetches sin `AbortController`** — `use-financial-summary.ts` y otros hooks: actualizan estado tras desmontar, con condiciones de carrera al cambiar filtros rápido. *Fix: señal de aborto + guard.*
-- [ ] **24. Sin virtualización en listas largas de transacciones** — `TransactionTable` renderiza todas las filas en el DOM (lag con +500 movimientos). *Fix: `@tanstack/react-virtual` o similar.*
-- [ ] **25. `images.unoptimized: true`** — `next.config.mjs`: sin compresión/WebP/resize. *Fix: activar optimización de imágenes.*
-- [ ] **26. Sin Suspense/streaming** — todo es `"use client"` sin boundaries; las páginas esperan al hook más lento. *Fix: `loading.tsx` por ruta + Suspense en secciones del dashboard.*
+- [x] **20. Búsquedas O(n×m) en la tabla de transacciones** — sin cambios, sigue hecho.
+- [ ] **21. `hasChanges` con `JSON.stringify` en cada render** — sigue pendiente.
+- [ ] **22. Falta `React.memo` en componentes pesados del dashboard** — sigue pendiente.
+- [ ] **23. Fetches sin `AbortController`** — sigue pendiente en varios hooks (aunque `runQuery` sí centraliza el abort en los que lo usan — ver hallazgo nuevo sobre mensajes de abort más abajo).
+- [ ] **24. Sin virtualización en listas largas de transacciones** — sigue pendiente.
+- [ ] **25. `images.unoptimized: true`** — sigue pendiente.
+- [ ] **26. Sin Suspense/streaming** — sigue pendiente.
 
 ---
 
 ## 🐛 C. Bugs funcionales
 
-- [x] **27. El importe no acepta coma decimal** — `transaction-form.tsx` y `amount-range-filter.tsx` ahora usan `parseEuropeanNumber` (extraído a `lib/utils/number.ts` y reutilizado por el panel de importación). Inputs pasados a `type="text"` con `inputMode="decimal"`.
-- [x] **28. Sin validación de importe = 0** — `transaction-form.tsx` valida importe finito y ≠ 0 antes de guardar.
-- [x] **29. Bug de zona horaria en fechas** — `transaction-detail.tsx` parsea `yyyy-MM-dd` con `parseISO` (fecha local) en la nota de historial y en el calendario.
-- [ ] **30. Doble envío en formularios** — guardado de categorías (`category-list.tsx:617`) y otros formularios no deshabilitan el botón mientras se envía → registros duplicados con doble clic. *Fix: estado `saving` + disabled.*
-- [ ] **31. Doble importación posible** — `transaction-import-panel.tsx:553`: clic rápido dos veces dispara dos importaciones; la detección de duplicados no ve la primera. *Fix: guard `isImporting`.*
-- [ ] **32. Saldo de cuentas desactualizado** — `cuentas-manager.tsx:84`: el saldo se calcula al montar y no se refresca al crear/borrar movimientos. *Fix: refetch al cambiar movimientos.*
-- [ ] **33. Selección no se limpia al cambiar filtros** — `transaction-list.tsx:109`: las transacciones seleccionadas persisten tras cambiar filtros; las operaciones masivas pueden aplicarse a elementos que ya no se ven. *Fix: limpiar selección al cambiar filtros.*
-- [x] **34. Falta `not-found.tsx`** — añadida `app/not-found.tsx` con estilo coherente con `error.tsx`.
-- [ ] **35. Roles no aplicados en la UI** — el rol `solo_lectura` solo se respeta en categorías y pagos-mcm; en transacciones, cuentas, contactos e importación los botones de edición/borrado siguen activos. *Fix: aplicar el patrón de `category-list.tsx` en el resto.*
-- [ ] **36. Borrados sin deshacer ni resumen de impacto** — borrar una categoría con movimientos no avisa del impacto ni ofrece undo. *Fix: diálogo con recuento de movimientos afectados + toast con "Deshacer".*
-- [ ] **37. Operaciones masivas sin actualización optimista** — `transaction-manager.tsx`: asignar categoría en lote deja la UI congelada hasta la respuesta. *Fix: optimistic update con revert en error.*
-- [ ] **38. Mensajes de error genéricos** — `toast.error("Error al guardar")` por toda la app sin código ni pista de resolución. *Fix: helper centralizado de errores con detalle.*
+- [x] **27-29, 34.** Sin cambios, siguen hechos (coma decimal, importe=0, timezone en `transaction-detail.tsx`, `not-found.tsx`).
+- [ ] **30. Doble envío en formularios** — sigue pendiente.
+- [x] **31. Doble importación posible** — resuelto: `transaction-import-panel.tsx` ya tiene guard `isImporting` que deshabilita el botón durante la importación.
+- [ ] **32. Saldo de cuentas desactualizado** — parcialmente distinto del descrito originalmente; ver **hallazgo nuevo 32b**, que es la versión real y más grave de este bug.
+- [ ] **NUEVO — 32b. [CRÍTICO, corregido 06/08/2026] Saldo de cuentas truncado por encima de ~1000 movimientos** — `components/cuentas/cuentas-manager.tsx` calculaba el saldo con una query por cuenta (`select importe from movimiento where cuenta_id=...`) sumada en cliente, **sin paginar**. PostgREST corta la respuesta a `db-max-rows` (1000 filas por defecto en Supabase): al superarlo, la suma se calculaba sobre un subconjunto y el saldo salía **mal, sin ningún error visible**. En el momento de la revisión la cuenta mayor tenía 548 movimientos (por debajo del límite, pero las cuentas sincronizan del banco automáticamente y lo alcanzarán). *Corregido*: nueva RPC `get_saldos_por_cuenta` (`scripts/057_saldos_por_cuenta.sql`, aplicada en producción) que agrega con `SUM()` en Postgres — sin N+1 y sin límite de filas. Verificado contra cálculo directo en SQL y en la app (delegación con 548 movimientos, saldo `-31.219,22 €` idéntico por ambas vías).
+- [ ] **33. Selección no se limpia al cambiar filtros** — sigue pendiente.
+- [x] **34.** (ver arriba, agrupado con 27-29).
+- [ ] **35-38.** Sin cambios, siguen pendientes.
+- [ ] **NUEVO — 38b. [corregido 06/08/2026] Mensaje de error interno filtrado al usuario** — `lib/db/in-flight.ts` cancela peticiones en curso al recuperar el foco de la pestaña con `ac.abort(new Error("tab-focus-reset"))`; el `catch` general de `runQuery` (`lib/db/query.ts`) dejaba pasar ese texto interno tal cual, así que cualquier hook que lo usara podía mostrar *"Ha ocurrido un problema: tab-focus-reset"* al usuario solo por cambiar de pestaña del navegador mientras cargaba algo (reproducido en `/propuestas`). *Corregido*: el catch ahora normaliza a `"Request aborted"` cuando `ac.signal.aborted`, igual que ya hacían las otras dos rutas de abort del mismo fichero. *Pendiente de decisión de producto*: si aborts nunca deberían mostrarse como alerta roja al usuario (relacionado con el punto 38 de mensajes de error genéricos).
 
 ---
 
 ## 🎨 D. Interfaz y bugs visuales
 
-- [x] **39. Dark mode roto en el panel de importación** — `transaction-import-panel.tsx`: todas las cajas informativas (azul, verde, ámbar, rojo) y las tarjetas de duplicados tienen ya variantes `dark:`.
-- [x] **40. Contraste de los chips de importe en dark mode** — ya resuelto: `amount-display.tsx` usa `dark:text-*-400 dark:bg-*-950/30 dark:border-*-700`.
-- [x] **41. Título de categorías gigante en móvil** — `category-list.tsx`: `text-2xl sm:text-4xl`.
-- [x] **42. Truncados/overflow en la tabla de transacciones** — ya resuelto: la tabla scrollea en horizontal (`overflow-x-auto` + `min-w`), y `transaction-list-row` usa `line-clamp-1` en el concepto y `truncate max-w-[120px]` en los badges de contacto.
-- [x] **43. Email del usuario desborda el topbar en móvil** — ya resuelto: el bloque de nombre/email es `hidden sm:flex` con `truncate max-w-[180px]` en `topbar.tsx`.
-- [x] **44. Sheets/modales desbordan en pantallas pequeñas** — ya resuelto: el `SheetContent` es `h-full` (anclado arriba y abajo) y las instancias (panel de importación, formularios de categoría) pasan `overflow-y-auto`, así que el contenido scrollea internamente.
-- [x] **45. Flash del icono de tema al hidratar** — `theme-provider.tsx` ya no envuelve a `NextThemesProvider` tras un guard `mounted`, así que next-themes inyecta su script anti-flash en el SSR (el `<html>` ya lleva `suppressHydrationWarning`).
-- [x] **46. Mismatch de hidratación en el sidebar** — `app-layout.tsx` arranca `sidebarCollapsed` en `false` y lo hidrata desde localStorage en un `useEffect`, sin leer localStorage durante el render.
-- [x] **48. Accesibilidad: botones de solo icono sin `aria-label`** — `aria-label` en el botón de colapsar del sidebar y en las acciones de `category-card`; `aria-busy` en los botones con estado de carga (importación y formularios de transacción/categoría). (El menú móvil, tema y logout ya tenían `sr-only`.)
-- [x] **49. Cadenas mezcladas español/inglés** — auditoría completa. La app ya estaba muy localizada; los únicos textos visibles en inglés eran `Close` (×2, `dialog.tsx`/`sheet.tsx`) → "Cerrar", `Remove file` (`file-dropzone.tsx`) → "Eliminar archivo", y los `Email` sueltos → "Mail" (más corto y coherente con el login). El resto del inglés es código/comentarios (no visible).
+- [x] **39-49.** Sin cambios, siguen hechos (verificados el 15/06).
+
+### Hallazgos nuevos de la revisión de móvil (06/08/2026)
+
+Pasada completa por Dashboard (3 pestañas), Cuentas, Categorías, Transacciones, Facturas, Pagos MCM, Contactos, Configuración, Informes, Propuestas y el widget de Avisos, en viewport 375×812. Todo lo listado aquí está **corregido**, salvo que se indique lo contrario:
+
+- [x] **50n. Pestañas del dashboard descentradas** — `components/ui/tabs.tsx`: la pestaña activa tenía `border` y las inactivas no, así que medía 2px más y la píldora activa quedaba con 7px arriba / 3px abajo en vez de centrada. *Fix*: `border-transparent` en la base + `min-h-12` (no `h-12`) en el carril.
+- [x] **51n. Etiquetas de las pestañas del dashboard invisibles en móvil** — `dashboard-home.tsx` usaba `hidden sm:inline` en los `<span>` de "Resumen"/"Balance"/"Análisis", dejando las pestañas sin nombre accesible en móvil (un `span` con `display:none` no llega al árbol de accesibilidad) y contradiciendo la convención del propio `CLAUDE.md` ("No hidden or truncated navigation labels on mobile"). *Fix*: etiquetas siempre visibles, con `px-2` en móvil para que quepan las tres.
+- [x] **52n. Importes del resumen financiero truncados en móvil** — `components/dashboard/financial-summary.tsx`: con icono+texto en fila, el número solo tenía ~88px y `-31.219,22 €` necesitaba 129px → se veía `-31.21...`. *Fix*: icono encima del texto en móvil (`flex-col` → `sm:flex-row`), sin `truncate`.
+- [x] **53n. Nombre de la delegación cortado a ~15px de ancho en el topbar móvil** — `components/topbar.tsx`: el spacer usaba `flex-1` en todos los breakpoints, dejando solo 56px al nombre de la delegación en móvil ("-T MCM Nueva Yorki" → "-T M..."). *Fix*: el selector de delegación pasa a `flex-1` en móvil (el spacer se oculta ahí); además se movieron **tema, manual y logout al menú lateral** (ver 54n), liberando aún más sitio — el nombre completo ya se lee sin cortes.
+- [x] **54n. Tema, Manual y Logout ocupaban ~130px del topbar en móvil sin necesidad** — a petición del usuario, se han movido al pie del menú lateral (`components/sidebar.tsx`, solo en la variante `Sheet` móvil vía prop `accountFooter`) y se han ocultado en el topbar por debajo de `sm`. En desktop no cambia nada.
+- [x] **55n. Página `/cuentas` con scroll horizontal en TODO el móvil** — dos causas combinadas en `components/cuentas/cuentas-manager.tsx`: (a) el `<h3>` del nombre de cuenta tenía `truncate` pero no `min-w-0`, así que como flex-item nunca se encogía por debajo de su contenido (p. ej. "Pruebas EnableBanking con cuenta AJ Central xd"); (b) la lista de tarjetas usaba `<div className="grid gap-4">` sin `grid-cols-1`, y sin columnas explícitas el track implícito de CSS Grid usa `min-width:auto`, así que **todas** las tarjetas —incluso las de nombre corto— se ensanchaban al ancho de la más larga, forzando `innerWidth` a 627px en un viewport de 375px. *Fix*: `min-w-0` en el `h3` y `Card`, `grid-cols-1` (que usa `minmax(0,1fr)`) en el contenedor.
+- [x] **56n. Tabla "Últimas transacciones" del dashboard: columna Importe fuera de pantalla** — `components/dashboard/activity-balance.tsx`: "Fecha" (`w-[90px]`) + "Concepto" (`max-w-[320px]`, más ancho que el propio contenedor en móvil) dejaban "Importe" desplazado fuera de la vista, sin ninguna pista de que la mini-tabla se podía desplazar. *Fix*: fecha sin año en móvil (`dd MMM`), `max-w-[110px]` en Concepto por debajo de `sm`.
+- [x] **57n. Tabla "Detalle por categoría" (Análisis): columna Categoría se pierde al desplazar** — `components/dashboard/category-analysis.tsx`: la tabla tiene 4 columnas visibles en móvil (Categoría/Ingresos/Gastos/Balance) y necesita scroll horizontal; al desplazar para ver Gastos/Balance se perdía de vista a qué categoría correspondía cada fila. *Fix*: columna Categoría con `sticky left-0` (cabecera, filas normales, filas de grupo y fila de Total) con fondo sólido — cuidado con no usar opacidad (`bg-card/95` dejaba ver los números de Ingresos superpuestos al desplazar; con `bg-card` sólido no pasa).
+- [x] **58n. Botón "Generar informe" fuera de pantalla en `/informes`** — `components/informes/informes-page.tsx`: "Subir informe" + "Generar informe" en una fila `flex` sin envolver sumaban más ancho que el viewport. *Fix*: `grid grid-cols-2 gap-2 sm:flex` + `w-full sm:w-auto` en ambos botones.
+- [x] **59n. Tabla de Delegaciones en `/configuracion`: columna UUID innecesaria en móvil** — mostraba un UUID completo de 36 caracteres en una tabla ya apretada. *Fix*: `hidden md:table-cell` en cabecera y celda (mismo patrón que "Categoría" en otras tablas del proyecto). También se acotó con `truncate`+`title` el email y la lista de delegaciones de la tabla de Usuarios, ocultando esta última en móvil.
+- [ ] **60n. [menor, no corregido] Fila "Editar" parcialmente cortada al entrar en la tabla de Delegaciones/Usuarios de `/configuracion`** — el scroll interno de la tabla funciona (no hay overflow de página), pero el botón "Editar" queda parcialmente fuera de la vista inicial sin pista visual de que hay que desplazar. Página de uso exclusivo de `gestor_central`, impacto bajo. *Fix sugerido*: sticky en la columna de acciones, o botones de icono en vez de texto en móvil.
+- [ ] **61n. [observación, no corregido] Panel "Avisos y tareas" flota sobre el contenido en móvil en vez de ocupar pantalla completa** — funciona y no desborda, pero su posicionado (anclado al botón flotante) puede sentirse menos natural que un bottom-sheet a pantalla completa en móvil. Prioridad baja, es una mejora de pulido, no un bug.
 
 ---
 
@@ -115,37 +126,30 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ### De valor medio
 
-- [x] **56. Completar las páginas deshabilitadas del sidebar** — corregido: era falso. `sidebar.tsx` tiene **Facturas** e **Informes** con `enabled: true`, ambas ya implementadas (y `plans/021-redesign-facturas-pagos.md` las acaba de rediseñar). El punto describía un estado que ya no existe.
-- [ ] **57. Mapeo de columnas configurable en la importación** — hoy solo hay parsers hardcodeados de Sabadell y CaixaBank; añadir UI de mapeo + plantillas guardadas por banco.
-- [ ] **58. Detector de duplicados "blandos"** — emparejamiento difuso (mismo importe ±0,01€, fecha ±1 día, concepto similar) con asistente de fusión; el `concepto_hash` actual solo pilla duplicados exactos.
-- [ ] **59. Notificaciones por email** — presupuesto excedido, huecos de conciliación, consentimiento PSD2 a punto de caducar (este banner ya está apuntado como pendiente en `docs/ENABLE_BANKING.md`).
-- [ ] **60. Gestión de miembros por delegación** — UI para que el tesorero invite usuarios y asigne roles, en vez de depender solo de la página de admin.
-- [ ] **61. Búsqueda avanzada y filtros guardados** — full-text search con `tsvector` en Postgres (hoy solo `ilike` en concepto/descripción) + conjuntos de filtros reutilizables.
-- [ ] **62. Soporte PWA/móvil** — manifest + service worker para captura rápida de gastos en campo.
+- [x] **56.** Sin cambios, sigue hecho (falso positivo del análisis original).
+- [ ] **57-62.** Sin cambios, siguen pendientes.
 
 ### Pulido
 
-- [ ] **63. Auto-categorización por reglas** — el esquema de reglas existe parcialmente en BD pero no tiene UI de gestión.
-- [ ] **64. Previsión de tesorería** — proyección de saldo a 30/60/90 días basada en recurrentes + histórico, con aviso de saldo negativo proyectado.
-- [ ] **65. Exportación en más formatos** — CSV/JSON y selección de columnas (hoy solo XLSX con 7 columnas fijas).
+- [ ] **63. Auto-categorización por reglas** — el esquema de reglas existe parcialmente en BD pero no tiene UI de gestión. **Nota de la revisión del 06/08**: la tabla `regla` tiene RLS activo **sin ninguna política** (deny-all, 0 filas hoy) — no es un bug de seguridad (fail-closed), pero es un prerrequisito bloqueante antes de construir la UI: hay que decidir y crear las políticas de acceso (¿quién puede crear/editar reglas de su delegación?) antes de que cualquier pantalla nueva pueda leer o escribir en esa tabla.
+- [ ] **64-65.** Sin cambios, siguen pendientes.
 
 ---
 
 ## 🧹 F. Mantenibilidad y deuda técnica
 
-- [ ] **66. Debounce global de revalidaciones al cambiar de pestaña** — `hooks/use-app-status.ts`: las revalidaciones al volver al foco se disparan en ráfaga (jitter individual de 90-220ms). *Fix: agrupador `scheduleRevalidation` con ventana de ~500ms que ejecute los callbacks de forma escalonada.*
-- [ ] **67. Trocear `category-list.tsx` (1269 líneas)** — solo se extrajo `CategoryCard`. *Fix: separar tipos, helpers, dialogs y formularios a `components/categories/`, dejando el archivo principal como orquestador (<400 líneas). Refactor mecánico sin cambio de comportamiento.*
-- [ ] **68. Continuar la migración a TanStack Query** — cubierto hasta ahora: `useCuentas`, `useCategoryBreakdown`, y (`plans/021-redesign-facturas-pagos.md`) `useFacturas`/`usePagosMcm` con `useInfiniteQuery`. *Fix: migrar el resto (`useMovimientos`, `useFinancialSummary`, `useMonthlyTrend`…) manteniendo el mismo contrato de salida, y retirar la gestión manual de abort/caché donde React Query ya lo cubra.*
-- [ ] **69. Miniaturas persistidas de los adjuntos** — `components/ui/file-thumbnail.tsx` (plan 021) renderiza el PDF en un `<iframe>` escalado en el cliente en vez de mostrar una miniatura real; funciona pero es un rodeo. *Fix: columna `miniatura_path` en `archivo_adjunto` generada por una Edge Function al subir el archivo (thumbnail real en Storage).*
-- [ ] **70. Búsqueda de facturas por nombre de proveedor** — `getFacturasByDelegacion` (`lib/services/database.ts`) sólo hace `ILIKE` sobre `concepto`/`numero`/`notas`; el nombre del proveedor vive en `contacto` y no se busca. *Fix: columna generada `tsvector` + índice GIN, o desnormalizar el nombre del proveedor en `factura` (ver comentario en `scripts/052_facturas_pagos_resumen_e_integridad.sql`).*
-- [ ] **71. Enlaces factura/pago ↔ movimiento no son transaccionales** — `linkFacturaToMovimiento`, `linkPagoToMovimiento` y `convertPagoToMovimiento` (`lib/services/database.ts`) hacen varias escrituras seguidas (update movimiento, update factura, replicar adjuntos) sin una transacción real; un fallo a mitad deja el vínculo a medias. *Fix: mover la lógica a una función `plpgsql` con `BEGIN`/`COMMIT` implícito de Postgres, expuesta como RPC.*
+- [ ] **66-71.** Sin cambios, siguen pendientes.
+- [ ] **NUEVO — 72. Comparación de la API key externa no es timing-safe** — **[corregido 06/08/2026]** `lib/api/external-auth.ts` comparaba la clave de la API externa con `!==` (tiempo variable, filtra por temporización cuántos caracteres iniciales coinciden). *Fix aplicado*: `timingSafeEqual` de `node:crypto` (con comprobación de longitud aparte, ya que `timingSafeEqual` exige buffers del mismo tamaño). Impacto era bajo (clave larga, superficie pequeña) pero el fix es gratis.
+- [ ] **NUEVO — 73. `MCM_API_KEY` puede no estar configurada y caer al `CRON_SECRET` del cron bancario** — `lib/api/external-auth.ts` reutiliza `CRON_SECRET` como clave de la API externa (`/api/v1/movimientos/...`) si `MCM_API_KEY` no está definida. Si en Vercel no está puesta `MCM_API_KEY`, la misma clave que vive en Google Apps Script (superficie de menor confianza) dispara también `POST /api/bank-sync/run` (sincroniza **todas** las cuentas de banco). *Fix*: confirmar que `MCM_API_KEY` está configurada en producción y es distinta de `CRON_SECRET`; si no, generarla y añadirla.
+- [ ] **NUEVO — 74. `/api/v1/movimientos` usa `createAdminClient()` sin ámbito de delegación** — por diseño (documentado en el propio código: API para Google Apps Script, el ID de movimiento es único en toda la BBDD), pero implica que una sola clave filtrada expone las 17 delegaciones sin pasar por RLS. *A valorar*: claves por delegación/consumidor si el número de integraciones externas crece.
 
 ---
 
 ## Prioridades recomendadas
 
-1. **Lote 1 (urgente):** 1–4 — la API de admin abierta es una vulnerabilidad crítica explotable hoy.
-2. **Lote 2 (seguridad alta):** 5, 7, 9 — adjuntos públicos, RPCs sin autorización, cabeceras.
-3. **Lote 3 (bugs diarios):** 27–31 — coma decimal y doble envío afectan a la entrada de datos a diario.
-4. **Lote 4 (rendimiento):** 13–16, 24.
-5. **Lote 5 (deuda técnica):** 66–68.
+1. **Lote 0 (crítico, acción manual del mantenedor):** rotar la contraseña del usuario demo en Supabase Auth (punto 12) — las credenciales ya no están en el repo, pero siguen en el historial de git y la cuenta tiene rol `gestor_central` en 17 delegaciones.
+2. **Lote 1 (seguridad, verificar y cerrar):** 4 (dashboard `/` sin proteger), 6 (validación de ficheros), 8 (xlsx desde CDN), 12b/12c (advisors de Supabase), 73 (API key del cron).
+3. **Lote 2 (bugs de datos):** 32b (ya corregido, desplegar la migración `057` si no se ha hecho vía MCP) — verificar que no hay más agregados client-side sin paginar en el resto de la app.
+4. **Lote 3 (rendimiento):** 13, 15-18, 21-26.
+5. **Lote 4 (deuda técnica):** 66-71, 74.
+6. **Lote 5 (pulido móvil pendiente):** 60n, 61n.

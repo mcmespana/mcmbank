@@ -678,6 +678,30 @@ export class DatabaseService {
   }
 
   /**
+   * Saldo de cada cuenta de la delegación, agregado en Postgres vía la RPC
+   * get_saldos_por_cuenta (scripts/057). Sustituye al cálculo anterior en
+   * cliente, que hacía una query por cuenta y además se dejaba movimientos
+   * fuera al superar el límite de filas de PostgREST (saldo silenciosamente
+   * incorrecto por encima de ~1000 movimientos).
+   *
+   * Incluye las cuentas sin movimientos (saldo 0) y suma también los
+   * movimientos `ignorado`, porque el saldo refleja el extracto del banco.
+   */
+  static async getSaldosPorCuenta(delegacionId: string): Promise<Record<string, number>> {
+    const client = this.getClient() as any
+    const { data, error } = await client.rpc("get_saldos_por_cuenta", {
+      p_delegacion_id: delegacionId,
+    })
+    if (error) throw error
+    const saldos: Record<string, number> = {}
+    for (const row of (data as { cuenta_id: string; saldo: number | string }[]) ?? []) {
+      // `numeric` puede llegar como string desde PostgREST.
+      saldos[row.cuenta_id] = Number(row.saldo) || 0
+    }
+    return saldos
+  }
+
+  /**
    * Busca movimientos candidatos para vincular a un pago MCM. Usa el mismo
    * margen que la vía de facturas (margenImporteFactura: 2%, mínimo 0,50 €)
    * en vez de exigir importe exacto, para que ambos flujos encuentren

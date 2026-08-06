@@ -17,23 +17,106 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  LogOut,
+  BookOpen,
+  Moon,
+  Sun,
+  Monitor,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { useDelegationCounts } from "@/hooks/use-delegation-counts"
 import type { DelegationCounts } from "@/hooks/use-delegation-counts"
+import { useAuth } from "@/contexts/auth-context"
+import { usePerfil } from "@/hooks/use-perfil"
+import { useTheme } from "next-themes"
+import { useEffect, useMemo, useState } from "react"
 
 interface SidebarContentProps {
   className?: string
   collapsed?: boolean
   counts: DelegationCounts
   countsLoading: boolean
+  // Pie con tema/manual/logout. Solo se pasa true en el Sheet móvil: en
+  // desktop esas acciones ya viven en el topbar y duplicarlas sería ruido.
+  accountFooter?: boolean
 }
 
-function SidebarContent({ className, collapsed = false, counts, countsLoading }: SidebarContentProps) {
+function SidebarContent({ className, collapsed = false, counts, countsLoading, accountFooter = false }: SidebarContentProps) {
   const pathname = usePathname()
   const isAdmin = useIsAdmin()
+
+  // Datos de cuenta/tema — solo se pintan cuando accountFooter=true (Sheet
+  // móvil), pero los hooks se llaman siempre para no romper las reglas de
+  // hooks (el componente puede pasar de accountFooter=false a true si cambia
+  // de instancia desktop/mobile).
+  const { user, signOut } = useAuth()
+  const { perfil, loading: perfilLoading } = usePerfil()
+  const { setTheme, theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+
+  const themePreference = theme ?? "system"
+  const themeOrder = useMemo(() => ["system", "light", "dark"] as const, [])
+  const themeIcons: Record<(typeof themeOrder)[number], typeof Sun> = {
+    light: Sun,
+    dark: Moon,
+    system: Monitor,
+  }
+  const themeLabels: Record<(typeof themeOrder)[number], string> = {
+    light: "Modo claro",
+    dark: "Modo oscuro",
+    system: "Según dispositivo",
+  }
+  const currentThemeKey = useMemo(
+    () => (themeOrder.includes(themePreference as typeof themeOrder[number]) ? (themePreference as typeof themeOrder[number]) : "system"),
+    [themeOrder, themePreference],
+  )
+  const nextTheme = useMemo(() => {
+    const currentIndex = themeOrder.indexOf(currentThemeKey)
+    return themeOrder[(currentIndex + 1) % themeOrder.length]
+  }, [themeOrder, currentThemeKey])
+  const handleThemeCycle = () => {
+    setTheme(nextTheme)
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("mcmbank-theme", nextTheme)
+    }
+  }
+  const ThemeIcon = themeIcons[currentThemeKey]
+  const currentThemeLabel = themeLabels[currentThemeKey]
+
+  const getUserInitials = (name?: string, email?: string) => {
+    if (name && name.trim()) {
+      return name.split(" ").map((p) => p.charAt(0)).join("").toUpperCase().slice(0, 2)
+    }
+    if (!email) return "U"
+    return email.split("@")[0].split(".").map((p) => p.charAt(0)).join("").toUpperCase().slice(0, 2)
+  }
+  const getUserDisplayName = () => {
+    if (perfilLoading) return "Cargando..."
+    if (perfil?.nombre_completo && perfil.nombre_completo.trim()) return perfil.nombre_completo
+    if (user?.email) {
+      return user.email.split("@")[0].split(".").map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ")
+    }
+    return "Usuario"
+  }
+  const handleManualClick = () => {
+    const manualUrl = process.env.NEXT_PUBLIC_URL_MANUAL || process.env.URL_MANUAL
+    if (manualUrl) window.open(manualUrl, "_blank", "noopener,noreferrer")
+  }
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error("Error signing out:", error)
+    }
+  }
 
   const getCountBadge = (value: number | null) => {
     if (typeof value === "number") {
@@ -217,6 +300,56 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading }:
           )
         })}
       </nav>
+
+      {/* Pie de cuenta — solo en el Sheet móvil (accountFooter=true). En
+          desktop estas acciones ya están en el topbar; duplicarlas aquí sería
+          ruido. Mueve tema/manual/logout fuera del topbar en móvil, donde no
+          había hueco para el nombre de la delegación. */}
+      {accountFooter && (
+        <div className="border-t border-sidebar-border/30 p-4 space-y-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-sidebar-border/30 bg-card/50 px-3 py-2">
+            <Avatar className="h-9 w-9 ring-2 ring-primary/20 flex-shrink-0">
+              <AvatarImage src="" alt={getUserDisplayName()} />
+              <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                {getUserInitials(perfil?.nombre_completo, user?.email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-sidebar-foreground text-sm truncate">{getUserDisplayName()}</span>
+              {user?.email && <span className="text-xs text-muted-foreground truncate">{user.email}</span>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {mounted && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start gap-2 rounded-xl"
+                onClick={handleThemeCycle}
+                title={`Cambiar tema (actual: ${currentThemeLabel})`}
+              >
+                <ThemeIcon className="h-4 w-4" />
+                Tema
+              </Button>
+            )}
+            <Button variant="outline" size="sm" className="justify-start gap-2 rounded-xl" onClick={handleManualClick}>
+              <BookOpen className="h-4 w-4" />
+              Manual
+            </Button>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="w-full justify-start gap-2 text-red-600 dark:text-red-400 hover:text-red-600 hover:bg-red-500/10 rounded-xl"
+          >
+            <LogOut className="h-4 w-4" />
+            Cerrar sesión
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -278,7 +411,7 @@ export function Sidebar({
               <SheetTitle>Menú de Navegación</SheetTitle>
               <SheetDescription>Accede a las diferentes secciones bancarias</SheetDescription>
             </SheetHeader>
-            <SidebarContent counts={counts} countsLoading={countsLoading} />
+            <SidebarContent counts={counts} countsLoading={countsLoading} accountFooter />
           </SheetContent>
         </Sheet>
       )}

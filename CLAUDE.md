@@ -60,7 +60,7 @@ Always import the appropriate client based on component type (client vs server c
 - Protected routes: `/transacciones`, `/categorias`, `/cuentas`, `/delegaciones`, `/movimientos` — redirect to `/auth/login` if unauthenticated
 - Authenticated users accessing `/auth` pages are redirected to `/`
 - Server actions for auth in `lib/actions/auth.ts`
-- Demo user: `admin@movimientoconsolacion.com` / password `1234`
+- Credentials are never stored in this repo. To test a flow that needs a login, ask the user to enter it themselves.
 
 ### Delegation Context
 The app uses a **DelegationContext** (`contexts/delegation-context.tsx`) that:

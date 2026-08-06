@@ -103,18 +103,22 @@ export function InformesPage() {
           </p>
         </div>
         {canWrite && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setSubirOpen(true)} disabled={!selectedDelegation}>
-              <Upload className="mr-2 h-4 w-4" /> Subir informe
+          // grid-cols-2, no flex: en móvil los dos botones en fila (sin
+          // envolver, sin encoger el texto) sumaban más ancho que el viewport
+          // y "Generar informe" quedaba cortado fuera de la pantalla.
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSubirOpen(true)} disabled={!selectedDelegation}>
+              <Upload className="mr-2 h-4 w-4 shrink-0" /> Subir informe
             </Button>
             <Button
+              className="w-full sm:w-auto"
               onClick={() => {
                 setGenerarDraft(null)
                 setGenerarOpen(true)
               }}
               disabled={!selectedDelegation}
             >
-              <Sparkles className="mr-2 h-4 w-4" /> Generar informe
+              <Sparkles className="mr-2 h-4 w-4 shrink-0" /> Generar informe
             </Button>
           </div>
         )}

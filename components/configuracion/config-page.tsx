@@ -136,7 +136,10 @@ export function ConfigPage() {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Código</TableHead>
-              <TableHead>UUID</TableHead>
+              {/* Oculto en móvil: un UUID completo no cabe junto al resto de
+                  columnas y es el dato menos útil de la fila para uso diario;
+                  sigue disponible en desktop. */}
+              <TableHead className="hidden md:table-cell">UUID</TableHead>
               <TableHead>Movimientos</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -146,7 +149,7 @@ export function ConfigPage() {
               <TableRow key={d.id}>
                 <TableCell>{d.nombre}</TableCell>
                 <TableCell>{d.codigo || "-"}</TableCell>
-                <TableCell className="font-mono text-xs">{d.id}</TableCell>
+                <TableCell className="hidden md:table-cell font-mono text-xs">{d.id}</TableCell>
                 <TableCell>{d.movimientos || 0}</TableCell>
                 <TableCell className="text-right">
                   <Button size="sm" variant="outline" onClick={() => setEditingDelegacion(d)}>
@@ -190,9 +193,13 @@ export function ConfigPage() {
               const delegs = u.membresias.map((m) => m.delegacion?.nombre).filter(Boolean).join(", ")
               return (
                 <TableRow key={u.id}>
-                  <TableCell>{u.email}</TableCell>
+                  <TableCell className="max-w-[140px] truncate sm:max-w-none" title={u.email}>{u.email}</TableCell>
                   <TableCell>{roleLabel}</TableCell>
-                  <TableCell>{delegs}</TableCell>
+                  {/* max-w + truncate, no un string sin límite: con varias
+                      delegaciones la lista de nombres se volvía tan larga que
+                      forzaba scroll horizontal en móvil. title conserva la
+                      lista completa al mantener pulsado/hacer hover. */}
+                  <TableCell className="hidden sm:table-cell max-w-[160px] truncate" title={delegs}>{delegs}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button
                       size="sm"

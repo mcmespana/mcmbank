@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client"
+import { FileService } from "@/lib/services/file-service"
 import type {
   Categoria,
   CategoryBreakdownRow,
@@ -697,33 +698,25 @@ export class DatabaseService {
 
   /**
    * Devuelve la cuenta de la delegación con más movimientos (sugerencia por defecto
-   * para 'convertir pago a movimiento'). Si ninguna cuenta tiene movimientos,
-   * devuelve la primera disponible.
+   * para 'convertir pago a movimiento'), vía la RPC get_cuenta_con_mas_movimientos
+   * (una sola llamada, en vez de una query count por cuenta). NULL si la
+   * delegación no tiene movimientos; el caller cae a cuentas[0].
    */
   static async getCuentaConMasMovimientos(delegacionId: string): Promise<string | null> {
-    const supabase = this.getClient() as any
-    const { data: cuentas, error } = await supabase
-      .from("cuenta")
-      .select("id")
-      .eq("delegacion_id", delegacionId)
-    if (error || !Array.isArray(cuentas) || cuentas.length === 0) return null
-
-    const counts = await Promise.all(
-      cuentas.map(async (c: { id: string }) => {
-        const { count } = await supabase
-          .from("movimiento")
-          .select("id", { head: true, count: "exact" })
-          .eq("cuenta_id", c.id)
-        return { id: c.id, count: typeof count === "number" ? count : 0 }
-      }),
-    )
-    counts.sort((a, b) => b.count - a.count)
-    return counts[0]?.id ?? null
+    const client = this.getClient() as any
+    const { data, error } = await client.rpc("get_cuenta_con_mas_movimientos", {
+      p_delegacion_id: delegacionId,
+    })
+    if (error) return null
+    return (data as string | null) ?? null
   }
 
   /**
-   * Busca movimientos candidatos para vincular a un pago MCM por importe exacto.
-   * Excluye los que ya tienen pago_mcm_id.
+   * Busca movimientos candidatos para vincular a un pago MCM. Usa el mismo
+   * margen que la vía de facturas (margenImporteFactura: 2%, mínimo 0,50 €)
+   * en vez de exigir importe exacto, para que ambos flujos encuentren
+   * candidatos con diferencias de céntimos. Excluye los que ya tienen
+   * pago_mcm_id.
    */
   static async findCandidatosMovimientoParaPago(
     delegacionId: string,
@@ -733,6 +726,7 @@ export class DatabaseService {
     const supabase = this.getClient() as any
     // Pagos son gastos: el movimiento del banco tendrá importe negativo del mismo valor absoluto.
     const target = -Math.abs(importe)
+    const margen = margenImporteFactura(importe)
     let query = supabase
       .from("movimiento")
       .select(`
@@ -757,7 +751,8 @@ export class DatabaseService {
         )
       `)
       .eq("delegacion_id", delegacionId)
-      .eq("importe", target)
+      .gte("importe", target - margen)
+      .lte("importe", target + margen)
       .is("pago_mcm_id", null)
       .order("fecha", { ascending: false })
       .limit(opts.limit ?? 20)
@@ -929,6 +924,17 @@ export class DatabaseService {
     const supabase = this.getClient() as any
 
     await supabase.from("movimiento").update({ factura_id: null }).eq("factura_id", id)
+
+    const { data: archivos } = await supabase
+      .from("archivo_adjunto")
+      .select("path_storage, bucket")
+      .eq("entidad", "factura")
+      .eq("entidad_id", id)
+    for (const archivo of (archivos ?? []) as { path_storage: string; bucket: "facturas" | "documentos" }[]) {
+      await FileService.deleteFile(archivo.path_storage, archivo.bucket).catch((err) =>
+        console.warn("No se pudo eliminar el archivo de Storage:", err),
+      )
+    }
     await supabase.from("archivo_adjunto").delete().eq("entidad", "factura").eq("entidad_id", id)
 
     const { error } = await supabase.from("factura").delete().eq("id", id)

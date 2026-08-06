@@ -2,17 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
+import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MoneyInput, formatMoney, parseMoney } from "@/components/ui/money-input"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Separator } from "@/components/ui/separator"
+import { CategoryChip } from "@/components/transactions/category-chip"
 import { cn } from "@/lib/utils"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
 import { PagoMcmArchivos } from "./pago-mcm-archivos"
 import {
-  PAGO_MCM_ESTADO_INFO,
   PAGO_MCM_GASOLINA_PRESETS,
   PAGO_MCM_GASOLINA_PRESETS_ORDER,
   PAGO_MCM_TIPO_CALCULO_INFO,
@@ -41,23 +44,20 @@ interface PagoMcmFormProps {
   delegacionId: string | null
   pago?: PagoMcmConRelaciones | null
   contactos: ContactoConCategoriaPredeterminada[]
-  categorias: Pick<Categoria, "id" | "nombre" | "emoji" | "color">[]
+  categorias: Categoria[]
+  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
   onSubmit: (payload: PagoMcmFormSubmit) => Promise<PagoMcm | void>
   onCancel: () => void
 }
 
-const TIPO_CALCULO_OPTIONS: PagoMcmTipoCalculo[] = [
-  "manual",
-  "gasolina_tickets",
-  "gasolina_km",
-  "gasolina_avanzado",
-]
+const TIPO_CALCULO_OPTIONS: PagoMcmTipoCalculo[] = ["manual", "gasolina_tickets", "gasolina_km"]
 
 export function PagoMcmForm({
   delegacionId,
   pago,
   contactos,
   categorias,
+  onRequestCreateCategory,
   onSubmit,
   onCancel,
 }: PagoMcmFormProps) {
@@ -66,15 +66,11 @@ export function PagoMcmForm({
   const [contactoId, setContactoId] = useState<string | null>(pago?.contacto_id ?? null)
   const [concepto, setConcepto] = useState(pago?.concepto ?? "")
   const [descripcion, setDescripcion] = useState(pago?.descripcion ?? "")
-  const [importeStr, setImporteStr] = useState(
-    pago ? Number(pago.importe).toFixed(2).replace(".", ",") : "",
-  )
-  const [estado, setEstado] = useState<PagoMcmEstado>(pago?.estado ?? "pendiente")
+  const [importeDisplay, setImporteDisplay] = useState(pago ? formatMoney(Number(pago.importe)) : "")
   const [tipoCalculo, setTipoCalculo] = useState<PagoMcmTipoCalculo>(pago?.tipo_calculo ?? "manual")
-  const [categoriaSugeridaId, setCategoriaSugeridaId] = useState<string | "ninguna">(
-    pago?.categoria_id_sugerida ?? "ninguna",
-  )
+  const [categoriaSugeridaId, setCategoriaSugeridaId] = useState<string | null>(pago?.categoria_id_sugerida ?? null)
   const [notas, setNotas] = useState(pago?.notas ?? "")
+  const [detallesOpen, setDetallesOpen] = useState(false)
 
   // Datos gasolina por km
   const [km, setKm] = useState<string>(
@@ -91,7 +87,7 @@ export function PagoMcmForm({
       : String(PAGO_MCM_GASOLINA_PRESETS.estandar_0_26.precio),
   )
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState<PagoMcmEstado | null>(null)
 
   // Cuando cambia el preset, actualiza precio (excepto en personalizado)
   useEffect(() => {
@@ -108,19 +104,15 @@ export function PagoMcmForm({
     return calcularImporteGasolinaKm(kmNum, idaVuelta, precioNum)
   }, [tipoCalculo, km, idaVuelta, precioKm])
 
-  // Mantener el importe en sincronía con el cálculo de km
-  useEffect(() => {
-    if (importeCalculadoKm == null) return
-    setImporteStr(importeCalculadoKm.toFixed(2).replace(".", ","))
-  }, [importeCalculadoKm])
+  const importeNumerico = tipoCalculo === "gasolina_km" ? importeCalculadoKm ?? 0 : parseMoney(importeDisplay) ?? 0
 
-  const importeNumerico = useMemo(() => {
-    const v = parseFloat(importeStr.replace(/\./g, "").replace(",", "."))
-    return Number.isFinite(v) ? v : 0
-  }, [importeStr])
+  const categoriaSugerida = categorias.find((c) => c.id === categoriaSugeridaId)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleRequestCreateCategory = () => {
+    onRequestCreateCategory?.((newId) => setCategoriaSugeridaId(newId))
+  }
+
+  const handleSubmit = async (targetEstado: "borrador" | "pendiente") => {
     if (!delegacionId) {
       toast.error("Selecciona una delegación antes de crear el pago")
       return
@@ -136,10 +128,6 @@ export function PagoMcmForm({
     }
     if (!(importeNumerico > 0)) {
       toast.error("El importe debe ser mayor que 0")
-      return
-    }
-    if (PAGO_MCM_TIPO_CALCULO_INFO[tipoCalculo].disabled) {
-      toast.error("Este tipo de cálculo aún no está disponible")
       return
     }
 
@@ -158,7 +146,7 @@ export function PagoMcmForm({
             gasolina_preset: null,
           }
 
-    setLoading(true)
+    setLoading(targetEstado)
     try {
       if (isEdit && pago) {
         const update: PagoMcmUpdate = {
@@ -166,9 +154,9 @@ export function PagoMcmForm({
           concepto: conceptoTrim,
           descripcion: descripcion.trim() || null,
           importe: importeNumerico,
-          estado,
+          estado: targetEstado,
           tipo_calculo: tipoCalculo,
-          categoria_id_sugerida: categoriaSugeridaId === "ninguna" ? null : categoriaSugeridaId,
+          categoria_id_sugerida: categoriaSugeridaId,
           notas: notas.trim() || null,
           ...gasolinaData,
         }
@@ -180,9 +168,9 @@ export function PagoMcmForm({
           concepto: conceptoTrim,
           descripcion: descripcion.trim() || null,
           importe: importeNumerico,
-          estado,
+          estado: targetEstado,
           tipo_calculo: tipoCalculo,
-          categoria_id_sugerida: categoriaSugeridaId === "ninguna" ? null : categoriaSugeridaId,
+          categoria_id_sugerida: categoriaSugeridaId,
           notas: notas.trim() || null,
           ...gasolinaData,
         }
@@ -192,268 +180,230 @@ export function PagoMcmForm({
     } catch (err) {
       toast.error("No se pudo guardar: " + (err instanceof Error ? err.message : "error desconocido"))
     } finally {
-      setLoading(false)
+      setLoading(null)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 pb-6">
-      {/* Contacto */}
-      <div className="space-y-1.5">
-        <Label>Contacto *</Label>
-        <ContactoSelector
-          contactos={contactos}
-          value={contactoId}
-          onChange={setContactoId}
-          placeholder="¿A quién hay que pagar?"
-        />
+    <form
+      onSubmit={(e) => e.preventDefault()}
+      className="space-y-5 pb-6"
+    >
+      {/* A quién y por qué */}
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Contacto *</Label>
+          <ContactoSelector
+            contactos={contactos}
+            value={contactoId}
+            onChange={setContactoId}
+            placeholder="¿A quién hay que pagar?"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="concepto">Concepto *</Label>
+          <Input
+            id="concepto"
+            value={concepto}
+            onChange={(e) => setConcepto(e.target.value)}
+            placeholder="P.ej. Ticket Consum del campamento"
+            required
+          />
+        </div>
       </div>
 
-      {/* Concepto */}
-      <div className="space-y-1.5">
-        <Label htmlFor="concepto">Concepto *</Label>
-        <Input
-          id="concepto"
-          value={concepto}
-          onChange={(e) => setConcepto(e.target.value)}
-          placeholder="P.ej. Ticket Consum del campamento"
-          required
-        />
-      </div>
+      <Separator />
 
-      {/* Tipo de cálculo */}
-      <div className="space-y-1.5">
-        <Label>Tipo de cálculo</Label>
-        <Select value={tipoCalculo} onValueChange={(v) => setTipoCalculo(v as PagoMcmTipoCalculo)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
+      {/* Cuánto */}
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Tipo de cálculo</Label>
+          <div className="inline-flex w-full rounded-xl border border-border/60 bg-muted/40 p-1">
             {TIPO_CALCULO_OPTIONS.map((t) => {
               const info = PAGO_MCM_TIPO_CALCULO_INFO[t]
-              const TipoIcon = info.icon
+              const active = tipoCalculo === t
               return (
-                <SelectItem key={t} value={t} disabled={info.disabled}>
-                  <span className="inline-flex items-center gap-2">
-                    <TipoIcon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                    <span>{info.label}</span>
-                    {info.disabled && (
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">próximamente</span>
-                    )}
-                  </span>
-                </SelectItem>
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTipoCalculo(t)}
+                  className={cn(
+                    "flex-1 rounded-lg px-2 py-1.5 text-xs font-medium tracking-tight transition-colors",
+                    active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {info.shortLabel}
+                </button>
               )
             })}
-          </SelectContent>
-        </Select>
-        <p className="text-[11px] text-muted-foreground">{PAGO_MCM_TIPO_CALCULO_INFO[tipoCalculo].descripcion}</p>
-      </div>
-
-      {/* Inputs específicos de gasolina_km */}
-      {tipoCalculo === "gasolina_km" && (
-        <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="km" className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Km (un trayecto)
-              </Label>
-              <Input
-                id="km"
-                type="text"
-                inputMode="decimal"
-                value={km}
-                onChange={(e) => setKm(e.target.value)}
-                placeholder="0"
-                className="tabular-nums"
-              />
-            </div>
-            <div className="flex items-end gap-2 pb-1.5">
-              <Checkbox
-                id="ida-vuelta"
-                checked={idaVuelta}
-                onCheckedChange={(c) => setIdaVuelta(Boolean(c))}
-              />
-              <Label htmlFor="ida-vuelta" className="cursor-pointer text-sm">
-                Ida y vuelta <span className="text-muted-foreground">(×2)</span>
-              </Label>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Precio por kilómetro
-            </Label>
-            <div className="flex flex-wrap gap-1.5">
-              {PAGO_MCM_GASOLINA_PRESETS_ORDER.map((p) => {
-                const info = PAGO_MCM_GASOLINA_PRESETS[p]
-                const active = preset === p
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPreset(p)}
-                    className={cn(
-                      "rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-tight transition-colors tabular-nums",
-                      active
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border/70 bg-background text-foreground/70 hover:border-foreground/30 hover:text-foreground",
-                    )}
-                    title={info.descripcion}
-                  >
-                    {info.label}
-                  </button>
-                )
-              })}
-            </div>
-            {preset === "personalizado" && (
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={precioKm}
-                onChange={(e) => setPrecioKm(e.target.value)}
-                placeholder="0,26"
-                className="mt-1.5 tabular-nums"
-              />
-            )}
-          </div>
-
-          <div className="flex items-baseline justify-between gap-3 rounded-lg border border-border/60 bg-background px-3 py-2.5">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              Importe calculado
-            </div>
-            <div className="text-right">
-              <div className="text-lg font-bold tracking-tight tabular-nums">
-                {formatCurrency(importeCalculadoKm ?? 0)}
-              </div>
-              <div className="text-[10px] text-muted-foreground tabular-nums">
-                {(parseFloat(km.replace(",", ".")) || 0)} km{idaVuelta ? " × 2" : ""} × {precioKm} €
-              </div>
-            </div>
           </div>
         </div>
-      )}
 
-      {tipoCalculo === "gasolina_tickets" && (
-        <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
-          Sube los tickets en la sección de archivos (al guardar el pago) e introduce el importe total a mano.
-        </div>
-      )}
-
-      {/* Importe (editable salvo en gasolina_km) */}
-      <div className="space-y-1.5">
-        <Label htmlFor="importe">Importe *</Label>
-        <div className="relative">
-          <Input
-            id="importe"
-            type="text"
-            inputMode="decimal"
-            value={importeStr}
-            onChange={(e) => setImporteStr(e.target.value)}
-            disabled={tipoCalculo === "gasolina_km"}
-            placeholder="0,00"
-            className="pr-8"
-          />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-            €
-          </span>
-        </div>
         {tipoCalculo === "gasolina_km" && (
-          <p className="text-[11px] text-muted-foreground">Se calcula automáticamente a partir de los kilómetros.</p>
+          <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="km" className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Km (un trayecto)
+                </Label>
+                <Input
+                  id="km"
+                  type="text"
+                  inputMode="decimal"
+                  value={km}
+                  onChange={(e) => setKm(e.target.value)}
+                  placeholder="0"
+                  className="tabular-nums"
+                />
+              </div>
+              <div className="flex items-end gap-2 pb-1.5">
+                <Checkbox id="ida-vuelta" checked={idaVuelta} onCheckedChange={(c) => setIdaVuelta(Boolean(c))} />
+                <Label htmlFor="ida-vuelta" className="cursor-pointer text-sm">
+                  Ida y vuelta <span className="text-muted-foreground">(×2)</span>
+                </Label>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Precio por kilómetro
+              </Label>
+              <div className="flex flex-wrap gap-1.5">
+                {PAGO_MCM_GASOLINA_PRESETS_ORDER.map((p) => {
+                  const info = PAGO_MCM_GASOLINA_PRESETS[p]
+                  const active = preset === p
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPreset(p)}
+                      className={cn(
+                        "rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-tight transition-colors tabular-nums",
+                        active
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border/70 bg-background text-foreground/70 hover:border-foreground/30 hover:text-foreground",
+                      )}
+                      title={info.descripcion}
+                    >
+                      {info.label}
+                    </button>
+                  )
+                })}
+              </div>
+              {preset === "personalizado" && (
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={precioKm}
+                  onChange={(e) => setPrecioKm(e.target.value)}
+                  placeholder="0,26"
+                  className="mt-1.5 tabular-nums"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {tipoCalculo === "gasolina_tickets" && (
+          <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+            Sube los tickets en justificantes e introduce el importe total a mano.
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="importe">Importe *</Label>
+          {tipoCalculo === "gasolina_km" ? (
+            <div className="flex items-center justify-between rounded-xl border-2 border-input bg-muted/30 px-4 py-2.5">
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {parseFloat(km.replace(",", ".")) || 0} km{idaVuelta ? " × 2" : ""} × {precioKm} €
+              </span>
+              <span className="text-base font-semibold tabular-nums">{formatCurrency(importeCalculadoKm ?? 0)}</span>
+            </div>
+          ) : (
+            <div className="relative">
+              <MoneyInput id="importe" value={importeDisplay} onValueChange={setImporteDisplay} placeholder="0,00" className="pr-8" />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                €
+              </span>
+            </div>
+          )}
+          {tipoCalculo === "gasolina_km" && (
+            <p className="text-[11px] text-muted-foreground">Se calcula automáticamente a partir de los kilómetros.</p>
+          )}
+        </div>
+
+        {isEdit && pago && delegacionId && (
+          <div className="space-y-1.5">
+            <Label>Justificantes</Label>
+            <PagoMcmArchivos pagoId={pago.id} delegacionId={delegacionId} />
+          </div>
         )}
       </div>
 
-      {/* Descripción */}
-      <div className="space-y-1.5">
-        <Label htmlFor="descripcion">Descripción detallada</Label>
-        <Textarea
-          id="descripcion"
-          value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
-          placeholder="Detalle del gasto para transparencia (opcional)."
-          rows={3}
-        />
-      </div>
+      <Separator />
 
-      {/* Categoría sugerida */}
-      <div className="space-y-1.5">
-        <Label>Categoría sugerida</Label>
-        <Select value={categoriaSugeridaId} onValueChange={setCategoriaSugeridaId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Sin categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ninguna">Sin categoría</SelectItem>
-            {categorias.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.emoji ? `${c.emoji} ` : ""}
-                {c.nombre}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-[11px] text-muted-foreground">Se aplicará al movimiento cuando lo conviertas o lo vincules.</p>
-      </div>
+      {/* Detalles (colapsado por defecto) */}
+      <Collapsible open={detallesOpen} onOpenChange={setDetallesOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Detalles
+            <ChevronDown className={cn("h-4 w-4 transition-transform", detallesOpen && "rotate-180")} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 pt-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="descripcion">Descripción detallada</Label>
+            <Textarea
+              id="descripcion"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Detalle del gasto para transparencia (opcional)."
+              rows={3}
+            />
+          </div>
 
-      {/* Estado */}
-      <div className="space-y-1.5">
-        <Label>Estado</Label>
-        <Select value={estado} onValueChange={(v) => setEstado(v as PagoMcmEstado)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(["borrador", "pendiente", "pagado", "cancelado"] as const).map((s) => {
-              const info = PAGO_MCM_ESTADO_INFO[s]
-              const lockedPagado = s === "pagado" && !pago?.movimiento_id
-              return (
-                <SelectItem key={s} value={s} disabled={lockedPagado}>
-                  <span className="inline-flex items-center gap-2">
-                    <span className={cn("h-1.5 w-1.5 rounded-full", info.dotClass)} aria-hidden />
-                    <span>{info.label}</span>
-                    {lockedPagado && (
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        vincula un movimiento
-                      </span>
-                    )}
-                  </span>
-                </SelectItem>
-              )
-            })}
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="space-y-1.5">
+            <Label>Categoría sugerida</Label>
+            <CategoryChip
+              category={categoriaSugerida}
+              categories={categorias}
+              onCategoryChange={setCategoriaSugeridaId}
+              onCreateCategory={onRequestCreateCategory ? handleRequestCreateCategory : undefined}
+            />
+            <p className="text-[11px] text-muted-foreground">Se aplicará al movimiento cuando lo conviertas o lo vincules.</p>
+          </div>
 
-      {/* Notas */}
-      <div className="space-y-1.5">
-        <Label htmlFor="notas">Notas internas</Label>
-        <Textarea
-          id="notas"
-          value={notas}
-          onChange={(e) => setNotas(e.target.value)}
-          placeholder="Notas privadas para el equipo (opcional)."
-          rows={2}
-        />
-      </div>
-
-      {/* Adjuntos (solo en edición) */}
-      {isEdit && pago && delegacionId && (
-        <div className="space-y-1.5">
-          <Label>Archivos adjuntos</Label>
-          <PagoMcmArchivos pagoId={pago.id} delegacionId={delegacionId} />
-          <p className="text-[11px] text-muted-foreground">
-            Tickets, justificantes, etc. Si vinculas este pago a un movimiento, el archivo también
-            quedará disponible desde el movimiento.
-          </p>
-        </div>
-      )}
+          <div className="space-y-1.5">
+            <Label htmlFor="notas">Notas internas</Label>
+            <Textarea
+              id="notas"
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              placeholder="Notas privadas para el equipo (opcional)."
+              rows={2}
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Acciones */}
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading != null}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear pago"}
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => handleSubmit("borrador")}
+          disabled={loading != null}
+        >
+          {loading === "borrador" ? "Guardando…" : "Guardar borrador"}
+        </Button>
+        <Button type="button" onClick={() => handleSubmit("pendiente")} disabled={loading != null}>
+          {loading === "pendiente" ? "Guardando…" : "Guardar como pendiente"}
         </Button>
       </div>
     </form>

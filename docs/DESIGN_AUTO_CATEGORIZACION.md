@@ -10,46 +10,42 @@
 1. **¿Apply-on-sync o suggest-only?** Ver §3. Recomiendo *suggest-only* para
    la primera versión — es reversible y no exige aún una vista de "revisar
    auto-categorizados" — pero es una decisión de producto, no técnica.
-2. **¿Se puede confirmar el volumen real de `sin_categoria` por
-   `origen_sync`?** No he podido consultarlo (sin proyecto Supabase real en
-   este entorno de ejecución) — ver nota en §1. Antes de dimensionar el
-   build habría que correr las queries de §1 contra la base real.
-3. **¿El `regla` que existe hoy en la base viva coincide con las columnas
-   documentadas más abajo?** Tampoco he podido volcarlo en vivo (mismo
-   motivo). Las columnas de §1 son las que documenta el propio plan 020;
-   hay que confirmarlas con `list_tables`/SQL antes de construir sobre
-   ellas.
+2. **Volumen real de `sin_categoria` por `origen_sync`**: confirmado en
+   vivo (2026-08-06), ver §1.2 — 935/2281 movimientos (41%) sin categoría,
+   820 de ellos (72.6%) sincronizados vía enablebanking.
+3. **Esquema real de `regla`**: confirmado en vivo, ver §1.1 — la
+   columna de scoping es `organizacion_id`, no `delegacion_id` como asumía
+   la primera versión de este documento (corregido también en §4.4).
 4. **¿Dónde vive la gestión de reglas en la UI?** Propongo una sección
    nueva dentro de `/configuracion` (ver §4) siguiendo el patrón de
    `components/categories/`, pero podría justificarse una ruta propia si
    crece.
 
-## 1. Estado verificado (y lo que no he podido verificar)
+## 1. Estado verificado
 
 ### 1.1 Tabla `regla`
 
-**No he podido volcar el esquema en vivo** en esta sesión — no hay acceso a
-un proyecto Supabase real desde este entorno, y `regla` no tiene ninguna
-migración rastreada en `scripts/` (`grep -rln "regla" scripts/*.sql` no
-devuelve nada), igual que ya le pasa a las políticas RLS en vivo de otras
-tablas (ver la nota de "reproducibility gap" en `plans/README.md`). Esta
-sección documenta las columnas que el propio plan 020 registra como
-verificadas en el pase de auditoría que lo escribió (`condiciones jsonb`,
-`prioridad`, `categoria_id`, `activa`) — **hay que reconfirmarlas con
-`list_tables` o SQL directo contra la base real antes de construir nada**,
-no asumirlas ciertas solo por estar en este documento.
+**Esquema confirmado en vivo** (2026-08-06, vía `list_tables` contra el
+proyecto Supabase real) — corrige la versión anterior de este documento,
+que asumía columnas sin re-verificar:
 
-Columnas documentadas por el plan 020 (sin re-verificar en vivo aquí):
+| Columna         | Tipo                     | Notas |
+|------------------|--------------------------|-------|
+| `id`             | `uuid`                   | PK |
+| `organizacion_id`| `uuid`                   | FK a `organizacion` — **no** `delegacion_id`. Como la app tiene una única fila en `organizacion`, esto hace que las reglas sean de ámbito global, no por delegación (ver §4.4) |
+| `nombre`         | `text`                   | |
+| `prioridad`      | `int`, default `100`     | desempate de reglas, menor = evalúa antes |
+| `condiciones`    | `jsonb`                  | DSL propuesta en §2 |
+| `categoria_id`   | `uuid`                   | FK a `categoria`, la categoría a asignar |
+| `activa`         | `boolean`, default `true`| si la regla se evalúa |
+| `creada_por`     | `uuid`                   | FK a `auth.users` |
+| `creada_en`      | `timestamptz`, default `now()` | |
 
-| Columna       | Tipo (asumido) | Notas |
-|---------------|----------------|-------|
-| `condiciones` | `jsonb`        | DSL propuesta en §2 |
-| `prioridad`   | numérico       | desempate de reglas, menor = evalúa antes (propuesto) |
-| `categoria_id`| `uuid`         | FK a `categoria`, la categoría a asignar |
-| `activa`      | `boolean`      | si la regla se evalúa |
+FKs confirmadas: `regla_categoria_id_fkey`, `regla_creada_por_fkey`,
+`regla_organizacion_id_fkey`.
 
 Hecho confirmado por el plan 020 (auditoría con acceso a Supabase
-advisors, no reproducido aquí): RLS está **activado pero sin políticas**
+advisors) y reconfirmado en vivo: RLS está **activado pero sin políticas**
 (`rls_enabled_no_policy`) — es decir, hoy nadie autenticado puede leer ni
 escribir la tabla vía la API pública. Cualquier build necesita añadir
 políticas (§4.4) antes de que la tabla sea usable desde el cliente.
@@ -60,30 +56,34 @@ infraestructura sin usar.
 
 ### 1.2 Volumen de movimientos sin categorizar
 
-**Pendiente de datos.** Las queries que habría que correr, por delegación
-y `origen_sync`, son:
+**Confirmado en vivo** (2026-08-06):
 
-```sql
-SELECT origen_sync, COUNT(*) AS sin_categoria
-FROM public.movimiento
-WHERE categoria_id IS NULL
-  AND delegacion_id = '<delegacion_id>'
-GROUP BY origen_sync
-ORDER BY sin_categoria DESC;
-```
+- Total de movimientos: **2281**.
+- Sin categoría (`categoria_id IS NULL`): **935 (41%)**.
+- Sincronizados vía `enablebanking` (`origen_sync`): **1130**.
+- De esos, sin categoría: **820 (72.6% de los sincronizados)** — la
+  inmensa mayoría del volumen sin categorizar viene del sync bancario, tal
+  y como predecía §1.3 (el pipeline nunca escribe `categoria_id`).
 
-Y para una muestra anonimizable de patrones de `contraparte`/`concepto`:
+Desglose por delegación (movimientos `enablebanking` sin categoría):
 
-```sql
-SELECT contraparte, concepto
-FROM public.movimiento
-WHERE categoria_id IS NULL AND origen_sync = 'enablebanking'
-LIMIT 50;
-```
+| Delegación                  | Sin categoría (enablebanking) |
+|------------------------------|-------------------------------|
+| MCM Vila-real                 | 546 |
+| MCM Nueva Yorki (-T)           | 232 |
+| MCM Nules                      | 30 |
+| MCM Castellón                  | 5 |
+| MCM Espinardo                  | 5 + 3 |
+| MCM Benicarló-Vinaròs          | 2 |
 
-No se han ejecutado — no hay proyecto Supabase accesible desde este
-entorno. Antes de dimensionar el build (S/M/L de §4.5) hace falta correr
-esto contra 2-3 delegaciones reales.
+Además hay un pequeño resto de movimientos sin categoría cuyo origen no es
+el sync bancario (importación manual/entrada manual), no reflejado en la
+tabla anterior.
+
+Confirma que el grueso del problema se concentra en 2 delegaciones
+(Vila-real y Nueva Yorki), lo que es relevante para priorizar el diseño de
+reglas: unas pocas reglas bien dirigidas a esas dos delegaciones cubrirían
+la mayoría del volumen.
 
 ### 1.3 Pipeline de sync (verificado leyendo el código en este repo)
 
@@ -274,46 +274,43 @@ en §3 (si es suggest-only, el backfill solo rellena
 
 ### 4.4 RLS de `regla`
 
-Siguiendo el patrón ya usado para `categoria` (`scripts/050_enable_categoria_rls.sql`,
-membership-scoped, ver esa migración como plantilla exacta):
+**Corrección sobre la primera versión de este documento**: `regla` se
+scopa por `organizacion_id`, no por `delegacion_id` (§1.1, confirmado en
+vivo). Como la app tiene una única fila en `organizacion`
+(`list_tables` → `organizacion: rows: 1`), en la práctica esto hace que
+las reglas sean **globales para toda la app**, no por delegación —
+diferente del patrón membership-scoped de `categoria`
+(`scripts/050_enable_categoria_rls.sql`), que sí es por `delegacion_id`.
+
+Esto es una decisión de producto que hay que confirmar con el
+mantenedor antes de construir el CRUD (§4.5): si una regla es global, un
+tesorero de una delegación que edite una regla afecta la
+auto-categorización de *todas* las demás delegaciones. Por eso, a
+diferencia de `categoria`, propongo restringir la escritura a
+`gestor_central` (oficina técnica central) y dejar la lectura abierta a
+cualquier `authenticated` con membresía en alguna delegación — así el
+selector de "por qué se sugirió esta categoría" puede mostrar el nombre
+de la regla en la UI de cualquier delegación:
 
 ```sql
 ALTER TABLE public.regla ENABLE ROW LEVEL SECURITY; -- ya está activado, falta política
 
-CREATE POLICY "Ver reglas de la delegacion" ON public.regla
+CREATE POLICY "Ver reglas" ON public.regla
   FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM membresia m
-      WHERE m.delegacion_id = regla.delegacion_id
-        AND m.usuario_id = auth.uid()
-    )
+    EXISTS (SELECT 1 FROM membresia m WHERE m.usuario_id = auth.uid())
   );
 
-CREATE POLICY "Gestionar reglas de la delegacion" ON public.regla
+CREATE POLICY "Gestionar reglas (solo gestor_central)" ON public.regla
   FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM membresia m
-      WHERE m.delegacion_id = regla.delegacion_id
-        AND m.usuario_id = auth.uid()
-        AND m.rol IN ('tesorero', 'gestor_central')
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM membresia m
-      WHERE m.delegacion_id = regla.delegacion_id
-        AND m.usuario_id = auth.uid()
-        AND m.rol IN ('tesorero', 'gestor_central')
-    )
-  );
+  USING (public.is_gestor_central())
+  WITH CHECK (public.is_gestor_central());
 ```
 
-**Nota**: asume que `regla` tiene una columna `delegacion_id` — no
-confirmado en vivo (§1.1); si no la tiene, el diseño de esta política
-cambia (podría ser una tabla global sin scoping, lo cual sería un cambio de
-producto más grande que decidir aquí).
+`is_gestor_central()` ya existe y se usa en ~15 políticas RLS de la app
+(`lib/types/database.ts` no lo referencia porque es una función SQL, no
+un tipo) — reutilizarla mantiene el mismo patrón en vez de reinventar el
+chequeo de rol.
 
 ### 4.5 UI de gestión de reglas
 
@@ -327,7 +324,7 @@ siguiendo el patrón CRUD de `components/categories/category-list.tsx`
 
 | Pieza | Tamaño | Depende de |
 |---|---|---|
-| RLS de `regla` (§4.4) | S | confirmar esquema real |
+| RLS de `regla` (§4.4) | S | decisión de producto: ¿reglas globales gestionadas solo por `gestor_central`? (ver §4.4) |
 | `lib/services/auto-categorizacion.ts` puro + tests | M | — |
 | Hook en `sync.ts` (§4.1) | S | pieza anterior |
 | Hook en import manual (§4.2) | S | plan 018 (ya aterrizado) |
@@ -340,9 +337,10 @@ siguiendo el patrón CRUD de `components/categories/category-list.tsx`
 El plan sugiere, como paso opcional, un script desechable que corra el
 matcher propuesto contra movimientos ya categorizados de una delegación
 real y calcule precisión (cuántas veces la categoría de la regla coincide
-con la que puso la persona). **No se ha podido ejecutar** — no hay
-proyecto Supabase accesible desde este entorno de ejecución para leer
-datos reales. Queda como el primer paso recomendado del plan de build:
-antes de escribir el CRUD de reglas, correr esta sonda contra 1-2
-delegaciones para validar que el DSL de §2 captura los patrones reales
-antes de invertir en la UI.
+con la que puso la persona). **No se ha ejecutado todavía** — solo se
+confirmó el volumen agregado de sin_categoria (§1.2), no la precisión de
+un matcher real (que aún no existe). Queda como el primer paso
+recomendado del plan de build: antes de escribir el CRUD de reglas,
+correr esta sonda contra las delegaciones con más volumen (Vila-real y
+Nueva Yorki, §1.2) para validar que el DSL de §2 captura los patrones
+reales antes de invertir en la UI.

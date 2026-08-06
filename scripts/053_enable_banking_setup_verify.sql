@@ -1,11 +1,14 @@
 -- =============================================================================
--- 052 Enable Banking · verificación de setup
+-- 053 Enable Banking · verificación de setup
 -- =============================================================================
 -- Script de VERIFICACIÓN, no de reemplazo: asume que scripts/038 (schema) y
 -- scripts/039 (cron) ya se aplicaron. Es seguro ejecutarlo solo, más de una
 -- vez, y en cualquier momento después de esos dos — solo activa extensiones
 -- (idempotente) y termina con un SELECT de diagnóstico, no toca tablas ni
 -- reprograma el cron.
+--
+-- El secreto CRON_SECRET vive en Supabase Vault (`vault.decrypted_secrets`),
+-- no en un setting de sesión de la base — ver scripts/056 para el porqué.
 --
 -- Uso: pégalo en Supabase → SQL Editor → Run, después de haber seguido
 -- docs/ENABLE_BANKING.md §3.3–3.6. El resultado te dice qué falta.
@@ -14,18 +17,18 @@
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
--- Diagnóstico: settings de sesión de cron + si el job existe.
--- No se muestra nunca el valor completo de app.mcmbank_cron_key (solo un
--- prefijo), para poder pegar este resultado en un ticket de soporte sin
--- exponer el secreto.
+-- Diagnóstico: ¿existe el secreto en Vault? + si el job de cron existe.
+-- No se muestra nunca el valor completo del secreto (solo un prefijo), para
+-- poder pegar este resultado en un ticket de soporte sin exponerlo.
 SELECT
-  current_setting('app.mcmbank_url', true) IS NOT NULL AS mcmbank_url_configurado,
-  current_setting('app.mcmbank_url', true) AS mcmbank_url,
-  current_setting('app.mcmbank_cron_key', true) IS NOT NULL AS mcmbank_cron_key_configurado,
-  CASE
-    WHEN current_setting('app.mcmbank_cron_key', true) IS NULL THEN NULL
-    ELSE substring(current_setting('app.mcmbank_cron_key', true), 1, 6) || '...'
-  END AS mcmbank_cron_key_prefijo,
+  EXISTS (
+    SELECT 1 FROM vault.decrypted_secrets WHERE name = 'CRON_SECRET'
+  ) AS cron_secret_configurado,
+  (
+    SELECT substring(decrypted_secret, 1, 6) || '...'
+    FROM vault.decrypted_secrets
+    WHERE name = 'CRON_SECRET'
+  ) AS cron_secret_prefijo,
   EXISTS (
     SELECT 1 FROM cron.job WHERE jobname = 'mcmbank_bank_sync_daily'
   ) AS cron_job_existe;

@@ -116,16 +116,26 @@ create extension if not exists pg_cron;
 create extension if not exists pg_net;
 ```
 
-### 3.5 Configurar settings para el cron
+### 3.5 Guardar el secreto del cron en Vault
 
-En Supabase → **SQL Editor** ejecuta (reemplazando los valores):
+`trigger_bank_sync_cron()` (scripts/039 y scripts/056) lee el secreto desde
+**Supabase Vault**, no desde un setting de sesión de la base — así queda
+cifrado en reposo en vez de en texto plano en `pg_database.datconfig`.
+
+En Supabase → **Project Settings → Vault** (o por SQL) crea un secreto
+llamado `CRON_SECRET` con el mismo valor que la variable de entorno
+`CRON_SECRET` de Vercel:
 
 ```sql
-alter database postgres set app.mcmbank_url      = 'https://<tu-dominio>';
-alter database postgres set app.mcmbank_cron_key = '<mismo-valor-que-CRON_SECRET>';
+select vault.create_secret('<mismo-valor-que-CRON_SECRET-de-Vercel>', 'CRON_SECRET');
 ```
 
-**Nota**: estos `ALTER DATABASE SET` solo aplican a conexiones nuevas. No afecta a sesiones abiertas. El cron los lee cada ejecución, así que funciona.
+La URL del sitio (`https://bank.movimientoconsolacion.com`) no es secreta:
+va hardcodeada en el cuerpo de la función (scripts/056).
+
+**Nota**: si necesitas rotar el secreto, actualiza tanto la env var de
+Vercel como el valor en Vault (`select vault.update_secret(...)`, ver
+`docs/SUMMARY.md` o el dashboard de Vault) — deben coincidir siempre.
 
 ### 3.6 Programar el cron (039)
 
@@ -138,10 +148,10 @@ Verifica:
 SELECT * FROM cron.job WHERE jobname = 'mcmbank_bank_sync_daily';
 ```
 
-**Verificación conjunta**: en vez de comprobar cada paso suelto, `scripts/052_enable_banking_setup_verify.sql`
-ejecuta esta misma verificación (extensiones + settings + cron) en una sola
-pasada — pégalo y ejecútalo en el SQL Editor después de haber aplicado 038 y
-039 para confirmar que todo quedó bien encadenado.
+**Verificación conjunta**: en vez de comprobar cada paso suelto, `scripts/053_enable_banking_setup_verify.sql`
+ejecuta esta misma verificación (extensiones + secreto en Vault + cron) en
+una sola pasada — pégalo y ejecútalo en el SQL Editor después de haber
+aplicado 038 y 039 para confirmar que todo quedó bien encadenado.
 
 ### 3.7 Deploy en Vercel
 
@@ -306,9 +316,9 @@ El consentimiento ha caducado. Desconecta la cuenta y vuelve a conectar (Section
 SELECT * FROM cron.job WHERE jobname = 'mcmbank_bank_sync_daily';
 SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 5;
 ```
-- Si `status='failed'`: mira `return_message`. Suele ser `app.mcmbank_url` o `app.mcmbank_cron_key` no configurados (Section 3.5).
+- Si `status='failed'`: mira `return_message`. Suele ser que falta el secreto `CRON_SECRET` en Vault (Section 3.5).
 - Si no hay registros en `job_run_details`: pg_cron extension está inactiva.
-- Si `net.http_post` devuelve 401: el `CRON_SECRET` de Vercel no coincide con `app.mcmbank_cron_key`.
+- Si `net.http_post` devuelve 401: el `CRON_SECRET` de Vercel no coincide con el valor guardado en Vault.
 
 ### Transacciones duplicadas
 No debería ocurrir gracias al índice único. Si pasa:
@@ -325,7 +335,7 @@ Si hay duplicados, probablemente es el fallback de hash compuesto con una transa
 ## 7. Seguridad
 
 - **Clave privada PEM**: solo en env de Vercel (encriptada). Nunca en código o commits.
-- **CRON_SECRET**: mismo criterio. Rotable regenerando con `openssl rand -hex 32` y actualizando tanto Vercel env como `app.mcmbank_cron_key` en Supabase.
+- **CRON_SECRET**: mismo criterio. Rotable regenerando con `openssl rand -hex 32` y actualizando tanto la env var de Vercel como el secreto `CRON_SECRET` en Supabase Vault (Section 3.5).
 - **RLS**: `banco_conexion` y `banco_sync_log` tienen políticas para que un usuario solo vea/edite los de sus delegaciones con rol `gestor_central` o `tesorero`.
 - **Service role**: solo se usa en API routes server-side. No se expone al cliente.
 - **PII**: los logs en `banco_sync_log` pueden contener previews de transacciones (contraparte, importe). Si compartes un log para debug, revisa antes.

@@ -1,10 +1,13 @@
 "use client"
 
+import { memo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Upload, List, Tag, ArrowRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-export function QuickActions() {
+// Sin props: memo evita que re-renderice solo porque el padre (dashboard) lo
+// hace por otro motivo (cambio de timeframe, resetToken, etc.).
+export const QuickActions = memo(function QuickActions() {
   const router = useRouter()
 
   const actions = [
@@ -68,4 +71,4 @@ export function QuickActions() {
       ))}
     </div>
   )
-}
+})

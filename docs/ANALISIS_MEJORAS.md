@@ -56,23 +56,23 @@ Optimizaciones que figuraban como pendientes en docs antiguos pero **ya están e
 
 ### Alto impacto
 
-- [ ] **13. Doble consulta de resumen financiero en el dashboard** — sigue así: `components/dashboard/financial-summary.tsx` llama dos veces a `useFinancialSummary`.
+- [x] **13. Doble consulta de resumen financiero en el dashboard** — **[08/2026]** `financial-summary.tsx` sigue llamando a `useFinancialSummary` dos veces (periodo + histórico 1970→hoy para el saldo, son rangos genuinamente distintos, no se pueden fusionar en una llamada sin cambiar la RPC). Lo que se ha corregido es el hook en sí: migrado a TanStack Query (`hooks/use-financial-summary.ts`, mismo patrón que `useCuentas`/`useCategoryBreakdown`), con caché compartida entre instancias/páginas y `staleTime` de 30s — evita relanzar ambas queries en cada remount/cambio de pestaña dentro de ese margen.
 - [x] **14. Patrón N+1 en `getCuentaConMasMovimientos`** — resuelto: ya usa la RPC `get_cuenta_con_mas_movimientos` (una sola llamada), no N queries.
-- [ ] **15. `getContactosByDelegacion` sin paginación** — sigue pendiente.
-- [ ] **16. Recargas de contadores en cada focus** — sigue pendiente (`use-delegation-counts.ts` sin TTL).
-- [ ] **17. `useMonthlyTrendData` sin caché** — sigue pendiente.
-- [ ] **18. Recharts y xlsx en el bundle inicial** — sigue pendiente: cero usos de `next/dynamic` en todo el repo.
+- [ ] **15. `getContactosByDelegacion` sin paginación** — **[verificado 08/2026, no accionado]** revisado en vivo: hoy hay **1 solo contacto** en toda la base (`select count(*) from contacto`), así que no hay ningún problema de volumen real. Forzar paginación ahora sería el mismo tipo de riesgo que el bug de saldo truncado (punto 32b): `useContactos` construye sus contadores por tipo client-side y hace mutaciones optimistas sobre el array completo — paginar rompería ambas cosas sin necesidad. Revisar cuando el volumen real lo justifique.
+- [x] **16. Recargas de contadores en cada focus** — resuelto: `use-delegation-counts.ts` migrado a TanStack Query (antes: `useRevalidateOnFocusJitter` propio disparando las 6 queries en cada focus de pestaña sin importar si los datos seguían frescos).
+- [x] **17. `useMonthlyTrendData` sin caché** — resuelto: migrado a TanStack Query, mismo patrón.
+- [x] **18. Recharts y xlsx en el bundle inicial** — resuelto: `next/dynamic` (con `ssr:false`) en `MonthlyTrend`, `ActivityBalanceDashboard`, `CategoryAnalysisDashboard` (las 3 pestañas del dashboard que importan Recharts) y en `TransactionImportPanel` (importa `xlsx`, se abre desde un botón en `/transacciones`). Compilación verificada (`pnpm build`, `✓ Compiled successfully`); no había ningún uso de `next/dynamic` en el repo antes de esto.
 - [x] **19. Re-renders en cascada desde `DelegationContext`** — resuelto: `setSelectedDelegation` ya es un `useCallback` con dependencias correctas (comprueba `delegationId === selectedDelegation` antes de actualizar).
 
 ### Medio impacto
 
 - [x] **20. Búsquedas O(n×m) en la tabla de transacciones** — sin cambios, sigue hecho.
-- [ ] **21. `hasChanges` con `JSON.stringify` en cada render** — sigue pendiente.
-- [ ] **22. Falta `React.memo` en componentes pesados del dashboard** — sigue pendiente.
-- [ ] **23. Fetches sin `AbortController`** — sigue pendiente en varios hooks (aunque `runQuery` sí centraliza el abort en los que lo usan — ver hallazgo nuevo sobre mensajes de abort más abajo).
-- [ ] **24. Sin virtualización en listas largas de transacciones** — sigue pendiente.
-- [ ] **25. `images.unoptimized: true`** — sigue pendiente.
-- [ ] **26. Sin Suspense/streaming** — sigue pendiente.
+- [x] **21. `hasChanges` con `JSON.stringify` en cada render** — resuelto: `transaction-detail.tsx` comparaba `formData`/`baselineData` con `JSON.stringify` en cada tecleo (el `useMemo` ya evitaba recomputar si las referencias no cambiaban, pero `formData` cambia de referencia en cada tecla). Sustituido por comparación campo a campo de los 7 campos conocidos (mismos que construye `baselineData`), sin serializar.
+- [x] **22. Falta `React.memo` en componentes pesados del dashboard** — resuelto: `React.memo` en `FinancialSummary`, `RecentTransactions`, `QuickActions`, `MonthlyTrend`, `ActivityBalanceDashboard` y `CategoryAnalysisDashboard` — todos reciben solo props primitivas (`from`/`to`/`resetToken`/`limit` o ninguna), así que la comparación superficial por defecto de `memo` es exacta sin necesitar estabilizar referencias en el padre.
+- [x] **23. Fetches sin `AbortController`** — **[verificado 08/2026]** revisado every hook en `hooks/*.ts` que llama a Supabase/RPC: todos usan `abortSignal`, `runQuery` (que centraliza el abort) o `useQuery` de TanStack (que inyecta `signal` automáticamente) — no queda ningún hook haciendo queries sin mecanismo de cancelación. El hallazgo de mensajes de abort visibles al usuario (punto 38b) ya estaba corregido aparte.
+- [ ] **24. Sin virtualización en listas largas de transacciones** — sigue pendiente. *No accionado ahora*: requiere añadir una dependencia nueva (`react-window`/`@tanstack/react-virtual`) e integrarla con la tabla de transacciones existente (selección, expansión de fila, sticky header) — cambio de mayor superficie que un ajuste de rendimiento puntual, mejor como su propio plan.
+- [ ] **25. `images.unoptimized: true`** — sigue pendiente. *No accionado ahora*: activar la optimización de imágenes de Next tiene implicaciones de infraestructura (coste de la Image Optimization API de Vercel, dominios remotos permitidos) — decisión de producto/infra del mantenedor, no un cambio de código aislado.
+- [ ] **26. Sin Suspense/streaming** — sigue pendiente. *No accionado ahora*: cambio arquitectónico (afecta el árbol de carga de rutas enteras), con riesgo de romper estados de loading/error ya establecidos en toda la app — no es un ajuste seguro de hacer "con cuidadito" sin una revisión propia.
 
 ---
 
@@ -150,6 +150,6 @@ Pasada completa por Dashboard (3 pestañas), Cuentas, Categorías, Transacciones
 1. **Lote 0 (crítico, acción manual del mantenedor):** rotar la contraseña del usuario demo en Supabase Auth (punto 12) — las credenciales ya no están en el repo, pero siguen en el historial de git y la cuenta tiene rol `gestor_central` en 17 delegaciones.
 2. **Lote 1 (seguridad, verificar y cerrar):** 4 (dashboard `/` sin proteger), 6 (validación de ficheros), 8 (xlsx desde CDN), 12b/12c (advisors de Supabase), 73 (API key del cron).
 3. **Lote 2 (bugs de datos):** 32b (ya corregido, desplegar la migración `057` si no se ha hecho vía MCP) — verificar que no hay más agregados client-side sin paginar en el resto de la app.
-4. **Lote 3 (rendimiento):** 13, 15-18, 21-26.
+4. **Lote 3 (rendimiento):** ✅ 13, 16-18, 21-23 hechos (08/2026); 15 verificado y deprioritizado (sin volumen real); quedan 24-26, cada uno documentado como cambio de mayor superficie (nueva dependencia, decisión de infra, o arquitectónico) — no se han forzado sin revisión propia.
 5. **Lote 4 (deuda técnica):** 66-71, 74.
 6. **Lote 5 (pulido móvil pendiente):** 60n, 61n.

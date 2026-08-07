@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import Link from "next/link"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,7 +16,10 @@ interface Props {
   limit?: number
 }
 
-export function RecentTransactions({ limit = 5 }: Props) {
+// `limit` es primitivo: memo evita re-renderizar solo porque el dashboard
+// padre re-renderiza por otro motivo (el propio hook useMovimientos ya
+// controla cuándo cambian sus datos).
+export const RecentTransactions = memo(function RecentTransactions({ limit = 5 }: Props) {
   const { selectedDelegation } = useDelegationContext()
   const { movimientos } = useMovimientos(selectedDelegation)
 
@@ -108,4 +112,4 @@ export function RecentTransactions({ limit = 5 }: Props) {
       </CardContent>
     </Card>
   )
-}
+})

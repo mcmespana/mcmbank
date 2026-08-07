@@ -104,7 +104,15 @@ export function TransactionDetail({
       return false
     }
 
-    return JSON.stringify(formData) !== JSON.stringify(baselineData)
+    return (
+      formData.importe !== baselineData.importe ||
+      formData.fecha !== baselineData.fecha ||
+      formData.concepto !== baselineData.concepto ||
+      (formData.descripcion || "") !== baselineData.descripcion ||
+      formData.categoria_id !== baselineData.categoria_id ||
+      (formData.contacto_id ?? null) !== baselineData.contacto_id ||
+      (formData.factura_pendiente ?? false) !== baselineData.factura_pendiente
+    )
   }, [formData, baselineData])
 
   const account = accounts.find((acc) => acc.id === movement?.cuenta_id)

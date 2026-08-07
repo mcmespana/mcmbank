@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useMonthlyTrendData } from "@/hooks/use-monthly-trend-data"
-import { useMemo } from "react"
+import { memo, useMemo } from "react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { parse, format } from "date-fns"
@@ -13,7 +13,9 @@ interface Props {
   to: string
 }
 
-export function MonthlyTrend({ from, to }: Props) {
+// from/to son primitivos: memo evita recalcular el gráfico cuando el
+// dashboard padre re-renderiza por otro motivo.
+export const MonthlyTrend = memo(function MonthlyTrend({ from, to }: Props) {
   const { trend } = useMonthlyTrendData(from, to)
 
   const chartData = useMemo(() => {
@@ -77,4 +79,4 @@ export function MonthlyTrend({ from, to }: Props) {
       </Card>
     </div>
   )
-}
+})

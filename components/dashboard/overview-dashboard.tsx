@@ -1,9 +1,17 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { FinancialSummary } from "./financial-summary"
 import { QuickActions } from "./quick-actions"
 import { RecentTransactions } from "./recent-transactions"
-import { MonthlyTrend } from "./monthly-trend"
+import { Skeleton } from "@/components/ui/skeleton"
+
+// Carga diferida: MonthlyTrend importa Recharts, que así queda fuera del
+// bundle inicial del dashboard (la página que ve todo el mundo al entrar).
+const MonthlyTrend = dynamic(() => import("./monthly-trend").then((m) => m.MonthlyTrend), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[340px] w-full rounded-xl" />,
+})
 
 interface Props {
   from: string

@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Scale, Wallet, Tag, CheckCircle2 } from "lucide-react"
 import { useFinancialSummary } from "@/hooks/use-financial-summary"
@@ -12,7 +13,9 @@ interface Props {
   to: string
 }
 
-export function FinancialSummary({ from, to }: Props) {
+// from/to son primitivos: memo evita recalcular las 5 tarjetas cuando el
+// dashboard padre re-renderiza por otro motivo (cambio de pestaña, resetToken...).
+export const FinancialSummary = memo(function FinancialSummary({ from, to }: Props) {
   const router = useRouter()
   const { summary } = useFinancialSummary(from, to)
   // Saldo real: balance de TODA la historia (cuentas activas, sin ignorados).
@@ -123,4 +126,4 @@ export function FinancialSummary({ from, to }: Props) {
       </Card>
     </div>
   )
-}
+})

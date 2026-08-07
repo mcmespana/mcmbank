@@ -41,7 +41,16 @@ import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
-import { TransactionImportPanel } from "./transaction-import-panel"
+import dynamic from "next/dynamic"
+
+// Carga diferida: este panel importa xlsx (parser de Excel, pesado) de forma
+// estática; que quede en un chunk aparte en vez del bundle inicial de
+// /transacciones. Solo se muestra cuando `open` es true (Sheet controlado),
+// así que no hace falta loading fallback (nada debería verse mientras tanto).
+const TransactionImportPanel = dynamic(
+  () => import("./transaction-import-panel").then((m) => m.TransactionImportPanel),
+  { ssr: false },
+)
 import {
   Dialog,
   DialogContent,

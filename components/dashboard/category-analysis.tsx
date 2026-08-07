@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { memo, useEffect, useMemo, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -216,7 +216,13 @@ function CategoryMobileRow({
   )
 }
 
-export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
+// from/to/resetToken son primitivos: memo evita recalcular esta tabla pesada
+// cuando el dashboard padre re-renderiza por otro motivo.
+export const CategoryAnalysisDashboard = memo(function CategoryAnalysisDashboard({
+  from,
+  to,
+  resetToken,
+}: Props) {
   const { selectedDelegation } = useDelegationContext()
   const [isLoaded, setIsLoaded] = useState(false)
 
@@ -981,4 +987,4 @@ export function CategoryAnalysisDashboard({ from, to, resetToken }: Props) {
       />
     </div>
   )
-}
+})

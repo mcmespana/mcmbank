@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { memo, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -54,7 +54,13 @@ interface Props {
 
 const MOVEMENTS_PREVIEW_LIMIT = 30
 
-export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
+// from/to/resetToken son primitivos: memo evita recalcular esta vista pesada
+// cuando el dashboard padre re-renderiza por otro motivo.
+export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
+  from,
+  to,
+  resetToken,
+}: Props) {
   const { selectedDelegation } = useDelegationContext()
   const [isLoaded, setIsLoaded] = useState(false)
 
@@ -455,4 +461,4 @@ export function ActivityBalanceDashboard({ from, to, resetToken }: Props) {
       )}
     </div>
   )
-}
+})

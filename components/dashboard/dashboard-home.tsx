@@ -1,16 +1,27 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import { AppLayout } from "@/components/app-layout"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TimeframeFilter, type Timeframe, getTimeframeRange } from "@/components/dashboard/timeframe-filter"
-import { ActivityBalanceDashboard } from "@/components/dashboard/activity-balance"
-import { CategoryAnalysisDashboard } from "@/components/dashboard/category-analysis"
 import { OverviewDashboard } from "@/components/dashboard/overview-dashboard"
 import { ConsentAlertBanner } from "@/components/dashboard/consent-alert-banner"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useLocalStorageState } from "@/hooks/use-local-storage"
 import { TrendingUp, PieChart, Home, RotateCcw } from "lucide-react"
+
+// Carga diferida: ambas pestañas importan Recharts; que solo se pida al
+// navegar a la pestaña en vez de ir en el bundle inicial del dashboard.
+const ActivityBalanceDashboard = dynamic(
+  () => import("@/components/dashboard/activity-balance").then((m) => m.ActivityBalanceDashboard),
+  { ssr: false, loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
+)
+const CategoryAnalysisDashboard = dynamic(
+  () => import("@/components/dashboard/category-analysis").then((m) => m.CategoryAnalysisDashboard),
+  { ssr: false, loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
+)
 
 export type DashboardTab = "overview" | "actividad" | "categorias"
 

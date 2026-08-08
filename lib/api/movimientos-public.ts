@@ -85,7 +85,7 @@ const MOVIMIENTO_SELECT = `
   origen_sync,
   creado_en,
   delegacion_id,
-  cuenta:cuenta_id!movimiento_cuenta_id_fkey (
+  cuenta:cuenta!movimiento_cuenta_id_fkey (
     id,
     nombre,
     tipo,

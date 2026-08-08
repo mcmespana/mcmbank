@@ -867,8 +867,9 @@ export function TransactionManager() {
           )}
         </div>
 
-        {/* Transaction List */}
-        <div className="flex-1 overflow-auto">
+        {/* Transaction List — el scroll vive dentro de TransactionList: el
+            virtualizador necesita ser dueño de su contenedor de scroll. */}
+        <div className="flex-1 min-h-0 overflow-hidden">
 
           <TransactionList
             movements={movements}

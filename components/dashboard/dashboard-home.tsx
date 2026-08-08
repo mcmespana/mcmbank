@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
-import { AppLayout } from "@/components/app-layout"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TimeframeFilter, type Timeframe, getTimeframeRange } from "@/components/dashboard/timeframe-filter"
 import { OverviewDashboard } from "@/components/dashboard/overview-dashboard"
@@ -98,70 +97,68 @@ export function DashboardHome({ initialTab }: Props) {
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-8">
-        {/* Aviso de consentimiento bancario próximo a caducar (solo gestor central/tesorero) */}
-        <ConsentAlertBanner />
+    <div className="space-y-8">
+      {/* Aviso de consentimiento bancario próximo a caducar (solo gestor central/tesorero) */}
+      <ConsentAlertBanner />
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-2 bg-gradient-to-b from-primary via-primary/70 to-primary/40 rounded-full shadow-lg shadow-primary/30" />
-            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
-              Dashboard
-            </h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <TimeframeFilter value={activeTimeframe} onChange={handleTimeframeChange} />
-            <Button variant="outline" onClick={handleResetAll} className="gap-2">
-              <RotateCcw className="h-4 w-4" />
-              Eliminar todos los filtros
-            </Button>
-          </div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-2 bg-gradient-to-b from-primary via-primary/70 to-primary/40 rounded-full shadow-lg shadow-primary/30" />
+          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
+            Dashboard
+          </h1>
         </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
-          {/* Las etiquetas se muestran también en móvil: ocultarlas con
-              `hidden sm:inline` dejaba las pestañas sin nombre accesible (un
-              span display:none no llega al árbol de accesibilidad) y va contra
-              la convención del proyecto. px-2 en móvil para que quepan los tres. */}
-          <TabsList className="grid w-full grid-cols-3 sm:mx-auto sm:flex sm:w-fit">
-            <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
-              <Home className="h-4 w-4 shrink-0" />
-              <span>Resumen</span>
-            </TabsTrigger>
-            <TabsTrigger value="actividad" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
-              <TrendingUp className="h-4 w-4 shrink-0" />
-              <span>Balance</span>
-            </TabsTrigger>
-            <TabsTrigger value="categorias" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
-              <PieChart className="h-4 w-4 shrink-0" />
-              <span>Análisis</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-8">
-            <OverviewDashboard from={overviewRange.from} to={overviewRange.to} />
-          </TabsContent>
-
-          <TabsContent value="actividad" className="space-y-8">
-            <ActivityBalanceDashboard
-              from={balanceRange.from}
-              to={balanceRange.to}
-              resetToken={resetToken}
-            />
-          </TabsContent>
-
-          <TabsContent value="categorias" className="space-y-8">
-            <CategoryAnalysisDashboard
-              from={analysisRange.from}
-              to={analysisRange.to}
-              resetToken={resetToken}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="flex flex-wrap items-center gap-2">
+          <TimeframeFilter value={activeTimeframe} onChange={handleTimeframeChange} />
+          <Button variant="outline" onClick={handleResetAll} className="gap-2">
+            <RotateCcw className="h-4 w-4" />
+            Eliminar todos los filtros
+          </Button>
+        </div>
       </div>
-    </AppLayout>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
+        {/* Las etiquetas se muestran también en móvil: ocultarlas con
+            `hidden sm:inline` dejaba las pestañas sin nombre accesible (un
+            span display:none no llega al árbol de accesibilidad) y va contra
+            la convención del proyecto. px-2 en móvil para que quepan los tres. */}
+        <TabsList className="grid w-full grid-cols-3 sm:mx-auto sm:flex sm:w-fit">
+          <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
+            <Home className="h-4 w-4 shrink-0" />
+            <span>Resumen</span>
+          </TabsTrigger>
+          <TabsTrigger value="actividad" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
+            <TrendingUp className="h-4 w-4 shrink-0" />
+            <span>Balance</span>
+          </TabsTrigger>
+          <TabsTrigger value="categorias" className="flex items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-4">
+            <PieChart className="h-4 w-4 shrink-0" />
+            <span>Análisis</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-8">
+          <OverviewDashboard from={overviewRange.from} to={overviewRange.to} />
+        </TabsContent>
+
+        <TabsContent value="actividad" className="space-y-8">
+          <ActivityBalanceDashboard
+            from={balanceRange.from}
+            to={balanceRange.to}
+            resetToken={resetToken}
+          />
+        </TabsContent>
+
+        <TabsContent value="categorias" className="space-y-8">
+          <CategoryAnalysisDashboard
+            from={analysisRange.from}
+            to={analysisRange.to}
+            resetToken={resetToken}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }

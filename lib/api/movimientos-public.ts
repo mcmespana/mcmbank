@@ -84,7 +84,8 @@ const MOVIMIENTO_SELECT = `
   value_date,
   origen_sync,
   creado_en,
-  cuenta:cuenta_id (
+  delegacion_id,
+  cuenta:cuenta_id!movimiento_cuenta_id_fkey (
     id,
     nombre,
     tipo,
@@ -98,11 +99,6 @@ const MOVIMIENTO_SELECT = `
     emoji,
     color
   ),
-  delegacion:delegacion_id (
-    id,
-    codigo,
-    nombre
-  ),
   contacto:contacto_id (
     id,
     nombre,
@@ -111,8 +107,32 @@ const MOVIMIENTO_SELECT = `
 `
 
 /**
+ * Convierte un error de Supabase/PostgREST (un objeto plano, no una instancia
+ * de `Error`) en un `Error` real, para que el `catch` de las rutas pueda
+ * mostrar `err.message` en vez de volcar `String(objetoPlano)` como
+ * `"[object Object]"`.
+ */
+function wrapSupabaseError(error: unknown): Error {
+  if (error instanceof Error) return error
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message?: unknown }).message)
+      : "Error desconocido de Supabase."
+  return new Error(message)
+}
+
+/**
  * Obtiene un movimiento por su ID con sus relaciones (cuenta, categoría,
- * delegación, contacto). Devuelve `null` si no existe.
+ * contacto) y la delegación asociada. Devuelve `null` si no existe.
+ *
+ * La cuenta se embebe indicando explícitamente la FK (`!movimiento_cuenta_id_fkey`):
+ * `movimiento` tiene otra FK compuesta hacia `cuenta` (`movimiento_cuenta_deleg_fk`,
+ * que valida que la cuenta pertenezca a la delegación del movimiento) y sin el
+ * hint PostgREST no puede decidir cuál de las dos usar ("ambiguous embedding").
+ *
+ * La delegación no se embebe en el mismo `select`: no existe una FK directa
+ * `movimiento.delegacion_id -> delegacion.id` (solo la compuesta de arriba),
+ * así que se resuelve con una segunda consulta.
  */
 export async function getMovimientoRaw(admin: AdminClient, id: string) {
   const { data, error } = await (admin as any)
@@ -121,7 +141,26 @@ export async function getMovimientoRaw(admin: AdminClient, id: string) {
     .eq("id", id)
     .maybeSingle()
 
-  if (error) throw error
+  if (error) throw wrapSupabaseError(error)
+  if (!data) return null
+
+  const delegacion = await getDelegacionRaw(admin, (data as any).delegacion_id)
+  return { ...(data as object), delegacion }
+}
+
+/**
+ * Obtiene una delegación por su ID en su forma pública mínima.
+ */
+export async function getDelegacionRaw(admin: AdminClient, delegacionId: string | null) {
+  if (!delegacionId) return null
+
+  const { data, error } = await (admin as any)
+    .from("delegacion")
+    .select("id, codigo, nombre")
+    .eq("id", delegacionId)
+    .maybeSingle()
+
+  if (error) throw wrapSupabaseError(error)
   return data ?? null
 }
 
@@ -135,7 +174,7 @@ export async function getArchivosRaw(admin: AdminClient, movimientoId: string) {
     .eq("movimiento_id", movimientoId)
     .order("subido_en", { ascending: true })
 
-  if (error) throw error
+  if (error) throw wrapSupabaseError(error)
   return (data ?? []) as any[]
 }
 

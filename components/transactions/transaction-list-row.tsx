@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, memo } from "react"
+import { useEffect, useRef, useState, memo } from "react"
 import { BankAvatar } from "./bank-avatar"
 import { CategoryChip } from "./category-chip"
 import { AmountDisplay } from "@/components/amount-display"
@@ -25,7 +25,7 @@ interface TransactionListRowProps {
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
   isSelected: boolean
   selectionActive: boolean
-  onSelectionChange: (selected: boolean, rangeFromAnchor?: boolean) => void
+  onSelectionChange: (movementId: string, selected: boolean, rangeFromAnchor?: boolean) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -44,6 +44,32 @@ export const TransactionListRow = memo(function TransactionListRow({
   const [editing, setEditing] = useState(false)
   const [conceptValue, setConceptValue] = useState(movement.concepto)
 
+  // Con la lista virtualizada una fila puede desmontarse al salir del viewport
+  // sin que llegue a dispararse el `onBlur` del input. Si había una edición de
+  // concepto en curso se guarda igualmente, con la misma semántica que el blur.
+  const pendingConceptRef = useRef<string | null>(null)
+  const unmountSaveRef = useRef<{ id: string; original: string; save: TransactionListRowProps["onMovementUpdate"] }>({
+    id: movement.id,
+    original: movement.concepto,
+    save: onMovementUpdate,
+  })
+
+  useEffect(() => {
+    unmountSaveRef.current = { id: movement.id, original: movement.concepto, save: onMovementUpdate }
+  }, [movement.id, movement.concepto, onMovementUpdate])
+
+  useEffect(
+    () => () => {
+      const pending = pendingConceptRef.current?.trim()
+      const { id, original, save } = unmountSaveRef.current
+      if (!pending || pending === original) return
+      void save(id, { concepto: pending }).catch((error) => {
+        console.error("Error updating concept:", error)
+      })
+    },
+    [],
+  )
+
   const handleCategoryChange = async (categoryId: string | null) => {
     setIsUpdating(true)
     try {
@@ -57,10 +83,17 @@ export const TransactionListRow = memo(function TransactionListRow({
 
   const handleConceptClick = (e: React.MouseEvent) => {
     e.stopPropagation()
+    pendingConceptRef.current = movement.concepto
     setEditing(true)
   }
 
+  const handleConceptChange = (value: string) => {
+    pendingConceptRef.current = value
+    setConceptValue(value)
+  }
+
   const handleConceptSave = async () => {
+    pendingConceptRef.current = null
     if (conceptValue.trim() !== "") {
       try {
         await onMovementUpdate(movement.id, { concepto: conceptValue.trim() })
@@ -72,6 +105,7 @@ export const TransactionListRow = memo(function TransactionListRow({
   }
 
   const handleConceptCancel = () => {
+    pendingConceptRef.current = null
     setConceptValue(movement.concepto)
     setEditing(false)
   }
@@ -81,7 +115,7 @@ export const TransactionListRow = memo(function TransactionListRow({
     if ("preventDefault" in event) event.preventDefault()
     const rangeFromAnchor =
       "shiftKey" in event && (event.shiftKey || event.metaKey || event.ctrlKey)
-    onSelectionChange(!isSelected, rangeFromAnchor)
+    onSelectionChange(movement.id, !isSelected, rangeFromAnchor)
   }
 
   return (
@@ -168,7 +202,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                 {editing ? (
                   <Input
                     value={conceptValue}
-                    onChange={(e) => setConceptValue(e.target.value)}
+                    onChange={(e) => handleConceptChange(e.target.value)}
                     onFocus={(e) => e.target.select()}
                     onBlur={handleConceptSave}
                     onKeyDown={(e) => {

@@ -183,6 +183,8 @@ components/                 # Reusable React components
 lib/                        # Business logic, utilities, types
   supabase/                 # Supabase clients (client, server, admin, middleware, redirect)
   services/                 # Data service layer (database, server-database, file-service, avisos)
+  api/                      # Shared core of the external API + MCP server (see below)
+  mcp/                      # MCP protocol layer (protocol, args, tools, server)
   types/                    # TypeScript types (database.ts, improvement-proposals.ts)
   utils/                    # Utilities (format, category-colors, export-to-excel, date-input, etc.)
   db/                       # Query execution and telemetry (query.ts, telemetry.ts)
@@ -211,8 +213,56 @@ docs/                       # End-user documentation in Spanish
 | `/api/avisos/notificar` | Sends a notice/task by email via Resend |
 | `/api/admin/users` | Admin user management API |
 | `/api/supabase-sanity` | Supabase health check API |
+| `/api/v1/*` | External REST API (see below) |
+| `/api/mcp` | MCP server (JSON-RPC over HTTP) |
+| `/api/v1/openapi.json`, `/docs/api`, `/llms.txt` | Machine- and human-readable API docs |
 
 All non-auth routes use `<AppLayout>` for consistent navigation (sidebar + topbar).
+
+## External API and MCP server
+
+`/api/v1/*` (REST) and `/api/mcp` (MCP) are two front doors onto the **same**
+core in `lib/api/`. Anything doable through one is doable through the other, and
+neither route handler contains business logic — they parse input, check the key,
+and call the core. Add a capability once, in `lib/api/`, then expose it in both.
+
+Both are aimed at central-office admins who work across **all** delegations, so
+they use the **admin (service role) client** and bypass RLS. Everything is
+scoped explicitly in the query instead: `resolveAmbitoDelegaciones()` returns
+`null` for "all delegations" and a resolved list otherwise.
+
+| Module | Responsibility |
+|--------|----------------|
+| `lib/api/external-auth.ts` | API-key check with two scopes: `MCM_API_KEY` (read+write), `MCM_API_KEY_READONLY` and `CRON_SECRET` (read only) |
+| `lib/api/actor.ts` | Resolves the real user that signs each write (`usuario_email` → `x-mcm-usuario-email` → `MCM_API_USER_EMAIL`). Never picks an arbitrary user |
+| `lib/api/delegaciones.ts` | Natural-language delegation lookup ("Sevilla", "MCM-SEV", UUID); ambiguity returns the candidates |
+| `lib/api/catalogos.ts` | Cached cuenta/categoria/contacto maps, joined in memory instead of embedded in every query |
+| `lib/api/movimientos-public.ts` | Movement search (multi-delegation, with whole-set totals), fetch and update |
+| `lib/api/facturas.ts` | Invoice CRUD, linking, and the scoring used to reconcile invoices against movements |
+| `lib/api/avisos.ts` | Notices and tasks, including the email notification |
+| `lib/api/archivos.ts` | Base64 upload to Storage + registration, signed URLs, deletion |
+| `lib/api/resumen.ts` | Per-delegation financial rollup |
+| `lib/api/errors.ts` | `ApiError` with HTTP status; unexpected errors are logged in full and truncated to one line in the response |
+| `lib/api/route-helpers.ts` | `conApi()` wrapper: auth + query parsing + `{ ok: true, ... }` shape |
+| `lib/mcp/tools.ts` | The 27 MCP tools, each a thin wrapper over `lib/api/` |
+
+Conventions worth keeping:
+
+- **Never write through the aggregation RPCs** (`get_financial_summary`,
+  `get_saldos_por_cuenta`…): they call `assert_delegacion_member`, which checks
+  `auth.uid()` and therefore always fails for the service role. Aggregate in JS
+  (paged, ordered by `id` so pages don't overlap) as `lib/api/resumen.ts` does.
+- **Client-only modules stay out**: `lib/services/database.ts` and
+  `file-service.ts` are `"use client"`. Server equivalents live in `lib/api/`.
+- **Paged aggregation must order by a unique column.** Ordering by `fecha`
+  makes rows repeat or vanish across pages and the totals come out wrong.
+- **Error messages are read by models too.** Say what is missing and put the
+  valid values or the candidates in `detalles` so the caller can self-correct.
+- API-uploaded files cap at 3 MB (Vercel's ~4.5 MB request body, +33% for
+  base64); the app's own limit is still 20 MB.
+
+Docs: `docs/manual/21.-api-externa-solo-pros.md`,
+`docs/manual/22.-servidor-mcp.md`, `docs/API_PRUEBA_RAPIDA.md`.
 
 ## Styling Conventions
 

@@ -26,7 +26,11 @@ export async function GET(request: Request) {
 
 ## Autenticación
 
-Todas las peticiones requieren una clave de API en una cabecera:
+El servidor MCP admite **OAuth 2.1** (registro dinámico de clientes + PKCE): es lo que
+usan los conectores de claude.ai, y no necesita ninguna clave. El descubrimiento
+empieza en \`${origin}/.well-known/oauth-protected-resource\`.
+
+Para la API REST (y para el MCP desde Claude Code) se usa una clave en una cabecera:
 
 - \`Authorization: Bearer <clave>\`  — o bien
 - \`x-api-key: <clave>\`
@@ -46,6 +50,9 @@ Hay dos niveles: \`MCM_API_KEY\` da lectura y escritura; \`MCM_API_KEY_READONLY\
 claude mcp add --transport http mcm-bank ${origin}/api/mcp \\
   --header "Authorization: Bearer TU_CLAVE"
 \`\`\`
+
+Desde claude.ai basta con añadir \`${origin}/api/mcp\` como conector personalizado:
+el servidor responde 401 con \`WWW-Authenticate\` y el cliente arranca el flujo de OAuth solo.
 
 Herramientas disponibles: buscar_movimientos, obtener_movimiento,
 actualizar_movimiento, resumen_economico, listar_delegaciones, listar_cuentas,

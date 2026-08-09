@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { verifyApiKey } from "@/lib/api/external-auth"
 import { JSONRPC_ERRORES, fallo, type JsonRpcRequest } from "@/lib/mcp/protocol"
+import { autorizarMcp } from "@/lib/mcp/auth"
 import { procesarMensaje, SERVIDOR } from "@/lib/mcp/server"
 
 export const runtime = "nodejs"
@@ -11,13 +11,14 @@ export const dynamic = "force-dynamic"
  *
  *   POST /api/mcp   →  mensajes JSON-RPC del protocolo MCP
  *
- * Autenticación: la misma clave que la API externa, en `Authorization: Bearer`
- * o en `x-api-key`. Una clave de solo lectura puede consultar pero no escribir.
+ * Dos formas de autenticarse (ver `lib/mcp/auth.ts`):
  *
- * Autoría de las escrituras: se puede fijar por conexión con las cabeceras
- * `x-mcm-usuario-email` o `x-mcm-usuario-id`, o por llamada con el argumento
- * `usuario_email` de cada herramienta. Si no llega ninguna, se usa la cuenta
- * configurada en el servidor (`MCM_API_USER_EMAIL` / `MCM_API_USER_ID`).
+ *   - **OAuth**, para el conector de claude.ai: cada persona entra con su
+ *     cuenta de MCM Bank y las escrituras se firman con ella. Cuando falta el
+ *     token se responde 401 con `WWW-Authenticate`, que es la señal con la que
+ *     el cliente descubre el servidor de autorización y arranca el flujo solo.
+ *   - **Clave de API** en `Authorization: Bearer` o `x-api-key`, para Claude
+ *     Code y los scripts.
  *
  * Para conectarlo desde Claude Code:
  *   claude mcp add --transport http mcm-bank https://TU-DOMINIO/api/mcp \
@@ -29,7 +30,7 @@ const CABECERAS_CORS = {
   "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
   "Access-Control-Allow-Headers":
     "Content-Type, Authorization, x-api-key, mcp-session-id, mcp-protocol-version, x-mcm-usuario-email, x-mcm-usuario-id",
-  "Access-Control-Expose-Headers": "mcp-session-id, mcp-protocol-version",
+  "Access-Control-Expose-Headers": "mcp-session-id, mcp-protocol-version, WWW-Authenticate",
   "Access-Control-Max-Age": "86400",
 }
 
@@ -38,18 +39,13 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: Request) {
-  const auth = verifyApiKey(request)
-  if (!auth.ok) {
-    return NextResponse.json(
-      fallo(null, JSONRPC_ERRORES.INVALID_REQUEST, auth.error),
-      {
-        status: auth.status,
-        headers: {
-          ...CABECERAS_CORS,
-          ...(auth.status === 401 ? { "WWW-Authenticate": 'Bearer realm="MCM Bank MCP"' } : {}),
-        },
-      },
-    )
+  const autorizacion = await autorizarMcp(request)
+  if (!autorizacion.ok) {
+    const { status, error, cabeceras } = autorizacion.rechazo
+    return NextResponse.json(fallo(null, JSONRPC_ERRORES.INVALID_REQUEST, error), {
+      status,
+      headers: { ...CABECERAS_CORS, ...cabeceras },
+    })
   }
 
   let cuerpo: unknown
@@ -63,13 +59,12 @@ export async function POST(request: Request) {
   }
 
   const url = new URL(request.url)
+  const { scope, actorHint, actorForzado } = autorizacion.auth
   const opciones = {
-    scope: auth.scope,
+    scope,
     baseUrl: `${url.protocol}//${url.host}`,
-    actorHint: {
-      usuario_email: request.headers.get("x-mcm-usuario-email"),
-      usuario_id: request.headers.get("x-mcm-usuario-id"),
-    },
+    actorHint,
+    actorForzado,
   }
 
   // Los lotes desaparecieron de la especificación en 2025-06-18, pero clientes

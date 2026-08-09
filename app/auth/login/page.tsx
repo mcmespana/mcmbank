@@ -7,15 +7,21 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export const dynamic = "force-dynamic"
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>
+}) {
   const supabase = createClient()
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // If user is logged in, redirect to home page
+  // Si ya hay sesión, se va directo al destino. `next` solo admite rutas
+  // internas: con una URL absoluta esto sería un redirector abierto.
   if (session) {
-    redirect("/")
+    const { next } = await searchParams
+    redirect(next && next.startsWith("/") && !next.startsWith("//") ? next : "/")
   }
 
   return (

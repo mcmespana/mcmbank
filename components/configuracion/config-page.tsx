@@ -11,6 +11,7 @@ import type { Delegacion } from "@/lib/types/database"
 import { useIsAdmin } from "@/hooks/use-is-admin"
 import { PlantillaMemoriaSection } from "@/components/configuracion/plantilla-memoria-section"
 import { EnableBankingHealthSection } from "@/components/configuracion/enable-banking-health-section"
+import { ConexionesMcpSection } from "@/components/configuracion/conexiones-mcp-section"
 
 interface DelegacionWithCount extends Delegacion {
   movimientos?: number
@@ -124,6 +125,7 @@ export function ConfigPage() {
     <div className="space-y-10">
       <PlantillaMemoriaSection />
       <EnableBankingHealthSection />
+      <ConexionesMcpSection />
 
       {/* Delegaciones Section */}
       <section>

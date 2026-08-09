@@ -72,6 +72,11 @@ export interface ContextoMcp {
   baseUrl: string
   /** Autoría por defecto (cabeceras de la petición o variables de entorno). */
   actorHint: ActorHint
+  /**
+   * Usuario impuesto por la credencial (token OAuth): manda sobre cualquier
+   * `usuario_email` que llegue en los argumentos.
+   */
+  actorForzado?: string | null
 }
 
 export interface HerramientaMcp {
@@ -113,6 +118,11 @@ function objetoSchema(propiedades: Record<string, unknown>, obligatorios: string
 }
 
 async function actorDe(args: Args, ctx: ContextoMcp): Promise<Actor> {
+  // Con OAuth la identidad la fija el token: se ignora lo que digan los
+  // argumentos, para que nadie pueda firmar en nombre de otra persona.
+  if (ctx.actorForzado) {
+    return resolveActor(ctx.admin, { usuario_id: ctx.actorForzado })
+  }
   return resolveActor(ctx.admin, {
     usuario_id: texto(args, "usuario_id") ?? ctx.actorHint.usuario_id,
     usuario_email: texto(args, "usuario_email") ?? ctx.actorHint.usuario_email,

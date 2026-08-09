@@ -57,6 +57,12 @@ export interface OpcionesMcp {
   scope: ApiScope
   baseUrl: string
   actorHint: ActorHint
+  /**
+   * Usuario impuesto por la credencial (token OAuth). Cuando viene, las
+   * herramientas no admiten pistas de autoría: si el modelo pudiera indicar
+   * otro correo, firmaría notas en nombre de terceros.
+   */
+  actorForzado?: string | null
 }
 
 /** Procesa un mensaje JSON-RPC. Devuelve `null` si era una notificación. */
@@ -159,6 +165,7 @@ async function ejecutarHerramienta(
       scope: opciones.scope,
       baseUrl: opciones.baseUrl,
       actorHint: opciones.actorHint,
+      actorForzado: opciones.actorForzado ?? null,
     }
 
     const resultado = await herramienta.handler(args, contexto)

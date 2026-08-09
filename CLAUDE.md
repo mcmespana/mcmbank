@@ -245,6 +245,40 @@ scoped explicitly in the query instead: `resolveAmbitoDelegaciones()` returns
 | `lib/api/errors.ts` | `ApiError` with HTTP status; unexpected errors are logged in full and truncated to one line in the response |
 | `lib/api/route-helpers.ts` | `conApi()` wrapper: auth + query parsing + `{ ok: true, ... }` shape |
 | `lib/mcp/tools.ts` | The 27 MCP tools, each a thin wrapper over `lib/api/` |
+| `lib/mcp/auth.ts` | Accepts either an API key or an OAuth access token; OAuth pins the acting user |
+| `lib/oauth/` | OAuth 2.1 authorization server: config, PKCE, DB-backed store, authorize-request validation |
+
+### OAuth for claude.ai connectors
+
+claude.ai custom connectors cannot send a static header, so `/api/mcp` is also
+an OAuth 2.1 authorization server (`scripts/058_mcp_oauth.sql` adds the three
+tables). The payoff is bigger than the web: each admin signs in as themselves,
+so writes are attributed to the real person and `MCM_API_USER_EMAIL` becomes
+unnecessary.
+
+The discovery chain is what makes a connector self-configure: `/api/mcp` answers
+401 with `WWW-Authenticate: ... resource_metadata=...` →
+`/.well-known/oauth-protected-resource` → `/.well-known/oauth-authorization-server`
+→ dynamic registration → consent → token. Those `.well-known` paths are
+**rewrites** in `next.config.mjs`: Next's router ignores dot-prefixed folders,
+so the handlers live under `app/api/well-known/`.
+
+Rules this code keeps, and that a change must not break:
+
+- **PKCE S256 only, no client secrets.** Clients are public apps; PKCE is the
+  only thing binding a code to whoever requested it.
+- **Exact `redirect_uri` match.** On a client/redirect failure the page renders
+  an error instead of redirecting — redirecting to an unvalidated destination is
+  the classic OAuth hole. `lib/oauth/autorizacion.ts` encodes that as
+  fatal-vs-redirigible, and both the page and the POST run the same validator.
+- **Only `gestor_central` may consent** — the MCP server bypasses RLS across all
+  delegations.
+- **Codes are single-use; refresh tokens rotate.** Reuse of either revokes every
+  token for that client+user.
+- **Only SHA-256 of codes/tokens is stored.** The three tables have RLS on with
+  no policies: service role only.
+- With an OAuth token, `actorForzado` pins the user and tool arguments cannot
+  override authorship. With an API key, `usuario_email` still applies.
 
 Conventions worth keeping:
 

@@ -54,11 +54,19 @@ export default function LoginForm() {
   }
 
   // Handle successful login by redirecting
+  // `next` permite volver a donde se venía (p. ej. la pantalla de
+  // autorización de un conector MCP). Solo se aceptan rutas internas: un
+  // destino absoluto convertiría el login en un redirector abierto.
+  const destino = (() => {
+    const pedido = searchParams.get("next")
+    return pedido && pedido.startsWith("/") && !pedido.startsWith("//") ? pedido : "/"
+  })()
+
   useEffect(() => {
     if (state?.success) {
-      router.push("/")
+      router.push(destino)
     }
-  }, [state, router])
+  }, [state, router, destino])
 
   return (
     <div className="relative z-10 w-full max-w-md">

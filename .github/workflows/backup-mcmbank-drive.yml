@@ -11,11 +11,8 @@ jobs:
     steps:
       - name: Instalar cliente de Postgres 17
         run: |
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo wget -O /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
-            https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-17
 
       - name: Generar el dump
@@ -24,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           FILENAME="mcmbank-$(date +%Y-%m-%d).sql.gz"
-          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges | gzip > "$FILENAME"
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges | gzip > "$FILENAME"
           echo "FILENAME=$FILENAME" >> "$GITHUB_ENV"
           echo "DAY_OF_MONTH=$(date +%d)" >> "$GITHUB_ENV"
 

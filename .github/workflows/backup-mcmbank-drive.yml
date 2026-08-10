@@ -1,0 +1,58 @@
+name: Backup Supabase mcmbank a Google Drive
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # todas las noches a las 03:00 UTC (05:00 hora España en verano)
+  workflow_dispatch: {}    # permite lanzarlo a mano desde la pestaña Actions
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar cliente de Postgres 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Generar el dump
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          FILENAME="mcmbank-$(date +%Y-%m-%d).sql.gz"
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges | gzip > "$FILENAME"
+          echo "FILENAME=$FILENAME" >> "$GITHUB_ENV"
+          echo "DAY_OF_MONTH=$(date +%d)" >> "$GITHUB_ENV"
+
+      - name: Instalar rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configurar rclone para Google Drive
+        env:
+          GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SA_JSON }}
+          GDRIVE_SHARED_DRIVE_ID: ${{ secrets.GDRIVE_SHARED_DRIVE_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.config/rclone
+          echo "$GDRIVE_SA_JSON" > /tmp/sa.json
+          cat > ~/.config/rclone/rclone.conf <<CONF
+          [gdrive]
+          type = drive
+          scope = drive
+          service_account_file = /tmp/sa.json
+          team_drive = ${GDRIVE_SHARED_DRIVE_ID}
+          CONF
+
+      - name: Subir backup a la carpeta diaria
+        run: rclone copy "$FILENAME" "gdrive:backups/mcmbank/daily/" --progress
+
+      - name: Copiar también a la carpeta mensual (si es día 1)
+        if: env.DAY_OF_MONTH == '01'
+        run: rclone copy "$FILENAME" "gdrive:backups/mcmbank/monthly/" --progress
+
+      - name: Borrar backups diarios de más de 5 días
+        run: rclone delete "gdrive:backups/mcmbank/daily/" --min-age 5d --rmdirs || true
+
+      - name: Limpiar archivos temporales del runner
+        if: always()
+        run: rm -f /tmp/sa.json "$FILENAME" 2>/dev/null || true

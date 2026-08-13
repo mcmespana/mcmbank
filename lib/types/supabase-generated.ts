@@ -87,11 +87,14 @@ export type Database = {
           delegacion_id: string
           destinatario: string
           estado: string
+          fecha_limite: string | null
           id: string
           notificado_en: string | null
           notificado_por: string | null
           referencia: string | null
+          responsable_id: string | null
           tipo: string
+          urgente: boolean
         }
         Insert: {
           actualizado_en?: string
@@ -103,11 +106,14 @@ export type Database = {
           delegacion_id: string
           destinatario: string
           estado?: string
+          fecha_limite?: string | null
           id?: string
           notificado_en?: string | null
           notificado_por?: string | null
           referencia?: string | null
+          responsable_id?: string | null
           tipo: string
+          urgente?: boolean
         }
         Update: {
           actualizado_en?: string
@@ -119,11 +125,14 @@ export type Database = {
           delegacion_id?: string
           destinatario?: string
           estado?: string
+          fecha_limite?: string | null
           id?: string
           notificado_en?: string | null
           notificado_por?: string | null
           referencia?: string | null
+          responsable_id?: string | null
           tipo?: string
+          urgente?: boolean
         }
         Relationships: [
           {

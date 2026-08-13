@@ -36,6 +36,7 @@ import {
   actualizarAviso,
   crearAviso,
   eliminarAviso,
+  listarAsignablesAviso,
   listarAvisos,
   notificarAviso,
   obtenerAviso,
@@ -909,7 +910,8 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
     title: "Dejar una nota o tarea",
     description:
       "Escribe una nota o una tarea en el canal de una delegación. Es el módulo de comunicación entre la oficina técnica y los tesoreros: aparece en el panel de avisos de esa delegación. " +
-      "Usa tipo 'tarea' cuando esperas que alguien haga algo (se puede marcar como hecha) y 'nota' cuando solo informas. Con notificar=true además se envía por correo a quien corresponda.",
+      "Usa tipo 'tarea' cuando esperas que alguien haga algo (se puede marcar como hecha) y 'nota' cuando solo informas. Con notificar=true además se envía por correo a quien corresponda. " +
+      "responsable_id, fecha_limite y urgente solo tienen efecto en tareas: usa listar_asignables_aviso para saber a quién puedes asignar.",
     inputSchema: objetoSchema(
       {
         delegacion: { type: "string", description: "Nombre, código o id de la delegación." },
@@ -923,6 +925,12 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
         },
         referencia: { type: "string", description: "Etiqueta corta de contexto, máximo 60 caracteres." },
         notificar: { type: "boolean", description: "Enviarlo además por correo." },
+        responsable_id: {
+          type: "string",
+          description: "Solo para tareas: id de quién tiene que hacerla (ver listar_asignables_aviso).",
+        },
+        fecha_limite: { type: "string", description: "Solo para tareas: fecha límite 'AAAA-MM-DD'." },
+        urgente: { type: "boolean", description: "Solo para tareas: marca de prioridad." },
         usuario_email: CAMPO_USUARIO_EMAIL,
       },
       ["delegacion", "contenido"],
@@ -939,6 +947,9 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
           destinatario: opcion(args, "destinatario", ["delegacion", "oficina_tecnica"] as const),
           referencia: texto(args, "referencia"),
           notificar: booleano(args, "notificar"),
+          responsable_id: texto(args, "responsable_id"),
+          fecha_limite: texto(args, "fecha_limite"),
+          urgente: booleano(args, "urgente"),
         },
         actor.id,
       )
@@ -946,10 +957,32 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
     },
   },
   {
+    name: "listar_asignables_aviso",
+    title: "Ver a quién se le puede asignar una tarea",
+    description:
+      "Personas a las que se les puede asignar como responsable una tarea dirigida a una delegación (sus tesoreros) o a la oficina técnica (los gestores centrales).",
+    inputSchema: objetoSchema(
+      {
+        delegacion: { type: "string", description: "Nombre, código o id de la delegación." },
+        destinatario: { type: "string", enum: ["delegacion", "oficina_tecnica"] },
+      },
+      ["delegacion", "destinatario"],
+    ),
+    scope: "read",
+    annotations: { readOnlyHint: true },
+    handler: async (args, ctx) => ({
+      asignables: await listarAsignablesAviso(
+        ctx.admin,
+        textoObligatorio(args, "delegacion"),
+        opcion(args, "destinatario", ["delegacion", "oficina_tecnica"] as const) ?? "delegacion",
+      ),
+    }),
+  },
+  {
     name: "actualizar_aviso",
     title: "Editar o cerrar un aviso",
     description:
-      "Cambia el texto de un aviso o lo marca como hecho (estado 'hecha') o de nuevo pendiente.",
+      "Cambia el texto de un aviso o lo marca como hecho (estado 'hecha') o de nuevo pendiente. También admite responsable_id, fecha_limite ('AAAA-MM-DD') y urgente; pasa una cadena vacía en responsable_id o fecha_limite para quitarlos.",
     inputSchema: objetoSchema(
       {
         id: { type: "string" },
@@ -957,6 +990,9 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
         referencia: { type: "string" },
         destinatario: { type: "string", enum: ["delegacion", "oficina_tecnica"] },
         estado: { type: "string", enum: ["pendiente", "hecha"] },
+        responsable_id: { type: "string" },
+        fecha_limite: { type: "string" },
+        urgente: { type: "boolean" },
         usuario_email: CAMPO_USUARIO_EMAIL,
       },
       ["id"],
@@ -973,6 +1009,9 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
           referencia: "referencia" in args ? texto(args, "referencia") ?? null : undefined,
           destinatario: opcion(args, "destinatario", ["delegacion", "oficina_tecnica"] as const),
           estado: opcion(args, "estado", ["pendiente", "hecha"] as const),
+          responsable_id: "responsable_id" in args ? texto(args, "responsable_id") ?? null : undefined,
+          fecha_limite: "fecha_limite" in args ? texto(args, "fecha_limite") ?? null : undefined,
+          urgente: booleano(args, "urgente"),
         },
         actor.id,
       )

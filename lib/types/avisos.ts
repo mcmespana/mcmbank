@@ -29,14 +29,25 @@ export type Aviso = Omit<AvisoRow, "tipo" | "destinatario" | "estado"> & {
   autorNombre: string | null
   /** Nombre de quien la marcó como hecha. */
   completadoPorNombre: string | null
+  /** Nombre de quien tiene asignada la tarea (perfil.nombre_completo), si hay responsable. */
+  responsableNombre: string | null
   /** true si soy el autor. */
   esMio: boolean
   /** true si va dirigido a mi lado (oficina técnica o delegación). */
   esParaMi: boolean
+  /** true si soy yo el responsable asignado. */
+  esResponsableMio: boolean
   /** true si todavía no lo he marcado como leído (y no lo escribí yo). */
   noLeido: boolean
   /** Cuántas personas lo han leído (sin contar al autor). */
   lecturas: number
+}
+
+/** Alguien a quien se le puede asignar una tarea: tesorero de la delegación
+ * receptora, o gestor central si la tarea va dirigida a la oficina técnica. */
+export interface AvisoAsignable {
+  id: string
+  nombre: string
 }
 
 export const AVISO_TIPO_LABELS: Record<AvisoTipo, string> = {
@@ -69,4 +80,17 @@ export interface NuevoAviso {
   destinatario: AvisoDestinatario
   /** Enviar además un correo con Resend a quien corresponda. */
   notificar?: boolean
+  /** Solo para tareas: quién tiene que hacerla. */
+  responsable_id?: string | null
+  /** Solo para tareas: fecha límite en ISO "yyyy-mm-dd". */
+  fecha_limite?: string | null
+  /** Solo para tareas: prioridad marcada. */
+  urgente?: boolean
+}
+
+/** Cambios admitidos sobre una tarea ya creada (responsable, fecha, prioridad). */
+export interface AvisoCambios {
+  responsable_id?: string | null
+  fecha_limite?: string | null
+  urgente?: boolean
 }

@@ -131,12 +131,14 @@ Full feature for submitting ideas and bug reports:
 
 ### Notices & Tasks (Avisos y tareas)
 Short notes between the central technical office (`gestor_central`) and each delegation's treasurers:
-- **Types**: `"tarea"` (has `estado` pendiente/hecha) and `"nota"` (informational; `hecha` = archived)
+- **Types**: `"tarea"` (has `estado` pendiente/hecha, plus optional `responsable_id`, `fecha_limite`, `urgente`) and `"nota"` (informational; `hecha` = archived)
 - **Recipient** (`destinatario`): `"oficina_tecnica"` or `"delegacion"`
+- **Responsable**: who a task is assigned to. Eligible people are the receiving side's members — tesoreros of the delegation if `destinatario` is `"delegacion"`, gestor_central users (global) if it's `"oficina_tecnica"` — same pool as the email recipients. Resolved via `perfil`, which any authenticated user can read (`membresia` is readable by any authenticated user too)
 - **Isolation**: every aviso belongs to a delegation; RLS only grants access to `membresia` holders of that delegation, so delegation A never sees B's notes
 - **Unread**: `aviso_lectura` holds one row per (aviso, user); the badge counts avisos with no receipt for the current user
 - **Email**: `POST /api/avisos/notificar` sends it with Resend (needs `RESEND_API_KEY`) to the treasurers of the delegation or to all central managers, never to the author
-- **UI**: floating button bottom-right, mounted once in `components/app-layout.tsx` (`components/avisos/`), opens with ⌘/Ctrl+I
+- **Panel tabs**: filtered by the aviso's `destinatario`, not by who wrote it — "Para vosotros/nosotros" (directed to the delegation) and "Enviados"/"Pedido a la oficina" (directed to oficina técnica) are the same two buckets, worded differently depending on `miLado`; "Hechas" is the completed/archived history
+- **UI**: floating 44px button bottom-right, mounted once in `components/app-layout.tsx` (`components/avisos/`), opens with ⌘/Ctrl+I. On mobile the panel becomes a full-screen overlay (not a route) so closing it returns to the exact same page
 - **Types/service/hook**: `lib/types/avisos.ts`, `lib/services/avisos.ts`, `hooks/use-avisos.ts`
 
 ### File Uploads

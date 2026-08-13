@@ -1,3 +1,26 @@
+import type { AvisoDestinatario } from "@/lib/types/avisos"
+
+/**
+ * Cómo se llama un lado (oficina técnica / delegación) en las frases del
+ * panel. La oficina técnica se llama siempre igual; la delegación se llama
+ * por su nombre visto desde fuera, o "nosotros/vosotros" vista desde dentro.
+ */
+export function ladoLabel(
+  lado: AvisoDestinatario,
+  slot: "origen" | "destino",
+  miLado: AvisoDestinatario,
+  delegacionNombre: string,
+): string {
+  if (lado === "oficina_tecnica") return "Oficina técnica"
+  if (miLado !== "delegacion") return delegacionNombre
+  return slot === "origen" ? "Nosotros" : "Vosotros"
+}
+
+/** A quién avisaría el correo si se manda: "los tesoreros de X" | "la oficina técnica". */
+export function descripcionDestinoCorreo(destinatario: AvisoDestinatario, delegacionNombre: string): string {
+  return destinatario === "delegacion" ? `los tesoreros de ${delegacionNombre}` : "la oficina técnica"
+}
+
 /** "ahora", "hace 5 min", "hace 3 h", "ayer", "12 jul", "12 jul 2024". */
 export function formatRelativoCorto(value?: string | null): string {
   if (!value) return ""
@@ -45,4 +68,26 @@ export function primerNombre(nombre?: string | null): string | null {
   const limpio = nombre.trim()
   if (!limpio) return null
   return limpio.split(/\s+/)[0]
+}
+
+/** "31 dic" (o "31 dic 2027" si no es este año). `fechaIso` es "yyyy-mm-dd". */
+export function formatFechaLimiteCorta(fechaIso?: string | null): string | null {
+  if (!fechaIso) return null
+  // new Date("yyyy-mm-dd") se interpreta en UTC; se fuerza mediodía local para no desplazar el día.
+  const fecha = new Date(`${fechaIso}T12:00:00`)
+  if (Number.isNaN(fecha.getTime())) return null
+  const mismoAnio = fecha.getFullYear() === new Date().getFullYear()
+  return fecha.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    ...(mismoAnio ? {} : { year: "numeric" }),
+  })
+}
+
+/** true si la fecha límite (fecha, sin hora) ya ha pasado. */
+export function estaVencida(fechaIso?: string | null): boolean {
+  if (!fechaIso) return false
+  const limite = new Date(`${fechaIso}T23:59:59`)
+  if (Number.isNaN(limite.getTime())) return false
+  return limite.getTime() < Date.now()
 }

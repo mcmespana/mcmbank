@@ -44,10 +44,12 @@ export async function GET(request: Request) {
  * Deja una nota o una tarea en una delegación.
  *
  * Cuerpo: `{ delegacion, contenido, tipo?, destinatario?, referencia?,
- * notificar?, usuario_email? }`. Con `notificar: true` se envía además por
- * correo (tesoreros de la delegación o gestores centrales, según el
- * destinatario). Si el correo falla, el aviso ya está guardado y la respuesta
- * lo explica en `aviso_notificacion`.
+ * notificar?, usuario_email?, responsable_id?, fecha_limite?, urgente? }`.
+ * Con `notificar: true` se envía además por correo (tesoreros de la
+ * delegación o gestores centrales, según el destinatario). Si el correo
+ * falla, el aviso ya está guardado y la respuesta lo explica en
+ * `aviso_notificacion`. `responsable_id`, `fecha_limite` ("AAAA-MM-DD") y
+ * `urgente` solo se guardan cuando `tipo` es `tarea`.
  */
 export async function POST(request: Request) {
   return conApi(request, "write", async ({ actorHint }) => {
@@ -68,6 +70,9 @@ export async function POST(request: Request) {
         destinatario: cuerpo.destinatario as AvisoDestinatario | null,
         referencia: cuerpo.referencia as string | null,
         notificar: Boolean(cuerpo.notificar),
+        responsable_id: (cuerpo.responsable_id as string | null) ?? null,
+        fecha_limite: (cuerpo.fecha_limite as string | null) ?? null,
+        urgente: Boolean(cuerpo.urgente),
       },
       actor.id,
     )

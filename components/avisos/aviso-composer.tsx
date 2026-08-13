@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { forwardRef, useEffect, useRef, useState } from "react"
 import { es } from "date-fns/locale"
 import {
   ArrowUp,
@@ -10,7 +10,9 @@ import {
   ChevronDown,
   Flag,
   Loader2,
+  MessageSquare,
   Plus,
+  SquareCheckBig,
   Tag,
   User,
   Users,
@@ -33,6 +35,12 @@ export interface AvisoDraft {
   referenciaAbierta: boolean
   /** Solo aplica a tareas. */
   responsable_id: string | null
+  /**
+   * Nombre del responsable elegido. Se guarda junto al id para que el chip lo
+   * muestre al instante (y tras recargar, con el borrador de localStorage) sin
+   * tener que ir a buscar la lista de asignables.
+   */
+  responsable_nombre: string | null
   /** Solo aplica a tareas. ISO "yyyy-mm-dd". */
   fecha_limite: string | null
   /** Solo aplica a tareas. */
@@ -47,6 +55,7 @@ export const AVISO_DRAFT_VACIO: AvisoDraft = {
   notificar: false,
   referenciaAbierta: false,
   responsable_id: null,
+  responsable_nombre: null,
   fecha_limite: null,
   urgente: false,
 }
@@ -56,6 +65,8 @@ interface AvisoComposerProps {
   onDraftChange: (cambios: Partial<AvisoDraft>) => void
   onSubmit: () => void
   enviando: boolean
+  /** Nombre del lado receptor, para el texto en reposo ("…a MCM Vila-real"). */
+  destinoNombre: string
   /** A quién avisaría el correo si se activa el interruptor, para el pie. */
   descripcionCorreo: string
   /** A quién se le puede asignar la tarea dirigida a `destinatario`. */
@@ -74,41 +85,40 @@ const DESTINATARIO_OPCIONES: { value: AvisoDestinatario; label: string; icono: t
   { value: "oficina_tecnica", label: "Para la oficina técnica", icono: Users },
 ]
 
-function Chip({
-  active,
-  dashed,
-  onClick,
-  children,
-  className,
-}: {
-  active?: boolean
-  dashed?: boolean
-  onClick?: () => void
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[12px] font-medium transition-colors duration-150",
-        dashed ? "border border-dashed border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground" : "",
-        !dashed && !active && "bg-muted text-muted-foreground hover:text-foreground",
-        active && "bg-primary/10 text-primary hover:bg-primary/15",
-        className,
-      )}
-    >
-      {children}
-    </button>
-  )
-}
+/**
+ * Chip de detalle del compositor (responsable, fecha, prioridad, referencia).
+ *
+ * Reenvía ref y props porque varios de estos chips son el `PopoverTrigger` de
+ * Radix con `asChild`: si no se propagan, el `onClick` que abre el desplegable
+ * nunca llega al botón y el chip se queda muerto.
+ */
+const Chip = forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { relleno?: boolean }
+>(({ relleno, className, children, ...props }, ref) => (
+  <button
+    ref={ref}
+    type="button"
+    {...props}
+    className={cn(
+      "inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[12px] transition-colors duration-150",
+      relleno
+        ? "bg-secondary text-muted-foreground hover:bg-secondary/80"
+        : "border border-dashed border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+      className,
+    )}
+  >
+    {children}
+  </button>
+))
+Chip.displayName = "Chip"
 
 export function AvisoComposer({
   draft,
   onDraftChange,
   onSubmit,
   enviando,
+  destinoNombre,
   descripcionCorreo,
   onCargarAsignables,
   textareaRef,
@@ -118,9 +128,8 @@ export function AvisoComposer({
   const referenciaRef = useRef<HTMLInputElement | null>(null)
   const contenedorRef = useRef<HTMLDivElement | null>(null)
 
-  // "Reposo" solo cuando no hay nada que perder: si hay texto o metadatos
-  // (por ejemplo, un borrador recuperado de localStorage tras hidratar) el
-  // compositor se muestra abierto sin esperar a que el usuario haga clic.
+  // "Reposo" solo cuando no hay nada que perder: si hay texto o detalles (por
+  // ejemplo un borrador recuperado de localStorage) se muestra ya desplegado.
   const [expandidoManual, setExpandidoManual] = useState(false)
   const [destinoAbierto, setDestinoAbierto] = useState(false)
   const [responsableAbierto, setResponsableAbierto] = useState(false)
@@ -130,8 +139,10 @@ export function AvisoComposer({
 
   const esTarea = draft.tipo === "tarea"
   const puedeEnviar = draft.contenido.trim().length > 0 && !enviando
-  const tieneMetadatos = Boolean(draft.referencia || draft.responsable_id || draft.fecha_limite || draft.urgente)
-  const expandido = expandidoManual || Boolean(draft.contenido.trim()) || tieneMetadatos
+  const tieneDetalles = Boolean(
+    draft.referencia || draft.responsable_id || draft.fecha_limite || draft.urgente,
+  )
+  const expandido = expandidoManual || Boolean(draft.contenido.trim()) || tieneDetalles
 
   // Autoajuste de altura: crece hasta 5 líneas y luego hace scroll.
   useEffect(() => {
@@ -145,9 +156,9 @@ export function AvisoComposer({
     if (draft.referenciaAbierta) referenciaRef.current?.focus()
   }, [draft.referenciaAbierta])
 
-  // Se carga al abrir el popover (no en un efecto): es una reacción directa al
-  // clic del usuario, no una sincronización con el render.
-  const abrirResponsablePicker = (siguiente: boolean) => {
+  // Se carga al abrir el desplegable, no en un efecto: es una reacción directa
+  // al clic del usuario, no una sincronización con el render.
+  const abrirResponsables = (siguiente: boolean) => {
     setResponsableAbierto(siguiente)
     if (!siguiente) return
     setCargandoAsignables(true)
@@ -168,115 +179,120 @@ export function AvisoComposer({
     }
   }
 
-  const handleBlurContenedor = () => {
-    // Los popovers (destinatario, responsable, fecha) se pintan en un portal
-    // fuera de este contenedor, así que el foco puede "salir" del DOM sin que
-    // el usuario haya abandonado el compositor. Se comprueba en el siguiente
-    // tick, cuando el nuevo elemento activo ya está asentado.
+  const handleBlur = () => {
+    // Los desplegables se pintan en un portal fuera de este contenedor, así que
+    // el foco puede salir del árbol sin que el usuario haya abandonado el
+    // compositor. Se comprueba en el siguiente tick, ya asentado el foco.
     setTimeout(() => {
       if (destinoAbierto || responsableAbierto || fechaAbierta) return
       if (contenedorRef.current?.contains(document.activeElement)) return
-      if (draft.contenido.trim() || tieneMetadatos) return
+      if (draft.contenido.trim() || tieneDetalles) return
       setExpandidoManual(false)
     }, 0)
   }
 
-  const responsableActual = draft.responsable_id
-    ? asignables.find((a) => a.id === draft.responsable_id)?.nombre
-    : null
-
+  // ── Reposo: el compositor plegado, la lista manda ──────────────────────────
   if (!expandido) {
     return (
-      <div className="px-2.5 pb-2.5">
+      <div className="px-4 pb-3.5">
         <button
           type="button"
           onClick={abrir}
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-2xl border border-dashed border-border px-3.5 py-3 text-left text-[13.5px] text-muted-foreground",
-            "transition-colors duration-150 hover:border-foreground/25 hover:text-foreground",
+            // Móvil: acción principal de la barra inferior, sólida y a 48px.
+            "flex w-full items-center justify-center gap-2.5 rounded-[14px]",
+            "h-12 bg-primary text-[15px] font-semibold text-primary-foreground",
+            "transition-colors duration-150 hover:bg-primary/90",
+            // Escritorio: discreta, la lista manda.
+            "sm:h-auto sm:justify-start sm:rounded-[14px] sm:border sm:border-dashed sm:border-border",
+            "sm:bg-background sm:px-3.5 sm:py-3 sm:text-left sm:text-[13.5px] sm:font-normal sm:text-muted-foreground",
+            "sm:hover:border-foreground/25 sm:hover:bg-background sm:hover:text-foreground",
           )}
         >
-          <Plus className="h-4 w-4 shrink-0" aria-hidden />
-          Escribir un aviso…
+          <Plus className="h-[18px] w-[18px] shrink-0 sm:h-4 sm:w-4" aria-hidden />
+          <span className="truncate sm:hidden">Escribir un aviso</span>
+          <span className="hidden truncate sm:inline">Escribir un aviso a {destinoNombre}…</span>
         </button>
       </div>
     )
   }
 
+  // ── Escribiendo ────────────────────────────────────────────────────────────
   return (
-    <div className="px-2.5 pb-2.5" ref={contenedorRef} onBlur={handleBlurContenedor}>
-      <div
-        className={cn(
-          "rounded-2xl border border-primary/45 bg-background/70",
-          "shadow-[0_0_0_3.5px_hsl(var(--primary)/0.10)]",
-        )}
-      >
+    <div className="px-4 pb-3.5" ref={contenedorRef} onBlur={handleBlur}>
+      <div className="rounded-2xl border border-primary/45 bg-card shadow-[0_0_0_3.5px_hsl(var(--primary)/0.10)]">
         {/* Tipo + destinatario */}
         <div className="flex items-center gap-1 px-2.5 pt-2.5">
-          <div className="flex rounded-lg bg-muted/70 p-[2px]">
-            <button
-              type="button"
-              onClick={() => onDraftChange({ tipo: "tarea" })}
-              aria-pressed={draft.tipo === "tarea"}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11.5px] font-semibold",
-                "transition-[background-color,color] duration-150",
-                draft.tipo === "tarea"
-                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Tarea
-            </button>
-            <button
-              type="button"
-              onClick={() => onDraftChange({ tipo: "nota" })}
-              aria-pressed={draft.tipo === "nota"}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11.5px] font-semibold",
-                "transition-[background-color,color] duration-150",
-                draft.tipo === "nota"
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Nota
-            </button>
-          </div>
+          {(
+            [
+              { tipo: "tarea" as const, label: "Tarea", Icono: SquareCheckBig },
+              { tipo: "nota" as const, label: "Nota", Icono: MessageSquare },
+            ]
+          ).map(({ tipo, label, Icono }) => {
+            const activo = draft.tipo === tipo
+            return (
+              <button
+                key={tipo}
+                type="button"
+                onClick={() => onDraftChange({ tipo })}
+                aria-pressed={activo}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-lg px-[11px] text-[12px]",
+                  "transition-colors duration-150",
+                  activo
+                    ? tipo === "tarea"
+                      ? "bg-amber-500/[0.14] font-semibold text-amber-800 dark:text-amber-300"
+                      : "bg-primary/[0.14] font-semibold text-blue-700 dark:text-blue-300"
+                    : "font-medium text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icono className="h-[13px] w-[13px]" aria-hidden />
+                {label}
+              </button>
+            )
+          })}
 
-          <div className="flex-1" />
+          <span className="flex-1" />
 
           <Popover open={destinoAbierto} onOpenChange={setDestinoAbierto}>
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-2 text-[11.5px] font-medium text-foreground transition-colors duration-150 hover:bg-muted"
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-2.5",
+                  "text-[11.5px] font-medium text-foreground transition-colors duration-150 hover:bg-muted",
+                )}
               >
                 {DESTINATARIO_OPCIONES.find((o) => o.value === draft.destinatario)?.label}
                 <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden />
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-56 p-1">
-              {DESTINATARIO_OPCIONES.map((opcion) => {
-                const Icono = opcion.icono
-                const activo = draft.destinatario === opcion.value
+            <PopoverContent align="end" className="w-60 p-1">
+              {DESTINATARIO_OPCIONES.map(({ value, label, icono: Icono }) => {
+                const activo = draft.destinatario === value
                 return (
                   <button
-                    key={opcion.value}
+                    key={value}
                     type="button"
                     onClick={() => {
-                      onDraftChange({ destinatario: opcion.value })
+                      // El responsable se elige entre la gente del lado que
+                      // recibe: si cambia el destinatario, deja de ser válido.
+                      onDraftChange({
+                        destinatario: value,
+                        responsable_id: null,
+                        responsable_nombre: null,
+                      })
                       setDestinoAbierto(false)
                     }}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px]",
+                      "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px]",
                       "transition-colors duration-150 hover:bg-muted",
                       activo && "font-medium text-foreground",
                     )}
                   >
-                    <Icono className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                    <span className="flex-1">{opcion.label}</span>
-                    {activo && <Check className="h-3.5 w-3.5 text-primary" aria-hidden />}
+                    <Icono className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="flex-1">{label}</span>
+                    {activo && <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />}
                   </button>
                 )
               })}
@@ -284,6 +300,7 @@ export function AvisoComposer({
           </Popover>
         </div>
 
+        {/* Texto */}
         <textarea
           ref={ref}
           rows={1}
@@ -292,16 +309,15 @@ export function AvisoComposer({
           onChange={(event) => onDraftChange({ contenido: event.target.value })}
           onKeyDown={handleKeyDown}
           placeholder={PLACEHOLDERS[draft.tipo]}
-          aria-label={draft.tipo === "tarea" ? "Nueva tarea" : "Nueva nota"}
+          aria-label={esTarea ? "Nueva tarea" : "Nueva nota"}
           className={cn(
-            "block w-full resize-none bg-transparent px-3 pt-2 text-[13.5px] leading-[1.5]",
-            "outline-none placeholder:text-muted-foreground/60",
-            "scrollbar-thin",
+            "scrollbar-thin block w-full resize-none bg-transparent px-3.5 pb-0.5 pt-2",
+            "text-[13.5px] leading-[1.55] outline-none placeholder:text-muted-foreground/60",
           )}
         />
 
         {draft.referenciaAbierta && (
-          <div className="flex items-center gap-1.5 px-3 pt-1.5">
+          <div className="flex items-center gap-1.5 px-3.5 pt-1.5">
             <Tag className="h-3 w-3 shrink-0 text-muted-foreground/70" aria-hidden />
             <input
               ref={referenciaRef}
@@ -338,31 +354,30 @@ export function AvisoComposer({
           </div>
         )}
 
-        {/* Chips opcionales: solo tienen sentido en tareas */}
-        <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2">
+        {/* Detalles opcionales: solo tienen sentido en una tarea */}
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
           {esTarea && (
-            <Popover open={responsableAbierto} onOpenChange={abrirResponsablePicker}>
+            <Popover open={responsableAbierto} onOpenChange={abrirResponsables}>
               <PopoverTrigger asChild>
-                <Chip active={Boolean(draft.responsable_id)} dashed={!draft.responsable_id}>
-                  <User className="h-3 w-3" aria-hidden />
-                  {draft.responsable_id ? (
-                    <>
-                      Responsable <span className="font-semibold">{responsableActual ?? "…"}</span>
-                    </>
-                  ) : (
-                    "Responsable"
+                <Chip relleno={Boolean(draft.responsable_id)}>
+                  <User className="h-[13px] w-[13px]" aria-hidden />
+                  Responsable
+                  {draft.responsable_id && (
+                    <span className="font-semibold text-foreground">
+                      {draft.responsable_nombre ?? "Asignado"}
+                    </span>
                   )}
                 </Chip>
               </PopoverTrigger>
-              <PopoverContent align="start" className="w-56 p-1">
+              <PopoverContent align="start" className="w-60 p-1">
                 {cargandoAsignables ? (
                   <div className="flex items-center justify-center gap-2 py-4 text-[12px] text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                     Cargando…
                   </div>
                 ) : asignables.length === 0 ? (
-                  <p className="px-2 py-3 text-[12px] text-muted-foreground">
-                    No hay nadie a quien asignar todavía.
+                  <p className="px-2 py-3 text-[12px] leading-snug text-muted-foreground">
+                    No hay nadie a quien asignar en ese lado todavía.
                   </p>
                 ) : (
                   <>
@@ -371,18 +386,21 @@ export function AvisoComposer({
                         key={persona.id}
                         type="button"
                         onClick={() => {
-                          onDraftChange({ responsable_id: persona.id })
+                          onDraftChange({
+                            responsable_id: persona.id,
+                            responsable_nombre: persona.nombre,
+                          })
                           setResponsableAbierto(false)
                         }}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px]",
+                          "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px]",
                           "transition-colors duration-150 hover:bg-muted",
                           draft.responsable_id === persona.id && "font-medium",
                         )}
                       >
                         <span className="flex-1 truncate">{persona.nombre}</span>
                         {draft.responsable_id === persona.id && (
-                          <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
                         )}
                       </button>
                     ))}
@@ -390,10 +408,10 @@ export function AvisoComposer({
                       <button
                         type="button"
                         onClick={() => {
-                          onDraftChange({ responsable_id: null })
+                          onDraftChange({ responsable_id: null, responsable_nombre: null })
                           setResponsableAbierto(false)
                         }}
-                        className="mt-0.5 flex w-full items-center gap-2 rounded-md border-t border-border px-2 py-1.5 pt-2 text-left text-[12.5px] text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+                        className="mt-1 w-full rounded-md border-t border-border px-2 pb-1.5 pt-2 text-left text-[12.5px] text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
                       >
                         Quitar responsable
                       </button>
@@ -407,16 +425,27 @@ export function AvisoComposer({
           {esTarea && (
             <Popover open={fechaAbierta} onOpenChange={setFechaAbierta}>
               <PopoverTrigger asChild>
-                <Chip active={Boolean(draft.fecha_limite)} dashed={!draft.fecha_limite}>
-                  <CalendarIcon className="h-3 w-3" aria-hidden />
-                  {draft.fecha_limite ? `Antes del ${formatFechaLimiteCorta(draft.fecha_limite)}` : "Fecha límite"}
+                <Chip relleno={Boolean(draft.fecha_limite)}>
+                  <CalendarIcon className="h-[13px] w-[13px]" aria-hidden />
+                  {draft.fecha_limite ? (
+                    <>
+                      Antes del{" "}
+                      <span className="font-semibold text-foreground">
+                        {formatFechaLimiteCorta(draft.fecha_limite)}
+                      </span>
+                    </>
+                  ) : (
+                    "Fecha límite"
+                  )}
                 </Chip>
               </PopoverTrigger>
               <PopoverContent align="start" className="w-auto p-0">
                 <Calendar
                   mode="single"
                   selected={draft.fecha_limite ? new Date(`${draft.fecha_limite}T12:00:00`) : undefined}
-                  defaultMonth={draft.fecha_limite ? new Date(`${draft.fecha_limite}T12:00:00`) : new Date()}
+                  defaultMonth={
+                    draft.fecha_limite ? new Date(`${draft.fecha_limite}T12:00:00`) : new Date()
+                  }
                   locale={es}
                   onSelect={(date) => {
                     if (!date) return
@@ -429,7 +458,7 @@ export function AvisoComposer({
                   autoFocus
                 />
                 {draft.fecha_limite && (
-                  <div className="border-t p-2">
+                  <div className="border-t border-border p-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -448,46 +477,54 @@ export function AvisoComposer({
 
           {esTarea && (
             <Chip
-              active={draft.urgente}
-              dashed={!draft.urgente}
+              relleno={draft.urgente}
               onClick={() => onDraftChange({ urgente: !draft.urgente })}
-              className={draft.urgente ? "bg-destructive/10 text-destructive hover:bg-destructive/15" : undefined}
+              aria-pressed={draft.urgente}
+              className={
+                draft.urgente
+                  ? "bg-destructive/[0.12] font-semibold text-red-700 hover:bg-destructive/[0.18] dark:text-red-400"
+                  : undefined
+              }
             >
-              <Flag className="h-3 w-3" aria-hidden />
+              <Flag className="h-[13px] w-[13px]" aria-hidden />
               Urgente
             </Chip>
           )}
 
           {!draft.referenciaAbierta && (
-            <Chip dashed onClick={() => onDraftChange({ referenciaAbierta: true })}>
-              <Tag className="h-3 w-3" aria-hidden />
+            <Chip onClick={() => onDraftChange({ referenciaAbierta: true })}>
+              <Tag className="h-[13px] w-[13px]" aria-hidden />
               Referencia
             </Chip>
           )}
         </div>
 
-        {/* Pie: avisar por correo + enviar */}
-        <div className="mt-2.5 flex items-center gap-2.5 rounded-b-2xl border-t border-border/70 bg-primary/[0.03] px-3 py-2.5">
+        {/* Pie: a qué buzón va y enviar */}
+        <div
+          className={cn(
+            "mt-3 flex items-center gap-2.5 rounded-b-[15px] border-t border-border bg-primary/[0.04] px-3 py-2.5",
+          )}
+        >
           <Switch
             checked={draft.notificar}
             onCheckedChange={(checked) => onDraftChange({ notificar: checked })}
             aria-label="Avisar por correo al enviar"
           />
-          <span className="min-w-0 text-[11.5px] leading-[1.35] text-muted-foreground">
+          <span className="min-w-0 text-[12px] leading-[1.35] text-muted-foreground">
             Avisar por correo a
             <br />
             <span className="font-semibold text-foreground">{descripcionCorreo}</span>
           </span>
-          <div className="flex-1" />
+          <span className="flex-1" />
           <button
             type="button"
             onClick={onSubmit}
             disabled={!puedeEnviar}
             title="Enviar (Intro)"
             className={cn(
-              "inline-flex h-[34px] items-center gap-1.5 rounded-[10px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground",
-              "transition-[background-color,opacity] duration-150 hover:bg-primary/90",
-              "disabled:pointer-events-none disabled:bg-muted disabled:text-muted-foreground/50",
+              "inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[10px] px-3.5 text-[13px] font-semibold",
+              "bg-primary text-primary-foreground transition-colors duration-150 hover:bg-primary/90",
+              "disabled:pointer-events-none disabled:bg-muted disabled:text-muted-foreground/60",
             )}
           >
             {enviando ? (

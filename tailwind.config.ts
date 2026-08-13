@@ -13,6 +13,12 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		transitionTimingFunction: {
+  			// Curva de entrada/salida de paneles y hojas. Con nombre propio: la
+  			// forma arbitraria equivalente lleva comas y Tailwind la marca como
+  			// ambigua al escanear el contenido.
+  			panel: 'cubic-bezier(0.2, 0, 0, 1)',
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',

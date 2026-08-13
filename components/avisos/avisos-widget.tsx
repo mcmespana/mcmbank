@@ -74,6 +74,8 @@ export function AvisosWidget() {
     setDraft((prev) => ({
       ...prev,
       destinatario: miLado === "delegacion" ? "oficina_tecnica" : "delegacion",
+      responsable_id: null,
+      responsable_nombre: null,
     }))
   }, [miLado, rolConocido, draft.contenido, setDraft])
 
@@ -161,6 +163,7 @@ export function AvisosWidget() {
         referencia: "",
         referenciaAbierta: false,
         responsable_id: null,
+        responsable_nombre: null,
         fecha_limite: null,
         urgente: false,
       }))
@@ -224,17 +227,29 @@ export function AvisosWidget() {
   const atajo = esMac ? "⌘I" : "Ctrl+I"
 
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6 print:hidden">
+    <div className="pointer-events-none fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2.5 sm:bottom-6 sm:right-6 print:hidden">
+      {/* Velo solo en móvil: la hoja tapa la pantalla, pero sigues en la misma página */}
+      {montado && (
+        <div
+          aria-hidden
+          onClick={cerrar}
+          className={cn(
+            "pointer-events-auto fixed inset-0 z-40 bg-foreground/20 backdrop-blur-[2px] sm:hidden",
+            open ? "duration-200 animate-in fade-in-0" : "duration-150 animate-out fade-out-0",
+          )}
+        />
+      )}
+
       {montado && (
         <div
           ref={panelRef}
           className={cn(
             // Móvil: hoja a pantalla completa, sin salir de donde estabas (es
-            // una superposición, no una navegación). Desktop: panel flotante
-            // anclado junto al botón, como hasta ahora.
+            // una superposición, no una navegación). Escritorio: panel flotante
+            // anclado junto al botón.
             "pointer-events-auto fixed inset-0 z-50 sm:static sm:inset-auto sm:z-auto sm:w-[27.25rem]",
             open
-              ? "duration-200 ease-[cubic-bezier(0.2,0,0,1)] animate-in fade-in-0 slide-in-from-bottom-4 sm:zoom-in-[0.98] sm:slide-in-from-bottom-3"
+              ? "duration-200 ease-panel animate-in fade-in-0 slide-in-from-bottom-4 sm:zoom-in-[0.98] sm:slide-in-from-bottom-3"
               : "duration-150 ease-out animate-out fade-out-0 slide-out-to-bottom-4 sm:slide-out-to-bottom-1",
           )}
         >
@@ -275,11 +290,11 @@ export function AvisosWidget() {
         aria-label={`Avisos y tareas (${atajo})`}
         title={`Avisos y tareas · ${atajo}`}
         className={cn(
-          "pointer-events-auto relative flex h-11 w-11 items-center justify-center rounded-full",
-          "border border-border/60 bg-card/90 text-foreground/80 backdrop-blur-xl",
-          "shadow-[0_1px_2px_rgba(0,0,0,0.05),0_6px_16px_-4px_rgba(0,0,0,0.18)]",
+          "pointer-events-auto relative flex h-11 w-11 items-center justify-center rounded-full sm:h-12 sm:w-12",
+          "bg-foreground text-background",
+          "shadow-[0_1px_2px_rgba(0,0,0,0.05),0_10px_24px_-6px_rgba(0,0,0,0.32)]",
           "transition-[background-color,color,box-shadow,transform,opacity] duration-150",
-          "hover:text-foreground hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_10px_24px_-6px_rgba(0,0,0,0.24)]",
+          "hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_14px_30px_-8px_rgba(0,0,0,0.40)]",
           "active:scale-[0.96]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           // La hoja a pantalla completa en móvil ya tiene su propio botón de
@@ -291,14 +306,14 @@ export function AvisosWidget() {
         <ClipboardList
           aria-hidden
           className={cn(
-            "absolute h-[18px] w-[18px] transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+            "absolute h-[18px] w-[18px] transition-[opacity,transform,filter] duration-200 ease-panel sm:h-[19px] sm:w-[19px]",
             open ? "scale-[0.25] opacity-0 blur-[4px]" : "scale-100 opacity-100 blur-0",
           )}
         />
         <X
           aria-hidden
           className={cn(
-            "absolute h-[18px] w-[18px] transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+            "absolute h-[18px] w-[18px] transition-[opacity,transform,filter] duration-200 ease-panel sm:h-[19px] sm:w-[19px]",
             open ? "scale-100 opacity-100 blur-0" : "scale-[0.25] opacity-0 blur-[4px]",
           )}
         />
@@ -306,7 +321,7 @@ export function AvisosWidget() {
         {badge > 0 && !open && (
           <span
             className={cn(
-              "absolute -right-0.5 -top-0.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1",
+              "absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1",
               "text-[10px] font-semibold leading-none tabular-nums text-white",
               "ring-2 ring-background duration-200 animate-in fade-in-0 zoom-in-75",
               badgeNoLeidos ? "bg-primary" : "bg-amber-500",

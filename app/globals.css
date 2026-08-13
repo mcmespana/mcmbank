@@ -37,6 +37,16 @@
   .scrollbar-thin::-webkit-scrollbar-track {
     background-color: #f3f4f6;
   }
+
+  /* Filas que se desplazan en horizontal sin enseñar la barra (filtros, chips) */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {

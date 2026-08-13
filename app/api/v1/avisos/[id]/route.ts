@@ -18,7 +18,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  * PATCH /api/v1/avisos/{id}
  *
  * Edita el texto o cierra la tarea: `{ estado: "hecha" }` la marca como hecha
- * y anota quién lo hizo.
+ * y anota quién lo hizo. También admite `responsable_id`, `fecha_limite`
+ * ("AAAA-MM-DD") y `urgente`; pasa `null` en `responsable_id`/`fecha_limite`
+ * para quitarlos.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   return conApi(request, "write", async ({ actorHint }) => {
@@ -39,6 +41,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         referencia: "referencia" in cuerpo ? (cuerpo.referencia as string | null) : undefined,
         destinatario: cuerpo.destinatario as AvisoDestinatario | null,
         estado: cuerpo.estado as AvisoEstado | null,
+        responsable_id: "responsable_id" in cuerpo ? (cuerpo.responsable_id as string | null) : undefined,
+        fecha_limite: "fecha_limite" in cuerpo ? (cuerpo.fecha_limite as string | null) : undefined,
+        urgente: "urgente" in cuerpo ? Boolean(cuerpo.urgente) : undefined,
       },
       actor.id,
     )

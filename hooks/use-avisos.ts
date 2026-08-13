@@ -6,7 +6,14 @@ import { useAuth } from "@/contexts/auth-context"
 import { useDelegationRole } from "@/hooks/use-delegation-role"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { registerAC, unregisterAC } from "@/lib/db/in-flight"
-import type { Aviso, AvisoContadores, AvisoDestinatario, NuevoAviso } from "@/lib/types/avisos"
+import type {
+  Aviso,
+  AvisoAsignable,
+  AvisoCambios,
+  AvisoContadores,
+  AvisoDestinatario,
+  NuevoAviso,
+} from "@/lib/types/avisos"
 
 const QUERY_TIMEOUT_MS = 12_000
 // Sondeo suave: el panel se revalida al enfocar la pestaña; este intervalo solo
@@ -35,6 +42,10 @@ export interface UseAvisosResult {
   eliminar: (id: string) => Promise<void>
   marcarLeidos: (ids: string[]) => Promise<void>
   notificar: (id: string) => Promise<string[]>
+  /** Responsable, fecha límite y/o prioridad de una tarea ya creada. */
+  actualizarCambios: (id: string, cambios: AvisoCambios) => Promise<void>
+  /** A quién se le puede asignar una tarea dirigida a `destinatario`. */
+  listarAsignables: (destinatario: AvisoDestinatario) => Promise<AvisoAsignable[]>
 }
 
 export function useAvisos(delegacionId?: string | null): UseAvisosResult {
@@ -223,6 +234,26 @@ export function useAvisos(delegacionId?: string | null): UseAvisosResult {
     return destinatarios
   }, [])
 
+  const actualizarCambios = useCallback(async (id: string, cambios: AvisoCambios) => {
+    const previo = avisosRef.current
+    setAvisos((prev) => prev.map((a) => (a.id === id ? { ...a, ...cambios } : a)))
+    try {
+      await AvisosService.actualizarCambios(id, cambios)
+      await fetchRef.current()
+    } catch (err) {
+      setAvisos(previo)
+      throw err
+    }
+  }, [])
+
+  const listarAsignables = useCallback(
+    (destinatario: AvisoDestinatario) => {
+      if (!delegacionId) return Promise.resolve([])
+      return AvisosService.listarAsignables(delegacionId, destinatario)
+    },
+    [delegacionId],
+  )
+
   const contadores = useMemo<AvisoContadores>(
     () => ({
       noLeidos: avisos.filter((a) => a.noLeido).length,
@@ -249,6 +280,8 @@ export function useAvisos(delegacionId?: string | null): UseAvisosResult {
     eliminar,
     marcarLeidos,
     notificar,
+    actualizarCambios,
+    listarAsignables,
   }
 }
 

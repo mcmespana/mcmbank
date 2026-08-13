@@ -46,6 +46,9 @@ export interface AvisoPublico {
   completado_por: { id: string; nombre: string | null } | null
   completado_en: string | null
   notificado_en: string | null
+  responsable: { id: string; nombre: string | null } | null
+  fecha_limite: string | null
+  urgente: boolean
   lecturas: number
   creado_en: string
   actualizado_en: string
@@ -63,19 +66,24 @@ const AVISO_SELECT = `
   completado_en,
   notificado_en,
   notificado_por,
+  responsable_id,
+  fecha_limite,
+  urgente,
   creado_por,
   creado_en,
   actualizado_en,
   lecturas:aviso_lectura ( usuario_id )
 `
 
-/** Nombres de perfil de los usuarios implicados (autores y completadores). */
+/** Nombres de perfil de los usuarios implicados (autores, completadores y responsables). */
 async function nombresDePerfil(
   admin: AdminClient,
   filas: any[],
 ): Promise<Record<string, string>> {
   const ids = Array.from(
-    new Set(filas.flatMap((f) => [f.creado_por, f.completado_por].filter(Boolean) as string[])),
+    new Set(
+      filas.flatMap((f) => [f.creado_por, f.completado_por, f.responsable_id].filter(Boolean) as string[]),
+    ),
   )
   if (ids.length === 0) return {}
 
@@ -117,6 +125,11 @@ function serializeAviso(
       : null,
     completado_en: fila.completado_en ?? null,
     notificado_en: fila.notificado_en ?? null,
+    responsable: fila.responsable_id
+      ? { id: fila.responsable_id, nombre: nombres[fila.responsable_id] ?? null }
+      : null,
+    fecha_limite: fila.fecha_limite ?? null,
+    urgente: Boolean(fila.urgente),
     lecturas: lecturas.filter((l) => l.usuario_id !== fila.creado_por).length,
     creado_en: fila.creado_en,
     actualizado_en: fila.actualizado_en,
@@ -189,6 +202,12 @@ export interface CrearAvisoParams {
   referencia?: string | null
   /** Enviar además el correo a los destinatarios. */
   notificar?: boolean
+  /** Solo se guarda si tipo es 'tarea'. Quién tiene que hacerla. */
+  responsable_id?: string | null
+  /** Solo se guarda si tipo es 'tarea'. Fecha límite "yyyy-mm-dd". */
+  fecha_limite?: string | null
+  /** Solo se guarda si tipo es 'tarea'. Marca de prioridad. */
+  urgente?: boolean | null
 }
 
 export interface CrearAvisoResultado {
@@ -234,6 +253,11 @@ export async function crearAviso(
   }
 
   const referencia = params.referencia?.trim().slice(0, AVISO_MAX_REFERENCIA) || null
+  const esTarea = tipo === "tarea"
+
+  if (params.fecha_limite && !/^\d{4}-\d{2}-\d{2}$/.test(params.fecha_limite)) {
+    throw badRequest(`fecha_limite debe tener el formato "AAAA-MM-DD", recibido '${params.fecha_limite}'.`)
+  }
 
   const fila = unwrap(
     await (admin as any)
@@ -245,6 +269,9 @@ export async function crearAviso(
         referencia,
         destinatario,
         creado_por: actorId,
+        responsable_id: esTarea ? params.responsable_id ?? null : null,
+        fecha_limite: esTarea ? params.fecha_limite ?? null : null,
+        urgente: esTarea ? Boolean(params.urgente) : false,
       })
       .select(AVISO_SELECT)
       .single(),
@@ -273,6 +300,11 @@ export interface ActualizarAvisoParams {
   referencia?: string | null
   destinatario?: AvisoDestinatario | null
   estado?: AvisoEstado | null
+  /** Quién tiene que hacer la tarea. Pasa null para quitar el responsable. */
+  responsable_id?: string | null
+  /** Fecha límite "yyyy-mm-dd". Pasa null para quitarla. */
+  fecha_limite?: string | null
+  urgente?: boolean | null
 }
 
 export async function actualizarAviso(
@@ -314,10 +346,22 @@ export async function actualizarAviso(
     updates.estado = cambios.estado
     updates.completado_por = cambios.estado === "hecha" ? actorId : null
   }
+  if (cambios.responsable_id !== undefined) {
+    updates.responsable_id = cambios.responsable_id
+  }
+  if (cambios.fecha_limite !== undefined) {
+    if (cambios.fecha_limite && !/^\d{4}-\d{2}-\d{2}$/.test(cambios.fecha_limite)) {
+      throw badRequest(`fecha_limite debe tener el formato "AAAA-MM-DD", recibido '${cambios.fecha_limite}'.`)
+    }
+    updates.fecha_limite = cambios.fecha_limite
+  }
+  if (cambios.urgente !== undefined && cambios.urgente !== null) {
+    updates.urgente = Boolean(cambios.urgente)
+  }
 
   if (Object.keys(updates).length === 0) {
     throw badRequest(
-      "No has indicado ningún cambio. Campos admitidos: contenido, referencia, destinatario, estado.",
+      "No has indicado ningún cambio. Campos admitidos: contenido, referencia, destinatario, estado, responsable_id, fecha_limite, urgente.",
     )
   }
 
@@ -325,6 +369,41 @@ export async function actualizarAviso(
   if (error) throw wrapSupabaseError(error)
 
   return obtenerAviso(admin, id)
+}
+
+export interface AsignableAviso {
+  id: string
+  nombre: string | null
+}
+
+/**
+ * Quién se puede asignar como responsable de una tarea: tesoreros de la
+ * delegación si va dirigida a ella, o gestores centrales (globales) si va
+ * dirigida a la oficina técnica. Mismo criterio que los destinatarios del correo.
+ */
+export async function listarAsignablesAviso(
+  admin: AdminClient,
+  delegacionRef: string,
+  destinatario: AvisoDestinatario,
+): Promise<AsignableAviso[]> {
+  const delegacion = await resolveDelegacion(admin, delegacionRef)
+
+  let query = (admin as any).from("membresia").select("usuario_id")
+  query =
+    destinatario === "delegacion"
+      ? query.eq("delegacion_id", delegacion.id).eq("rol", "tesorero")
+      : query.eq("rol", "gestor_central")
+
+  const { data, error } = await query
+  if (error) throw wrapSupabaseError(error)
+
+  const ids: string[] = Array.from(new Set((data ?? []).map((m: any) => String(m.usuario_id))))
+  if (ids.length === 0) return []
+
+  const nombres = await nombresDePerfil(admin, ids.map((id) => ({ creado_por: id })))
+  return ids
+    .map((id): AsignableAviso => ({ id, nombre: nombres[id] ?? null }))
+    .sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? ""))
 }
 
 export async function eliminarAviso(admin: AdminClient, id: string): Promise<void> {

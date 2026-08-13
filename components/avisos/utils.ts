@@ -62,12 +62,30 @@ export function formatFechaCompleta(value?: string | null): string {
   })
 }
 
-/** Primer nombre, para que la línea de meta no se haga larga. */
-export function primerNombre(nombre?: string | null): string | null {
-  if (!nombre) return null
-  const limpio = nombre.trim()
-  if (!limpio) return null
-  return limpio.split(/\s+/)[0]
+/**
+ * Los desplegables del panel (calendario, responsable, destinatario) los pinta
+ * Radix en un portal colgado del body, así que no cuelgan del panel.
+ */
+const SELECTOR_PORTAL = "[data-radix-popper-content-wrapper]"
+
+/**
+ * ¿Este clic debe cerrar el panel de avisos?
+ *
+ * Solo si cae de verdad fuera: ni en el panel, ni en el botón flotante, ni en
+ * uno de esos desplegables. Sin la última comprobación, elegir un día en el
+ * calendario se lee como clic fuera y cierra el panel entero.
+ */
+export function clicCierraPanel(
+  target: Node | null,
+  panel: HTMLElement | null,
+  boton: HTMLElement | null,
+): boolean {
+  if (!target) return true
+  if (panel?.contains(target)) return false
+  if (boton?.contains(target)) return false
+  // Un nodo de texto no tiene closest(); se pregunta a su elemento padre.
+  const elemento = "closest" in target ? (target as Element) : target.parentElement
+  return !elemento?.closest(SELECTOR_PORTAL)
 }
 
 /** "31 dic" (o "31 dic 2027" si no es este año). `fechaIso` es "yyyy-mm-dd". */

@@ -9,6 +9,7 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useAvisos } from "@/hooks/use-avisos"
 import { useLocalStorageState } from "@/hooks/use-local-storage"
 import { AVISO_DRAFT_VACIO, type AvisoDraft } from "./aviso-composer"
+import { clicCierraPanel } from "./utils"
 import { AvisosPanel } from "./avisos-panel"
 
 const CIERRE_MS = 160
@@ -125,10 +126,7 @@ export function AvisosWidget() {
   useEffect(() => {
     if (!open) return
     const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node
-      if (panelRef.current?.contains(target)) return
-      if (botonRef.current?.contains(target)) return
-      cerrar()
+      if (clicCierraPanel(event.target as Node, panelRef.current, botonRef.current)) cerrar()
     }
     document.addEventListener("pointerdown", onPointerDown)
     return () => document.removeEventListener("pointerdown", onPointerDown)

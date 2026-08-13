@@ -26,7 +26,6 @@ import {
   formatFechaLimiteCorta,
   formatRelativoCorto,
   ladoLabel,
-  primerNombre,
 } from "./utils"
 
 interface AvisoItemProps {
@@ -97,7 +96,6 @@ export function AvisoItem({
 
   const esTarea = aviso.tipo === "tarea"
   const hecha = aviso.estado === "hecha"
-  const autor = primerNombre(aviso.autorNombre)
   const notificado = Boolean(aviso.notificado_en)
   const vencida = !hecha && estaVencida(aviso.fecha_limite)
   const saliente = !aviso.esParaMi
@@ -326,9 +324,9 @@ export function AvisoItem({
             {aviso.referencia}
           </span>
         )}
-        <span className="font-medium text-foreground/75">{autor ?? "Alguien"}</span>
-        <span aria-hidden className="text-muted-foreground/40">·</span>
-        <span>{ladoLabel(origenLado, "origen", miLado, delegacionNombre)}</span>
+        <span className="font-medium text-foreground/75">
+          {ladoLabel(origenLado, "origen", miLado, delegacionNombre)}
+        </span>
         <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/60" aria-hidden />
         <span>{ladoLabel(aviso.destinatario, "destino", miLado, delegacionNombre)}</span>
         <span aria-hidden className="text-muted-foreground/40">·</span>

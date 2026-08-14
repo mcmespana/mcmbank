@@ -38,6 +38,8 @@ The app uses Supabase with a hierarchical structure:
 - **membresia**: User-delegation role assignments
 - **perfil**: User profiles (auto-created on sign-in via AuthContext)
 - **movimiento_archivo**: File attachments for transactions
+- **factura**: Invoices inbox per delegation (upload, email intake, AI reading, reconciliation)
+- **factura_email**: Log of emails received in the per-delegation invoice mailbox
 - **propuesta_mejora**: Improvement proposals (ideas and bug reports)
 - **propuesta_mejora_comentario**: Comments on proposals
 - **propuesta_mejora_voto**: Votes/reactions on proposals
@@ -141,6 +143,34 @@ Short notes between the central technical office (`gestor_central`) and each del
 - **UI**: floating 44px button bottom-right, mounted once in `components/app-layout.tsx` (`components/avisos/`), opens with ⌘/Ctrl+I. On mobile the panel becomes a full-screen overlay (not a route) so closing it returns to the exact same page
 - **Types/service/hook**: `lib/types/avisos.ts`, `lib/services/avisos.ts`, `hooks/use-avisos.ts`
 
+### Invoices by email + AI reading (Facturas)
+
+Invoices reach the delegation's inbox in three ways — dragged into the bandeja,
+attached to a movement, or **emailed** to
+`facturas+<alias>@movimientoconsolacion.com` — and all three end up in the same
+place, read by the same code (`plans/022`, `docs/FACTURAS_EMAIL_IA.md`).
+
+- **Address → delegation**: `delegacion.alias_email` (`scripts/060`). The parser
+  accepts `facturas+alias@`, `facturas-alias@` and `alias@facturas.…`, and also
+  reads forwarding headers, because a forwarded mail only keeps the original
+  recipient there. Falls back to `codigo`.
+- **The webhook is the only unauthenticated entrance to the app**: svix
+  HMAC-SHA256 verified by hand, 5-minute window, 503 when
+  `RESEND_WEBHOOK_SECRET` is unset (fail closed). `factura_email` gives
+  idempotency (Resend retries) and diagnosis.
+- **Everything lands in `bandeja`** and nothing is ever auto-reconciled.
+- **The AI suggests, it does not decide.** Transcription fields (número, fecha,
+  importe, concepto) are written **only when empty**; the supplier is linked on
+  an exact NIF/name match and created otherwise; **the category is never applied
+  automatically** — it waits in `datos_ia` until someone accepts it, which is
+  what writes `factura.categoria_id` and propagates it to the movement.
+- **The document is untrusted input.** One `generateContent` call with a
+  `responseSchema` and no tools; every field re-validated in
+  `lib/utils/facturas-ia.ts`, and the category must exist in the list that was
+  handed to the model. There is no schema output that can reconcile or delete
+  anything.
+- AI extraction runs in `after()` from the webhook so the response stays fast.
+
 ### File Uploads
 - Files uploaded to Supabase Storage buckets
 - Metadata tracked in `movimiento_archivo` table
@@ -213,6 +243,8 @@ docs/                       # End-user documentation in Spanish
 | `/auth/sign-up` | Registration page |
 | `/auth/callback` | OAuth callback |
 | `/api/avisos/notificar` | Sends a notice/task by email via Resend |
+| `/api/facturas/entrantes` | Resend inbound webhook: the per-delegation invoice mailbox |
+| `/api/facturas/ia` | Reads an invoice with AI / accepts its category suggestion (session-authenticated) |
 | `/api/admin/users` | Admin user management API |
 | `/api/supabase-sanity` | Supabase health check API |
 | `/api/v1/*` | External REST API (see below) |
@@ -241,12 +273,15 @@ scoped explicitly in the query instead: `resolveAmbitoDelegaciones()` returns
 | `lib/api/catalogos.ts` | Cached cuenta/categoria/contacto maps, joined in memory instead of embedded in every query |
 | `lib/api/movimientos-public.ts` | Movement search (multi-delegation, with whole-set totals), fetch and update |
 | `lib/api/facturas.ts` | Invoice CRUD, linking, and the scoring used to reconcile invoices against movements |
+| `lib/api/factura-ia.ts` | Reads an invoice document with Gemini, validates every field, fills only the empty ones |
+| `lib/api/facturas-email.ts` | Per-delegation invoice mailbox: svix signature check, address→delegation, attachments → invoices |
+| `lib/api/gemini.ts` | Minimal Gemini client (one REST call, structured output, no SDK) |
 | `lib/api/avisos.ts` | Notices and tasks, including the email notification |
 | `lib/api/archivos.ts` | Base64 upload to Storage + registration, signed URLs, deletion |
 | `lib/api/resumen.ts` | Per-delegation financial rollup |
 | `lib/api/errors.ts` | `ApiError` with HTTP status; unexpected errors are logged in full and truncated to one line in the response |
 | `lib/api/route-helpers.ts` | `conApi()` wrapper: auth + query parsing + `{ ok: true, ... }` shape |
-| `lib/mcp/tools.ts` | The 27 MCP tools, each a thin wrapper over `lib/api/` |
+| `lib/mcp/tools.ts` | The 30 MCP tools, each a thin wrapper over `lib/api/` |
 | `lib/mcp/auth.ts` | Accepts either an API key or an OAuth access token; OAuth pins the acting user |
 | `lib/oauth/` | OAuth 2.1 authorization server: config, PKCE, DB-backed store, authorize-request validation |
 
@@ -350,6 +385,9 @@ NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL="http://localhost:3000/auth/callback"
 Optional:
 ```bash
 NEXT_PUBLIC_SKIP_PROFILE_CREATION=true  # Temporarily skip profile table creation
+GEMINI_API_KEY=                         # AI reading of invoices (lib/api/factura-ia.ts)
+RESEND_WEBHOOK_SECRET=                  # Invoice mailbox webhook signature
+NEXT_PUBLIC_FACTURAS_EMAIL=facturas@movimientoconsolacion.com
 ```
 
 **Security**: Never commit secrets. Only use `NEXT_PUBLIC_` prefix for client-safe variables. If a key is leaked, rotate it from the Supabase dashboard.

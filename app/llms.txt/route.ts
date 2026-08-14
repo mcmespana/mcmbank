@@ -59,7 +59,8 @@ actualizar_movimiento, resumen_economico, listar_delegaciones, listar_cuentas,
 listar_categorias, listar_contactos, buscar_facturas, obtener_factura,
 crear_factura, actualizar_factura, eliminar_factura, vincular_factura,
 desvincular_factura, buscar_movimiento_de_factura, buscar_factura_de_movimiento,
-conciliar_facturas, subir_archivo, obtener_url_archivo, eliminar_archivo,
+conciliar_facturas, leer_factura_con_ia, aceptar_categoria_factura,
+subir_archivo, obtener_url_archivo, eliminar_archivo,
 listar_avisos, crear_aviso, actualizar_aviso, eliminar_aviso, notificar_aviso,
 listar_pagos_mcm.
 
@@ -86,6 +87,15 @@ nueva (opcionalmente con su archivo y ya vinculada a un movimiento).
 
 ### POST ${origin}/api/v1/facturas/{id}/vincular
 Concilia una factura con el movimiento que la pagó.
+
+### POST ${origin}/api/v1/facturas/{id}/leer-ia
+Lee el documento de la factura con IA y rellena los campos vacíos (proveedor
+—creándolo si hace falta—, número, fecha, importe y concepto). La categoría se
+devuelve solo como sugerencia en \`datos_ia\`.
+
+### POST ${origin}/api/v1/facturas/{id}/categoria
+Aplica la categoría: la sugerida por la IA o la que se indique. Existe como paso
+aparte porque la lectura automática nunca categoriza por su cuenta.
 
 ### POST ${origin}/api/v1/conciliacion
 Cuadra un lote de facturas: se envía una lista de importes y devuelve, para cada

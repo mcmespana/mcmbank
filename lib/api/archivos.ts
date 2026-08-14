@@ -125,7 +125,7 @@ interface ArchivoValidado {
   descripcion: string | null
 }
 
-function validarArchivo(entrada: ArchivoEntrante): ArchivoValidado {
+function validarArchivo(entrada: ArchivoEntrante, limiteBytes = MAX_BYTES_API): ArchivoValidado {
   const nombreOriginal = (entrada.nombre ?? "").trim()
   if (!nombreOriginal) throw badRequest("Falta el nombre del archivo (con su extensión).")
 
@@ -147,13 +147,16 @@ function validarArchivo(entrada: ArchivoEntrante): ArchivoValidado {
   }
 
   const buffer = decodificarBase64(entrada.contenido_base64 ?? "")
-  if (buffer.length > MAX_BYTES_API) {
+  if (buffer.length > limiteBytes) {
     throw badRequest(
-      `El archivo ocupa ${(buffer.length / 1024 / 1024).toFixed(1)} MB y por API el máximo son ${(
-        MAX_BYTES_API /
+      `El archivo ocupa ${(buffer.length / 1024 / 1024).toFixed(1)} MB y el máximo aquí son ${(
+        limiteBytes /
         1024 /
         1024
-      ).toFixed(0)} MB. Súbelo desde la aplicación (allí el límite es 20 MB).`,
+      ).toFixed(0)} MB.` +
+        (limiteBytes === MAX_BYTES_API
+          ? " Súbelo desde la aplicación (allí el límite es 20 MB)."
+          : ""),
     )
   }
 
@@ -321,9 +324,21 @@ export async function subirArchivoAMovimiento(
 /** Adjunta un archivo a una factura de la bandeja (entidad `factura`). */
 export async function subirArchivoAFactura(
   admin: AdminClient,
-  params: { facturaId: string; archivo: ArchivoEntrante; actorId: string; baseUrl?: string },
+  params: {
+    facturaId: string
+    archivo: ArchivoEntrante
+    actorId: string
+    baseUrl?: string
+    /**
+     * Tope de tamaño. Por defecto el de la API (`MAX_BYTES_API`), que existe
+     * porque el fichero viaja en base64 dentro del cuerpo de la petición. El
+     * buzón de correo no tiene esa limitación —descarga el adjunto en el
+     * servidor— y pasa un tope mayor.
+     */
+    limiteBytes?: number
+  },
 ): Promise<ResultadoSubida> {
-  const validado = validarArchivo(params.archivo)
+  const validado = validarArchivo(params.archivo, params.limiteBytes)
 
   const factura = unwrap(
     await (admin as any)

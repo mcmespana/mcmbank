@@ -950,7 +950,11 @@ export class DatabaseService {
 
     const [{ data: factura, error: facturaErr }, { data: movimiento, error: movErr }] = await Promise.all([
       supabase.from("factura").select("*").eq("id", facturaId).maybeSingle(),
-      supabase.from("movimiento").select("id, fecha, importe, contacto_id, factura_id").eq("id", movimientoId).maybeSingle(),
+      supabase
+        .from("movimiento")
+        .select("id, fecha, importe, contacto_id, categoria_id, factura_id")
+        .eq("id", movimientoId)
+        .maybeSingle(),
     ])
     if (facturaErr) throw facturaErr
     if (movErr) throw movErr
@@ -960,6 +964,9 @@ export class DatabaseService {
 
     const movimientoUpdates: Record<string, unknown> = { factura_id: facturaId }
     if (factura.contacto_id && !movimiento.contacto_id) movimientoUpdates.contacto_id = factura.contacto_id
+    // La categoría de la factura solo existe si alguien la aceptó (la IA nunca
+    // la escribe sola), así que propagarla al movimiento es seguro.
+    if (factura.categoria_id && !movimiento.categoria_id) movimientoUpdates.categoria_id = factura.categoria_id
 
     const { error: updMovErr } = await supabase
       .from("movimiento")
@@ -972,6 +979,7 @@ export class DatabaseService {
     if (factura.importe == null) facturaUpdates.importe = Math.abs(Number(movimiento.importe))
     if (!factura.fecha_emision && movimiento.fecha) facturaUpdates.fecha_emision = movimiento.fecha
     if (!factura.contacto_id && movimiento.contacto_id) facturaUpdates.contacto_id = movimiento.contacto_id
+    if (!factura.categoria_id && movimiento.categoria_id) facturaUpdates.categoria_id = movimiento.categoria_id
     if (Object.keys(facturaUpdates).length > 0) {
       const { error } = await supabase.from("factura").update(facturaUpdates).eq("id", facturaId)
       if (error) console.warn("No se pudieron rellenar los datos de la factura:", error)

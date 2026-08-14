@@ -20,6 +20,7 @@ import { formatMoney, parseMoney } from "@/components/ui/money-input"
 import { FacturaDatosFields, type FacturaDatosFieldsValue } from "./factura-datos-fields"
 import { FacturaConciliacionPanel } from "./factura-conciliacion-panel"
 import { FacturaArchivos } from "./factura-archivos"
+import { FacturaIaPanel } from "./factura-ia-panel"
 import { ContactoForm, type ContactoFormSubmitPayload } from "@/components/contactos/contacto-form"
 import type {
   Categoria,
@@ -42,7 +43,7 @@ interface FacturaDetailSheetProps {
   onOpenChange: (open: boolean) => void
   delegacionId: string | null
   contactos: ContactoConCategoriaPredeterminada[]
-  categorias: Pick<Categoria, "id" | "nombre" | "emoji" | "color">[]
+  categorias: Categoria[]
   canEdit: boolean
   canManageGlobalContact?: boolean
   onCreateContacto?: (payload: ContactoFormSubmitPayload) => Promise<Contacto | void>
@@ -51,10 +52,13 @@ interface FacturaDetailSheetProps {
   onUnlinkMovimiento: (facturaId: string, movimientoId: string) => Promise<void>
   onMarcarPagadaFuera: (facturaId: string) => Promise<void>
   onDelete: (factura: FacturaConRelaciones) => void
+  /** Recarga la lista tras una lectura con IA (que escribe en la factura). */
+  onRefrescar?: () => void | Promise<void>
 }
 
 const EMPTY_VALUE: FacturaDatosFieldsValue = {
   contactoId: null,
+  categoriaId: null,
   concepto: "",
   numero: "",
   fechaEmision: null,
@@ -83,6 +87,7 @@ export function FacturaDetailSheet({
   onUnlinkMovimiento,
   onMarcarPagadaFuera,
   onDelete,
+  onRefrescar,
 }: FacturaDetailSheetProps) {
   const { user } = useAuth()
   const isEdit = Boolean(factura?.id)
@@ -101,6 +106,7 @@ export function FacturaDetailSheet({
       factura
         ? {
             contactoId: factura.contacto_id,
+            categoriaId: factura.categoria_id,
             concepto: factura.concepto ?? "",
             numero: factura.numero ?? "",
             fechaEmision: factura.fecha_emision,
@@ -110,8 +116,11 @@ export function FacturaDetailSheet({
         : EMPTY_VALUE,
     )
     setSeleccion(null)
+    // `actualizado_en` entra en las dependencias a propósito: cuando la lectura
+    // con IA rellena campos, la factura vuelve con datos nuevos y el formulario
+    // abierto tiene que reflejarlos.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, factura?.id])
+  }, [open, factura?.id, factura?.actualizado_en])
 
   const importeNumerico = useMemo(() => parseMoney(value.importeDisplay), [value.importeDisplay])
   const movimientosVinculados = useMemo(() => factura?.movimientos ?? [], [factura])
@@ -133,6 +142,7 @@ export function FacturaDetailSheet({
 
     const base = {
       contacto_id: value.contactoId,
+      categoria_id: value.categoriaId,
       concepto: value.concepto.trim() || null,
       numero: value.numero.trim() || null,
       fecha_emision: value.fechaEmision,
@@ -269,6 +279,21 @@ export function FacturaDetailSheet({
               </div>
             )}
 
+            {/* Lectura automática */}
+            {isEdit && factura && (
+              <>
+                <Separator />
+                <FacturaIaPanel
+                  factura={factura}
+                  canEdit={canEdit}
+                  onChanged={() => onRefrescar?.()}
+                  onCategoriaAceptada={(categoriaId) =>
+                    setValue((prev) => ({ ...prev, categoriaId }))
+                  }
+                />
+              </>
+            )}
+
             <Separator />
 
             {/* Datos */}
@@ -278,6 +303,7 @@ export function FacturaDetailSheet({
                 value={value}
                 onChange={(patch) => setValue((prev) => ({ ...prev, ...patch }))}
                 contactos={contactos}
+                categorias={categorias}
                 onCreateContacto={
                   onCreateContacto
                     ? (initialNombre) => {

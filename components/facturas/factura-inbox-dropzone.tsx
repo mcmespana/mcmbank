@@ -2,13 +2,14 @@
 
 import { useState } from "react"
 import { useDropzone } from "react-dropzone"
-import { Inbox, Loader2 } from "lucide-react"
+import { Inbox, Loader2, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { DatabaseService } from "@/lib/services/database"
 import { FileService } from "@/lib/services/file-service"
+import { leerFacturaConIa } from "@/lib/services/factura-ia-client"
 
 interface FacturaInboxDropzoneProps {
   delegacionId: string | null
@@ -34,6 +35,7 @@ export function FacturaInboxDropzone({ delegacionId, disabled, onCreated }: Fact
   const { getCurrentDelegation } = useDelegationContext()
   const delegacionCodigo = getCurrentDelegation()?.codigo ?? undefined
   const [uploading, setUploading] = useState(false)
+  const [leyendo, setLeyendo] = useState(false)
   const [progreso, setProgreso] = useState<{ done: number; total: number } | null>(null)
 
   const onDrop = async (accepted: File[]) => {
@@ -46,6 +48,7 @@ export function FacturaInboxDropzone({ delegacionId, disabled, onCreated }: Fact
     setUploading(true)
     setProgreso({ done: 0, total: accepted.length })
     let creadas = 0
+    const nuevas: string[] = []
     try {
       for (const file of accepted) {
         const validation = FileService.validateFile(file, "facturas")
@@ -86,6 +89,7 @@ export function FacturaInboxDropzone({ delegacionId, disabled, onCreated }: Fact
         }
 
         creadas += 1
+        nuevas.push(factura.id)
         setProgreso({ done: creadas, total: accepted.length })
       }
 
@@ -94,6 +98,17 @@ export function FacturaInboxDropzone({ delegacionId, disabled, onCreated }: Fact
           creadas === 1 ? "Factura añadida a la bandeja" : `${creadas} facturas añadidas a la bandeja`,
         )
         await onCreated()
+
+        // Lectura con IA de todo el lote a la vez. Se espera a que termine para
+        // que la bandeja aparezca ya con los datos puestos, pero un fallo aquí
+        // no invalida la subida: las facturas ya están guardadas.
+        setLeyendo(true)
+        try {
+          await Promise.allSettled(nuevas.map((id) => leerFacturaConIa(id)))
+        } finally {
+          setLeyendo(false)
+          await onCreated()
+        }
       }
     } catch (err) {
       toast.error("No se pudo subir: " + (err instanceof Error ? err.message : "error desconocido"))
@@ -106,7 +121,7 @@ export function FacturaInboxDropzone({ delegacionId, disabled, onCreated }: Fact
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
-    disabled: disabled || uploading || !delegacionId,
+    disabled: disabled || uploading || leyendo || !delegacionId,
     maxSize: 20 * 1024 * 1024,
   })
 
@@ -118,7 +133,7 @@ export function FacturaInboxDropzone({ delegacionId, disabled, onCreated }: Fact
         isDragActive
           ? "border-primary bg-primary/5"
           : "hover:border-primary/50 hover:bg-primary/[0.03]",
-        (disabled || uploading || !delegacionId) && "cursor-not-allowed opacity-60",
+        (disabled || uploading || leyendo || !delegacionId) && "cursor-not-allowed opacity-60",
       )}
     >
       <input {...getInputProps()} />
@@ -128,9 +143,17 @@ export function FacturaInboxDropzone({ delegacionId, disabled, onCreated }: Fact
           isDragActive ? "scale-110" : "group-hover/dz:scale-105",
         )}
       >
-        {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Inbox className="h-5 w-5" />}
+        {uploading || leyendo ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <Inbox className="h-5 w-5" />
+        )}
       </div>
-      {uploading && progreso ? (
+      {leyendo ? (
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          <Sparkles className="h-4 w-4 text-primary" aria-hidden /> Leyendo las facturas con IA…
+        </div>
+      ) : uploading && progreso ? (
         <div className="text-sm font-medium">
           Subiendo {progreso.done + 1 > progreso.total ? progreso.total : progreso.done + 1} de{" "}
           {progreso.total}…
@@ -141,9 +164,9 @@ export function FacturaInboxDropzone({ delegacionId, disabled, onCreated }: Fact
             {isDragActive ? "Suelta las facturas aquí" : "Arrastra facturas a la bandeja"}
           </div>
           <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
-            Suelta uno o varios PDF o imágenes y se creará una factura por archivo, lista para
-            completar el proveedor y vincular con su movimiento. También puedes pulsar para elegir
-            archivos.
+            Suelta uno o varios PDF o imágenes: se crea una factura por archivo y la IA lee el
+            documento para rellenar proveedor, número, fecha e importe. También puedes pulsar para
+            elegir archivos.
           </p>
         </>
       )}

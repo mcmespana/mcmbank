@@ -592,6 +592,7 @@ export type Database = {
       }
       delegacion: {
         Row: {
+          alias_email: string | null
           codigo: string | null
           creado_en: string
           id: string
@@ -599,6 +600,7 @@ export type Database = {
           organizacion_id: string
         }
         Insert: {
+          alias_email?: string | null
           codigo?: string | null
           creado_en?: string
           id?: string
@@ -606,6 +608,7 @@ export type Database = {
           organizacion_id: string
         }
         Update: {
+          alias_email?: string | null
           codigo?: string | null
           creado_en?: string
           id?: string
@@ -785,6 +788,7 @@ export type Database = {
       factura: {
         Row: {
           actualizado_en: string
+          categoria_id: string | null
           concepto: string | null
           contacto_id: string | null
           creado_en: string
@@ -803,6 +807,7 @@ export type Database = {
         }
         Insert: {
           actualizado_en?: string
+          categoria_id?: string | null
           concepto?: string | null
           contacto_id?: string | null
           creado_en?: string
@@ -821,6 +826,7 @@ export type Database = {
         }
         Update: {
           actualizado_en?: string
+          categoria_id?: string | null
           concepto?: string | null
           contacto_id?: string | null
           creado_en?: string
@@ -839,6 +845,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "factura_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categoria"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "factura_contacto_id_fkey"
             columns: ["contacto_id"]
             isOneToOne: false
@@ -847,6 +860,65 @@ export type Database = {
           },
           {
             foreignKeyName: "factura_delegacion_id_fkey"
+            columns: ["delegacion_id"]
+            isOneToOne: false
+            referencedRelation: "delegacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      factura_email: {
+        Row: {
+          alias_detectado: string | null
+          asunto: string | null
+          creado_en: string
+          cuerpo_extracto: string | null
+          delegacion_id: string | null
+          destinatarios: Json | null
+          error: string | null
+          estado: string
+          facturas_creadas: number
+          id: string
+          message_id: string | null
+          proveedor_email_id: string
+          recibido_en: string | null
+          remitente: string | null
+        }
+        Insert: {
+          alias_detectado?: string | null
+          asunto?: string | null
+          creado_en?: string
+          cuerpo_extracto?: string | null
+          delegacion_id?: string | null
+          destinatarios?: Json | null
+          error?: string | null
+          estado?: string
+          facturas_creadas?: number
+          id?: string
+          message_id?: string | null
+          proveedor_email_id: string
+          recibido_en?: string | null
+          remitente?: string | null
+        }
+        Update: {
+          alias_detectado?: string | null
+          asunto?: string | null
+          creado_en?: string
+          cuerpo_extracto?: string | null
+          delegacion_id?: string | null
+          destinatarios?: Json | null
+          error?: string | null
+          estado?: string
+          facturas_creadas?: number
+          id?: string
+          message_id?: string | null
+          proveedor_email_id?: string
+          recibido_en?: string | null
+          remitente?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factura_email_delegacion_id_fkey"
             columns: ["delegacion_id"]
             isOneToOne: false
             referencedRelation: "delegacion"

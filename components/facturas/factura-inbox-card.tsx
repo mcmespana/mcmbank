@@ -1,10 +1,11 @@
 "use client"
 
-import { FileText, Trash2 } from "lucide-react"
+import { FileText, Loader2, Sparkles, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ActionMenu } from "@/components/ui/action-menu"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
-import { formatDate } from "@/lib/utils/format"
+import { formatCurrency, formatDate } from "@/lib/utils/format"
+import { leerDatosIa } from "@/lib/types/factura-ia"
 import { FACTURA_ORIGEN_INFO } from "@/lib/utils/facturas"
 import type { FacturaConRelaciones } from "@/lib/types/database"
 
@@ -25,6 +26,8 @@ export function FacturaInboxCard({ factura, canEdit, onOpenDetail, onDelete }: F
   const nombre = archivo?.nombre_original || factura.concepto?.trim() || "Factura sin título"
   const fechaSubida = archivo?.subido_en ?? factura.creado_en
   const OrigenIcon = FACTURA_ORIGEN_INFO[factura.origen].icon
+  const ia = leerDatosIa(factura.datos_ia)
+  const proveedor = factura.contacto?.nombre ?? null
 
   return (
     <div
@@ -61,8 +64,28 @@ export function FacturaInboxCard({ factura, canEdit, onOpenDetail, onDelete }: F
         </div>
       )}
 
+      {ia?.estado === "procesando" && (
+        <div className="absolute left-1.5 top-1.5 z-10 flex items-center gap-1 rounded-full bg-background/90 px-1.5 py-0.5 text-[10px] text-muted-foreground shadow-sm">
+          <Loader2 className="h-2.5 w-2.5 animate-spin" aria-hidden /> Leyendo
+        </div>
+      )}
+
       <div className="space-y-0.5 px-0.5">
         <div className="line-clamp-2 text-xs font-medium leading-snug">{nombre}</div>
+        {/* Lo que ha sacado la lectura automática: sin esto habría que abrir
+            cada tarjeta para saber si la factura ya tiene datos. */}
+        {(proveedor || factura.importe != null) && (
+          <div className="flex items-center gap-1 truncate text-[10px] text-foreground/80">
+            {ia?.estado === "listo" && (
+              <Sparkles className="h-2.5 w-2.5 shrink-0 text-primary" aria-hidden />
+            )}
+            <span className="truncate">
+              {[proveedor, factura.importe != null ? formatCurrency(Number(factura.importe)) : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </div>
+        )}
         <div className="text-[10px] text-muted-foreground">{formatDate(fechaSubida)}</div>
         {factura.origen === "email" && factura.email_remitente && (
           <div className="flex items-center gap-1 truncate text-[10px] text-muted-foreground">

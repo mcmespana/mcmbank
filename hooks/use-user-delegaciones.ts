@@ -29,6 +29,7 @@ export function useUserDelegaciones() {
           id,
           organizacion_id,
           codigo,
+          alias_email,
           nombre,
           creado_en
         `,

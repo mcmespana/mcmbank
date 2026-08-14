@@ -132,6 +132,8 @@ export function useFacturas(delegacionId?: string | null, options: UseFacturasOp
     loading: query.isPending && query.fetchStatus !== "idle",
     error: query.error ? (query.error as Error).message : null,
     refetch: query.refetch,
+    /** Invalida lista y contadores: lo que necesita la UI tras una lectura con IA. */
+    refrescar: invalidate,
     hasMore: Boolean(query.hasNextPage),
     onLoadMore: query.fetchNextPage,
     isFetchingMore: query.isFetchingNextPage,

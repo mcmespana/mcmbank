@@ -41,6 +41,7 @@ import {
   notificarAviso,
   obtenerAviso,
 } from "@/lib/api/avisos"
+import { aceptarCategoriaSugerida, extraerDatosFactura } from "@/lib/api/factura-ia"
 import { listarPagosMcm } from "@/lib/api/pagos"
 import { resumenGeneral } from "@/lib/api/resumen"
 import {
@@ -562,6 +563,68 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
 
       return {
         factura: await actualizarFactura(ctx.admin, textoObligatorio(args, "id"), cambios, {
+          baseUrl: ctx.baseUrl,
+        }),
+      }
+    },
+  },
+  {
+    name: "leer_factura_con_ia",
+    title: "Leer una factura con IA",
+    description:
+      "Lee el PDF o la foto de una factura con IA y rellena sus datos: proveedor (lo crea si no existe), número, fecha, importe y concepto. " +
+      "Los campos que ya tuvieran valor no se tocan. La categoría se devuelve solo como SUGERENCIA en datos_ia: para aplicarla hay que llamar a 'aceptar_categoria_factura'. " +
+      "Si la factura ya se leyó antes, no se vuelve a gastar una llamada salvo que se pase forzar=true.",
+    inputSchema: objetoSchema(
+      {
+        id: { type: "string", description: "Id de la factura." },
+        forzar: { type: "boolean", description: "Volver a leerla aunque ya tenga una lectura guardada." },
+        crear_proveedor: {
+          type: "boolean",
+          description: "Crear el proveedor si no existe ninguno que case. Por defecto sí.",
+        },
+        usuario_email: CAMPO_USUARIO_EMAIL,
+      },
+      ["id"],
+    ),
+    scope: "write",
+    handler: async (args, ctx) => {
+      const actor = await actorDe(args, ctx)
+      const { factura, datos } = await extraerDatosFactura(ctx.admin, textoObligatorio(args, "id"), {
+        actorId: actor.id,
+        forzar: booleano(args, "forzar") ?? false,
+        crearProveedor: booleano(args, "crear_proveedor") !== false,
+        baseUrl: ctx.baseUrl,
+      })
+      return { factura, datos_ia: datos }
+    },
+  },
+  {
+    name: "aceptar_categoria_factura",
+    title: "Aceptar la categoría de una factura",
+    description:
+      "Pone categoría a una factura: la que sugirió la IA si no se indica otra, o la de 'categoria_id'. " +
+      "Es el paso que falta después de 'leer_factura_con_ia', que nunca aplica la categoría por su cuenta. " +
+      "Si la factura ya está conciliada, la categoría pasa también a los movimientos vinculados que no tuvieran ninguna.",
+    inputSchema: objetoSchema(
+      {
+        id: { type: "string", description: "Id de la factura." },
+        categoria_id: {
+          type: "string",
+          description: "Opcional: para poner otra distinta de la sugerida (ver listar_categorias).",
+        },
+        usuario_email: CAMPO_USUARIO_EMAIL,
+      },
+      ["id"],
+    ),
+    scope: "write",
+    annotations: { idempotentHint: true },
+    handler: async (args, ctx) => {
+      const actor = await actorDe(args, ctx)
+      return {
+        factura: await aceptarCategoriaSugerida(ctx.admin, textoObligatorio(args, "id"), {
+          categoriaId: texto(args, "categoria_id"),
+          actorId: actor.id,
           baseUrl: ctx.baseUrl,
         }),
       }

@@ -497,6 +497,68 @@ export async function GET(request: Request) {
           }),
         },
       },
+      "/api/v1/facturas/{id}/leer-ia": {
+        post: {
+          tags: ["Facturas"],
+          summary: "Leer una factura con IA",
+          description:
+            "Lee el PDF o la imagen de la factura con Gemini y rellena los campos que estuvieran vacíos (número, fecha, importe, concepto) y el proveedor, creándolo si no existía. " +
+            "La categoría se devuelve solo como sugerencia dentro de `datos_ia`: para aplicarla hay que llamar a POST /api/v1/facturas/{id}/categoria. " +
+            "Si la factura ya se leyó, no se repite la llamada al modelo salvo `forzar: true`.",
+          operationId: "leerFacturaConIa",
+          parameters: [PARAM_ID("de la factura")],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    forzar: { type: "boolean", description: "Volver a leerla aunque ya tenga lectura." },
+                    crear_proveedor: {
+                      type: "boolean",
+                      description: "Crear el proveedor si no existe. Por defecto true.",
+                    },
+                    usuario_email: { type: "string", format: "email" },
+                  },
+                },
+              },
+            },
+          },
+          responses: respuestaOk("Factura leída.", {
+            factura: { $ref: "#/components/schemas/Factura" },
+            datos_ia: { type: "object" },
+          }),
+        },
+      },
+      "/api/v1/facturas/{id}/categoria": {
+        post: {
+          tags: ["Facturas"],
+          summary: "Aceptar la categoría de una factura",
+          description:
+            "Pone categoría a la factura: la sugerida por la IA si no se indica otra. Es un paso aparte a propósito, porque la lectura automática nunca aplica la categoría por su cuenta. " +
+            "Si la factura ya está conciliada, la categoría se propaga a los movimientos vinculados que no tuvieran ninguna.",
+          operationId: "aceptarCategoriaFactura",
+          parameters: [PARAM_ID("de la factura")],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    categoria_id: { type: "string", format: "uuid" },
+                    usuario_email: { type: "string", format: "email" },
+                  },
+                },
+              },
+            },
+          },
+          responses: respuestaOk("Factura con categoría.", {
+            factura: { $ref: "#/components/schemas/Factura" },
+          }),
+        },
+      },
       "/api/v1/facturas/{id}/vincular": {
         post: {
           tags: ["Facturas"],
@@ -999,6 +1061,14 @@ export async function GET(request: Request) {
             email_remitente: { type: ["string", "null"] },
             delegacion: { anyOf: [{ $ref: "#/components/schemas/Delegacion" }, { type: "null" }] },
             contacto: { type: ["object", "null"] },
+            categoria: {
+              type: ["object", "null"],
+              description: "Solo se rellena cuando alguien acepta la categoría (la IA no la aplica sola).",
+            },
+            datos_ia: {
+              type: ["object", "null"],
+              description: "Resultado de la lectura automática: sugerencias, confianza y campos rellenados.",
+            },
             importe_pagado: { type: "number", description: "Suma de los movimientos vinculados." },
             importe_pendiente: { type: ["number", "null"] },
             movimientos: { type: "array", items: { type: "object" } },

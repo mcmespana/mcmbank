@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Mail, Plus, ReceiptText, Search, Sparkles } from "lucide-react"
+import { Plus, ReceiptText, Search } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,7 @@ import { FacturaRow, FACTURA_ROW_COLS } from "./factura-row"
 import { FacturaInboxCard } from "./factura-inbox-card"
 import { FacturaDetailSheet, type FacturaDetailSheetSubmit } from "./factura-detail-sheet"
 import { FacturaInboxDropzone } from "./factura-inbox-dropzone"
+import { FacturaBuzonHint } from "./factura-buzon-hint"
 import { DeleteFacturaDialog } from "./delete-factura-dialog"
 
 type TabValue = "bandeja" | "sin_pagar" | "pagadas" | "todas"
@@ -73,12 +74,14 @@ function FilterPill({
 }
 
 export function FacturasManager() {
-  const { selectedDelegation } = useDelegationContext()
+  const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
   const { user } = useAuth()
   const isAdmin = useIsAdmin()
   const { role } = useDelegationRole(selectedDelegation)
   const canEdit = isAdmin || role === "gestor_central" || role === "tesorero"
   const canManageGlobalContact = isAdmin || role === "gestor_central"
+
+  const delegacionActual = getCurrentDelegation()
 
   const [tab, setTab] = useState<TabValue>("bandeja")
   const { value: busquedaDebounced, immediateValue: busqueda, setValue: setBusqueda } = useDebouncedState("", 250)
@@ -109,6 +112,7 @@ export function FacturasManager() {
     deleteFactura,
     linkToMovimiento,
     unlinkFromMovimiento,
+    refrescar,
   } = useFacturas(selectedDelegation, {
     estados: estadosForTab,
     busqueda: busquedaDebounced || undefined,
@@ -188,12 +192,19 @@ export function FacturasManager() {
       />
 
       {canEdit && tab === "bandeja" && (
-        <FacturaInboxDropzone
-          delegacionId={selectedDelegation}
-          onCreated={async () => {
-            await refetchTotals()
-          }}
-        />
+        <div className="space-y-2">
+          <FacturaInboxDropzone
+            delegacionId={selectedDelegation}
+            onCreated={async () => {
+              refrescar()
+              await refetchTotals()
+            }}
+          />
+          <FacturaBuzonHint
+            aliasEmail={delegacionActual?.alias_email}
+            delegacionNombre={delegacionActual?.nombre}
+          />
+        </div>
       )}
 
       <FilterTabs
@@ -257,7 +268,7 @@ export function FacturasManager() {
           }
           description={
             tab === "bandeja"
-              ? "Arrastra los archivos de factura arriba y aparecerán aquí para revisar y conciliar."
+              ? "Arrastra los archivos de factura arriba (o reenvíalos al buzón de la delegación) y aparecerán aquí, ya leídos, para revisar y conciliar."
               : "Sube la primera factura a la bandeja o créala a mano."
           }
         >
@@ -323,15 +334,6 @@ export function FacturasManager() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <Mail className="h-3.5 w-3.5 shrink-0" /> Próximamente: buzón de email por delegación
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 shrink-0" /> Próximamente: lectura automática con IA
-        </span>
-      </div>
-
       <FacturaDetailSheet
         factura={detailFactura}
         open={detailOpen}
@@ -352,6 +354,10 @@ export function FacturasManager() {
         onLinkMovimiento={linkToMovimiento}
         onUnlinkMovimiento={unlinkFromMovimiento}
         onMarcarPagadaFuera={marcarPagadaFuera}
+        onRefrescar={async () => {
+          refrescar()
+          await refetchTotals()
+        }}
         onDelete={(factura) => {
           setDetailOpen(false)
           setDeleting(factura)

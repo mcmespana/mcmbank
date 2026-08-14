@@ -50,6 +50,12 @@ const FACTURA_SELECT = `
     email,
     identificador_fiscal
   ),
+  categoria:categoria_id (
+    id,
+    nombre,
+    emoji,
+    color
+  ),
   movimientos:movimiento (
     id,
     fecha,
@@ -79,6 +85,10 @@ export interface FacturaPublica {
     email: string | null
     identificador_fiscal: string | null
   } | null
+  /** Categoría de la factura. Solo se rellena cuando una persona la acepta. */
+  categoria: { id: string; nombre: string } | null
+  /** Lo que sacó la lectura automática con IA (ver `lib/types/factura-ia.ts`). */
+  datos_ia: unknown | null
   /** Suma (en valor absoluto) de los movimientos ya vinculados. */
   importe_pagado: number
   /** Lo que falta por cubrir; `null` si la factura no tiene importe. */
@@ -133,6 +143,8 @@ export function serializeFactura(
           identificador_fiscal: row.contacto.identificador_fiscal ?? null,
         }
       : null,
+    categoria: row.categoria ? { id: row.categoria.id, nombre: row.categoria.nombre } : null,
+    datos_ia: row.datos_ia ?? null,
     importe_pagado: redondear(pagado),
     importe_pendiente: importe == null ? null : redondear(Math.max(importe - pagado, 0)),
     movimientos,
@@ -430,7 +442,7 @@ export async function vincularFacturaAMovimiento(
     (admin as any).from("factura").select("*").eq("id", facturaId).maybeSingle(),
     (admin as any)
       .from("movimiento")
-      .select("id, fecha, importe, contacto_id, factura_id, delegacion_id")
+      .select("id, fecha, importe, contacto_id, categoria_id, factura_id, delegacion_id")
       .eq("id", movimientoId)
       .maybeSingle(),
   ])
@@ -455,6 +467,11 @@ export async function vincularFacturaAMovimiento(
   if (factura.contacto_id && !movimiento.contacto_id) {
     movimientoUpdates.contacto_id = factura.contacto_id
   }
+  // La categoría de la factura solo llega aquí si alguien aceptó la sugerencia
+  // de la IA (o la eligió a mano), así que propagarla es seguro.
+  if (factura.categoria_id && !movimiento.categoria_id) {
+    movimientoUpdates.categoria_id = factura.categoria_id
+  }
   const { error } = await (admin as any)
     .from("movimiento")
     .update(movimientoUpdates)
@@ -466,6 +483,7 @@ export async function vincularFacturaAMovimiento(
   if (factura.importe == null) facturaUpdates.importe = Math.abs(Number(movimiento.importe))
   if (!factura.fecha_emision && movimiento.fecha) facturaUpdates.fecha_emision = movimiento.fecha
   if (!factura.contacto_id && movimiento.contacto_id) facturaUpdates.contacto_id = movimiento.contacto_id
+  if (!factura.categoria_id && movimiento.categoria_id) facturaUpdates.categoria_id = movimiento.categoria_id
   if (Object.keys(facturaUpdates).length > 0) {
     const { error: updErr } = await (admin as any)
       .from("factura")

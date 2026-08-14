@@ -57,6 +57,7 @@ export function useDelegations({ timeout = 10000 }: { timeout?: number } = {}) {
                 id,
                 organizacion_id,
                 codigo,
+                alias_email,
                 nombre,
                 creado_en
               )

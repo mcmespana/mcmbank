@@ -14,7 +14,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER, getDefaultColor, getDefaultEmoji } from "@/lib/utils/contacto-tipos"
 import { formatearIban, normalizarIban, validarIban } from "@/lib/utils/iban"
+import { limpiarDominio } from "@/lib/utils/proveedor-logo"
 import { useClipboard } from "@/hooks/use-clipboard"
+import { ContactoLogoField } from "./contacto-logo-field"
 import type {
   Categoria,
   Contacto,
@@ -74,6 +76,8 @@ export function ContactoForm({
     contacto?.categoria_id_predeterminada ?? "ninguna",
   )
   const [notas, setNotas] = useState(contacto?.notas ?? "")
+  const [dominio, setDominio] = useState(contacto?.dominio ?? "")
+  const [logoUrl, setLogoUrl] = useState<string | null>(contacto?.logo_url ?? null)
   const [direccionAbierta, setDireccionAbierta] = useState(Boolean(contacto?.direccion || contacto?.ciudad || contacto?.codigo_postal))
   const [loading, setLoading] = useState(false)
 
@@ -122,6 +126,7 @@ export function ContactoForm({
         codigo_postal: codigoPostal.trim() || null,
         categoria_id_predeterminada: categoriaPredeterminadaId === "ninguna" ? null : categoriaPredeterminadaId,
         notas: notas.trim() || null,
+        dominio: limpiarDominio(dominio),
       }
 
       let result: Contacto | void
@@ -223,6 +228,21 @@ export function ContactoForm({
           />
         </div>
       </div>
+
+      {/* Logo: solo para proveedores. Una persona MCM o una familia
+          destinataria no tienen logotipo, y pedirlo sería ruido. */}
+      {tipo === "proveedor" && (
+        <ContactoLogoField
+          contactoId={contacto?.id ?? null}
+          nombre={nombre}
+          emoji={emoji}
+          color={color}
+          logoUrl={logoUrl}
+          dominio={dominio}
+          onDominioChange={setDominio}
+          onLogoChange={setLogoUrl}
+        />
+      )}
 
       {/* Contacto */}
       <div className="space-y-3 rounded-xl border border-border/40 bg-card/40 p-4">

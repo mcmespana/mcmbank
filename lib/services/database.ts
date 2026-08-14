@@ -399,6 +399,7 @@ export class DatabaseService {
           tipo,
           emoji,
           color,
+          logo_url,
           iban,
           email,
           telefono
@@ -458,6 +459,7 @@ export class DatabaseService {
           tipo,
           emoji,
           color,
+          logo_url,
           iban,
           email,
           telefono
@@ -782,6 +784,7 @@ export class DatabaseService {
       tipo,
       emoji,
       color,
+      logo_url,
       email,
       identificador_fiscal
     ),

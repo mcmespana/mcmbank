@@ -10,6 +10,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Sparkles,
   Trash2,
   TriangleAlert,
   Users,
@@ -62,6 +63,7 @@ export function ContactosManager() {
     updateContacto,
     deleteContacto,
     archiveContacto,
+    refetch,
   } = useContactos(selectedDelegation, {
     busqueda: busquedaDebounced || undefined,
     incluirArchivados,
@@ -80,14 +82,74 @@ export function ContactosManager() {
     return contactos.filter((c) => c.tipo === tab)
   }, [contactos, tab])
 
+  const proveedoresSinLogo = useMemo(
+    () => contactos.filter((c) => c.tipo === "proveedor" && !c.archivado && !c.logo_url).length,
+    [contactos],
+  )
+  const [buscandoLogos, setBuscandoLogos] = useState(false)
+
+  const buscarLogosPendientes = async () => {
+    setBuscandoLogos(true)
+    try {
+      const respuesta = await fetch("/api/contactos/logos-pendientes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delegacionId: selectedDelegation }),
+      })
+      const datos = await respuesta.json()
+
+      if (!respuesta.ok) {
+        toast.error(datos?.error ?? "No se pudieron buscar los logos")
+        return
+      }
+
+      await refetch()
+
+      const encontrados = datos.resueltos?.length ?? 0
+      if (encontrados === 0) {
+        toast.info("No se ha encontrado ningún logo. Puedes subirlos a mano desde cada ficha.")
+      } else {
+        toast.success(
+          `${encontrados} ${encontrados === 1 ? "logo encontrado" : "logos encontrados"}` +
+            (datos.fallidos?.length ? `. Sin logo: ${datos.fallidos.join(", ")}` : ""),
+        )
+      }
+    } catch (error) {
+      console.error("Error buscando logos pendientes:", error)
+      toast.error("No se pudieron buscar los logos")
+    } finally {
+      setBuscandoLogos(false)
+    }
+  }
+
   const handleSubmitForm = async (payload: ContactoFormSubmitPayload) => {
     if (editing) {
       if (!payload.update) return
       await updateContacto(editing.id, payload.update)
+      // El logo se guarda por su ruta de API, fuera del update optimista del
+      // hook, así que hay que releer para que la tarjeta lo muestre.
+      await refetch()
       return undefined
     }
     if (!payload.insert) return
-    return await createContacto({ ...payload.insert, creado_por: user?.id ?? null })
+    const creado = await createContacto({ ...payload.insert, creado_por: user?.id ?? null })
+
+    // Aquí está lo de "que fuera automático": un proveedor recién creado busca
+    // su logo él solo. No se espera al resultado ni se avisa si falla —el alta
+    // ya ha ido bien y el logo es un extra— pero al terminar se relee la lista.
+    if (creado?.id && payload.insert.tipo === "proveedor") {
+      void fetch(`/api/contactos/${creado.id}/logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dominio: payload.insert.dominio ?? null }),
+      })
+        .then(async (respuesta) => {
+          if (respuesta.ok) await refetch()
+        })
+        .catch(() => undefined)
+    }
+
+    return creado
   }
 
   const openCreate = (tipo?: ContactoTipo) => {
@@ -116,7 +178,17 @@ export function ContactosManager() {
             Tu agenda para los movimientos: proveedores, personas MCM (socios, voluntarios) y destinatarios. Guarda IBAN, teléfono y notas, y vincúlalos a los movimientos.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit && proveedoresSinLogo > 0 && (
+            <Button variant="outline" size="sm" onClick={buscarLogosPendientes} disabled={buscandoLogos}>
+              {buscandoLogos ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Buscar {proveedoresSinLogo} {proveedoresSinLogo === 1 ? "logo" : "logos"}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -292,6 +364,7 @@ function ContactoCard({
             emoji={contacto.emoji}
             defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
             colorHex={contacto.color}
+            logoUrl={contacto.logo_url}
             size="lg"
             seed={`contacto:${contacto.id}`}
           />

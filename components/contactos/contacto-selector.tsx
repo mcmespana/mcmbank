@@ -89,6 +89,7 @@ export function ContactoSelector({
                   emoji={selected.emoji}
                   defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
                   colorHex={selected.color}
+                  logoUrl={selected.logo_url}
                   size="sm"
                   seed={`contacto:${selected.id}`}
                 />
@@ -168,6 +169,7 @@ export function ContactoSelector({
                           emoji={c.emoji}
                           defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
                           colorHex={c.color}
+                          logoUrl={c.logo_url}
                           size="sm"
                           seed={`contacto:${c.id}`}
                           className="mr-2"

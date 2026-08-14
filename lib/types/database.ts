@@ -76,7 +76,7 @@ export type PagoMcmConRelaciones = Omit<PagoMcm, "estado" | "tipo_calculo" | "ga
   estado: PagoMcmEstado
   tipo_calculo: PagoMcmTipoCalculo
   gasolina_preset: PagoMcmGasolinaPreset | null
-  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "iban" | "email" | "telefono"> | null
+  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "logo_url" | "iban" | "email" | "telefono"> | null
   categoria_sugerida?: Pick<Categoria, "id" | "nombre" | "emoji" | "color"> | null
   movimiento?: Pick<
     Database["public"]["Tables"]["movimiento"]["Row"],
@@ -111,7 +111,7 @@ export type FacturaMovimientoVinculado = Pick<
 export type FacturaConRelaciones = Omit<Factura, "estado" | "origen"> & {
   estado: FacturaEstado
   origen: FacturaOrigen
-  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "email" | "identificador_fiscal"> | null
+  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "logo_url" | "email" | "identificador_fiscal"> | null
   movimientos?: FacturaMovimientoVinculado[]
   archivos?: Pick<
     ArchivoAdjunto,
@@ -141,7 +141,7 @@ export type GoogleCredencial = Database["public"]["Tables"]["google_credencial"]
 export type MovimientoConRelaciones = Movimiento & {
   cuenta: Cuenta
   categoria?: Categoria
-  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "es_global"> | null
+  contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "logo_url" | "es_global"> | null
   archivos?: MovimientoArchivo[] // Lazy loaded - not included in default queries
 }
 

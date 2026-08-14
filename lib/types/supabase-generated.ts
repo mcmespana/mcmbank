@@ -431,12 +431,16 @@ export type Database = {
           creado_por: string | null
           delegacion_id: string | null
           direccion: string | null
+          dominio: string | null
           email: string | null
           emoji: string | null
           es_global: boolean
           iban: string | null
           id: string
           identificador_fiscal: string | null
+          logo_actualizado_en: string | null
+          logo_fuente: string | null
+          logo_url: string | null
           nombre: string
           notas: string | null
           telefono: string | null
@@ -453,12 +457,16 @@ export type Database = {
           creado_por?: string | null
           delegacion_id?: string | null
           direccion?: string | null
+          dominio?: string | null
           email?: string | null
           emoji?: string | null
           es_global?: boolean
           iban?: string | null
           id?: string
           identificador_fiscal?: string | null
+          logo_actualizado_en?: string | null
+          logo_fuente?: string | null
+          logo_url?: string | null
           nombre: string
           notas?: string | null
           telefono?: string | null
@@ -475,12 +483,16 @@ export type Database = {
           creado_por?: string | null
           delegacion_id?: string | null
           direccion?: string | null
+          dominio?: string | null
           email?: string | null
           emoji?: string | null
           es_global?: boolean
           iban?: string | null
           id?: string
           identificador_fiscal?: string | null
+          logo_actualizado_en?: string | null
+          logo_fuente?: string | null
+          logo_url?: string | null
           nombre?: string
           notas?: string | null
           telefono?: string | null

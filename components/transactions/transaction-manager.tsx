@@ -9,6 +9,7 @@ import { TransactionCreatePanel } from "./transaction-create-panel"
 import { DateRangeFilter } from "./date-range-filter"
 import { CategoryMegaSelector } from "./category-mega-selector"
 import { CategoryQuickCreateSheet } from "./category-quick-create-sheet"
+import { SelectionSummary } from "./selection-summary"
 import { supabase } from "@/lib/supabase/client"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useIsMobile } from "@/hooks/use-is-mobile"
@@ -773,10 +774,8 @@ export function TransactionManager() {
                     className="mt-1 h-5 w-5 border-2"
                     aria-label="Seleccionar todo lo visible"
                   />
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold tracking-tight">
-                      {selectionCount} transacciones seleccionadas
-                    </p>
+                  <div className="min-w-0 space-y-1">
+                    <SelectionSummary movements={selectedMovements as unknown as MovimientoConRelaciones[]} />
                     <p className="text-xs text-muted-foreground">
                       <kbd className="rounded border bg-background/80 px-1 py-0.5 font-mono text-[10px]">Shift</kbd>
                       +Click sobre otro círculo para seleccionar todo el rango.

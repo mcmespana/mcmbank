@@ -9,6 +9,7 @@ import { TransactionCreatePanel } from "./transaction-create-panel"
 import { DateRangeFilter } from "./date-range-filter"
 import { CategoryMegaSelector } from "./category-mega-selector"
 import { CategoryQuickCreateSheet } from "./category-quick-create-sheet"
+import { SelectionSummary } from "./selection-summary"
 import { supabase } from "@/lib/supabase/client"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useIsMobile } from "@/hooks/use-is-mobile"
@@ -150,7 +151,12 @@ export function TransactionManager() {
   const [categoryCreateOpen, setCategoryCreateOpen] = useState(false)
   const pendingCategoryAssignRef = useRef<((categoryId: string) => void | Promise<void>) | null>(null)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
-  const { contactos, createContacto: createContactoFn } = useContactos(selectedDelegation)
+  // Con catálogo: asignar un proveedor a un movimiento es el momento en el que
+  // se crean los duplicados, así que aquí es donde más falta hace que el
+  // selector ofrezca el "Mercadona" que ya existe en MCM.
+  const { contactos, createContacto: createContactoFn } = useContactos(selectedDelegation, {
+    incluirCatalogo: true,
+  })
   const isAdmin = useIsAdminHook()
   const { user: currentUser } = useCurrentUser()
 
@@ -558,6 +564,13 @@ export function TransactionManager() {
       setFilters((prev) => ({ ...prev, uncategorized: true }))
     }
 
+    // Llega desde el saldo por proveedor: ese proveedor, y de propina el mismo
+    // periodo y las mismas actividades que se estaban mirando allí.
+    const contactoParam = searchParams.get("contacto")
+    if (contactoParam) {
+      setFilters((prev) => ({ ...prev, contactoIds: [contactoParam] }))
+    }
+
     // Llega desde el dashboard (Balance) con categorías preseleccionadas
     const categoriasParam = searchParams.get("categorias")
     if (categoriasParam) {
@@ -773,10 +786,8 @@ export function TransactionManager() {
                     className="mt-1 h-5 w-5 border-2"
                     aria-label="Seleccionar todo lo visible"
                   />
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold tracking-tight">
-                      {selectionCount} transacciones seleccionadas
-                    </p>
+                  <div className="min-w-0 space-y-1">
+                    <SelectionSummary movements={selectedMovements as unknown as MovimientoConRelaciones[]} />
                     <p className="text-xs text-muted-foreground">
                       <kbd className="rounded border bg-background/80 px-1 py-0.5 font-mono text-[10px]">Shift</kbd>
                       +Click sobre otro círculo para seleccionar todo el rango.

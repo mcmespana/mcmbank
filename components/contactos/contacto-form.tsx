@@ -14,7 +14,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER, getDefaultColor, getDefaultEmoji } from "@/lib/utils/contacto-tipos"
 import { formatearIban, normalizarIban, validarIban } from "@/lib/utils/iban"
+import { limpiarDominio } from "@/lib/utils/proveedor-logo"
 import { useClipboard } from "@/hooks/use-clipboard"
+import { ContactoLogoField } from "./contacto-logo-field"
+import { categoriaPredeterminadaEfectiva, notasEfectivasContacto } from "@/lib/types/database"
 import type {
   Categoria,
   Contacto,
@@ -30,6 +33,13 @@ export interface ContactoFormSubmitPayload {
   insert?: Omit<ContactoInsert, "creado_en" | "actualizado_en">
   update?: ContactoUpdate
   esGlobal: boolean
+  /**
+   * Campos que son de la relación y no del proveedor, y que por tanto van a
+   * `contacto_delegacion` en vez de a la ficha compartida. Solo se rellena para
+   * proveedores: una ficha de todo MCM no puede apuntar a una categoría de una
+   * delegación concreta sin romperles la sugerencia a las demás.
+   */
+  porDelegacion?: { categoria_id_predeterminada: string | null; notas: string | null }
 }
 
 interface ContactoFormProps {
@@ -60,7 +70,11 @@ export function ContactoForm({
 
   const [tipo, setTipo] = useState<ContactoTipo>(contacto?.tipo ?? defaultTipo)
   const [nombre, setNombre] = useState(contacto?.nombre ?? defaultNombre ?? "")
-  const [esGlobal, setEsGlobal] = useState<boolean>(Boolean(contacto?.es_global))
+  // Los proveedores son de todo MCM, siempre. Las personas MCM y los
+  // destinatarios se quedan en su delegación salvo que un gestor central diga
+  // lo contrario: ahí hay datos de socios y de familias.
+  const [esGlobalManual, setEsGlobalManual] = useState<boolean>(Boolean(contacto?.es_global))
+  const esGlobal = tipo === "proveedor" ? true : esGlobalManual
   const [emoji, setEmoji] = useState<string>(contacto?.emoji ?? getDefaultEmoji(contacto?.tipo ?? defaultTipo))
   const [color, setColor] = useState<string>(contacto?.color ?? getDefaultColor(contacto?.tipo ?? defaultTipo))
   const [identificadorFiscal, setIdentificadorFiscal] = useState(contacto?.identificador_fiscal ?? "")
@@ -71,9 +85,11 @@ export function ContactoForm({
   const [ciudad, setCiudad] = useState(contacto?.ciudad ?? "")
   const [codigoPostal, setCodigoPostal] = useState(contacto?.codigo_postal ?? "")
   const [categoriaPredeterminadaId, setCategoriaPredeterminadaId] = useState<string | "ninguna">(
-    contacto?.categoria_id_predeterminada ?? "ninguna",
+    (contacto ? categoriaPredeterminadaEfectiva(contacto) : null) ?? "ninguna",
   )
-  const [notas, setNotas] = useState(contacto?.notas ?? "")
+  const [notas, setNotas] = useState((contacto ? notasEfectivasContacto(contacto) : null) ?? "")
+  const [dominio, setDominio] = useState(contacto?.dominio ?? "")
+  const [logoUrl, setLogoUrl] = useState<string | null>(contacto?.logo_url ?? null)
   const [direccionAbierta, setDireccionAbierta] = useState(Boolean(contacto?.direccion || contacto?.ciudad || contacto?.codigo_postal))
   const [loading, setLoading] = useState(false)
 
@@ -108,6 +124,12 @@ export function ContactoForm({
 
     setLoading(true)
     try {
+      const categoriaElegida = categoriaPredeterminadaId === "ninguna" ? null : categoriaPredeterminadaId
+      const notasEscritas = notas.trim() || null
+      // En un proveedor compartido, la categoría y las notas son de tu
+      // delegación; en un contacto propio viven en la ficha, como siempre.
+      const esCompartido = tipo === "proveedor"
+
       const baseFields = {
         tipo,
         nombre: nombreTrim,
@@ -120,14 +142,20 @@ export function ContactoForm({
         direccion: direccion.trim() || null,
         ciudad: ciudad.trim() || null,
         codigo_postal: codigoPostal.trim() || null,
-        categoria_id_predeterminada: categoriaPredeterminadaId === "ninguna" ? null : categoriaPredeterminadaId,
-        notas: notas.trim() || null,
+        categoria_id_predeterminada: esCompartido ? null : categoriaElegida,
+        notas: esCompartido ? null : notasEscritas,
+        dominio: limpiarDominio(dominio),
       }
+
+      const porDelegacion = esCompartido
+        ? { categoria_id_predeterminada: categoriaElegida, notas: notasEscritas }
+        : undefined
 
       let result: Contacto | void
       if (isEdit && contacto) {
         result = (await onSubmit({
           esGlobal,
+          porDelegacion,
           update: {
             ...baseFields,
             es_global: esGlobal,
@@ -137,6 +165,7 @@ export function ContactoForm({
       } else {
         result = (await onSubmit({
           esGlobal,
+          porDelegacion,
           insert: {
             ...baseFields,
             es_global: esGlobal,
@@ -186,13 +215,25 @@ export function ContactoForm({
         </div>
       </div>
 
-      {/* Contacto global (solo gestores centrales) */}
-      {canManageGlobal && (
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <Checkbox checked={esGlobal} onCheckedChange={(v) => setEsGlobal(Boolean(v))} />
-          <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Contacto global (todas las delegaciones)</span>
-        </label>
+      {/* Los proveedores son de todo MCM y no hay nada que elegir: se explica.
+          Para los demás tipos sigue siendo decisión del gestor central. */}
+      {tipo === "proveedor" ? (
+        <p className="flex items-start gap-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            Los proveedores se comparten con todas las delegaciones de MCM: si aquí pones su CIF o su logo, se lo
+            ahorras a las demás. Solo lo ven las delegaciones que lo usan, y la categoría sugerida y las notas de
+            abajo son solo tuyas.
+          </span>
+        </p>
+      ) : (
+        canManageGlobal && (
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <Checkbox checked={esGlobalManual} onCheckedChange={(v) => setEsGlobalManual(Boolean(v))} />
+            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Contacto global (todas las delegaciones)</span>
+          </label>
+        )
       )}
 
       {/* Identidad */}
@@ -223,6 +264,21 @@ export function ContactoForm({
           />
         </div>
       </div>
+
+      {/* Logo: solo para proveedores. Una persona MCM o una familia
+          destinataria no tienen logotipo, y pedirlo sería ruido. */}
+      {tipo === "proveedor" && (
+        <ContactoLogoField
+          contactoId={contacto?.id ?? null}
+          nombre={nombre}
+          emoji={emoji}
+          color={color}
+          logoUrl={logoUrl}
+          dominio={dominio}
+          onDominioChange={setDominio}
+          onLogoChange={setLogoUrl}
+        />
+      )}
 
       {/* Contacto */}
       <div className="space-y-3 rounded-xl border border-border/40 bg-card/40 p-4">

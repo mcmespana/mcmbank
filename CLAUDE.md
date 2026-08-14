@@ -40,6 +40,7 @@ The app uses Supabase with a hierarchical structure:
 - **movimiento_archivo**: File attachments for transactions
 - **factura**: Invoices inbox per delegation (upload, email intake, AI reading, reconciliation)
 - **factura_email**: Log of emails received in the per-delegation invoice mailbox
+- **contacto_delegacion**: Which delegations use each shared contact, plus that delegation's overrides (see Proveedores below)
 - **propuesta_mejora**: Improvement proposals (ideas and bug reports)
 - **propuesta_mejora_comentario**: Comments on proposals
 - **propuesta_mejora_voto**: Votes/reactions on proposals
@@ -105,6 +106,7 @@ Also includes: `ThemeStateWatcher`, `ConnectionMonitor`, `Toaster` (Sonner).
 | `use-perfil.ts` | User profile |
 | `use-improvement-proposals.ts` | Proposals CRUD, voting, commenting |
 | `use-avisos.ts` | Notices/tasks per delegation, unread + pending counters |
+| `use-saldo-contactos.ts` | Per-provider balance for a period, filtered by activity (category) |
 | `use-movimiento-archivos.ts` | Transaction file attachments |
 | `use-delegation-counts.ts` | Counts of items per delegation |
 | `use-app-status.ts` | App status with debounced revalidation |
@@ -150,7 +152,7 @@ attached to a movement, or **emailed** to
 `facturas+<alias>@movimientoconsolacion.com` — and all three end up in the same
 place, read by the same code (`plans/022`, `docs/FACTURAS_EMAIL_IA.md`).
 
-- **Address → delegation**: `delegacion.alias_email` (`scripts/060`). The parser
+- **Address → delegation**: `delegacion.alias_email` (`scripts/065`). The parser
   accepts `facturas+alias@`, `facturas-alias@` and `alias@facturas.…`, and also
   reads forwarding headers, because a forwarded mail only keeps the original
   recipient there. Falls back to `codigo`.
@@ -161,8 +163,9 @@ place, read by the same code (`plans/022`, `docs/FACTURAS_EMAIL_IA.md`).
 - **Everything lands in `bandeja`** and nothing is ever auto-reconciled.
 - **The AI suggests, it does not decide.** Transcription fields (número, fecha,
   importe, concepto) are written **only when empty**; the supplier is linked on
-  an exact NIF/name match and created otherwise; **the category is never applied
-  automatically** — it waits in `datos_ia` until someone accepts it, which is
+  an exact NIF/name match and otherwise created as a **global** proveedor
+  (`scripts/061`), which the `factura_adoptar_contacto` trigger then adopts for
+  the delegation; **the category is never applied automatically** — it waits in `datos_ia` until someone accepts it, which is
   what writes `factura.categoria_id` and propagates it to the movement.
 - **The document is untrusted input.** One `generateContent` call with a
   `responseSchema` and no tools; every field re-validated in
@@ -170,6 +173,71 @@ place, read by the same code (`plans/022`, `docs/FACTURAS_EMAIL_IA.md`).
   handed to the model. There is no schema output that can reconcile or delete
   anything.
 - AI extraction runs in `after()` from the webhook so the response stays fast.
+### Proveedores (interdelegacionales) y sus logos
+
+Los **proveedores** (`contacto.tipo = 'proveedor'`) son fichas de toda la
+organización: `es_global = true`, `delegacion_id = null`, una sola "Mercadona"
+para las 18 delegaciones. **Personas MCM y destinatarios MCM NO**: siguen siendo
+privados de su delegación porque contienen datos personales.
+
+Qué vive dónde:
+
+| Dato | Tabla | Por qué |
+|------|-------|---------|
+| nombre, CIF/NIF, IBAN, `dominio`, `logo_url`, email, teléfono, dirección | `contacto` | Son del proveedor, no de la relación. Cualquier tesorero puede corregirlos y se lo ahorra a las demás delegaciones |
+| `alias`, `notas`, `categoria_id_predeterminada`, `archivado` | `contacto_delegacion` | Son de cada delegación. Una ficha global no puede apuntar a una categoría de una delegación concreta |
+
+Se lee con los helpers de `lib/types/database.ts`: `nombreEfectivoContacto()`,
+`archivadoEfectivoContacto()`, `categoriaPredeterminadaEfectiva()`,
+`notasEfectivasContacto()` — mismo patrón que `CategoriaConOrdenEfectivo`.
+**Nunca leas `contacto.categoria_id_predeterminada` ni `contacto.archivado`
+directamente** para un proveedor: te saltarías la sobrescritura de la delegación.
+
+Reglas que están en la base de datos (scripts `061`–`063`) y no en la app, porque
+hay cuatro caminos de escritura (web, API externa, MCP e importación de Excel):
+
+- `clave_normalizada` la calcula un trigger con `mcm_clave_proveedor()`, y un
+  índice único sobre ella para proveedores globales hace **imposible** tener dos
+  Mercadonas. `normalizarClaveProveedor()` en `lib/utils/proveedor-logo.ts` es su
+  equivalente en TS, pero solo para buscar dominios y sugerir coincidencias: la
+  autoridad es la base de datos.
+- Vincular un contacto global a un movimiento o factura **lo adopta solo**
+  (`contacto_adoptar_al_vincular`).
+- **Borrar un proveedor que usan varias delegaciones se rechaza**: las FK son
+  `ON DELETE SET NULL`, así que habría dejado sin proveedor los movimientos de
+  las demás en silencio. Para dejar de verlo está archivarlo, que es por
+  delegación.
+- `contacto_uso_delegaciones` es una vista con `security_invoker = off` a
+  propósito: expone solo un recuento por contacto, porque la RLS de
+  `contacto_delegacion` haría que saliera siempre 0 ó 1.
+
+**Visibilidad**: `getContactosByDelegacion()` devuelve los contactos propios más
+los globales adoptados, y con `incluirCatalogo: true` añade los globales que la
+delegación no usa, marcados `en_catalogo`. Ese catálogo es lo que evita
+duplicados: aparece en el selector de contacto y al buscar en Contactos, y
+elegirlo lo adopta en el mismo gesto. Consulta desde `contacto_delegacion`, no
+desde `contacto` con un filtro sobre el embebido: filtrando por dentro podría
+llegar la fila de adopción de otra delegación.
+
+**Logos**: se descargan una vez en el servidor de la web del proveedor y se
+guardan en el bucket `logos`; nunca se enlaza a un servicio externo desde la
+interfaz. La cadena de fuentes es unavatar → DuckDuckGo → Google s2 →
+`/apple-touch-icon.png` (Clearbit está cerrada; no la añadas). El dominio sale de
+la ficha, del catálogo `DOMINIOS_CONOCIDOS`, o de adivinarlo por el nombre —esto
+último **solo** cuando alguien pulsa el botón y ve el resultado, porque un dominio
+inventado podría colarle a un proveedor el logo de otra empresa. Un logo con
+`logo_fuente = 'manual'` no lo sobrescribe nunca el proceso automático.
+
+Al pintar, basta con `EntityAvatar` y su prop `logoUrl`: los cuatro sitios que
+dibujan un contacto ya pasan por él. En Movimientos el logo va como insignia
+**sobre** el círculo de la cuenta, no en su lugar, porque ese círculo dice de qué
+cuenta sale el dinero y además es el único sitio desde el que se selecciona.
+
+**Saldo por proveedor**: `get_saldo_por_contacto(delegacion, desde, hasta,
+categorias[])` + `components/contactos/proveedores-saldos.tsx` (conmutador
+"Agenda / Saldos" en la pestaña de proveedores). Como el resto de RPC de
+agregación llama a `assert_delegacion_member`, así que **no sirve desde la API
+externa ni el MCP**: ahí hay que agregar en JS, como `lib/api/resumen.ts`.
 
 ### File Uploads
 - Files uploaded to Supabase Storage buckets
@@ -245,6 +313,8 @@ docs/                       # End-user documentation in Spanish
 | `/api/avisos/notificar` | Sends a notice/task by email via Resend |
 | `/api/facturas/entrantes` | Resend inbound webhook: the per-delegation invoice mailbox |
 | `/api/facturas/ia` | Reads an invoice with AI / accepts its category suggestion (session-authenticated) |
+| `/api/contactos/[id]/logo` | POST finds a provider's logo on its website, PUT uploads one by hand, DELETE removes it |
+| `/api/contactos/logos-pendientes` | Finds the logo of every provider that has none (max 20 per call) |
 | `/api/admin/users` | Admin user management API |
 | `/api/supabase-sanity` | Supabase health check API |
 | `/api/v1/*` | External REST API (see below) |

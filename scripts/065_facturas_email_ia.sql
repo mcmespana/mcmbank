@@ -1,5 +1,5 @@
 -- =============================================================================
--- 060: Buzón de facturas por delegación + lectura automática con IA
+-- 065: Buzón de facturas por delegación + lectura automática con IA
 -- =============================================================================
 -- Plan: plans/022-facturas-por-email-y-lectura-con-ia.md
 --

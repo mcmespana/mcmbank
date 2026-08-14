@@ -107,7 +107,7 @@ silencio es peor que dejar una fila que alguien borra en dos clics.
 | Campo | Qué hace | Por qué |
 |---|---|---|
 | `numero`, `fecha_emision`, `importe`, `concepto` | **se escriben** en la factura, pero **solo si están vacíos** | es transcripción, no criterio; y la factura sigue en `bandeja` esperando revisión |
-| Proveedor (`contacto_id`) | se enlaza si casa por **NIF exacto** o por **nombre normalizado exacto**; si no casa y hay nombre + NIF, **se crea** el contacto (`tipo: proveedor`, con nota de origen) | es lo que se ha pedido; el margen de error es bajo y queda trazado |
+| Proveedor (`contacto_id`) | se enlaza si casa por **NIF exacto** o por **nombre normalizado exacto**; si no casa, **se crea** la ficha global de proveedor y el trigger la adopta para la delegación al vincularla | es lo que se ha pedido; el margen de error es bajo y queda trazado |
 | **Categoría** | **solo sugerencia**. Se guarda en `datos_ia` y no toca ninguna fila hasta que alguien pulsa *Aceptar* | es lo único que se ha pedido explícitamente que no sea automático |
 
 Nunca se sobrescribe un valor escrito por una persona. La marca de agua de todo
@@ -151,7 +151,7 @@ Un buzón abierto es una entrada de datos no autenticada, y el PDF que llega es
 
 ## Plan de ejecución
 
-### Fase 1 — `scripts/060_facturas_email_ia.sql`
+### Fase 1 — `scripts/065_facturas_email_ia.sql`
 
 - `delegacion.alias_email TEXT` + índice único parcial; sembrado por slug del
   nombre (sin acentos, sin el prefijo `MCM`, `[a-z0-9-]`), con overrides
@@ -209,6 +209,24 @@ NEXT_PUBLIC_FACTURAS_EMAIL=facturas@movimientoconsolacion.com
 
 Sin `GEMINI_API_KEY` todo lo demás sigue funcionando: las facturas entran igual,
 solo que sin leer. Sin `RESEND_WEBHOOK_SECRET` el webhook rechaza todo.
+
+## Cambio sobrevenido: proveedores globales
+
+Mientras esto se desarrollaba, `scripts/061` convirtió los proveedores en fichas
+de toda la organización (`es_global = true`, con `contacto_delegacion` para saber
+quién los usa). La lectura con IA se adaptó al integrar:
+
+- Al modelo se le pasa **todo** el catálogo de proveedores de MCM, no solo los de
+  la delegación: reconocer que este Mercadona es el Mercadona que ya existe es
+  justo lo que evita el decimonoveno duplicado.
+- Los proveedores que crea nacen **globales**; adoptarlos para la delegación lo
+  hace solo el trigger `factura_adoptar_contacto` al escribir `factura.contacto_id`.
+- Si el índice único sobre `clave_normalizada` rechaza el alta (dos facturas del
+  mismo emisor nuevo leídas a la vez), se busca el que ya existe y se usa ese.
+- La nota "creado automáticamente" va en `contacto_delegacion`, que es donde
+  viven las notas de un proveedor compartido.
+- No se crea proveedor si la factura ya tenía uno: sería dejar una ficha suelta
+  que nadie ha pedido.
 
 ## Qué queda fuera a propósito
 

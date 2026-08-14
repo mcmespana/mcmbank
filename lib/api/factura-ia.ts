@@ -3,6 +3,7 @@ import { ApiError, badRequest, notFound, unwrap, wrapSupabaseError } from "@/lib
 import { generarJson, geminiConfigurado, GEMINI_MIME_SOPORTADOS } from "@/lib/api/gemini"
 import { obtenerFactura, type FacturaPublica } from "@/lib/api/facturas"
 import { listCategorias } from "@/lib/api/catalogos"
+import { limpiarDominio, normalizarClaveProveedor } from "@/lib/utils/proveedor-logo"
 import {
   normalizarNif,
   normalizarNombre,
@@ -174,6 +175,7 @@ export async function extraerDatosFactura(
       actorId: options.actorId ?? null,
       crearProveedor: options.crearProveedor !== false,
       esFactura: respuesta.datos.es_factura !== false,
+      yaTieneContacto: Boolean(fila.contacto_id),
     })
 
     const camposRellenados = await rellenarHuecos(admin, fila, sugerencias)
@@ -339,8 +341,18 @@ interface ProveedorConocido {
   id: string
   nombre: string
   identificador_fiscal: string | null
+  es_global: boolean
 }
 
+/**
+ * El catálogo con el que se compara el emisor de la factura.
+ *
+ * Se le pasa **todo** el catálogo de proveedores de MCM, no solo los que ya usa
+ * esta delegación: desde `scripts/061` los proveedores son de toda la
+ * organización, así que reconocer que este Mercadona es el Mercadona que ya
+ * existe es justo lo que evita el decimonoveno duplicado. Vincularlo a la
+ * factura lo adopta solo (trigger `factura_adoptar_contacto`).
+ */
 async function cargarProveedores(
   admin: AdminClient,
   delegacionId: string,
@@ -351,14 +363,17 @@ async function cargarProveedores(
   const filas = (unwrap(
     await (admin as any)
       .from("contacto")
-      .select("id, nombre, identificador_fiscal")
+      .select("id, nombre, identificador_fiscal, es_global, archivado")
       .eq("tipo", "proveedor")
-      .eq("archivado", false)
       .or(`delegacion_id.eq.${delegacionId},es_global.eq.true`)
       .order("nombre")
       .limit(MAX_PROVEEDORES_EN_PROMPT),
-  ) ?? []) as ProveedorConocido[]
-  return filas
+  ) ?? []) as (ProveedorConocido & { archivado: boolean })[]
+
+  // `archivado` de un proveedor global es por delegación y vive en
+  // `contacto_delegacion`; el de la ficha compartida no significa nada. Solo se
+  // filtra, por tanto, el de los contactos propios de la delegación.
+  return filas.filter((c) => c.es_global || !c.archivado)
 }
 
 function construirPrompt(ctx: {
@@ -450,6 +465,7 @@ async function interpretar(
     actorId: string | null
     crearProveedor: boolean
     esFactura: boolean
+    yaTieneContacto: boolean
   },
 ): Promise<FacturaIaSugerencias> {
   const nombreProveedor = recortar(respuesta.proveedor_nombre, 120)
@@ -513,6 +529,7 @@ async function resolverProveedor(
     actorId: string | null
     crearProveedor: boolean
     esFactura: boolean
+    yaTieneContacto: boolean
   },
 ): Promise<FacturaIaSugerencias["proveedor"]> {
   if (!ctx.nombre && !ctx.nif) return null
@@ -546,33 +563,97 @@ async function resolverProveedor(
 
   // No se crean proveedores a partir de documentos que ni siquiera parecen una
   // factura, ni con nombres de dos letras: sería sembrar el directorio de ruido.
-  if (!ctx.crearProveedor || !ctx.esFactura || !ctx.nombre || ctx.nombre.length < 3) {
+  // Y si la factura ya tiene proveedor puesto, tampoco: se quedaría una ficha
+  // suelta que nadie ha pedido.
+  if (
+    !ctx.crearProveedor ||
+    !ctx.esFactura ||
+    !ctx.nombre ||
+    ctx.nombre.length < 3 ||
+    ctx.yaTieneContacto
+  ) {
     return base
   }
 
   try {
+    // Los proveedores son de toda la organización (`scripts/061`): se crea la
+    // ficha global y la adopción de esta delegación la hace el trigger al
+    // vincularla a la factura. El dominio sale del correo del emisor, que es lo
+    // que luego permite encontrarle el logo solo.
     const creado = unwrap(
       await (admin as any)
         .from("contacto")
         .insert({
-          delegacion_id: ctx.delegacionId,
-          es_global: false,
+          delegacion_id: null,
+          es_global: true,
           tipo: "proveedor",
           nombre: ctx.nombre,
           identificador_fiscal: ctx.nif,
           email: ctx.email,
-          notas: "Creado automáticamente al leer una factura con IA. Revisa sus datos.",
+          dominio: ctx.email ? limpiarDominio(ctx.email.split("@")[1]) : null,
           creado_por: ctx.actorId,
         })
         .select("id")
         .single(),
     ) as any
+    await anotarOrigenAutomatico(admin, creado.id, ctx.delegacionId)
     return { ...base, contacto_id: creado.id, creado: true }
   } catch (err) {
+    // El índice único sobre `clave_normalizada` es la última palabra sobre si
+    // dos nombres son el mismo proveedor: si rechaza el alta, el bueno ya
+    // existe (lo habitual al leer un lote de facturas del mismo emisor a la
+    // vez). Se busca y se usa ese.
+    const existente = await buscarProveedorGlobalPorClave(admin, ctx.nombre)
+    if (existente) {
+      return {
+        ...base,
+        nombre: existente.nombre,
+        identificador_fiscal: existente.identificador_fiscal ?? ctx.nif,
+        contacto_id: existente.id,
+      }
+    }
     // Que no se pueda crear el proveedor no invalida el resto de la lectura.
     console.warn("No se pudo crear el proveedor detectado por IA:", (err as any)?.message ?? err)
     return base
   }
+}
+
+/** El proveedor global que ya ocupa ese nombre, si lo hay. */
+async function buscarProveedorGlobalPorClave(
+  admin: AdminClient,
+  nombre: string,
+): Promise<ProveedorConocido | null> {
+  const clave = normalizarClaveProveedor(nombre)
+  if (!clave) return null
+  const { data } = await (admin as any)
+    .from("contacto")
+    .select("id, nombre, identificador_fiscal, es_global")
+    .eq("tipo", "proveedor")
+    .eq("es_global", true)
+    .eq("clave_normalizada", clave)
+    .maybeSingle()
+  return (data as ProveedorConocido) ?? null
+}
+
+/**
+ * Deja constancia de que la ficha la escribió un modelo. Va en la adopción de
+ * la delegación y no en el contacto: las notas de un proveedor compartido son
+ * de cada delegación, y esta la escribe quien recibió la factura.
+ */
+async function anotarOrigenAutomatico(
+  admin: AdminClient,
+  contactoId: string,
+  delegacionId: string,
+): Promise<void> {
+  const { error } = await (admin as any).from("contacto_delegacion").upsert(
+    {
+      contacto_id: contactoId,
+      delegacion_id: delegacionId,
+      notas: "Creado automáticamente al leer una factura con IA. Revisa sus datos.",
+    },
+    { onConflict: "contacto_id,delegacion_id", ignoreDuplicates: true },
+  )
+  if (error) console.warn("No se pudo anotar el origen del proveedor:", error.message)
 }
 
 // ---------------------------------------------------------------------------

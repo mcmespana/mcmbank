@@ -564,6 +564,13 @@ export function TransactionManager() {
       setFilters((prev) => ({ ...prev, uncategorized: true }))
     }
 
+    // Llega desde el saldo por proveedor: ese proveedor, y de propina el mismo
+    // periodo y las mismas actividades que se estaban mirando allí.
+    const contactoParam = searchParams.get("contacto")
+    if (contactoParam) {
+      setFilters((prev) => ({ ...prev, contactoIds: [contactoParam] }))
+    }
+
     // Llega desde el dashboard (Balance) con categorías preseleccionadas
     const categoriasParam = searchParams.get("categorias")
     if (categoriasParam) {

@@ -40,6 +40,19 @@ export type ContactoTipo = "proveedor" | "persona_mcm" | "destinatario_mcm"
 
 export const CONTACTO_TIPOS: readonly ContactoTipo[] = ["proveedor", "persona_mcm", "destinatario_mcm"] as const
 
+/** Una fila de `get_saldo_por_contacto`: el saldo de un contacto en un periodo. */
+export type SaldoContactoRow = {
+  contacto_id: string
+  movimientos: number
+  ingresos: number
+  gastos: number
+  neto: number
+  primera_fecha: string | null
+  ultima_fecha: string | null
+  categoria_principal_id: string | null
+  categoria_principal_importe: number | null
+}
+
 export type ContactoDelegacion = Database["public"]["Tables"]["contacto_delegacion"]["Row"]
 export type ContactoDelegacionInsert = Database["public"]["Tables"]["contacto_delegacion"]["Insert"]
 export type ContactoDelegacionUpdate = Database["public"]["Tables"]["contacto_delegacion"]["Update"]

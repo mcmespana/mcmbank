@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import {
   Archive,
   ArchiveRestore,
+  Coins,
   Copy,
   Edit3,
   Globe,
@@ -41,6 +42,7 @@ import { ContactoForm, type ContactoFormSubmitPayload } from "./contacto-form"
 import { ContactoDetailSheet } from "./contacto-detail-sheet"
 import { ContactoTipoBadge } from "./contacto-tipo-badge"
 import { DeleteContactoDialog } from "./delete-contacto-dialog"
+import { ProveedoresSaldos } from "./proveedores-saldos"
 
 type TabValue = "todos" | ContactoTipo
 
@@ -53,6 +55,9 @@ export function ContactosManager() {
   const canManageGlobal = isAdmin
 
   const [tab, setTab] = useState<TabValue>("todos")
+  // Dos formas de mirar los mismos proveedores: la agenda (quién es quién) y
+  // los saldos (a quién le pagamos). No son dos pantallas, es la misma pregunta.
+  const [vista, setVista] = useState<"tarjetas" | "saldos">("tarjetas")
   const [incluirArchivados, setIncluirArchivados] = useState(false)
   const { value: busquedaDebounced, immediateValue: busqueda, setValue: setBusqueda } = useDebouncedState("", 250)
 
@@ -263,6 +268,40 @@ export function ContactosManager() {
         ]}
       />
 
+      {tab === "proveedor" && (
+        <div className="inline-flex rounded-lg border border-border/60 bg-muted/40 p-0.5">
+          {(
+            [
+              { valor: "tarjetas", etiqueta: "Agenda", icono: Users },
+              { valor: "saldos", etiqueta: "Saldos", icono: Coins },
+            ] as const
+          ).map(({ valor, etiqueta, icono: Icono }) => (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => setVista(valor)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                vista === valor
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icono className="h-3.5 w-3.5" />
+              {etiqueta}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === "proveedor" && vista === "saldos" ? (
+        <ProveedoresSaldos
+          delegacionId={selectedDelegation}
+          contactos={contactos}
+          categorias={categorias}
+        />
+      ) : (
+        <>
       {/* Buscador */}
       <div className="relative max-w-xl">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -319,6 +358,9 @@ export function ContactosManager() {
             />
           ))}
         </div>
+      )}
+
+        </>
       )}
 
       {/* Form sheet */}

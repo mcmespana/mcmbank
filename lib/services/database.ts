@@ -21,6 +21,7 @@ import type {
   MonthlyTrendRow,
   MovimientoConRelaciones,
   PagoMcm,
+  SaldoContactoRow,
   PagoMcmConRelaciones,
   PagoMcmEstado,
   PagoMcmInsert,
@@ -487,7 +488,16 @@ export class DatabaseService {
 
   static async getMovimientosByContacto(
     contactoId: string,
-    options: { limite?: number; signal?: AbortSignal } = {},
+    options: {
+      limite?: number
+      signal?: AbortSignal
+      /** Mismos filtros que la tabla de saldos, para que al abrir un proveedor
+       *  se vean exactamente los movimientos que suman el importe mostrado. */
+      delegacionId?: string | null
+      desde?: string
+      hasta?: string
+      categorias?: string[]
+    } = {},
   ): Promise<MovimientoConRelaciones[]> {
     const supabase = this.getClient() as any
     const limite = options.limite ?? 100
@@ -536,6 +546,11 @@ export class DatabaseService {
       .order("creado_en", { ascending: false })
       .limit(limite)
 
+    if (options.delegacionId) query = query.eq("delegacion_id", options.delegacionId)
+    if (options.desde) query = query.gte("fecha", options.desde)
+    if (options.hasta) query = query.lte("fecha", options.hasta)
+    if (options.categorias?.length) query = query.in("categoria_id", options.categorias)
+
     if (options.signal) {
       query = query.abortSignal(options.signal)
     }
@@ -543,6 +558,31 @@ export class DatabaseService {
     const { data, error } = await query
     if (error) throw error
     return (data ?? []) as MovimientoConRelaciones[]
+  }
+
+  /**
+   * Saldo por contacto de una delegación: cuánto se le paga, cuánto entra de él
+   * y en qué actividad se le gasta. Lo calcula Postgres
+   * (`get_saldo_por_contacto`) en vez de traer todos los movimientos al
+   * navegador, que es lo que sigue siendo instantáneo cuando una delegación
+   * lleve años acumulando.
+   */
+  static async getSaldoPorContacto(
+    delegacionId: string,
+    options: { desde?: string; hasta?: string; categorias?: string[]; signal?: AbortSignal } = {},
+  ): Promise<SaldoContactoRow[]> {
+    const supabase = this.getClient() as any
+    let query = supabase.rpc("get_saldo_por_contacto", {
+      p_delegacion_id: delegacionId,
+      p_desde: options.desde ?? null,
+      p_hasta: options.hasta ?? null,
+      p_categorias: options.categorias?.length ? options.categorias : null,
+    })
+    if (options.signal) query = query.abortSignal(options.signal)
+
+    const { data, error } = await query
+    if (error) throw error
+    return (data ?? []) as SaldoContactoRow[]
   }
 
   // ---------------------------------------------------------------------------

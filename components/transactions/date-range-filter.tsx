@@ -20,6 +20,9 @@ interface DateRangeFilterProps {
   dateFrom?: string
   dateTo?: string
   onDateRangeChange: (dateFrom?: string, dateTo?: string) => void
+  /** Preset con el que arranca. Por defecto "desde el inicio"; la pantalla de
+   *  saldos por proveedor arranca en el curso actual, que es lo que se mira. */
+  defaultPreset?: string
 }
 
 const DATE_PRESETS = [
@@ -37,9 +40,14 @@ const DATE_PRESETS = [
   { label: "Rango personalizado", value: "custom" },
 ]
 
-export function DateRangeFilter({ dateFrom, dateTo, onDateRangeChange }: DateRangeFilterProps) {
+export function DateRangeFilter({
+  dateFrom,
+  dateTo,
+  onDateRangeChange,
+  defaultPreset = "all-time",
+}: DateRangeFilterProps) {
   const [customRangeOpen, setCustomRangeOpen] = useState(false)
-  const [selectedPreset, setSelectedPreset] = useState("all-time")
+  const [selectedPreset, setSelectedPreset] = useState(defaultPreset)
   const [range, setRange] = useState<DateRange | undefined>(() => ({
     from: dateFrom ? new Date(dateFrom) : undefined,
     to: dateTo ? new Date(dateTo) : undefined,

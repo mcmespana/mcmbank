@@ -422,9 +422,11 @@ export type Database = {
       contacto: {
         Row: {
           actualizado_en: string
+          actualizado_por: string | null
           archivado: boolean
           categoria_id_predeterminada: string | null
           ciudad: string | null
+          clave_normalizada: string | null
           codigo_postal: string | null
           color: string | null
           creado_en: string
@@ -448,9 +450,11 @@ export type Database = {
         }
         Insert: {
           actualizado_en?: string
+          actualizado_por?: string | null
           archivado?: boolean
           categoria_id_predeterminada?: string | null
           ciudad?: string | null
+          clave_normalizada?: string | null
           codigo_postal?: string | null
           color?: string | null
           creado_en?: string
@@ -474,9 +478,11 @@ export type Database = {
         }
         Update: {
           actualizado_en?: string
+          actualizado_por?: string | null
           archivado?: boolean
           categoria_id_predeterminada?: string | null
           ciudad?: string | null
+          clave_normalizada?: string | null
           codigo_postal?: string | null
           color?: string | null
           creado_en?: string
@@ -508,6 +514,54 @@ export type Database = {
           },
           {
             foreignKeyName: "contacto_delegacion_id_fkey"
+            columns: ["delegacion_id"]
+            isOneToOne: false
+            referencedRelation: "delegacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacto_delegacion: {
+        Row: {
+          alias: string | null
+          archivado: boolean
+          categoria_id_predeterminada: string | null
+          contacto_id: string
+          creado_en: string
+          creado_por: string | null
+          delegacion_id: string
+          notas: string | null
+        }
+        Insert: {
+          alias?: string | null
+          archivado?: boolean
+          categoria_id_predeterminada?: string | null
+          contacto_id: string
+          creado_en?: string
+          creado_por?: string | null
+          delegacion_id: string
+          notas?: string | null
+        }
+        Update: {
+          alias?: string | null
+          archivado?: boolean
+          categoria_id_predeterminada?: string | null
+          contacto_id?: string
+          creado_en?: string
+          creado_por?: string | null
+          delegacion_id?: string
+          notas?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacto_delegacion_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contacto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacto_delegacion_delegacion_id_fkey"
             columns: ["delegacion_id"]
             isOneToOne: false
             referencedRelation: "delegacion"

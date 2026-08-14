@@ -26,6 +26,7 @@ import { formatIsoDateToInput } from "@/lib/utils/date-input"
 import { DateField } from "@/components/ui/date-field"
 import { TransactionFiles } from "./transaction-files"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria, Contacto, ContactoConCategoriaPredeterminada } from "@/lib/types/database"
+import { categoriaPredeterminadaEfectiva } from "@/lib/types/database"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
 import { ContactoForm } from "@/components/contactos/contacto-form"
@@ -549,9 +550,8 @@ export function TransactionDetail({
                           // Auto-sugerir categoría predeterminada al elegir contacto si no había una
                           if (contactoId && !prev.categoria_id) {
                             const c = contactos.find((x) => x.id === contactoId)
-                            if (c?.categoria_id_predeterminada) {
-                              next.categoria_id = c.categoria_id_predeterminada
-                            }
+                            const sugerida = c ? categoriaPredeterminadaEfectiva(c) : null
+                            if (sugerida) next.categoria_id = sugerida
                           }
                           return next
                         })

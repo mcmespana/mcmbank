@@ -40,8 +40,58 @@ export type ContactoTipo = "proveedor" | "persona_mcm" | "destinatario_mcm"
 
 export const CONTACTO_TIPOS: readonly ContactoTipo[] = ["proveedor", "persona_mcm", "destinatario_mcm"] as const
 
+export type ContactoDelegacion = Database["public"]["Tables"]["contacto_delegacion"]["Row"]
+export type ContactoDelegacionInsert = Database["public"]["Tables"]["contacto_delegacion"]["Insert"]
+export type ContactoDelegacionUpdate = Database["public"]["Tables"]["contacto_delegacion"]["Update"]
+
+/** Lo que una delegación sobrescribe de un contacto compartido. */
+export type ContactoAdopcion = Pick<
+  ContactoDelegacion,
+  "delegacion_id" | "categoria_id_predeterminada" | "alias" | "notas" | "archivado"
+>
+
+/**
+ * Un contacto visto desde una delegación concreta.
+ *
+ * Los proveedores son de todo MCM (una sola ficha "Mercadona") y cada
+ * delegación los adopta: `adopcion` es su fila en `contacto_delegacion`, con lo
+ * que esa delegación sobrescribe. Mismo patrón que `CategoriaConOrdenEfectivo`:
+ * el valor efectivo es el de la adopción si existe, y si no el de la ficha.
+ */
 export type ContactoConCategoriaPredeterminada = Contacto & {
   categoria_predeterminada?: Pick<Categoria, "id" | "nombre" | "emoji" | "color"> | null
+  /** Fila de adopción de la delegación activa. Null si no la ha adoptado. */
+  adopcion?: ContactoAdopcion | null
+  /** Contacto global que esta delegación todavía no usa: está en el catálogo. */
+  en_catalogo?: boolean
+  /** Cuántas delegaciones lo usan. Solo se calcula para el catálogo. */
+  usos_delegaciones?: number
+}
+
+/** Nombre con el que verlo aquí: el alias de la delegación si lo puso. */
+export function nombreEfectivoContacto(contacto: ContactoConCategoriaPredeterminada): string {
+  return contacto.adopcion?.alias?.trim() || contacto.nombre
+}
+
+/**
+ * Archivar es una decisión de cada delegación: dejar de ver Mercadona en
+ * Castellón no puede quitárselo a Sevilla. Para un contacto adoptado manda la
+ * adopción; para uno propio, la ficha.
+ */
+export function archivadoEfectivoContacto(contacto: ContactoConCategoriaPredeterminada): boolean {
+  return contacto.adopcion ? contacto.adopcion.archivado : contacto.archivado
+}
+
+/** La categoría sugerida es de la delegación; la de la ficha es el respaldo. */
+export function categoriaPredeterminadaEfectiva(
+  contacto: ContactoConCategoriaPredeterminada,
+): string | null {
+  return contacto.adopcion?.categoria_id_predeterminada ?? contacto.categoria_id_predeterminada
+}
+
+/** Las notas de la delegación tapan las de la ficha compartida. */
+export function notasEfectivasContacto(contacto: ContactoConCategoriaPredeterminada): string | null {
+  return contacto.adopcion?.notas ?? contacto.notas
 }
 
 export type ArchivoAdjunto = Database["public"]["Tables"]["archivo_adjunto"]["Row"]

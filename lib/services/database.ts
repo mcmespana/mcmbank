@@ -7,6 +7,7 @@ import type {
   CategoriaOrdenDelegacion,
   Contacto,
   ContactoConCategoriaPredeterminada,
+  ContactoDelegacion,
   ContactoInsert,
   ContactoTipo,
   ContactoUpdate,
@@ -26,7 +27,9 @@ import type {
   PagoMcmResumenRow,
   PagoMcmUpdate,
 } from "@/lib/types/database"
+import { archivadoEfectivoContacto, nombreEfectivoContacto } from "@/lib/types/database"
 import { margenImporteFactura, scoreCandidatoMovimiento } from "@/lib/utils/facturas"
+import { normalizarClaveProveedor } from "@/lib/utils/proveedor-logo"
 import { upsertCategoriaOrden, upsertCategoriaVisibilidad } from "@/lib/services/categoria-queries"
 
 type CategoriaWithOverrides = Categoria & {
@@ -208,6 +211,19 @@ export class DatabaseService {
   // Contacto operations (client-side)
   // ---------------------------------------------------------------------------
 
+  /**
+   * Contactos tal como los ve una delegación.
+   *
+   * Los proveedores son fichas de todo MCM, así que "ser visible aquí" no lo
+   * decide `delegacion_id` sino tener fila en `contacto_delegacion`. Eso da tres
+   * grupos: los contactos propios de la delegación (personas y destinatarios),
+   * los globales que la delegación ha adoptado, y —solo si se piden— el resto
+   * del catálogo, que es lo que permite adoptar en lugar de duplicar.
+   *
+   * Se resuelve con dos consultas en vez de un `or` gigante porque el filtro
+   * cruza tablas: PostgREST no sabe expresar "es mío o alguien lo adoptó" en una
+   * sola, y son dos consultas sobre índices, no un escaneo.
+   */
   static async getContactosByDelegacion(
     delegacionId?: string | null,
     options: {
@@ -215,6 +231,8 @@ export class DatabaseService {
       busqueda?: string
       incluirArchivados?: boolean
       incluirGlobales?: boolean
+      /** Añade los globales que esta delegación NO usa, marcados `en_catalogo`. */
+      incluirCatalogo?: boolean
       signal?: AbortSignal
     } = {},
   ): Promise<ContactoConCategoriaPredeterminada[]> {
@@ -223,9 +241,7 @@ export class DatabaseService {
 
     if (!delegacionId && !incluirGlobales) return []
 
-    let query = supabase
-      .from("contacto")
-      .select(`
+    const CAMPOS = `
         *,
         categoria_predeterminada:categoria_id_predeterminada (
           id,
@@ -233,40 +249,184 @@ export class DatabaseService {
           emoji,
           color
         )
-      `)
-      .order("archivado", { ascending: true })
-      .order("nombre", { ascending: true })
+      `
 
-    if (delegacionId) {
-      query = incluirGlobales
-        ? query.or(`delegacion_id.eq.${delegacionId},es_global.is.true`)
-        : query.eq("delegacion_id", delegacionId)
-    } else if (incluirGlobales) {
-      query = query.eq("es_global", true)
+    /**
+     * `prefijo` indica dónde viven los campos de contacto en esa consulta: vacío
+     * cuando `contacto` es la tabla base, y `"contacto."` cuando viene embebido
+     * bajo la tabla de adopciones.
+     */
+    const aplicarFiltrosComunes = (query: any, prefijo = "") => {
+      let q = query
+      if (options.tipo) q = q.eq(`${prefijo}tipo`, options.tipo)
+      if (options.busqueda) {
+        const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
+        const campos = ["nombre", "email", "telefono", "identificador_fiscal", "iban"]
+        const condiciones = campos.map((campo) => `${campo}.ilike.%${term}%`).join(",")
+        // `or` sobre un embebido se expresa con `referencedTable`, no metiendo el
+        // prefijo en cada condición.
+        q = prefijo ? q.or(condiciones, { referencedTable: "contacto" }) : q.or(condiciones)
+      }
+      if (options.signal) q = q.abortSignal(options.signal)
+      return q
     }
 
-    if (options.tipo) {
-      query = query.eq("tipo", options.tipo)
-    }
+    // 1. Los que son de la delegación y de nadie más.
+    const propiosPromesa = delegacionId
+      ? aplicarFiltrosComunes(
+          supabase.from("contacto").select(CAMPOS).eq("delegacion_id", delegacionId).eq("es_global", false),
+        )
+      : Promise.resolve({ data: [], error: null })
 
-    if (!options.incluirArchivados) {
-      query = query.eq("archivado", false)
-    }
+    // 2. Los globales que esta delegación usa, con su adopción.
+    //
+    //    Se consulta DESDE `contacto_delegacion` y no desde `contacto` con un
+    //    filtro sobre el embebido: filtrando por dentro, la fila de adopción que
+    //    llega podría ser la de otra delegación, y entonces se leerían su alias,
+    //    sus notas y su categoría. Preguntando "¿qué usa esta delegación?" la
+    //    adopción que viene es, por construcción, la correcta.
+    const adoptadosPromesa =
+      delegacionId && incluirGlobales
+        ? aplicarFiltrosComunes(
+            supabase
+              .from("contacto_delegacion")
+              .select(
+                `delegacion_id, categoria_id_predeterminada, alias, notas, archivado, contacto:contacto_id!inner (${CAMPOS})`,
+              )
+              .eq("delegacion_id", delegacionId),
+            // Los filtros de tipo y búsqueda son campos de `contacto`, que aquí
+            // es el embebido: hay que apuntarlos con su prefijo.
+            "contacto.",
+          )
+        : incluirGlobales && !delegacionId
+          ? aplicarFiltrosComunes(supabase.from("contacto").select(CAMPOS).eq("es_global", true))
+          : Promise.resolve({ data: [], error: null })
 
-    if (options.busqueda) {
-      const term = options.busqueda.replace(/%/g, "\\%").replace(/,/g, "\\,")
-      query = query.or(
-        `nombre.ilike.%${term}%,email.ilike.%${term}%,telefono.ilike.%${term}%,identificador_fiscal.ilike.%${term}%,iban.ilike.%${term}%`,
+    const [propios, adoptados] = await Promise.all([propiosPromesa, adoptadosPromesa])
+    if (propios.error) throw propios.error
+    if (adoptados.error) throw adoptados.error
+
+    const resultado: ContactoConCategoriaPredeterminada[] = [
+      ...((propios.data ?? []) as any[]).map((c) => ({ ...c, adopcion: null })),
+      ...((adoptados.data ?? []) as any[]).flatMap((fila) => {
+        // Sin delegación, la consulta devuelve contactos "planos" y no filas de
+        // adopción; ese caso se reconoce porque no trae `contacto` embebido.
+        if (!fila.contacto) return [{ ...fila, adopcion: null }]
+        const { contacto, ...adopcion } = fila
+        return [{ ...contacto, adopcion }]
+      }),
+    ]
+
+    // 3. El catálogo: globales que la delegación aún no usa. Se piden aparte
+    //    porque el 99% de las pantallas no los quiere ver mezclados.
+    if (options.incluirCatalogo && delegacionId && incluirGlobales) {
+      const yaVistos = new Set(resultado.map((c) => c.id))
+      const { data: catalogo, error: errorCatalogo } = await aplicarFiltrosComunes(
+        supabase
+          .from("contacto")
+          // El recuento viene de una vista, no de `contacto_delegacion`: sus
+          // políticas solo dejan ver las filas de tus delegaciones, así que
+          // contando desde la tabla saldría siempre 0 ó 1.
+          .select(`${CAMPOS}, usos:contacto_uso_delegaciones (delegaciones)`)
+          .eq("es_global", true)
+          .eq("archivado", false),
       )
+      if (errorCatalogo) throw errorCatalogo
+
+      for (const fila of (catalogo ?? []) as any[]) {
+        if (yaVistos.has(fila.id)) continue
+        const { usos, ...contacto } = fila
+        resultado.push({
+          ...contacto,
+          adopcion: null,
+          en_catalogo: true,
+          // Cuántas delegaciones lo usan: es lo que convierte "Mercadona" en
+          // "Mercadona, que ya usan 4 delegaciones" y anima a adoptarlo.
+          usos_delegaciones: (Array.isArray(usos) ? usos[0]?.delegaciones : usos?.delegaciones) ?? 0,
+        })
+      }
     }
 
-    if (options.signal) {
-      query = query.abortSignal(options.signal)
-    }
+    // Archivar es por delegación, así que el filtro no puede ir en SQL: depende
+    // de la adopción de cada fila. Con un puñado de contactos, en memoria sobra.
+    const visibles = options.incluirArchivados
+      ? resultado
+      : resultado.filter((c) => !archivadoEfectivoContacto(c))
 
-    const { data, error } = await query
+    return visibles.sort((a, b) => {
+      const archivadoA = archivadoEfectivoContacto(a)
+      const archivadoB = archivadoEfectivoContacto(b)
+      if (archivadoA !== archivadoB) return archivadoA ? 1 : -1
+      // El catálogo va al final: primero lo tuyo, luego lo que puedes adoptar.
+      if (Boolean(a.en_catalogo) !== Boolean(b.en_catalogo)) return a.en_catalogo ? 1 : -1
+      return nombreEfectivoContacto(a).localeCompare(nombreEfectivoContacto(b), "es")
+    })
+  }
+
+  /**
+   * Deja constancia de que una delegación usa un contacto global. Es idempotente
+   * y la llaman tanto el selector (al elegir del catálogo) como el alta.
+   *
+   * Al vincular un contacto a un movimiento o a una factura NO hace falta
+   * llamarla: eso lo cubre un trigger en la base de datos, que además protege
+   * los caminos de la API externa, del MCP y de la importación de Excel.
+   */
+  static async adoptarContacto(
+    contactoId: string,
+    delegacionId: string,
+    extra: Partial<Pick<ContactoDelegacion, "categoria_id_predeterminada" | "alias" | "notas">> = {},
+  ): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase
+      .from("contacto_delegacion")
+      .upsert({ contacto_id: contactoId, delegacion_id: delegacionId, ...extra }, {
+        onConflict: "contacto_id,delegacion_id",
+        ignoreDuplicates: true,
+      })
     if (error) throw error
-    return (data ?? []) as ContactoConCategoriaPredeterminada[]
+  }
+
+  /**
+   * Busca el proveedor global que ya ocupa el nombre que se intenta crear.
+   *
+   * Se usa cuando el índice único rechaza un alta: en vez de dejar a la persona
+   * con un error de base de datos, se le ofrece el que ya existe. La clave la
+   * calcula la base de datos con `mcm_clave_proveedor`, así que aquí se busca por
+   * el equivalente en TypeScript; si alguna vez se separan, simplemente no se
+   * encuentra y se muestra el error tal cual.
+   */
+  static async buscarProveedorGlobalPorNombre(
+    nombre: string,
+  ): Promise<ContactoConCategoriaPredeterminada | null> {
+    const clave = normalizarClaveProveedor(nombre)
+    if (!clave) return null
+
+    const supabase = this.getClient() as any
+    const { data, error } = await supabase
+      .from("contacto")
+      .select("*")
+      .eq("tipo", "proveedor")
+      .eq("es_global", true)
+      .eq("clave_normalizada", clave)
+      .maybeSingle()
+
+    if (error) throw error
+    return (data ?? null) as ContactoConCategoriaPredeterminada | null
+  }
+
+  /** Cambia lo que esta delegación sobrescribe de un contacto compartido. */
+  static async actualizarAdopcion(
+    contactoId: string,
+    delegacionId: string,
+    cambios: Partial<Pick<ContactoDelegacion, "categoria_id_predeterminada" | "alias" | "notas" | "archivado">>,
+  ): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase
+      .from("contacto_delegacion")
+      .upsert({ contacto_id: contactoId, delegacion_id: delegacionId, ...cambios }, {
+        onConflict: "contacto_id,delegacion_id",
+      })
+    if (error) throw error
   }
 
   static async getContactoById(id: string): Promise<ContactoConCategoriaPredeterminada | null> {
@@ -309,7 +469,19 @@ export class DatabaseService {
     if (error) throw error
   }
 
-  static async archiveContacto(id: string, archivado: boolean): Promise<void> {
+  /**
+   * Archiva un contacto. Si es global, se archiva SOLO en esta delegación: dejar
+   * de ver Mercadona en Castellón no puede quitárselo a Sevilla.
+   */
+  static async archiveContacto(
+    id: string,
+    archivado: boolean,
+    opciones: { esGlobal?: boolean; delegacionId?: string | null } = {},
+  ): Promise<void> {
+    if (opciones.esGlobal && opciones.delegacionId) {
+      await this.actualizarAdopcion(id, opciones.delegacionId, { archivado })
+      return
+    }
     await this.updateContacto(id, { archivado })
   }
 

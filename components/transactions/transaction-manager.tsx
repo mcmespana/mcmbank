@@ -151,7 +151,12 @@ export function TransactionManager() {
   const [categoryCreateOpen, setCategoryCreateOpen] = useState(false)
   const pendingCategoryAssignRef = useRef<((categoryId: string) => void | Promise<void>) | null>(null)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
-  const { contactos, createContacto: createContactoFn } = useContactos(selectedDelegation)
+  // Con catálogo: asignar un proveedor a un movimiento es el momento en el que
+  // se crean los duplicados, así que aquí es donde más falta hace que el
+  // selector ofrezca el "Mercadona" que ya existe en MCM.
+  const { contactos, createContacto: createContactoFn } = useContactos(selectedDelegation, {
+    incluirCatalogo: true,
+  })
   const isAdmin = useIsAdminHook()
   const { user: currentUser } = useCurrentUser()
 

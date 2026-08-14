@@ -20,6 +20,7 @@ import { ContactoForm } from "@/components/contactos/contacto-form"
 import { useCreateContactoInline } from "@/hooks/use-create-contacto-inline"
 import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 import type { Contacto, ContactoConCategoriaPredeterminada, Movimiento, Cuenta, Categoria } from "@/lib/types/database"
+import { categoriaPredeterminadaEfectiva } from "@/lib/types/database"
 
 interface TransactionCreatePanelProps {
   accounts: Cuenta[]
@@ -325,9 +326,8 @@ export function TransactionCreatePanel({
                   const next: Partial<Movimiento> = { ...prev, contacto_id: contactoId }
                   if (contactoId && !prev.categoria_id) {
                     const c = contactos.find((x) => x.id === contactoId)
-                    if (c?.categoria_id_predeterminada) {
-                      next.categoria_id = c.categoria_id_predeterminada
-                    }
+                    const sugerida = c ? categoriaPredeterminadaEfectiva(c) : null
+                    if (sugerida) next.categoria_id = sugerida
                   }
                   return next
                 })
@@ -341,7 +341,7 @@ export function TransactionCreatePanel({
               return (
                 <p className="text-[11px] text-muted-foreground">
                   Tipo: <span className="font-medium">{CONTACTO_TIPO_INFO[c.tipo].label}</span>
-                  {c.categoria_id_predeterminada && !formData.categoria_id && (
+                  {categoriaPredeterminadaEfectiva(c) && !formData.categoria_id && (
                     <span> · Te sugerimos su categoría por defecto</span>
                   )}
                 </p>

@@ -20,14 +20,16 @@ rellenarlas a mano.
 
 ## 1. Base de datos
 
-Aplicar `scripts/060_facturas_email_ia.sql`. Añade:
+`scripts/060_facturas_email_ia.sql` — **ya aplicada** (14-08-2026). Añade:
 
 - `delegacion.alias_email` — la etiqueta del buzón, sembrada automáticamente a
   partir del nombre (`MCM Castellón` → `castellon`, `ECE MCM` → `ece`).
 - `factura.categoria_id` — donde aterriza la categoría cuando se acepta.
 - `factura_email` — registro de los correos recibidos.
 
-Comprobar el sembrado y ajustar lo que no guste:
+Los alias sembrados son los esperados: `castellon`, `ece`, `madrid`, `zaragoza`,
+`vila-real`, `alcora`, `benicarlo-vinaros`, `villacanas`… Para comprobarlos o
+cambiar alguno:
 
 ```sql
 SELECT codigo, nombre, alias_email FROM delegacion ORDER BY nombre;
@@ -49,10 +51,33 @@ GEMINI_MODEL=gemini-3.7-flash     # opcional
 GEMINI_THINKING_LEVEL=low         # opcional
 ```
 
-**Coste**: 0,75 $ por millón de tokens de entrada y 3,75 $ de salida (tarifa
-vigente hasta el 31-12-2026; a partir de ahí, el doble). Una factura de una
-página sale por unos **0,0015 $**: mil facturas al año son ~1,5 $. Hay tier
-gratuito con límite de peticiones por minuto, suficiente para probar.
+### ¿Gratis o de pago?
+
+**El tier gratuito de AI Studio da de sobra para este volumen**: del orden de
+10 peticiones por minuto y ~1.500 al día. Una delegación no manda 1.500 facturas
+en un día, así que el único límite que se puede rozar es el de **por minuto**, si
+alguien suelta 15 PDFs de golpe en la bandeja: las que fallen se quedan con el
+aviso de error y un botón de "Volver a leer".
+
+Si se activa facturación, el coste es ridículo igualmente:
+
+| | Tokens por factura (1 página) | Precio |
+|---|---|---|
+| Entrada (PDF + catálogo de proveedores y categorías) | ~2.000 | 0,75 $/M |
+| Salida (el JSON) | ~200 | 3,75 $/M |
+| **Total** | | **~0,002 $ = 0,2 céntimos** |
+
+Es decir: **1.000 facturas al año ≈ 2 €**. (Tarifa vigente hasta el 31-12-2026;
+a partir de ahí, el doble: ~4 €.)
+
+**Lo que sí conviene mirar no es el precio, es la privacidad.** En el tier
+gratuito, Google puede usar el contenido enviado para mejorar sus productos, y
+revisores humanos pueden verlo; en el de pago, no. Con una excepción importante
+aquí: para clientes del **Espacio Económico Europeo, Suiza y Reino Unido**,
+Google aplica las condiciones de datos de pago también al tier gratuito. Aun así,
+por tratarse de facturas reales con datos de proveedores, **la recomendación es
+activar facturación**: cuestan un par de euros al año y evita depender de esa
+excepción.
 
 Sin `GEMINI_API_KEY`, la app no falla: cada factura guarda en `datos_ia` que la
 lectura no está configurada y la bandeja funciona a mano como siempre.
@@ -85,6 +110,25 @@ en Resend y poner sus registros MX. Las direcciones pasan a ser
 
 **Las dos funcionan sin tocar código**: el parser acepta `facturas+tag@`,
 `facturas-tag@` y `tag@facturas.…`.
+
+### Por qué Resend y no la API de Gmail
+
+Se valoraron las dos (la de Gmail era la idea original, ver el histórico del
+capítulo 8 del manual). Resumen de la comparación:
+
+| | Resend Inbound (lo implementado) | API de Gmail |
+|---|---|---|
+| Cómo llega | Push: Resend llama al webhook al instante | Polling con un cron cada 5-10 min, o Pub/Sub con un proyecto de Google Cloud |
+| Trabajo sucio | Resend parsea el MIME y separa los adjuntos | Hay que parsear el MIME a mano: multipart, base64, codificaciones raras, adjuntos anidados |
+| Credenciales | La API key de Resend que ya existe para los avisos | OAuth de Google con refresh token que caduca o se revoca (y un flujo de reconexión que mantener) |
+| Latencia | Segundos | Hasta 10 minutos con polling |
+| Código nuevo | Un webhook | Un cron + gestión de estado ("qué mensajes ya procesé") + etiquetas en Gmail |
+
+Gana Resend por la fila del parseo: leer correos MIME bien (con sus casos raros)
+es bastante más código y bastante más frágil que verificar una firma. Y como el
+correo entra por Workspace y se **reenvía**, el buzón `facturas@` sigue existiendo
+en Gmail con todo el histórico: se conserva lo bueno de la opción Google (un
+buzón que una persona puede abrir y mirar) sin escribir un parser de correo.
 
 ### Webhook
 

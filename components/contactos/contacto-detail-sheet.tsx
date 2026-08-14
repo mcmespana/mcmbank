@@ -104,6 +104,7 @@ export function ContactoDetailSheet({
                   emoji={contacto.emoji}
                   defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
                   colorHex={contacto.color}
+                  logoUrl={contacto.logo_url}
                   size="lg"
                   seed={`contacto:${contacto.id}`}
                   className="h-12 w-12 text-sm"

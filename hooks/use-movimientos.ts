@@ -206,6 +206,7 @@ export function useMovimientos(
               tipo,
               emoji,
               color,
+              logo_url,
               es_global
             )
           `,
@@ -441,6 +442,7 @@ export function useMovimientos(
             tipo,
             emoji,
             color,
+            logo_url,
             es_global
           ),
           archivos:movimiento_archivo!movimiento_id (

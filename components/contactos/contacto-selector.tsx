@@ -1,6 +1,9 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
+import { useDelegationContext } from "@/contexts/delegation-context"
+import { DatabaseService } from "@/lib/services/database"
 import { Check, ChevronsUpDown, Plus, TriangleAlert, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -17,12 +20,15 @@ import { cn } from "@/lib/utils"
 import { EntityAvatar } from "@/components/ui/entity-avatar"
 import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
 import type { ContactoConCategoriaPredeterminada, ContactoTipo } from "@/lib/types/database"
+import { archivadoEfectivoContacto, nombreEfectivoContacto } from "@/lib/types/database"
 
 interface ContactoSelectorProps {
   contactos: ContactoConCategoriaPredeterminada[]
   value?: string | null
   onChange: (contactoId: string | null) => void
   onCreateNew?: (initialNombre: string) => void
+  /** Aviso de que se ha adoptado un proveedor del catálogo, para releer la lista. */
+  onAdopted?: () => void
   placeholder?: string
   disabled?: boolean
   loading?: boolean
@@ -34,13 +40,18 @@ export function ContactoSelector({
   value,
   onChange,
   onCreateNew,
+  onAdopted,
   placeholder = "Sin contacto",
   disabled,
   loading,
   className,
 }: ContactoSelectorProps) {
+  const { selectedDelegation } = useDelegationContext()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
+  // Los que se acaban de adoptar aquí, para no seguir enseñándolos en el
+  // catálogo mientras el padre no haya vuelto a leer la lista.
+  const [adoptadosAhora, setAdoptadosAhora] = useState<string[]>([])
 
   const selected = useMemo(
     () => (value ? contactos.find((c) => c.id === value) ?? null : null),
@@ -54,11 +65,43 @@ export function ContactoSelector({
       destinatario_mcm: [],
     }
     for (const c of contactos) {
-      if (c.archivado) continue
+      if ((c.en_catalogo && !adoptadosAhora.includes(c.id)) || archivadoEfectivoContacto(c)) continue
       result[c.tipo].push(c)
     }
     return result
-  }, [contactos])
+  }, [contactos, adoptadosAhora])
+
+  /**
+   * Proveedores que ya existen en MCM pero que esta delegación no usa. Es la
+   * pieza que evita los duplicados: se ofrece el original justo en el momento
+   * en el que ibas a crear el tuyo.
+   */
+  const catalogo = useMemo(
+    () => contactos.filter((c) => c.en_catalogo && !adoptadosAhora.includes(c.id)),
+    [contactos, adoptadosAhora],
+  )
+
+  /**
+   * Elegir un proveedor del catálogo es empezar a usarlo, así que se adopta en el
+   * mismo gesto. Se hace aquí y no en cada pantalla porque el selector aparece en
+   * seis sitios y ninguno tiene por qué saber de la tabla de adopciones.
+   */
+  const adoptarYSeleccionar = async (contacto: ContactoConCategoriaPredeterminada) => {
+    if (!selectedDelegation) {
+      toast.error("Selecciona una delegación antes de usar un proveedor del catálogo")
+      return
+    }
+    try {
+      await DatabaseService.adoptarContacto(contacto.id, selectedDelegation)
+      setAdoptadosAhora((prev) => [...prev, contacto.id])
+      onChange(contacto.id)
+      setOpen(false)
+      onAdopted?.()
+    } catch (error) {
+      console.error("Error adoptando el contacto del catálogo:", error)
+      toast.error("No se pudo añadir el proveedor a tu delegación")
+    }
+  }
 
   const trimmedSearch = search.trim()
   const hasExactMatch = useMemo(
@@ -89,10 +132,11 @@ export function ContactoSelector({
                   emoji={selected.emoji}
                   defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
                   colorHex={selected.color}
+                  logoUrl={selected.logo_url}
                   size="sm"
                   seed={`contacto:${selected.id}`}
                 />
-                <span className="truncate">{selected.nombre}</span>
+                <span className="truncate">{nombreEfectivoContacto(selected)}</span>
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium tracking-tight",
@@ -168,13 +212,14 @@ export function ContactoSelector({
                           emoji={c.emoji}
                           defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
                           colorHex={c.color}
+                          logoUrl={c.logo_url}
                           size="sm"
                           seed={`contacto:${c.id}`}
                           className="mr-2"
                         />
                         <div className="flex-1 truncate">
                           <div className="flex items-center gap-1 truncate">
-                            <span className="truncate font-medium">{c.nombre}</span>
+                            <span className="truncate font-medium">{nombreEfectivoContacto(c)}</span>
                             {c.tipo === "proveedor" && !c.identificador_fiscal && (
                               <span title="Falta el NIF/CIF" className="shrink-0">
                                 <TriangleAlert className="h-3 w-3 text-amber-500" aria-label="Falta el NIF/CIF" />
@@ -187,11 +232,6 @@ export function ContactoSelector({
                             </div>
                           )}
                         </div>
-                        {c.es_global && (
-                          <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                            Global
-                          </span>
-                        )}
                         <Check className={cn("ml-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
                       </CommandItem>
                     )
@@ -199,6 +239,41 @@ export function ContactoSelector({
                 </CommandGroup>
               )
             })}
+
+            {catalogo.length > 0 && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="Ya existe en MCM (otras delegaciones lo usan)">
+                  {catalogo.map((c) => (
+                    <CommandItem
+                      key={c.id}
+                      value={`${c.id}__${c.nombre} ${c.identificador_fiscal ?? ""}`}
+                      onSelect={() => void adoptarYSeleccionar(c)}
+                    >
+                      <EntityAvatar
+                        name={c.nombre}
+                        emoji={c.emoji}
+                        defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
+                        colorHex={c.color}
+                        logoUrl={c.logo_url}
+                        size="sm"
+                        seed={`contacto:${c.id}`}
+                        className="mr-2"
+                      />
+                      <div className="flex-1 truncate">
+                        <div className="truncate font-medium">{c.nombre}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {c.usos_delegaciones && c.usos_delegaciones > 0
+                            ? `Lo usan ${c.usos_delegaciones} ${c.usos_delegaciones === 1 ? "delegación" : "delegaciones"}`
+                            : "En el catálogo de MCM"}
+                        </div>
+                      </div>
+                      <Plus className="ml-2 h-3.5 w-3.5 text-muted-foreground" />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
 
             {onCreateNew && (
               <>

@@ -147,6 +147,27 @@ export const TransactionListRow = memo(function TransactionListRow({
                 title={`Cuenta: ${account?.nombre || 'Sin nombre'} - Delegación ID: ${account?.delegacion_id || 'Sin delegación'}`}
               >
                 <BankAvatar account={account} />
+
+                {/* Logo del proveedor como insignia, no en lugar del círculo de
+                    la cuenta: ese círculo dice de qué cuenta sale el dinero y
+                    además es el único sitio desde el que se selecciona la fila.
+                    Así el movimiento con proveedor se reconoce de un vistazo sin
+                    perder ninguna de las dos cosas, y los que no tienen
+                    proveedor se ven exactamente igual que antes. */}
+                {movement.contacto?.logo_url && (
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 flex h-[17px] w-[17px] items-center justify-center overflow-hidden rounded-full bg-white ring-2 ring-card"
+                    title={movement.contacto.nombre}
+                  >
+                    <img
+                      src={movement.contacto.logo_url}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-contain"
+                    />
+                  </span>
+                )}
               </div>
             </AccountTooltip>
 
@@ -253,7 +274,17 @@ export const TransactionListRow = memo(function TransactionListRow({
                       )}
                       title={`${CONTACTO_TIPO_INFO[movement.contacto.tipo].label}: ${movement.contacto.nombre}`}
                     >
-                      <span aria-hidden>{movement.contacto.emoji ?? CONTACTO_TIPO_INFO[movement.contacto.tipo].emoji}</span>
+                      {movement.contacto.logo_url ? (
+                        <img
+                          src={movement.contacto.logo_url}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="h-3 w-3 shrink-0 rounded-[2px] object-contain"
+                        />
+                      ) : (
+                        <span aria-hidden>{movement.contacto.emoji ?? CONTACTO_TIPO_INFO[movement.contacto.tipo].emoji}</span>
+                      )}
                       <span className="max-w-[120px] truncate">{movement.contacto.nombre}</span>
                     </span>
                   )}

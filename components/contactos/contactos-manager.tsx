@@ -4,12 +4,14 @@ import { useMemo, useState } from "react"
 import {
   Archive,
   ArchiveRestore,
+  Coins,
   Copy,
   Edit3,
   Globe,
   Loader2,
   Plus,
   Search,
+  Sparkles,
   Trash2,
   TriangleAlert,
   Users,
@@ -25,6 +27,7 @@ import { cn } from "@/lib/utils"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useContactos } from "@/hooks/use-contactos"
+import { DatabaseService } from "@/lib/services/database"
 import { useDelegationRole } from "@/hooks/use-delegation-role"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { useAuth } from "@/contexts/auth-context"
@@ -33,11 +36,13 @@ import { useDebouncedState } from "@/hooks/use-debounced-state"
 import { EntityAvatar } from "@/components/ui/entity-avatar"
 import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
 import { formatearIban } from "@/lib/utils/iban"
-import type { ContactoConCategoriaPredeterminada, ContactoTipo } from "@/lib/types/database"
+import type { Contacto, ContactoConCategoriaPredeterminada, ContactoTipo } from "@/lib/types/database"
+import { archivadoEfectivoContacto, nombreEfectivoContacto } from "@/lib/types/database"
 import { ContactoForm, type ContactoFormSubmitPayload } from "./contacto-form"
 import { ContactoDetailSheet } from "./contacto-detail-sheet"
 import { ContactoTipoBadge } from "./contacto-tipo-badge"
 import { DeleteContactoDialog } from "./delete-contacto-dialog"
+import { ProveedoresSaldos } from "./proveedores-saldos"
 
 type TabValue = "todos" | ContactoTipo
 
@@ -50,6 +55,9 @@ export function ContactosManager() {
   const canManageGlobal = isAdmin
 
   const [tab, setTab] = useState<TabValue>("todos")
+  // Dos formas de mirar los mismos proveedores: la agenda (quién es quién) y
+  // los saldos (a quién le pagamos). No son dos pantallas, es la misma pregunta.
+  const [vista, setVista] = useState<"tarjetas" | "saldos">("tarjetas")
   const [incluirArchivados, setIncluirArchivados] = useState(false)
   const { value: busquedaDebounced, immediateValue: busqueda, setValue: setBusqueda } = useDebouncedState("", 250)
 
@@ -62,9 +70,15 @@ export function ContactosManager() {
     updateContacto,
     deleteContacto,
     archiveContacto,
+    adoptarContacto,
+    refetch,
   } = useContactos(selectedDelegation, {
     busqueda: busquedaDebounced || undefined,
     incluirArchivados,
+    // El catálogo de MCM solo asoma al buscar: así la lista de siempre no se
+    // ensucia con proveedores de otras delegaciones, pero quien va a crear un
+    // "Mercadona" que ya existe lo encuentra justo antes de duplicarlo.
+    incluirCatalogo: busquedaDebounced.trim().length >= 2,
   })
 
   const { categorias } = useCategorias(selectedDelegation, { includeGlobal: true, includeInactive: false })
@@ -80,14 +94,109 @@ export function ContactosManager() {
     return contactos.filter((c) => c.tipo === tab)
   }, [contactos, tab])
 
+  const proveedoresSinLogo = useMemo(
+    () => contactos.filter((c) => c.tipo === "proveedor" && !c.en_catalogo && !archivadoEfectivoContacto(c) && !c.logo_url).length,
+    [contactos],
+  )
+  const [buscandoLogos, setBuscandoLogos] = useState(false)
+
+  const buscarLogosPendientes = async () => {
+    setBuscandoLogos(true)
+    try {
+      const respuesta = await fetch("/api/contactos/logos-pendientes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delegacionId: selectedDelegation }),
+      })
+      const datos = await respuesta.json()
+
+      if (!respuesta.ok) {
+        toast.error(datos?.error ?? "No se pudieron buscar los logos")
+        return
+      }
+
+      await refetch()
+
+      const encontrados = datos.resueltos?.length ?? 0
+      if (encontrados === 0) {
+        toast.info("No se ha encontrado ningún logo. Puedes subirlos a mano desde cada ficha.")
+      } else {
+        toast.success(
+          `${encontrados} ${encontrados === 1 ? "logo encontrado" : "logos encontrados"}` +
+            (datos.fallidos?.length ? `. Sin logo: ${datos.fallidos.join(", ")}` : ""),
+        )
+      }
+    } catch (error) {
+      console.error("Error buscando logos pendientes:", error)
+      toast.error("No se pudieron buscar los logos")
+    } finally {
+      setBuscandoLogos(false)
+    }
+  }
+
   const handleSubmitForm = async (payload: ContactoFormSubmitPayload) => {
     if (editing) {
       if (!payload.update) return
       await updateContacto(editing.id, payload.update)
+      // La categoría sugerida y las notas de un proveedor compartido son de esta
+      // delegación, así que van a su adopción y no a la ficha de todo MCM.
+      if (payload.porDelegacion && selectedDelegation) {
+        await DatabaseService.actualizarAdopcion(editing.id, selectedDelegation, payload.porDelegacion)
+      }
+      // El logo se guarda por su ruta de API, fuera del update optimista del
+      // hook, así que hay que releer para que la tarjeta lo muestre.
+      await refetch()
       return undefined
     }
     if (!payload.insert) return
-    return await createContacto({ ...payload.insert, creado_por: user?.id ?? null })
+
+    const insert = payload.insert
+    let creado: Contacto | void
+    try {
+      creado = await createContacto({ ...insert, creado_por: user?.id ?? null })
+    } catch (err) {
+      // El índice único de proveedores globales ha dicho que ese proveedor ya
+      // existe en MCM. En vez de dejar un error de base de datos en pantalla, se
+      // adopta el que hay: es lo que la persona quería conseguir.
+      const yaExiste =
+        insert.tipo === "proveedor" &&
+        selectedDelegation &&
+        (err as { code?: string })?.code === "23505"
+
+      if (!yaExiste) throw err
+
+      const existente = await DatabaseService.buscarProveedorGlobalPorNombre(insert.nombre)
+      if (!existente) throw err
+
+      await DatabaseService.adoptarContacto(existente.id, selectedDelegation, payload.porDelegacion ?? {})
+      await refetch()
+      toast.info(`"${existente.nombre}" ya existía en MCM. Lo hemos añadido a tu delegación en vez de duplicarlo.`)
+      return existente
+    }
+
+    // Un proveedor nuevo es una ficha de todo MCM sin dueño: si no se adopta,
+    // quien lo acaba de crear no lo vería en su propia lista.
+    if (creado?.id && insert.tipo === "proveedor" && selectedDelegation) {
+      await DatabaseService.adoptarContacto(creado.id, selectedDelegation, payload.porDelegacion ?? {})
+      await refetch()
+    }
+
+    // Aquí está lo de "que fuera automático": un proveedor recién creado busca
+    // su logo él solo. No se espera al resultado ni se avisa si falla —el alta
+    // ya ha ido bien y el logo es un extra— pero al terminar se relee la lista.
+    if (creado?.id && insert.tipo === "proveedor") {
+      void fetch(`/api/contactos/${creado.id}/logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dominio: insert.dominio ?? null }),
+      })
+        .then(async (respuesta) => {
+          if (respuesta.ok) await refetch()
+        })
+        .catch(() => undefined)
+    }
+
+    return creado
   }
 
   const openCreate = (tipo?: ContactoTipo) => {
@@ -116,7 +225,17 @@ export function ContactosManager() {
             Tu agenda para los movimientos: proveedores, personas MCM (socios, voluntarios) y destinatarios. Guarda IBAN, teléfono y notas, y vincúlalos a los movimientos.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit && proveedoresSinLogo > 0 && (
+            <Button variant="outline" size="sm" onClick={buscarLogosPendientes} disabled={buscandoLogos}>
+              {buscandoLogos ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Buscar {proveedoresSinLogo} {proveedoresSinLogo === 1 ? "logo" : "logos"}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -149,6 +268,40 @@ export function ContactosManager() {
         ]}
       />
 
+      {tab === "proveedor" && (
+        <div className="inline-flex rounded-lg border border-border/60 bg-muted/40 p-0.5">
+          {(
+            [
+              { valor: "tarjetas", etiqueta: "Agenda", icono: Users },
+              { valor: "saldos", etiqueta: "Saldos", icono: Coins },
+            ] as const
+          ).map(({ valor, etiqueta, icono: Icono }) => (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => setVista(valor)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                vista === valor
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icono className="h-3.5 w-3.5" />
+              {etiqueta}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === "proveedor" && vista === "saldos" ? (
+        <ProveedoresSaldos
+          delegacionId={selectedDelegation}
+          contactos={contactos}
+          categorias={categorias}
+        />
+      ) : (
+        <>
       {/* Buscador */}
       <div className="relative max-w-xl">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -196,10 +349,18 @@ export function ContactosManager() {
               }}
               onEdit={() => openEdit(c)}
               onDelete={() => setDeleting(c)}
-              onArchive={() => archiveContacto(c.id, !c.archivado)}
+              onArchive={() => archiveContacto(c.id, !archivadoEfectivoContacto(c))}
+              onAdopt={() =>
+                adoptarContacto(c.id).then(() =>
+                  toast.success(`${c.nombre} ya está disponible en tu delegación`),
+                )
+              }
             />
           ))}
         </div>
+      )}
+
+        </>
       )}
 
       {/* Form sheet */}
@@ -228,7 +389,11 @@ export function ContactosManager() {
         onOpenChange={setDetailOpen}
         canEdit={canEdit}
         onEdit={(c) => openEdit(c)}
-        onArchive={(c) => archiveContacto(c.id, !c.archivado).then(() => toast.success(c.archivado ? "Desarchivado" : "Archivado"))}
+        onArchive={(c) =>
+          archiveContacto(c.id, !archivadoEfectivoContacto(c)).then(() =>
+            toast.success(archivadoEfectivoContacto(c) ? "Desarchivado" : "Archivado"),
+          )
+        }
         onDelete={(c) => {
           setDetailOpen(false)
           setDeleting(c)
@@ -260,6 +425,7 @@ function ContactoCard({
   onEdit,
   onDelete,
   onArchive,
+  onAdopt,
 }: {
   contacto: ContactoConCategoriaPredeterminada
   canEdit: boolean
@@ -267,6 +433,7 @@ function ContactoCard({
   onEdit: () => void
   onDelete: () => void
   onArchive: () => void
+  onAdopt: () => void
 }) {
   const { copy, isCopied } = useClipboard()
 
@@ -281,7 +448,8 @@ function ContactoCard({
     <Card
       className={cn(
         "group cursor-pointer transition-[border-color,box-shadow,transform] hover:border-foreground/15 hover:shadow-md hover:-translate-y-0.5",
-        contacto.archivado && "opacity-60",
+        archivadoEfectivoContacto(contacto) && "opacity-60",
+        contacto.en_catalogo && "border-dashed bg-muted/20",
       )}
       onClick={onOpen}
     >
@@ -292,19 +460,29 @@ function ContactoCard({
             emoji={contacto.emoji}
             defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
             colorHex={contacto.color}
+            logoUrl={contacto.logo_url}
             size="lg"
             seed={`contacto:${contacto.id}`}
           />
           <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold tracking-tight">{contacto.nombre}</div>
+            <div className="truncate font-semibold tracking-tight">{nombreEfectivoContacto(contacto)}</div>
             <div className="mt-1 flex flex-wrap items-center gap-1">
               <ContactoTipoBadge tipo={contacto.tipo} size="sm" short />
-              {contacto.es_global && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground">
-                  <Globe className="h-2.5 w-2.5" /> Global
+              {contacto.en_catalogo ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                  <Globe className="h-2.5 w-2.5" />
+                  {contacto.usos_delegaciones && contacto.usos_delegaciones > 0
+                    ? `En MCM · lo usan ${contacto.usos_delegaciones} ${contacto.usos_delegaciones === 1 ? "delegación" : "delegaciones"}`
+                    : "En el catálogo de MCM"}
                 </span>
+              ) : (
+                contacto.es_global && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground">
+                    <Globe className="h-2.5 w-2.5" /> Compartido
+                  </span>
+                )
               )}
-              {contacto.archivado && (
+              {archivadoEfectivoContacto(contacto) && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
                   <Archive className="h-2.5 w-2.5" /> Archivado
                 </span>
@@ -314,7 +492,7 @@ function ContactoCard({
               <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{contacto.identificador_fiscal}</div>
             ) : (
               contacto.tipo === "proveedor" &&
-              !contacto.archivado && (
+              !archivadoEfectivoContacto(contacto) && (
                 <div
                   className="mt-1 flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400"
                   title="Falta el NIF/CIF de este proveedor"
@@ -355,7 +533,23 @@ function ContactoCard({
           )}
         </div>
 
-        {canEdit && (
+        {contacto.en_catalogo ? (
+          canEdit && (
+            <div className="pt-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 w-full text-xs"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAdopt()
+                }}
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" /> Usar en mi delegación
+              </Button>
+            </div>
+          )
+        ) : canEdit ? (
           <div className="flex justify-end gap-1 pt-1">
             <Button
               variant="ghost"
@@ -376,9 +570,9 @@ function ContactoCard({
                 e.stopPropagation()
                 onArchive()
               }}
-              title={contacto.archivado ? "Desarchivar" : "Archivar"}
+              title={archivadoEfectivoContacto(contacto) ? "Desarchivar" : "Archivar"}
             >
-              {contacto.archivado ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+              {archivadoEfectivoContacto(contacto) ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
             </Button>
             <Button
               variant="ghost"
@@ -392,7 +586,7 @@ function ContactoCard({
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   )

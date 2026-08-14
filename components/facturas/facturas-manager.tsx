@@ -128,7 +128,10 @@ export function FacturasManager() {
     })
   }, [facturasSinFiltrarPills, activePills])
 
-  const { contactos, createContacto } = useContactos(selectedDelegation, { incluirGlobales: true })
+  const { contactos, createContacto } = useContactos(selectedDelegation, {
+    incluirGlobales: true,
+    incluirCatalogo: true,
+  })
   const { categorias } = useCategorias(selectedDelegation, { includeGlobal: true, includeInactive: false })
 
   const [detailOpen, setDetailOpen] = useState(false)

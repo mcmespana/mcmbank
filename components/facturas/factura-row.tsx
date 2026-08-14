@@ -79,6 +79,7 @@ export const FacturaRow = memo(function FacturaRow({
           emoji={factura.contacto.emoji}
           defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
           colorHex={factura.contacto.color}
+          logoUrl={factura.contacto.logo_url}
           size="sm"
           seed={`contacto:${factura.contacto.id}`}
         />

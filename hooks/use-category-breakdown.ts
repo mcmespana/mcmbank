@@ -13,13 +13,15 @@ import type { CategoryBreakdownRow } from "@/lib/types/database"
  * Mantiene el mismo contrato de salida que la versión anterior
  * (breakdown, loading, error, refresh) para no tocar a los consumidores.
  */
-export function useCategoryBreakdown(from: string, to: string) {
+export function useCategoryBreakdown(from: string, to: string, contactoId?: string | null) {
   const { selectedDelegation } = useDelegationContext()
 
   const query = useQuery<CategoryBreakdownRow[]>({
-    queryKey: ["category-breakdown", selectedDelegation, from, to],
+    // El contacto va en la clave: si no, al filtrar se seguiría enseñando el
+    // desglose cacheado de "todos los contactos".
+    queryKey: ["category-breakdown", selectedDelegation, from, to, contactoId ?? null],
     queryFn: ({ signal }) =>
-      DatabaseService.getCategoryBreakdown(selectedDelegation as string, from, to, signal),
+      DatabaseService.getCategoryBreakdown(selectedDelegation as string, from, to, signal, contactoId),
     enabled: Boolean(selectedDelegation && from && to),
   })
 

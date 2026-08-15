@@ -41,7 +41,10 @@ export function useCreateContactoInline({
     },
     dialog: (
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto z-[70]">
+        {/* Sin capa propia: este panel siempre se abre desde otro panel (el
+            detalle o el alta de un movimiento) que ya está oscureciendo el
+            fondo. Con la suya, el lateral izquierdo se oscurecía dos veces. */}
+        <SheetContent overlay={false} side="right" className="w-full sm:max-w-xl overflow-y-auto z-[70] shadow-2xl">
           <SheetHeader className="mb-2">
             <SheetTitle>Nuevo contacto</SheetTitle>
           </SheetHeader>

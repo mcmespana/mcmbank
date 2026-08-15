@@ -5,18 +5,17 @@ import Link from "next/link"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
+import { DashboardFilters } from "@/components/dashboard/dashboard-filters"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
+import { useContactos } from "@/hooks/use-contactos"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
 import {
   TrendingUp,
   TrendingDown,
   Scale,
-  Filter,
   SearchX,
-  X,
   LineChart as LineChartIcon,
   ListOrdered,
   ArrowUpRight,
@@ -65,9 +64,10 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
   const [isLoaded, setIsLoaded] = useState(false)
 
   const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
-  const [selectorOpen, setSelectorOpen] = useState(false)
+  const [contactoId, setContactoId] = useState<string | null>(null)
 
   const { categorias } = useCategorias(selectedDelegation)
+  const { contactos } = useContactos(selectedDelegation)
   const expandedCategoryIds = useMemo(
     () => buildExpandedCategoryIds(categoryIds, categorias),
     [categoryIds, categorias],
@@ -80,6 +80,7 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
       fechaDesde: from,
       fechaHasta: to,
       categoriaIds: expandedCategoryIds.length > 0 ? expandedCategoryIds : undefined,
+      contactoIds: contactoId ? [contactoId] : undefined,
     },
     { pageSize: 0 },
   )
@@ -113,6 +114,7 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
   useEffect(() => {
     if (!resetToken) return
     setCategoryIds([])
+    setContactoId(null)
   }, [resetToken, setCategoryIds])
 
   const summary = useMemo(() => {
@@ -195,19 +197,8 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
 
   const clearFilters = () => {
     setCategoryIds([])
+    setContactoId(null)
   }
-
-  const removeCategory = (id: string) => {
-    setCategoryIds(selectedCategories.filter((c) => c !== id))
-  }
-
-  const selectedChips = useMemo(
-    () =>
-      selectedCategories
-        .map((id) => categorias.find((c) => c.id === id))
-        .filter((c): c is NonNullable<typeof c> => !!c),
-    [selectedCategories, categorias],
-  )
 
   const latestMovements = useMemo(
     () => [...movimientos].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, MOVEMENTS_PREVIEW_LIMIT),
@@ -215,55 +206,20 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
   )
 
   const hasFilteredMovements = movimientos.length > 0
-  const hasFilter = selectedCategories.length > 0
+  const hasFilter = selectedCategories.length > 0 || Boolean(contactoId)
 
   return (
     <div className="space-y-6">
-      {/* Toolbar de filtro por actividad/categoría */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => setSelectorOpen(true)}>
-          <Filter className="h-4 w-4" />
-          {hasFilter ? "Cambiar actividad" : "Elegir actividad o categoría"}
-        </Button>
-        {selectedChips.map((c) => (
-          <Badge key={c.id} variant="secondary" className="gap-1 pr-1 font-normal">
-            {c.emoji && <span>{c.emoji}</span>}
-            {c.nombre}
-            <button
-              type="button"
-              onClick={() => removeCategory(c.id)}
-              className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-              aria-label={`Quitar ${c.nombre}`}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-        {hasFilter && (
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={clearFilters}>
-            Limpiar
-          </Button>
-        )}
-        {isPending && <span className="text-xs text-muted-foreground">Aplicando filtros...</span>}
-        {!hasFilter && (
-          <span className="text-xs text-muted-foreground">
-            Sin filtro se muestra todo el periodo. Elige una actividad para cuadrarla.
-          </span>
-        )}
-      </div>
-
-      {selectorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <CategoryMegaSelector
-            categories={categorias}
-            selectedCategories={selectedCategories}
-            onSelectionChange={setCategoryIds}
-            onClose={() => setSelectorOpen(false)}
-            allowMultiple
-            title="Elegir actividad o categoría"
-          />
-        </div>
-      )}
+      <DashboardFilters
+        categorias={categorias}
+        selectedCategories={selectedCategories}
+        onCategoriesChange={setCategoryIds}
+        contactos={contactos}
+        selectedContacto={contactoId}
+        onContactoChange={setContactoId}
+        isPending={isPending}
+        hint="Sin filtro se muestra todo el periodo. Elige una actividad o un contacto para cuadrarlo."
+      />
 
       {!hasFilteredMovements ? (
         <EmptyState

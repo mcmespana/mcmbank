@@ -11,20 +11,19 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Filter,
   Scale,
   Tags,
-  X,
   List,
   Layers,
   ChevronRight,
 } from "lucide-react"
-import { CategoryMegaSelector } from "@/components/transactions/category-mega-selector"
+import { DashboardFilters } from "@/components/dashboard/dashboard-filters"
 import { RelatedMovementsSheet } from "@/components/transactions/related-movements-sheet"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useCategoryBreakdown } from "@/hooks/use-category-breakdown"
 import { useDebouncedCategoryFilter } from "@/hooks/use-debounced-state"
+import { useContactos } from "@/hooks/use-contactos"
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts"
 import { formatCurrency } from "@/lib/utils/format"
 import { Table, TableHeader, TableHead, TableRow, TableCell, TableBody, TableFooter } from "@/components/ui/table"
@@ -229,7 +228,7 @@ export const CategoryAnalysisDashboard = memo(function CategoryAnalysisDashboard
   const { categoryIds, selectedCategories, setCategoryIds, isPending } = useDebouncedCategoryFilter([])
   const [sortField, setSortField] = useState<SortField>("default")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
-  const [selectorOpen, setSelectorOpen] = useState(false)
+  const [contactoId, setContactoId] = useState<string | null>(null)
   const [grouped, setGrouped] = useState(false)
   // Categoría (o grupo) cuyos movimientos se están viendo en la ventana lateral
   const [viewing, setViewing] = useState<{
@@ -239,13 +238,14 @@ export const CategoryAnalysisDashboard = memo(function CategoryAnalysisDashboard
   } | null>(null)
 
   const { categorias } = useCategorias(selectedDelegation)
+  const { contactos } = useContactos(selectedDelegation)
   const expandedCategoryIds = useMemo(
     () => buildExpandedCategoryIds(categoryIds, categorias),
     [categoryIds, categorias],
   )
 
   // Fetch full category breakdown from DB — one row per category, no full table scan
-  const { breakdown } = useCategoryBreakdown(from, to)
+  const { breakdown } = useCategoryBreakdown(from, to, contactoId)
 
   // Filter client-side when category filter is active (cheap: one row per category)
   const filteredBreakdown = useMemo(() => {
@@ -469,11 +469,8 @@ export const CategoryAnalysisDashboard = memo(function CategoryAnalysisDashboard
   }
 
   const clearFilters = () => {
+    setContactoId(null)
     setCategoryIds([])
-  }
-
-  const removeCategory = (id: string) => {
-    setCategoryIds(selectedCategories.filter((c) => c !== id))
   }
 
   const handleSort = (field: SortField) => {
@@ -581,56 +578,18 @@ export const CategoryAnalysisDashboard = memo(function CategoryAnalysisDashboard
     </Card>
   )
 
-  const selectedChips = useMemo(
-    () =>
-      selectedCategories
-        .map((id) => categorias.find((c) => c.id === id))
-        .filter((c): c is NonNullable<typeof c> => !!c),
-    [selectedCategories, categorias],
-  )
-
   return (
     <div className="space-y-6">
-      {/* Toolbar de filtros: compacta, con chips de categorías activas */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => setSelectorOpen(true)}>
-          <Filter className="h-4 w-4" />
-          Filtrar categorías
-        </Button>
-        {selectedChips.map((c) => (
-          <Badge key={c.id} variant="secondary" className="gap-1 pr-1 font-normal">
-            {c.emoji && <span>{c.emoji}</span>}
-            {c.nombre}
-            <button
-              type="button"
-              onClick={() => removeCategory(c.id)}
-              className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-              aria-label={`Quitar ${c.nombre}`}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-        {selectedCategories.length > 0 && (
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={clearFilters}>
-            Limpiar
-          </Button>
-        )}
-        {isPending && <span className="text-xs text-muted-foreground">Aplicando filtros...</span>}
-      </div>
-
-      {selectorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <CategoryMegaSelector
-            categories={categorias}
-            selectedCategories={selectedCategories}
-            onSelectionChange={setCategoryIds}
-            onClose={() => setSelectorOpen(false)}
-            allowMultiple
-            title="Filtrar por Categorías"
-          />
-        </div>
-      )}
+      <DashboardFilters
+        categorias={categorias}
+        selectedCategories={selectedCategories}
+        onCategoriesChange={setCategoryIds}
+        contactos={contactos}
+        selectedContacto={contactoId}
+        onContactoChange={setContactoId}
+        isPending={isPending}
+        hint="Sin filtro se analiza todo el periodo. Elige una actividad o un contacto para acotarlo."
+      />
 
       {filteredBreakdown.length === 0 ? (
         <EmptyState

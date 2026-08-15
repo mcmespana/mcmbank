@@ -214,12 +214,13 @@ export function FacturasManager() {
   // Las facturas nuevas caen siempre en la bandeja: si se sueltan estando en
   // otra pestaña, no tendría sentido dejar al usuario mirando una lista donde
   // no aparecen.
+  const subirFacturas = subida.subir
   const subirYMostrarBandeja = useCallback(
     (files: File[]) => {
       setTab("bandeja")
-      void subida.subir(files)
+      void subirFacturas(files)
     },
-    [subida],
+    [subirFacturas],
   )
 
   const openCreate = () => {
@@ -349,7 +350,7 @@ export function FacturasManager() {
             <span>Concepto</span>
             <span>Importe</span>
             <span>Fecha</span>
-            <span>Conciliación</span>
+            <span>Estado</span>
             <span />
           </ListHeaderRow>
           {facturas.map((factura) => (

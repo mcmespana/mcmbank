@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils"
 import { ListRow } from "@/components/ui/list-row"
 import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu"
 import { StatusPill } from "@/components/ui/status-pill"
-import { AmountDisplay } from "@/components/amount-display"
 import { EntityAvatar } from "@/components/ui/entity-avatar"
+import { FacturaImporte } from "./factura-importe"
 import { CONTACTO_TIPO_DEFAULT_EMOJIS } from "@/lib/utils/contacto-tipos"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { FACTURA_ESTADO_INFO, importePendienteFactura } from "@/lib/utils/facturas"
@@ -129,10 +129,10 @@ export const FacturaRow = memo(function FacturaRow({
           variant="ghost"
           className="h-9 gap-1.5 px-2.5"
           onClick={onOpenDetail}
-          title="Conciliar con un movimiento"
+          title="Vincular con un movimiento del banco"
         >
           <Link2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Conciliar</span>
+          <span className="hidden sm:inline">Vincular</span>
         </Button>
       )}
       {canEdit && <ActionMenu ariaLabel={`Más acciones de la factura ${titulo}`} items={menuItems} />}
@@ -155,7 +155,7 @@ export const FacturaRow = memo(function FacturaRow({
             </div>
             <div className="shrink-0 text-right">
               {factura.importe != null ? (
-                <AmountDisplay amount={Number(factura.importe)} size="sm" />
+                <FacturaImporte importe={Number(factura.importe)} estado={factura.estado} size="sm" />
               ) : (
                 <span className="text-xs italic text-muted-foreground">Sin importe</span>
               )}
@@ -188,7 +188,7 @@ export const FacturaRow = memo(function FacturaRow({
 
           <div>
             {factura.importe != null ? (
-              <AmountDisplay amount={Number(factura.importe)} size="sm" />
+              <FacturaImporte importe={Number(factura.importe)} estado={factura.estado} size="sm" />
             ) : (
               <span className="text-xs italic text-muted-foreground">Sin importe</span>
             )}

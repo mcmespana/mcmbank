@@ -38,15 +38,26 @@ interface FileListProps {
   title: string
   emptyMessage: string
   loading?: boolean
+  /**
+   * Permite al padre quedarse con la acción de borrar de un archivo concreto.
+   * Los documentos de una factura vinculada no se borran desde aquí: pasan por
+   * el diálogo de desvincular, porque el archivo es el mismo objeto de Storage
+   * que el de la factura. Devuelve true si el padre se ha hecho cargo.
+   */
+  onDeleteIntercept?: (archivo: MovimientoArchivo) => boolean
+  /** Texto del botón de borrar (tooltip) por archivo. */
+  deleteTitleFor?: (archivo: MovimientoArchivo) => string
 }
 
-export function FileList({ 
-  archivos, 
-  onDelete, 
+export function FileList({
+  archivos,
+  onDelete,
   onUpdateDescription,
   title,
   emptyMessage,
-  loading = false 
+  loading = false,
+  onDeleteIntercept,
+  deleteTitleFor,
 }: FileListProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingDescription, setEditingDescription] = useState("")
@@ -95,6 +106,7 @@ export function FileList({
   }
 
   const openDeleteDialog = (archivo: MovimientoArchivo) => {
+    if (onDeleteIntercept?.(archivo)) return
     setFileToDelete(archivo)
     setDeleteError(null)
     setDeleteDialogOpen(true)
@@ -236,7 +248,7 @@ export function FileList({
                 variant="ghost"
                 onClick={() => handleView(archivo)}
                 className="h-8 w-8 p-0"
-                title="Ver archivo"
+                title="Abrir el archivo"
               >
                 <Eye className="h-4 w-4" />
               </Button>
@@ -256,7 +268,7 @@ export function FileList({
                 variant="ghost"
                 onClick={() => openDeleteDialog(archivo)}
                 className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                title="Eliminar"
+                title={deleteTitleFor?.(archivo) ?? "Eliminar el archivo"}
                 disabled={deletingId === archivo.id}
               >
                 <Trash2 className="h-4 w-4" />
@@ -274,15 +286,15 @@ export function FileList({
           if (!open) setDeleteError(null)
         }}
       >
-        <DialogContent>
+        <DialogContent className="z-[80]" overlayClassName="z-[70]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-5 w-5" />
               ¿Eliminar archivo?
             </DialogTitle>
             <DialogDescription>
-              Esta acción eliminará permanentemente el archivo &quot;{fileToDelete?.nombre_original}&quot;.
-              Esta acción no se puede deshacer.
+              Se eliminará permanentemente el archivo &quot;{fileToDelete?.nombre_original}&quot; de este
+              movimiento. No se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           {deleteError && (

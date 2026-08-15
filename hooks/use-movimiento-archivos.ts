@@ -140,7 +140,37 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
     }
   }
 
-  // Eliminar archivo
+  /**
+   * Quita la fila de movimiento_archivo (y recoloca el adjunto principal) sin
+   * tocar Storage. Es la parte común de eliminar y de desvincular.
+   */
+  const removeArchivoRow = async (archivo: MovimientoArchivo): Promise<void> => {
+    const { error } = await (supabase as any)
+      .from("movimiento_archivo")
+      .delete()
+      .eq("id", archivo.id)
+
+    if (error) throw error
+
+    // Si era una factura principal, limpiar el campo adjunto_principal_url
+    if (archivo.es_factura && movimientoId) {
+      const otrasFacturas = archivos.filter(a =>
+        a.id !== archivo.id && a.es_factura
+      )
+
+      const nuevaFacturaPrincipal = otrasFacturas.length > 0 ? otrasFacturas[0].url_publica : null
+
+      await (supabase as any)
+        .from("movimiento")
+        .update({ adjunto_principal_url: nuevaFacturaPrincipal })
+        .eq("id", movimientoId)
+    }
+
+    // Actualizar la lista de archivos
+    setArchivos(prev => prev.filter(a => a.id !== archivo.id))
+  }
+
+  // Eliminar archivo (del movimiento y de Storage)
   const deleteFile = async (archivo: MovimientoArchivo): Promise<void> => {
     setError(null)
 
@@ -148,32 +178,27 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
       // Eliminar archivo de Supabase Storage
       await FileService.deleteFile(archivo.path_storage, archivo.bucket as 'facturas' | 'documentos')
 
-      // Eliminar metadata de la base de datos
-      const { error } = await (supabase as any)
-        .from("movimiento_archivo")
-        .delete()
-        .eq("id", archivo.id)
-
-      if (error) throw error
-
-      // Si era una factura principal, limpiar el campo adjunto_principal_url
-      if (archivo.es_factura && movimientoId) {
-        const otrasFacturas = archivos.filter(a =>
-          a.id !== archivo.id && a.es_factura
-        )
-
-        const nuevaFacturaPrincipal = otrasFacturas.length > 0 ? otrasFacturas[0].url_publica : null
-
-        await (supabase as any)
-          .from("movimiento")
-          .update({ adjunto_principal_url: nuevaFacturaPrincipal })
-          .eq("id", movimientoId)
-      }
-
-      // Actualizar la lista de archivos
-      setArchivos(prev => prev.filter(a => a.id !== archivo.id))
+      await removeArchivoRow(archivo)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error al eliminar archivo"
+      setError(errorMsg)
+      throw new Error(errorMsg)
+    }
+  }
+
+  /**
+   * Desengancha el archivo de este movimiento SIN borrarlo de Storage. Se usa
+   * con los documentos de una factura vinculada: la copia del movimiento
+   * apunta al mismo objeto de Storage que la factura, así que borrarlo dejaría
+   * la factura sin documento en la bandeja.
+   */
+  const detachFile = async (archivo: MovimientoArchivo): Promise<void> => {
+    setError(null)
+
+    try {
+      await removeArchivoRow(archivo)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Error al quitar el archivo del movimiento"
       setError(errorMsg)
       throw new Error(errorMsg)
     }
@@ -225,6 +250,7 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
     error,
     uploadFile,
     deleteFile,
+    detachFile,
     updateFileDescription,
     refetch: fetchArchivos
   }

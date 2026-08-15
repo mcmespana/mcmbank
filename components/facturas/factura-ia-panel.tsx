@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { AlertTriangle, Check, Loader2, RefreshCw, Sparkles } from "lucide-react"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { aceptarCategoriaIa, leerFacturaConIa } from "@/lib/services/factura-ia-client"
@@ -37,8 +36,12 @@ export function FacturaIaPanel({
   onCategoriaAceptada,
 }: FacturaIaPanelProps) {
   const [trabajando, setTrabajando] = useState<"leyendo" | "aceptando" | null>(null)
+  // La sugerencia desaparece en cuanto se acepta, sin esperar a que vuelva la
+  // factura del servidor: si no, se queda un par de segundos preguntando algo
+  // que ya está respondido.
+  const [aceptadaAqui, setAceptadaAqui] = useState(false)
   const datos = leerDatosIa(factura.datos_ia)
-  const categoriaPendiente = categoriaPendienteDeAceptar(datos)
+  const categoriaPendiente = aceptadaAqui ? null : categoriaPendienteDeAceptar(datos)
 
   const leer = async (forzar: boolean) => {
     setTrabajando("leyendo")
@@ -62,12 +65,14 @@ export function FacturaIaPanel({
   const aceptar = async () => {
     if (!categoriaPendiente?.id) return
     setTrabajando("aceptando")
+    setAceptadaAqui(true)
     try {
       await aceptarCategoriaIa(factura.id, categoriaPendiente.id)
       onCategoriaAceptada?.(categoriaPendiente.id)
       toast.success(`Categoría "${categoriaPendiente.nombre}" aplicada`)
       await onChanged()
     } catch (err) {
+      setAceptadaAqui(false)
       toast.error("No se pudo aplicar: " + (err instanceof Error ? err.message : "error desconocido"))
     } finally {
       setTrabajando(null)
@@ -144,25 +149,31 @@ export function FacturaIaPanel({
         )}
       </Tira>
 
+      {/* Toda la sugerencia es el botón. Es una pregunta de sí o no y el "no"
+          es no tocarla, así que obligar a apuntar a un botón pequeño al lado
+          —imposible con el pulgar— no compraba nada. */}
       {categoriaPendiente && canEdit && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-2">
-          <div className="min-w-0">
+        <button
+          type="button"
+          onClick={aceptar}
+          disabled={trabajando !== null}
+          className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-2 text-left transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:opacity-60"
+        >
+          <div className="min-w-0 flex-1">
             <div className="text-xs font-medium">
               ¿La categorizo como <span className="text-primary">{categoriaPendiente.nombre}</span>?
             </div>
             {categoriaPendiente.motivo && (
               <div className="truncate text-[11px] text-muted-foreground">{categoriaPendiente.motivo}</div>
             )}
+            <div className="text-[11px] text-muted-foreground">Toca aquí para ponerla.</div>
           </div>
-          <Button type="button" size="sm" onClick={aceptar} disabled={trabajando !== null}>
-            {trabajando === "aceptando" ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Check className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Sí, ponla
-          </Button>
-        </div>
+          {trabajando === "aceptando" ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
+          ) : (
+            <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+          )}
+        </button>
       )}
     </div>
   )

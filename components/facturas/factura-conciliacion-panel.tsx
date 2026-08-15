@@ -16,6 +16,8 @@ interface FacturaConciliacionPanelProps {
   importeYaPagado: number
   fechaEmision: string | null
   contactoId: string | null
+  /** Nombre del proveedor, para cotejarlo con el concepto del movimiento. */
+  contactoNombre?: string | null
   seleccion: string | null
   onSeleccionChange: (id: string | null) => void
 }
@@ -32,6 +34,7 @@ export function FacturaConciliacionPanel({
   importeYaPagado,
   fechaEmision,
   contactoId,
+  contactoNombre,
   seleccion,
   onSeleccionChange,
 }: FacturaConciliacionPanelProps) {
@@ -43,7 +46,12 @@ export function FacturaConciliacionPanel({
     setLoading(true)
     DatabaseService.findCandidatosMovimientoParaFactura(
       delegacionId,
-      { importe: importePendiente, fecha_emision: fechaEmision, contacto_id: contactoId },
+      {
+        importe: importePendiente,
+        fecha_emision: fechaEmision,
+        contacto_id: contactoId,
+        contacto_nombre: contactoNombre ?? null,
+      },
       { limit: 30 },
     )
       .then((list) => {
@@ -58,14 +66,22 @@ export function FacturaConciliacionPanel({
     return () => {
       cancelled = true
     }
-  }, [delegacionId, importePendiente, fechaEmision, contactoId])
+  }, [delegacionId, importePendiente, fechaEmision, contactoId, contactoNombre])
 
   const scores = useMemo(
     () =>
       candidatos.map((m) =>
-        scoreCandidatoMovimiento({ importe: importePendiente, fecha_emision: fechaEmision, contacto_id: contactoId }, m),
+        scoreCandidatoMovimiento(
+          {
+            importe: importePendiente,
+            fecha_emision: fechaEmision,
+            contacto_id: contactoId,
+            contacto_nombre: contactoNombre ?? null,
+          },
+          m,
+        ),
       ),
-    [candidatos, importePendiente, fechaEmision, contactoId],
+    [candidatos, importePendiente, fechaEmision, contactoId, contactoNombre],
   )
 
   const matchDirecto = useMemo(() => esMatchDirecto(scores), [scores])
@@ -157,6 +173,16 @@ export function FacturaConciliacionPanel({
                   {s?.mismoContacto && (
                     <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
                       mismo contacto
+                    </span>
+                  )}
+                  {s?.nombreEnConcepto && (
+                    <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                      lo nombra el concepto
+                    </span>
+                  )}
+                  {s?.otroProveedorEnConcepto && (
+                    <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+                      es de otro proveedor
                     </span>
                   )}
                 </div>

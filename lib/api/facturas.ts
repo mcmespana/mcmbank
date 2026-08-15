@@ -541,6 +541,11 @@ export interface CandidatoMovimiento {
   }
   puntuacion: number
   importe_exacto: boolean
+  /**
+   * El concepto nombra a una cadena conocida distinta del proveedor de la
+   * factura: nunca se vincula solo, por mucho que el importe cuadre.
+   */
+  otro_proveedor_en_concepto: boolean
   motivos: string[]
 }
 
@@ -613,13 +618,22 @@ export async function buscarCandidatosParaFactura(
 
   const catalogos = await cargarCatalogos(admin)
   const delegaciones = await mapaDelegaciones(admin)
-  const proveedor = datos.proveedor?.trim() ? normalizarTexto(datos.proveedor.trim()) : null
-  const palabrasProveedor = proveedor ? proveedor.split(/\s+/).filter((p) => p.length >= 3) : []
-
   const puntuados = filas.map((fila) => {
     const base = scoreCandidatoMovimiento(
-      { importe, fecha_emision: datos.fecha ?? null, contacto_id: datos.contacto_id ?? null },
-      { importe: fila.importe, fecha: fila.fecha, contacto_id: fila.contacto_id } as any,
+      {
+        importe,
+        fecha_emision: datos.fecha ?? null,
+        contacto_id: datos.contacto_id ?? null,
+        contacto_nombre: datos.proveedor ?? null,
+      },
+      {
+        importe: fila.importe,
+        fecha: fila.fecha,
+        contacto_id: fila.contacto_id,
+        concepto: fila.concepto,
+        contraparte: fila.contraparte,
+        descripcion: fila.descripcion,
+      } as any,
     )
 
     const motivos: string[] = []
@@ -627,18 +641,12 @@ export async function buscarCandidatosParaFactura(
     else if (importe != null) motivos.push("importe dentro del margen")
     if (base.fechaCercana) motivos.push("fecha muy cercana")
     if (base.mismoContacto) motivos.push("mismo contacto")
+    if (base.nombreEnConcepto) motivos.push(`el concepto menciona "${datos.proveedor}"`)
+    if (base.otroProveedorEnConcepto) {
+      motivos.push("ojo: el concepto nombra a otro proveedor conocido")
+    }
 
     let extra = 0
-    if (palabrasProveedor.length > 0) {
-      const textoMovimiento = normalizarTexto(
-        [fila.concepto, fila.contraparte, fila.descripcion].filter(Boolean).join(" "),
-      )
-      const aciertos = palabrasProveedor.filter((p) => textoMovimiento.includes(p))
-      if (aciertos.length > 0) {
-        extra += aciertos.length === palabrasProveedor.length ? 3 : 2
-        motivos.push(`el concepto menciona "${datos.proveedor}"`)
-      }
-    }
     if (datos.numero) {
       const textoMovimiento = normalizarTexto(
         [fila.concepto, fila.contraparte, fila.descripcion].filter(Boolean).join(" "),
@@ -664,6 +672,7 @@ export async function buscarCandidatosParaFactura(
       },
       puntuacion: base.score + extra,
       importe_exacto: base.importeExacto,
+      otro_proveedor_en_concepto: base.otroProveedorEnConcepto,
       motivos,
     }
   })
@@ -755,7 +764,9 @@ export async function conciliarLote(
     const mejor = candidatos[0]
     const segundo = candidatos[1]
     const matchDirecto = Boolean(
-      mejor?.importe_exacto && (!segundo || mejor.puntuacion >= segundo.puntuacion + 2),
+      mejor?.importe_exacto &&
+        !mejor.otro_proveedor_en_concepto &&
+        (!segundo || mejor.puntuacion >= segundo.puntuacion + 2),
     )
 
     const resultado: ResultadoItemConciliacion = {
@@ -831,7 +842,7 @@ export async function buscarFacturasParaMovimiento(
   const movimiento = unwrap(
     await (admin as any)
       .from("movimiento")
-      .select("id, delegacion_id, fecha, importe, contacto_id")
+      .select("id, delegacion_id, fecha, importe, contacto_id, concepto, contraparte, descripcion")
       .eq("id", movimientoId)
       .maybeSingle(),
   ) as any
@@ -859,8 +870,20 @@ export async function buscarFacturasParaMovimiento(
       const factura = serializeFactura(fila, archivos.get(fila.id) ?? [], delegaciones)
       const pendiente = factura.importe_pendiente
       const base = scoreCandidatoMovimiento(
-        { importe: pendiente, fecha_emision: factura.fecha_emision, contacto_id: fila.contacto_id },
-        { importe: movimiento.importe, fecha: movimiento.fecha, contacto_id: movimiento.contacto_id } as any,
+        {
+          importe: pendiente,
+          fecha_emision: factura.fecha_emision,
+          contacto_id: fila.contacto_id,
+          contacto_nombre: fila.contacto?.nombre ?? null,
+        },
+        {
+          importe: movimiento.importe,
+          fecha: movimiento.fecha,
+          contacto_id: movimiento.contacto_id,
+          concepto: movimiento.concepto,
+          contraparte: movimiento.contraparte,
+          descripcion: movimiento.descripcion,
+        } as any,
       )
 
       const fueraDeMargen =
@@ -871,6 +894,8 @@ export async function buscarFacturasParaMovimiento(
       if (base.importeExacto) motivos.push("el importe pendiente coincide exactamente")
       if (base.fechaCercana) motivos.push("fecha muy cercana")
       if (base.mismoContacto) motivos.push("mismo contacto")
+      if (base.nombreEnConcepto) motivos.push("el concepto del movimiento nombra al proveedor")
+      if (base.otroProveedorEnConcepto) motivos.push("ojo: el concepto nombra a otro proveedor conocido")
 
       return { factura, puntuacion: base.score, motivos, fueraDeMargen }
     })

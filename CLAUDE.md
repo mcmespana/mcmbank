@@ -206,6 +206,40 @@ Lo que conviene no deshacer:
 - **Confirmar es lo que saca una factura de la bandeja** (`estado` pasa a
   `sin_pagar`). Mientras está en la bandeja es "un papel que ha llegado"; la IA
   rellena pero no da nada por bueno.
+- **El panel va dentro de un contenedor con `overflow-hidden`**, así que
+  cualquier hijo que no pueda encoger (una rejilla de dos inputs, una fila de
+  botones) no desborda: corta el panel por la derecha, sin barra que lo delate.
+  De ahí los `min-w-0` de `factura-panel.tsx` y `factura-datos-fields.tsx`, y el
+  `[&>div>div]:!block` sobre el `ScrollArea` (Radix mete dentro un
+  `display: table` que crece con su contenido).
+- **Los menús que se abren desde el panel necesitan `z-[80]`**: el workspace va
+  en `z-[60]` y un popover con el `z-50` de serie se dibuja por debajo, lo que
+  desde fuera parece que el botón no hace nada.
+
+### Conciliar: cuándo se puede afirmar "fijo que es este"
+
+El importe y la fecha no bastan. Mercadona y Amazon son los dos proveedores que
+más apuntes generan, así que es normal que el mismo día haya un pago de uno por
+el importe exacto de la factura del otro, y ahí el emparejamiento automático se
+equivocaba con toda la seguridad del mundo.
+
+`lib/utils/facturas-matching.ts` mira además el texto del movimiento, con dos
+niveles de exigencia distintos y a propósito:
+
+- **Un proveedor cualquiera**: encontrar su nombre en el concepto suma, no
+  encontrarlo no resta. El extracto casi nunca trae el nombre del proveedor
+  pequeño, así que del silencio no se puede concluir nada.
+- **Una cadena de `CADENAS_EN_EXTRACTO`** (Mercadona, Amazon, Carrefour…): sale
+  en el extracto casi siempre y casi siempre igual, así que aquí sí se concluye.
+  Ver **otra** cadena en el concepto marca `otroProveedorEnConcepto` y eso
+  **nunca** es match directo, por mucho que el importe cuadre al céntimo — ni en
+  la web, ni en `conciliar_facturas` con `aplicar: true`.
+
+Los patrones se comparan por palabras completas (`dia` no se cuela dentro de
+"diagonal") y sobre el nombre normalizado con `normalizarClaveProveedor()`, el
+mismo que impide que existan dos Mercadonas. Añadir una cadena es una línea;
+añadir una que no aparezca literalmente en los extractos sí haría daño, porque
+convierte el silencio en un descarte.
 ### Proveedores (interdelegacionales) y sus logos
 
 Los **proveedores** (`contacto.tipo = 'proveedor'`) son fichas de toda la

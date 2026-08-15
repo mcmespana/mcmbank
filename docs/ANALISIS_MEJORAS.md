@@ -149,6 +149,10 @@ Pasada completa por Dashboard (3 pestañas), Cuentas, Categorías, Transacciones
 ### Pulido
 
 - [ ] **63. Auto-categorización por reglas** — el esquema de reglas existe parcialmente en BD pero no tiene UI de gestión. **Nota de la revisión del 06/08**: la tabla `regla` tiene RLS activo **sin ninguna política** (deny-all, 0 filas hoy) — no es un bug de seguridad (fail-closed), pero es un prerrequisito bloqueante antes de construir la UI: hay que decidir y crear las políticas de acceso (¿quién puede crear/editar reglas de su delegación?) antes de que cualquier pantalla nueva pueda leer o escribir en esa tabla.
+- [ ] **63-bis. Auto-categorización y renombrado de movimientos (con y sin IA)** — hermano del 63, pero mirando al movimiento en vez de a la factura. Dos piezas:
+  1. **Categorizar solo**: primero sin IA (reglas y, sobre todo, aprender del historial: si los últimos N movimientos cuyo concepto normaliza igual fueron a la misma categoría, proponerla); la IA solo para lo que no case, en lote y no de uno en uno, que es lo que lo hace asumible.
+  2. **Ponerle un nombre decente al movimiento** — el concepto del banco es ruido (`COMPRA TARJ. 4021 MERCADONA SEVILLA 13/08`); guardar aparte un título legible sin pisar el original, que es la prueba documental.
+  Reglas que ya están decididas y no hay que volver a discutir: **la IA sugiere, no decide** (igual que en facturas: la sugerencia espera a que alguien la acepte) y el proveedor se detecta con `CADENAS_EN_EXTRACTO` de `lib/utils/facturas-matching.ts`, que ya sabe leer las cadenas típicas del extracto.
 - [ ] **64-65.** Sin cambios, siguen pendientes.
 
 ---

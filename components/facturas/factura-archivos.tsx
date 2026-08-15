@@ -62,6 +62,10 @@ export function FacturaArchivos({ facturaId, delegacionId, onCambio }: FacturaAr
     multiple: true,
     disabled: uploading || !delegacionCodigo,
     maxSize: 20 * 1024 * 1024,
+    // Que el arrastre no suba hasta `window`: allí escucha el drop a pantalla
+    // completa de la bandeja, y soltar un archivo aquí crearía además una
+    // factura nueva con él.
+    noDragEventsBubbling: true,
   })
 
   const handleDelete = async (archivo: ArchivoAdjunto) => {

@@ -35,6 +35,10 @@ export function FacturaInboxDropzone({
     multiple: true,
     disabled: bloqueado,
     maxSize: 20 * 1024 * 1024,
+    // Sin esto el evento sigue subiendo hasta `window`, donde también escucha
+    // `FacturaDropOverlay`, y soltar los archivos justo encima de este recuadro
+    // los subiría dos veces.
+    noDragEventsBubbling: true,
   })
 
   return (

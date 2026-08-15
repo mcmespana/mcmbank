@@ -13,7 +13,9 @@ import { ApiError } from "@/lib/api/errors"
  * líneas, y una dependencia más que mantener al día.
  *
  * Todo lo que pide este módulo es **salida estructurada**: se le pasa un JSON
- * Schema y el modelo está obligado a responder con un JSON que encaje. Nunca se
+ * Schema —que `aEsquemaGemini()` traduce al subconjunto de OpenAPI que acepta
+ * `generateContent`— y el modelo está obligado a responder con un JSON que
+ * encaje contra él. Nunca se
  * le dan herramientas ni se ejecuta nada de lo que responde: el documento que
  * lee es contenido no confiable (llega por correo desde fuera), así que la
  * única salida posible es rellenar los campos del schema, que luego se validan
@@ -24,6 +26,9 @@ const ENDPOINT_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 const TIMEOUT_MS = 60_000
 
 export const GEMINI_MODELO_POR_DEFECTO = "gemini-3.7-flash"
+
+/** Los únicos valores que acepta `thinkingConfig.thinkingLevel`. */
+const NIVELES_RAZONAMIENTO = ["low", "medium", "high"] as const
 
 /** Tipos de documento que el modelo sabe leer y que aquí se le mandan. */
 export const GEMINI_MIME_SOPORTADOS = [
@@ -42,6 +47,93 @@ export function geminiConfigurado(): boolean {
 
 export function modeloGemini(): string {
   return process.env.GEMINI_MODEL?.trim() || GEMINI_MODELO_POR_DEFECTO
+}
+
+function nivelRazonamiento(pedido?: string): string {
+  const valor = (pedido || process.env.GEMINI_THINKING_LEVEL || "").trim().toLowerCase()
+  return (NIVELES_RAZONAMIENTO as readonly string[]).includes(valor) ? valor : "low"
+}
+
+/**
+ * `generationConfig.responseSchema` **no** es JSON Schema.
+ *
+ * Es el subconjunto de OpenAPI 3.0 que entiende `generateContent`, y la
+ * diferencia que muerde es la nulabilidad: JSON Schema la escribe
+ * `{"type": ["string", "null"]}` y aquí eso es un 400 —el campo `type` es un
+ * enum de un solo valor—, hay que decirlo con `{"type": "string", "nullable":
+ * true}`. El error que devuelve Google no menciona el modelo para nada, así que
+ * es facilísimo confundirlo con "el modelo no existe" y perder la tarde
+ * cambiando `GEMINI_MODEL`.
+ *
+ * Esta función traduce, en vez de obligar a escribir los schemas ya
+ * traducidos, porque el schema de facturas se construye a mano
+ * (`construirSchema()` en `factura-ia.ts`) y cualquier otro que se añada
+ * mañana se escribirá igual: en JSON Schema, que es lo que todo el mundo tiene
+ * en la cabeza. Las claves que el subconjunto no reconoce se descartan aquí
+ * mismo, porque una clave desconocida también es un 400.
+ */
+const CLAVES_SOPORTADAS = new Set([
+  "type",
+  "format",
+  "title",
+  "description",
+  "nullable",
+  "enum",
+  "items",
+  "properties",
+  "required",
+  "minimum",
+  "maximum",
+  "minItems",
+  "maxItems",
+  "propertyOrdering",
+])
+
+export function aEsquemaGemini(schema: unknown): Record<string, unknown> {
+  if (!schema || typeof schema !== "object" || Array.isArray(schema)) return {}
+  const entrada = schema as Record<string, unknown>
+  const salida: Record<string, unknown> = {}
+
+  for (const [clave, valor] of Object.entries(entrada)) {
+    if (!CLAVES_SOPORTADAS.has(clave)) continue
+
+    if (clave === "type") {
+      // `["string", "null"]` -> type: "string" + nullable: true.
+      if (Array.isArray(valor)) {
+        const tipos = valor.filter((t) => typeof t === "string") as string[]
+        const concretos = tipos.filter((t) => t !== "null")
+        if (tipos.includes("null")) salida.nullable = true
+        // Sin tipo concreto (solo "null") el schema no dice nada: se omite el
+        // campo `type` y Gemini acepta cualquier valor, que es lo más honesto.
+        if (concretos.length > 0) salida.type = concretos[0]
+      } else if (typeof valor === "string") {
+        if (valor === "null") salida.nullable = true
+        else salida.type = valor
+      }
+      continue
+    }
+
+    if (clave === "properties" && valor && typeof valor === "object") {
+      const propiedades: Record<string, unknown> = {}
+      for (const [nombre, sub] of Object.entries(valor as Record<string, unknown>)) {
+        propiedades[nombre] = aEsquemaGemini(sub)
+      }
+      salida.properties = propiedades
+      continue
+    }
+
+    if (clave === "items") {
+      salida.items = aEsquemaGemini(valor)
+      continue
+    }
+
+    salida[clave] = valor
+  }
+
+  // `nullable` explícito en la entrada manda sobre el deducido del array.
+  if (typeof entrada.nullable === "boolean") salida.nullable = entrada.nullable
+
+  return salida
 }
 
 export interface DocumentoGemini {
@@ -98,11 +190,8 @@ export async function generarJson<T>(peticion: PeticionGemini): Promise<Respuest
     contents: [{ role: "user", parts: partes }],
     generationConfig: {
       responseMimeType: "application/json",
-      responseSchema: peticion.schema,
-      thinkingConfig: {
-        thinkingLevel:
-          peticion.nivelRazonamiento || process.env.GEMINI_THINKING_LEVEL?.trim() || "low",
-      },
+      responseSchema: aEsquemaGemini(peticion.schema),
+      thinkingConfig: { thinkingLevel: nivelRazonamiento(peticion.nivelRazonamiento) },
     },
   }
 
@@ -131,14 +220,19 @@ export async function generarJson<T>(peticion: PeticionGemini): Promise<Respuest
     }
 
     if (!respuesta.ok) {
-      const detalle = (await respuesta.text().catch(() => "")).slice(0, 500)
-      // La clave y la cuota son problemas de configuración: no se reintentan.
+      const detalle = (await respuesta.text().catch(() => "")).slice(0, 2000)
+      // La clave, el modelo y la forma de la petición son problemas de
+      // configuración: no se reintentan, y el mensaje tiene que decir cuál de
+      // los tres es. Google lo explica bien en el cuerpo; el error genérico que
+      // había aquí antes lo tiraba y mandaba a revisar la API key aunque el
+      // problema fuera el schema.
       if (respuesta.status === 400 || respuesta.status === 401 || respuesta.status === 403) {
         console.error("Gemini rechazó la petición:", respuesta.status, detalle)
-        throw new ApiError(
-          502,
-          `Gemini rechazó la petición (${respuesta.status}). Revisa GEMINI_API_KEY y que el modelo '${modelo}' exista.`,
-        )
+        throw new ApiError(502, `Gemini rechazó la petición (${respuesta.status}): ${mensajeDeGoogle(detalle)}`)
+      }
+      if (respuesta.status === 404) {
+        console.error("Gemini no encontró el modelo:", modelo, detalle)
+        throw new ApiError(502, `El modelo '${modelo}' no existe.${await pistaDeModelos(apiKey)}`)
       }
       ultimoError = `Gemini respondió ${respuesta.status}`
       console.warn("Gemini respondió con error:", respuesta.status, detalle)
@@ -170,6 +264,47 @@ export async function generarJson<T>(peticion: PeticionGemini): Promise<Respuest
   }
 
   throw new ApiError(502, `No se pudo leer el documento con IA: ${ultimoError ?? "error desconocido"}.`)
+}
+
+/**
+ * Lo que Google explica en el cuerpo del error, que es lo único que dice de
+ * verdad qué está mal (`{"error": {"message": "..."}}`).
+ */
+function mensajeDeGoogle(cuerpo: string): string {
+  try {
+    const mensaje = JSON.parse(cuerpo)?.error?.message
+    if (typeof mensaje === "string" && mensaje.trim()) return mensaje.trim().slice(0, 300)
+  } catch {
+    // No era JSON: se devuelve el texto tal cual, recortado.
+  }
+  return cuerpo.trim().slice(0, 300) || "sin detalle"
+}
+
+/**
+ * Los modelos que la clave puede usar de verdad, para el 404.
+ *
+ * Es justo el dato que hace falta cuando el nombre del modelo se ha quedado
+ * viejo, y es un `GET` sin coste. Si falla, se calla: es una pista, no el
+ * error.
+ */
+async function pistaDeModelos(apiKey: string): Promise<string> {
+  try {
+    const respuesta = await fetch(`${ENDPOINT_BASE}?pageSize=200`, {
+      headers: { "x-goog-api-key": apiKey },
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!respuesta.ok) return ""
+    const json = (await respuesta.json()) as any
+    const nombres = (json?.models ?? [])
+      .filter((m: any) => m?.supportedGenerationMethods?.includes("generateContent"))
+      .map((m: any) => String(m?.name ?? "").replace(/^models\//, ""))
+      .filter((n: string) => n.includes("flash"))
+      .slice(0, 8)
+    if (nombres.length === 0) return ""
+    return ` Con esta API key puedes usar, entre otros: ${nombres.join(", ")}. Ponlo en GEMINI_MODEL.`
+  } catch {
+    return ""
+  }
 }
 
 /** El texto vive en `candidates[0].content.parts[*].text`; puede venir troceado. */

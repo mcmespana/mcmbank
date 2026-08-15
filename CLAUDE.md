@@ -173,6 +173,39 @@ place, read by the same code (`plans/022`, `docs/FACTURAS_EMAIL_IA.md`).
   handed to the model. There is no schema output that can reconcile or delete
   anything.
 - AI extraction runs in `after()` from the webhook so the response stays fast.
+- **`generationConfig.responseSchema` is not JSON Schema.** It is the OpenAPI
+  3.0 subset, where nullability is `nullable: true` and `type: ["string",
+  "null"]` is a flat 400 — one that says nothing about the model, so it reads
+  exactly like a wrong `GEMINI_MODEL`. Write schemas as JSON Schema and let
+  `aEsquemaGemini()` translate them; it also drops the keywords the subset does
+  not know (`additionalProperties`, `$schema`…), which are another 400.
+
+### Facturas: la pantalla
+
+Rellenar una factura es copiar de un documento a un formulario, así que se ven
+los dos a la vez: `factura-workspace.tsx` pone el documento a la izquierda —el
+visor **del navegador**, en un `iframe` sobre la URL firmada, que ya sabe hacer
+zoom, buscar e imprimir— y `factura-panel.tsx` a la derecha. En móvil solo el
+panel.
+
+Lo que conviene no deshacer:
+
+- **Los buckets son privados**: todo lo que pinte un archivo pasa por
+  `getSignedFileUrl()` (`lib/utils/signed-file-url.ts`, con caché de 4 min).
+  `archivo_adjunto.url_publica` existe por historia y **no carga**.
+- Las miniaturas de PDF son la primera página rasterizada con pdf.js
+  (`lib/utils/pdf-preview.ts`), cargado con `import()` dinámico solo cuando hay
+  un PDF. Un `iframe` encogido no vale: enseña el visor, no el documento.
+- El orden del panel es datos → vincular con el banco → notas → documento. El
+  documento va al final porque ya se está viendo a la izquierda.
+- **El importe de una factura se guarda siempre en positivo** (es lo que hay
+  que pagar, no un apunte con signo: en negativo el pendiente se acota a 0 y la
+  búsqueda de candidatos deja de funcionar) y se pinta con `FacturaImporte`,
+  que colorea por estado. `AmountDisplay` colorea por signo, que es correcto
+  para un movimiento y engañoso aquí: pintaba de verde una factura sin pagar.
+- **Confirmar es lo que saca una factura de la bandeja** (`estado` pasa a
+  `sin_pagar`). Mientras está en la bandeja es "un papel que ha llegado"; la IA
+  rellena pero no da nada por bueno.
 ### Proveedores (interdelegacionales) y sus logos
 
 Los **proveedores** (`contacto.tipo = 'proveedor'`) son fichas de toda la

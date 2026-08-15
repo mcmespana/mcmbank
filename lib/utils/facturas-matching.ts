@@ -16,12 +16,18 @@ export function importePagadoFactura(factura: Pick<FacturaConRelaciones, "movimi
 /**
  * Importe que le falta a la factura por cubrir (null si no tiene importe
  * definido). Nunca negativo.
+ *
+ * El importe se toma en valor absoluto igual que el de los movimientos: la app
+ * lo guarda en positivo (es lo que hay que pagar, no un apunte con signo), pero
+ * una fila antigua o venida de la API externa puede traerlo en negativo, y
+ * entonces el pendiente salía 0 —acotado por el `max`— y la factura dejaba de
+ * encontrar candidatos en silencio.
  */
 export function importePendienteFactura(
   factura: Pick<FacturaConRelaciones, "movimientos" | "importe">,
 ): number | null {
   if (factura.importe == null) return null
-  return Math.max(Number(factura.importe) - importePagadoFactura(factura), 0)
+  return Math.max(Math.abs(Number(factura.importe)) - importePagadoFactura(factura), 0)
 }
 
 /**

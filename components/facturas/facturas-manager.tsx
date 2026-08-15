@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Plus, ReceiptText, Search } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { CheckCircle2, Clock, Inbox, Layers, Plus, ReceiptText, Search } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,16 +17,18 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useContactos } from "@/hooks/use-contactos"
 import { useDebouncedState } from "@/hooks/use-debounced-state"
+import { DatabaseService } from "@/lib/services/database"
 import { useDelegationRole } from "@/hooks/use-delegation-role"
 import useIsAdmin from "@/hooks/use-is-admin"
 import { useFacturas } from "@/hooks/use-facturas"
 import { useFacturasResumen } from "@/hooks/use-facturas-resumen"
-import { FACTURA_ESTADO_INFO } from "@/lib/utils/facturas"
+import { useSubirFacturas } from "@/hooks/use-subir-facturas"
 import type { FacturaConRelaciones, FacturaEstado } from "@/lib/types/database"
 import { FacturaRow, FACTURA_ROW_COLS } from "./factura-row"
 import { FacturaInboxCard } from "./factura-inbox-card"
-import { FacturaDetailSheet, type FacturaDetailSheetSubmit } from "./factura-detail-sheet"
+import { FacturaWorkspace, type FacturaWorkspaceSubmit } from "./factura-workspace"
 import { FacturaInboxDropzone } from "./factura-inbox-dropzone"
+import { FacturaDropOverlay } from "./factura-drop-overlay"
 import { FacturaBuzonHint } from "./factura-buzon-hint"
 import { DeleteFacturaDialog } from "./delete-factura-dialog"
 
@@ -35,9 +38,19 @@ const TAB_ORDER: TabValue[] = ["bandeja", "sin_pagar", "pagadas", "todas"]
 
 const TAB_LABELS: Record<TabValue, string> = {
   bandeja: "Bandeja",
-  sin_pagar: "Sin cerrar",
+  // "Sin cerrar" describía el dato (ni pagada ni pagada fuera); "Pendientes"
+  // describe lo que hay que hacer con ellas, que es lo que se está buscando
+  // cuando se pulsa aquí.
+  sin_pagar: "Pendientes",
   pagadas: "Pagadas",
   todas: "Todas",
+}
+
+const TAB_ICONS: Record<TabValue, typeof Inbox> = {
+  bandeja: Inbox,
+  sin_pagar: Clock,
+  pagadas: CheckCircle2,
+  todas: Layers,
 }
 
 const TAB_ESTADOS: Record<Exclude<TabValue, "todas">, FacturaEstado[]> = {
@@ -74,6 +87,9 @@ function FilterPill({
 }
 
 export function FacturasManager() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { selectedDelegation, getCurrentDelegation } = useDelegationContext()
   const { user } = useAuth()
   const isAdmin = useIsAdmin()
@@ -132,7 +148,7 @@ export function FacturasManager() {
     })
   }, [facturasSinFiltrarPills, activePills])
 
-  const { contactos, createContacto } = useContactos(selectedDelegation, {
+  const { contactos, createContacto, refetch: refetchContactos } = useContactos(selectedDelegation, {
     incluirGlobales: true,
     incluirCatalogo: true,
   })
@@ -141,8 +157,39 @@ export function FacturasManager() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<FacturaConRelaciones | null>(null)
+  // La factura que se ha pedido por URL y no está en la lista cargada.
+  const [facturaSuelta, setFacturaSuelta] = useState<FacturaConRelaciones | null>(null)
 
-  const detailFactura = detailId ? facturas.find((f) => f.id === detailId) ?? null : null
+  const detailFactura = detailId
+    ? facturas.find((f) => f.id === detailId) ?? (facturaSuelta?.id === detailId ? facturaSuelta : null)
+    : null
+
+  // `/facturas?factura=<id>` abre esa factura directamente: es a donde apunta
+  // el botón "Ver" de un movimiento conciliado. Puede no estar en la lista que
+  // hay cargada (otra pestaña, otra página del scroll infinito), así que si no
+  // aparece se pide suelta.
+  const facturaEnUrl = searchParams.get("factura")
+  useEffect(() => {
+    if (!facturaEnUrl) return
+    setDetailId(facturaEnUrl)
+    setDetailOpen(true)
+
+    let vigente = true
+    if (!facturas.some((f) => f.id === facturaEnUrl)) {
+      DatabaseService.getFacturaById(facturaEnUrl)
+        .then((f) => {
+          if (vigente) setFacturaSuelta(f)
+        })
+        .catch(() => undefined)
+    }
+    // El parámetro se limpia en cuanto se ha usado: si se quedara, cerrar el
+    // panel y recargar volvería a abrirlo, y al navegar hacia atrás también.
+    router.replace(pathname, { scroll: false })
+    return () => {
+      vigente = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facturaEnUrl])
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -156,6 +203,25 @@ export function FacturasManager() {
       if (current) observer.unobserve(current)
     }
   }, [hasMore, onLoadMore])
+
+  const refrescarTodo = useCallback(async () => {
+    refrescar()
+    await refetchTotals()
+  }, [refrescar, refetchTotals])
+
+  const subida = useSubirFacturas(selectedDelegation, refrescarTodo)
+
+  // Las facturas nuevas caen siempre en la bandeja: si se sueltan estando en
+  // otra pestaña, no tendría sentido dejar al usuario mirando una lista donde
+  // no aparecen.
+  const subirFacturas = subida.subir
+  const subirYMostrarBandeja = useCallback(
+    (files: File[]) => {
+      setTab("bandeja")
+      void subirFacturas(files)
+    },
+    [subirFacturas],
+  )
 
   const openCreate = () => {
     setDetailId(null)
@@ -171,7 +237,7 @@ export function FacturasManager() {
     await updateFactura(facturaId, { estado: "pagada_fuera" })
   }
 
-  const handleSaveDetail = async (payload: FacturaDetailSheetSubmit) => {
+  const handleSaveDetail = async (payload: FacturaWorkspaceSubmit) => {
     if (detailFactura) {
       if (!payload.update) return
       await updateFactura(detailFactura.id, payload.update)
@@ -194,29 +260,13 @@ export function FacturasManager() {
         }
       />
 
-      {canEdit && tab === "bandeja" && (
-        <div className="space-y-2">
-          <FacturaInboxDropzone
-            delegacionId={selectedDelegation}
-            onCreated={async () => {
-              refrescar()
-              await refetchTotals()
-            }}
-          />
-          <FacturaBuzonHint
-            aliasEmail={delegacionActual?.alias_email}
-            delegacionNombre={delegacionActual?.nombre}
-          />
-        </div>
-      )}
-
       <FilterTabs
         value={tab}
         onValueChange={(v) => setTab(v as TabValue)}
         items={TAB_ORDER.map((t) => ({
           value: t,
           label: TAB_LABELS[t],
-          dotClass: t === "todas" ? undefined : FACTURA_ESTADO_INFO[TAB_ESTADOS[t][0]].dotClass,
+          icon: TAB_ICONS[t],
           count:
             t === "todas"
               ? globalTotals.total
@@ -271,7 +321,7 @@ export function FacturasManager() {
           }
           description={
             tab === "bandeja"
-              ? "Arrastra los archivos de factura arriba (o reenvíalos al buzón de la delegación) y aparecerán aquí, ya leídos, para revisar y conciliar."
+              ? "Suelta aquí los archivos de factura (o reenvíalos al buzón de la delegación) y aparecerán ya leídos, para revisar y conciliar."
               : "Sube la primera factura a la bandeja o créala a mano."
           }
         >
@@ -300,7 +350,7 @@ export function FacturasManager() {
             <span>Concepto</span>
             <span>Importe</span>
             <span>Fecha</span>
-            <span>Conciliación</span>
+            <span>Estado</span>
             <span />
           </ListHeaderRow>
           {facturas.map((factura) => (
@@ -337,12 +387,43 @@ export function FacturasManager() {
         </div>
       )}
 
-      <FacturaDetailSheet
+      {/* Subida al final: lo primero que se quiere ver al entrar son las
+          facturas que esperan, no un recuadro vacío. Y soltar archivos ya no
+          obliga a llegar hasta aquí — vale cualquier punto de la página
+          (`FacturaDropOverlay`). */}
+      {canEdit && tab === "bandeja" && (
+        <div className="space-y-3 pt-2">
+          <FacturaBuzonHint
+            aliasEmail={delegacionActual?.alias_email}
+            delegacionNombre={delegacionActual?.nombre}
+          />
+          <FacturaInboxDropzone
+            onFiles={subida.subir}
+            uploading={subida.uploading}
+            leyendo={subida.leyendo}
+            progreso={subida.progreso}
+            disabled={!selectedDelegation}
+          />
+        </div>
+      )}
+
+      {canEdit && (
+        <FacturaDropOverlay
+          delegacionNombre={delegacionActual?.nombre}
+          disabled={!selectedDelegation || subida.ocupado || detailOpen}
+          onFiles={subirYMostrarBandeja}
+        />
+      )}
+
+      <FacturaWorkspace
         factura={detailFactura}
         open={detailOpen}
         onOpenChange={(open) => {
           setDetailOpen(open)
-          if (!open) setDetailId(null)
+          if (!open) {
+            setDetailId(null)
+            setFacturaSuelta(null)
+          }
         }}
         delegacionId={selectedDelegation}
         contactos={contactos}
@@ -357,13 +438,15 @@ export function FacturasManager() {
         onLinkMovimiento={linkToMovimiento}
         onUnlinkMovimiento={unlinkFromMovimiento}
         onMarcarPagadaFuera={marcarPagadaFuera}
-        onRefrescar={async () => {
-          refrescar()
-          await refetchTotals()
-        }}
-        onDelete={(factura) => {
+        onRefrescar={refrescarTodo}
+        onContactosCambiados={refetchContactos}
+        // El panel ya ha pedido confirmación con su botón de dos clics: abrir
+        // aquí además el diálogo sería pedirla dos veces.
+        onDelete={async (factura) => {
+          await deleteFactura(factura.id)
           setDetailOpen(false)
-          setDeleting(factura)
+          setDetailId(null)
+          toast.success("Factura eliminada")
         }}
       />
 

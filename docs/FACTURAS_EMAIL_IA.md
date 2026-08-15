@@ -168,4 +168,6 @@ correo entrante ya ha quedado registrado igualmente, solo se pierde el aviso.
 | `sin_delegacion` | El alias de la dirección no existe: revisa `delegacion.alias_email` |
 | No llega nada y Resend no registra eventos | El reenvío de Workspace no está activo, o el MX no ha propagado |
 | Las facturas entran vacías | Falta `GEMINI_API_KEY`, o el PDF es ilegible (`datos_ia.error` lo dice) |
+| "Gemini rechazó la petición (400)" | Es la **forma de la petición**, no la clave ni el modelo. El mensaje trae ya lo que dice Google; casi siempre es el schema: `generationConfig.responseSchema` es el subconjunto de OpenAPI, no JSON Schema, así que la nulabilidad se escribe `nullable: true` y no `type: ["string","null"]`. Lo traduce `aEsquemaGemini()` en `lib/api/gemini.ts` |
+| "El modelo 'X' no existe" | `GEMINI_MODEL` se ha quedado viejo. El propio error lista los modelos que la clave puede usar |
 | "Falta configurar MCM_API_USER_EMAIL" | El servidor no tiene cuenta a la que atribuir lo recibido |

@@ -159,35 +159,47 @@ export function FacturasManager() {
   const [deleting, setDeleting] = useState<FacturaConRelaciones | null>(null)
   // La factura que se ha pedido por URL y no está en la lista cargada.
   const [facturaSuelta, setFacturaSuelta] = useState<FacturaConRelaciones | null>(null)
+  // El movimiento del que se venía, si se llegó desde uno: permite volver a él.
+  const [volverMovimientoId, setVolverMovimientoId] = useState<string | null>(null)
+  // Id de la última petición de factura suelta en curso: evita que una
+  // respuesta tardía de una petición ya abandonada pise el estado.
+  const facturaSueltaRequestRef = useRef<string | null>(null)
 
   const detailFactura = detailId
     ? facturas.find((f) => f.id === detailId) ?? (facturaSuelta?.id === detailId ? facturaSuelta : null)
     : null
 
   // `/facturas?factura=<id>` abre esa factura directamente: es a donde apunta
-  // el botón "Ver" de un movimiento conciliado. Puede no estar en la lista que
-  // hay cargada (otra pestaña, otra página del scroll infinito), así que si no
-  // aparece se pide suelta.
+  // el botón "Ver" de un movimiento conciliado (con `mov=<id>` de propina para
+  // poder volver a él). Puede no estar en la lista que hay cargada (otra
+  // pestaña, otra página del scroll infinito), así que si no aparece se pide
+  // suelta.
   const facturaEnUrl = searchParams.get("factura")
+  const movEnUrl = searchParams.get("mov")
   useEffect(() => {
     if (!facturaEnUrl) return
     setDetailId(facturaEnUrl)
     setDetailOpen(true)
+    setVolverMovimientoId(movEnUrl)
 
-    let vigente = true
     if (!facturas.some((f) => f.id === facturaEnUrl)) {
+      // No se usa un flag de limpieza de efecto aquí a propósito: el propio
+      // `router.replace` de más abajo vacía `facturaEnUrl` en el siguiente
+      // render, lo que dispararía esa limpieza casi al instante y descartaría
+      // la respuesta en cuanto llegara, mucho antes de que la petición a la
+      // base de datos hubiera terminado. Comparar contra el id pedido en un
+      // ref, que no cambia con la URL, es lo que hace que la respuesta sí se
+      // aproveche.
+      facturaSueltaRequestRef.current = facturaEnUrl
       DatabaseService.getFacturaById(facturaEnUrl)
         .then((f) => {
-          if (vigente) setFacturaSuelta(f)
+          if (facturaSueltaRequestRef.current === facturaEnUrl) setFacturaSuelta(f)
         })
         .catch(() => undefined)
     }
     // El parámetro se limpia en cuanto se ha usado: si se quedara, cerrar el
     // panel y recargar volvería a abrirlo, y al navegar hacia atrás también.
     router.replace(pathname, { scroll: false })
-    return () => {
-      vigente = false
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facturaEnUrl])
 
@@ -423,8 +435,10 @@ export function FacturasManager() {
           if (!open) {
             setDetailId(null)
             setFacturaSuelta(null)
+            setVolverMovimientoId(null)
           }
         }}
+        volverHref={volverMovimientoId ? `/transacciones?mov=${volverMovimientoId}` : null}
         delegacionId={selectedDelegation}
         contactos={contactos}
         categorias={categorias}

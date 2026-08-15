@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { toast } from "sonner"
 import { ArrowLeft, BadgeCheck, Check, Eye, Loader2, Trash2, Unlink, X } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -58,6 +59,8 @@ interface FacturaPanelProps {
   onClose: () => void
   /** Avisa de que se está rebuscando entre movimientos (el panel pide ancho). */
   onModoBusquedaChange?: (buscando: boolean) => void
+  /** Si se llegó aquí desde un movimiento, la URL para volver a él. */
+  volverHref?: string | null
   className?: string
 }
 
@@ -98,6 +101,7 @@ export function FacturaPanel({
   onContactosCambiados,
   onClose,
   onModoBusquedaChange,
+  volverHref,
   className,
 }: FacturaPanelProps) {
   const { user } = useAuth()
@@ -317,6 +321,21 @@ export function FacturaPanel({
     <div className={cn("relative flex min-h-0 min-w-0 flex-col bg-background", className)}>
       {/* Cabecera */}
       <div className="flex items-start gap-3 border-b border-border/40 px-4 py-3 sm:px-5 sm:py-4">
+        {volverHref && (
+          <Button
+            asChild
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="-ml-1 h-8 w-8 shrink-0 text-muted-foreground"
+            title="Volver al movimiento"
+          >
+            <Link href={volverHref}>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Volver al movimiento</span>
+            </Link>
+          </Button>
+        )}
         {factura?.contacto ? (
           <EntityAvatar
             name={factura.contacto.nombre}

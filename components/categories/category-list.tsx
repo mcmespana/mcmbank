@@ -934,7 +934,10 @@ export function CategoryList() {
             }}
             className={cn(
               parentId ? "space-y-1" : "space-y-3",
-              parentId && "ml-4 border-l border-dashed border-muted-foreground/30 pl-3",
+              // La sangría de subcategorías se reduce en móvil: con ml-4+pl-3 en
+              // los dos niveles, una subcategoría perdía 56px de los 375 del
+              // viewport y el nombre se quedaba sin sitio.
+              parentId && "ml-1.5 border-l border-dashed border-muted-foreground/30 pl-2 sm:ml-4 sm:pl-3",
               items.length === 0 && "py-1.5",
               snapshot.isDraggingOver && !dropDisabled && depth < 1 && "rounded-lg bg-muted/40",
             )}

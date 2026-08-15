@@ -42,9 +42,12 @@ interface SidebarContentProps {
   // Pie con tema/manual/logout. Solo se pasa true en el Sheet móvil: en
   // desktop esas acciones ya viven en el topbar y duplicarlas sería ruido.
   accountFooter?: boolean
+  // Solo lo pasa el Sheet móvil: al navegar hay que cerrar el panel para
+  // descubrir la página a la que se acaba de ir.
+  onNavigate?: () => void
 }
 
-function SidebarContent({ className, collapsed = false, counts, countsLoading, accountFooter = false }: SidebarContentProps) {
+function SidebarContent({ className, collapsed = false, counts, countsLoading, accountFooter = false, onNavigate }: SidebarContentProps) {
   const pathname = usePathname()
   const isAdmin = useIsAdmin()
 
@@ -294,7 +297,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
           }
 
           return (
-            <Link key={item.name} href={item.href}>
+            <Link key={item.name} href={item.href} onClick={onNavigate}>
               {linkContent}
             </Link>
           )
@@ -368,6 +371,7 @@ export function Sidebar({
   showMobileTrigger = true,
 }: SidebarProps) {
   const { counts, loading: countsLoading } = useDelegationCounts()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <>
@@ -399,7 +403,7 @@ export function Sidebar({
 
       {/* Mobile Sidebar */}
       {showMobileTrigger && (
-        <Sheet>
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="lg:hidden">
               <Menu className="h-6 w-6" />
@@ -411,7 +415,12 @@ export function Sidebar({
               <SheetTitle>Menú de Navegación</SheetTitle>
               <SheetDescription>Accede a las diferentes secciones bancarias</SheetDescription>
             </SheetHeader>
-            <SidebarContent counts={counts} countsLoading={countsLoading} accountFooter />
+            <SidebarContent
+              counts={counts}
+              countsLoading={countsLoading}
+              accountFooter
+              onNavigate={() => setMobileOpen(false)}
+            />
           </SheetContent>
         </Sheet>
       )}

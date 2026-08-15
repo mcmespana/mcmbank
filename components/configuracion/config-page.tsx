@@ -8,10 +8,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { supabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import type { Delegacion } from "@/lib/types/database"
-import { useIsAdmin } from "@/hooks/use-is-admin"
+import { useIsAdminState } from "@/hooks/use-is-admin"
 import { PlantillaMemoriaSection } from "@/components/configuracion/plantilla-memoria-section"
 import { EnableBankingHealthSection } from "@/components/configuracion/enable-banking-health-section"
 import { ConexionesMcpSection } from "@/components/configuracion/conexiones-mcp-section"
+import { PageSkeleton } from "@/components/ui/page-skeleton"
+import { ConfirmButton } from "@/components/ui/confirm-button"
+import { Pencil } from "lucide-react"
 
 interface DelegacionWithCount extends Delegacion {
   movimientos?: number
@@ -31,7 +34,7 @@ interface UserData {
 }
 
 export function ConfigPage() {
-  const isAdmin = useIsAdmin()
+  const { isAdmin, loading: adminLoading } = useIsAdminState()
   const [delegaciones, setDelegaciones] = useState<DelegacionWithCount[]>([])
   const [users, setUsers] = useState<UserData[]>([])
   const [editingDelegacion, setEditingDelegacion] = useState<DelegacionWithCount | null>(null)
@@ -117,6 +120,13 @@ export function ConfigPage() {
     [],
   )
 
+  // Mientras se comprueba el rol no se sabe nada todavía: decir "Acceso
+  // restringido" ahí le dice a un gestor central que no tiene permiso justo
+  // antes de dejarle pasar (que es lo que se veía al entrar en /configuracion).
+  if (adminLoading) {
+    return <PageSkeleton />
+  }
+
   if (!isAdmin) {
     return <p className="text-center text-muted-foreground">Acceso restringido</p>
   }
@@ -154,8 +164,18 @@ export function ConfigPage() {
                 <TableCell className="hidden md:table-cell font-mono text-xs">{d.id}</TableCell>
                 <TableCell>{d.movimientos || 0}</TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" variant="outline" onClick={() => setEditingDelegacion(d)}>
-                    Editar
+                  {/* En móvil solo el icono: con el texto, la columna de
+                      acciones no cabía en la vista inicial de la tabla y no
+                      había ninguna pista de que hubiera que desplazarla. */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditingDelegacion(d)}
+                    aria-label={`Editar ${d.nombre}`}
+                    className="px-2 sm:px-3"
+                  >
+                    <Pencil className="h-4 w-4 sm:hidden" aria-hidden />
+                    <span className="hidden sm:inline">Editar</span>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -220,19 +240,29 @@ export function ConfigPage() {
                             })),
                         })
                       }}
+                      aria-label={`Editar ${u.email ?? "usuario"}`}
+                      className="px-2 sm:px-3"
                     >
-                      Editar
+                      <Pencil className="h-4 w-4 sm:hidden" aria-hidden />
+                      <span className="hidden sm:inline">Editar</span>
                     </Button>
-                    <Button
-                      size="sm"
+                    {/* Borrar un usuario era un solo clic, sin confirmación —
+                        en móvil, a un dedo de distancia del botón de editar. */}
+                    <ConfirmButton
                       variant="destructive"
-                      onClick={async () => {
-                        await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" })
+                      label="Eliminar"
+                      busyLabel="Eliminando…"
+                      className="px-2 sm:px-3"
+                      onConfirm={async () => {
+                        const res = await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" })
+                        if (!res.ok) {
+                          toast.error("No se ha podido eliminar el usuario")
+                          return
+                        }
                         setUsers((prev) => prev.filter((x) => x.id !== u.id))
+                        toast.success("Usuario eliminado")
                       }}
-                    >
-                      Eliminar
-                    </Button>
+                    />
                   </TableCell>
                 </TableRow>
               )

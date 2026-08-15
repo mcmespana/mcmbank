@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useDropzone } from "react-dropzone"
-import { Download, ExternalLink, Loader2, Trash2, Upload } from "lucide-react"
+import { Download, ExternalLink, Eye, Loader2, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils/signed-file-url"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useFacturaArchivos } from "@/hooks/use-factura-archivos"
+import { FacturaVisorDialog } from "./factura-visor-dialog"
 import type { ArchivoAdjunto } from "@/lib/types/database"
 
 interface FacturaArchivosProps {
@@ -43,6 +44,7 @@ export function FacturaArchivos({ facturaId, delegacionId, onCambio }: FacturaAr
   )
   const [ocupadoId, setOcupadoId] = useState<string | null>(null)
   const [armadoId, setArmadoId] = useState<string | null>(null)
+  const [visorArchivo, setVisorArchivo] = useState<ArchivoAdjunto | null>(null)
 
   const onDrop = async (accepted: File[]) => {
     if (accepted.length === 0) return
@@ -98,14 +100,28 @@ export function FacturaArchivos({ facturaId, delegacionId, onCambio }: FacturaAr
     }
   }
 
+  /**
+   * Abrir en una pestaña nueva, con red debajo.
+   *
+   * La pestaña se abre ANTES de pedir la firma porque si se abriera después el
+   * navegador ya no lo consideraría un gesto del usuario. Aun así hay móviles
+   * que la bloquean igual: cuando eso pasa no se deja al usuario mirando un
+   * botón que no hace nada, se enseña el documento aquí dentro (que es lo que
+   * quería) y se le cuenta por qué.
+   */
   const handleAbrir = async (archivo: ArchivoAdjunto) => {
-    // La pestaña se abre ANTES de pedir la firma: si se abriera después, el
-    // navegador ya no lo consideraría un gesto del usuario y lo bloquearía.
     const pestana = window.open("", "_blank", "noopener,noreferrer")
     try {
       const url = await getSignedFileUrl(archivo.path_storage, archivo.bucket as BucketArchivo)
-      if (pestana) pestana.location.href = url
-      else window.open(url, "_blank", "noopener,noreferrer")
+      if (pestana && !pestana.closed) {
+        pestana.location.href = url
+        return
+      }
+      const segundoIntento = window.open(url, "_blank", "noopener,noreferrer")
+      if (!segundoIntento) {
+        setVisorArchivo(archivo)
+        toast.info("Tu navegador ha bloqueado la ventana nueva, así que te lo enseño aquí.")
+      }
     } catch (err) {
       pestana?.close()
       toast.error(err instanceof Error ? err.message : "No se pudo abrir el archivo")
@@ -132,6 +148,14 @@ export function FacturaArchivos({ facturaId, delegacionId, onCambio }: FacturaAr
               </div>
             </div>
 
+            {/* Ver: el documento dentro de la app. En escritorio ya se está
+                viendo a la izquierda, así que ahí no se pinta. */}
+            <AccionArchivo
+              label="Ver el documento"
+              icon={Eye}
+              className="lg:hidden"
+              onClick={() => setVisorArchivo(a)}
+            />
             <AccionArchivo
               label="Descargar"
               icon={ocupado ? Loader2 : Download}
@@ -207,6 +231,12 @@ export function FacturaArchivos({ facturaId, delegacionId, onCambio }: FacturaAr
           </>
         )}
       </div>
+
+      <FacturaVisorDialog
+        archivo={visorArchivo}
+        open={Boolean(visorArchivo)}
+        onOpenChange={(open) => !open && setVisorArchivo(null)}
+      />
     </div>
   )
 }
@@ -218,6 +248,7 @@ function AccionArchivo({
   disabled,
   destructive,
   spinning,
+  className,
 }: {
   label: string
   icon: typeof Download
@@ -225,6 +256,7 @@ function AccionArchivo({
   disabled?: boolean
   destructive?: boolean
   spinning?: boolean
+  className?: string
 }) {
   return (
     <button
@@ -236,6 +268,7 @@ function AccionArchivo({
       className={cn(
         "rounded-md p-1.5 text-muted-foreground transition-colors disabled:opacity-50",
         destructive ? "hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30" : "hover:bg-muted hover:text-foreground",
+        className,
       )}
     >
       <Icon className={cn("h-3.5 w-3.5", spinning && "animate-spin")} aria-hidden />

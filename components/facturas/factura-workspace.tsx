@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { cn } from "@/lib/utils"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { FacturaVisorDocumento } from "./factura-visor-documento"
 import { FacturaPanel, type FacturaPanelSubmit } from "./factura-panel"
@@ -52,6 +54,11 @@ export function FacturaWorkspace({
   ...panelProps
 }: FacturaWorkspaceProps) {
   const archivo = factura?.archivos?.[0] ?? null
+  // Rebuscar entre movimientos es leer filas largas (concepto + importe +
+  // cuenta + fecha) en una columna pensada para un formulario. Mientras dura,
+  // el panel se come el sitio del documento: se hace poco, y cuando se hace es
+  // lo único que se está mirando.
+  const [buscando, setBuscando] = useState(false)
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -79,7 +86,11 @@ export function FacturaWorkspace({
             factura={factura}
             {...panelProps}
             onClose={() => onOpenChange(false)}
-            className="w-full shrink-0 lg:w-[30rem] xl:w-[34rem]"
+            onModoBusquedaChange={setBuscando}
+            className={cn(
+              "w-full shrink-0 transition-[width] duration-200",
+              buscando ? "lg:w-[46rem] xl:w-[52rem]" : "lg:w-[30rem] xl:w-[34rem]",
+            )}
           />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

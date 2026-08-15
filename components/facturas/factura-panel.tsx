@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { ArrowLeft, BadgeCheck, Check, Loader2, Trash2, Unlink, X } from "lucide-react"
+import { ArrowLeft, BadgeCheck, Check, Eye, Loader2, Trash2, Unlink, X } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -13,20 +13,17 @@ import { EntityAvatar } from "@/components/ui/entity-avatar"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
+import { useCategoriaEntorno } from "@/hooks/use-categoria-entorno"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { CONTACTO_TIPO_DEFAULT_EMOJIS } from "@/lib/utils/contacto-tipos"
 import { FACTURA_ESTADO_INFO } from "@/lib/utils/facturas"
 import { formatMoney, parseMoney } from "@/components/ui/money-input"
 import { FacturaImporte } from "./factura-importe"
-import {
-  FacturaDatosFields,
-  FACTURA_CAMPO_IDS,
-  type FacturaCampoEnfocable,
-  type FacturaDatosFieldsValue,
-} from "./factura-datos-fields"
+import { FacturaDatosFields, FACTURA_CAMPO_IDS, type FacturaDatosFieldsValue } from "./factura-datos-fields"
 import { FacturaConciliacionPanel } from "./factura-conciliacion-panel"
 import { FacturaArchivos } from "./factura-archivos"
 import { FacturaIaPanel } from "./factura-ia-panel"
+import { FacturaVisorDialog } from "./factura-visor-dialog"
 import { ContactoForm, type ContactoFormSubmitPayload } from "@/components/contactos/contacto-form"
 import type {
   Categoria,
@@ -59,6 +56,8 @@ interface FacturaPanelProps {
   onRefrescar?: () => void | Promise<void>
   onContactosCambiados?: () => void
   onClose: () => void
+  /** Avisa de que se está rebuscando entre movimientos (el panel pide ancho). */
+  onModoBusquedaChange?: (buscando: boolean) => void
   className?: string
 }
 
@@ -98,6 +97,7 @@ export function FacturaPanel({
   onRefrescar,
   onContactosCambiados,
   onClose,
+  onModoBusquedaChange,
   className,
 }: FacturaPanelProps) {
   const { user } = useAuth()
@@ -108,6 +108,9 @@ export function FacturaPanel({
   const [saving, setSaving] = useState(false)
   const [contactoCreateOpen, setContactoCreateOpen] = useState(false)
   const [contactoInitialNombre, setContactoInitialNombre] = useState("")
+  const [visorAbierto, setVisorAbierto] = useState(false)
+
+  const archivoPrincipal = factura?.archivos?.[0] ?? null
 
   // Sincroniza el formulario cada vez que cambia la factura mostrada.
   // `actualizado_en` entra en las dependencias a propósito: cuando la lectura
@@ -131,18 +134,24 @@ export function FacturaPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [factura?.id, factura?.actualizado_en])
 
-  // Se abre el panel con el cursor puesto en lo primero que falte: si la IA lo
-  // ha rellenado todo no se roba el foco de nada y basta con confirmar.
+  // Se abre el panel con el cursor puesto en el concepto, siempre.
+  //
+  // Antes se enfocaba "el primer campo que falte", que suena más listo pero se
+  // portaba peor: el sitio al que va el cursor cambiaba en cada factura, así
+  // que había que mirar dónde había caído antes de escribir. El concepto es
+  // además el campo que más se retoca (lo que trae la IA o el banco casi nunca
+  // es lo que uno escribiría), y desde él se llega a los demás con el tabulador.
   useEffect(() => {
     if (!canEdit) return
-    const faltante = primerCampoVacio(factura)
-    if (!faltante) return
     const id = window.setTimeout(() => {
-      const campo = document.getElementById(FACTURA_CAMPO_IDS[faltante]) as HTMLInputElement | null
+      const campo = document.getElementById(FACTURA_CAMPO_IDS.concepto) as HTMLInputElement | null
       campo?.focus()
+      // El cursor al final del texto: enfocar un input con contenido lo
+      // selecciona entero en algunos navegadores, y la primera tecla lo borra.
+      const fin = campo?.value.length ?? 0
+      campo?.setSelectionRange(fin, fin)
     }, 120)
     return () => window.clearTimeout(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [factura?.id, canEdit])
 
   const importeNumerico = useMemo(() => parseMoney(value.importeDisplay), [value.importeDisplay])
@@ -161,6 +170,16 @@ export function FacturaPanel({
   const importePendiente = importeNumerico != null ? Math.max(importeNumerico - importeYaPagado, 0) : null
 
   const enBandeja = factura?.estado === "bandeja"
+
+  // La actividad en la que se estaba gastando por esas fechas. Manda sobre la
+  // sugerencia de la IA (que solo mira el papel) porque aquí el gasto va por
+  // temporadas: en junio casi todo es del campamento de julio, y el albarán de
+  // la ferretería no lo dice en ninguna parte.
+  const { sugerencia: sugerenciaEntorno } = useCategoriaEntorno(
+    delegacionId,
+    value.fechaEmision,
+    categorias,
+  )
 
   const handleSubmit = async () => {
     if (!delegacionId) {
@@ -344,6 +363,27 @@ export function FacturaPanel({
         </Button>
       </div>
 
+      {/* Ver el documento: solo en móvil, donde no hay visor al lado. Va arriba
+          porque mirar el papel es lo primero que se hace al abrir una factura,
+          y antes obligaba a bajar hasta el final del panel para encontrarlo.
+          Fuera del `fieldset` a propósito: quien solo puede mirar (el fieldset
+          va deshabilitado) también tiene derecho a ver el documento. */}
+      {archivoPrincipal && (
+        <div className="border-b border-border/40 px-4 py-2 sm:px-5 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setVisorAbierto(true)}
+            className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2 text-left text-xs font-medium transition-colors hover:border-primary/40 hover:bg-primary/5"
+          >
+            <Eye className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span className="shrink-0">Ver el documento</span>
+            <span className="min-w-0 flex-1 truncate text-right text-[11px] font-normal text-muted-foreground">
+              {archivoPrincipal.nombre_original}
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* Radix envuelve el contenido en un `display: table` que crece con lo
           más ancho que haya dentro; en un panel estrecho eso se traduce en
           contenido cortado por la derecha sin barra que lo delate. Se le
@@ -361,6 +401,9 @@ export function FacturaPanel({
               canEdit={canEdit}
               onChanged={() => onRefrescar?.()}
               onCategoriaAceptada={(categoriaId) => setValue((prev) => ({ ...prev, categoriaId }))}
+              // Dos sugerencias de categoría a la vez son una pregunta con dos
+              // respuestas correctas: si tenemos la del entorno, esa manda.
+              ocultarSugerenciaCategoria={Boolean(sugerenciaEntorno)}
             />
           )}
 
@@ -369,6 +412,7 @@ export function FacturaPanel({
             onChange={(patch) => setValue((prev) => ({ ...prev, ...patch }))}
             contactos={contactos}
             categorias={categorias}
+            sugerenciaCategoria={sugerenciaEntorno}
             onContactoAdoptado={onContactosCambiados}
             onCreateContacto={
               onCreateContacto
@@ -390,6 +434,7 @@ export function FacturaPanel({
                 </h3>
                 <FacturaConciliacionPanel
                   delegacionId={delegacionId}
+                  facturaId={factura?.id ?? null}
                   importePendiente={importePendiente}
                   importeYaPagado={importeYaPagado}
                   fechaEmision={value.fechaEmision}
@@ -397,6 +442,7 @@ export function FacturaPanel({
                   contactoNombre={contactoSeleccionado?.nombre ?? null}
                   seleccion={seleccion}
                   onSeleccionChange={setSeleccion}
+                  onModoBusquedaChange={onModoBusquedaChange}
                 />
               </div>
             </>
@@ -495,6 +541,12 @@ export function FacturaPanel({
         </div>
       )}
 
+      <FacturaVisorDialog
+        archivo={archivoPrincipal}
+        open={visorAbierto}
+        onOpenChange={setVisorAbierto}
+      />
+
       {/* Alta de proveedor: una capa DENTRO del panel, no otro Sheet encima.
           Un segundo panel flotante traía su propia capa oscura, que sumada a la
           del primero dejaba la pantalla casi negra, y además tapaba el
@@ -541,11 +593,3 @@ export function FacturaPanel({
   )
 }
 
-/** El primer dato que falta, para poner ahí el cursor al abrir. */
-function primerCampoVacio(factura: FacturaConRelaciones | null): FacturaCampoEnfocable | null {
-  if (!factura) return "concepto"
-  if (!factura.concepto?.trim()) return "concepto"
-  if (factura.importe == null) return "importe"
-  if (!factura.fecha_emision) return "fecha"
-  return null
-}

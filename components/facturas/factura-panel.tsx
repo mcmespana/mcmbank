@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu"
-import { ConfirmButton } from "@/components/ui/confirm-button"
 import { StatusPill } from "@/components/ui/status-pill"
 import { EntityAvatar } from "@/components/ui/entity-avatar"
 import { Separator } from "@/components/ui/separator"
@@ -147,6 +146,13 @@ export function FacturaPanel({
   }, [factura?.id, canEdit])
 
   const importeNumerico = useMemo(() => parseMoney(value.importeDisplay), [value.importeDisplay])
+  // El nombre del proveedor entra en la búsqueda de candidatos: es lo que
+  // permite descartar el pago de Amazon que cuadra en importe con una factura
+  // de Mercadona. Se usa el nombre de la ficha, no el alias de la delegación.
+  const contactoSeleccionado = useMemo(
+    () => contactos.find((c) => c.id === value.contactoId) ?? null,
+    [contactos, value.contactoId],
+  )
   const movimientosVinculados = useMemo(() => factura?.movimientos ?? [], [factura])
   const importeYaPagado = useMemo(
     () => movimientosVinculados.reduce((sum, m) => sum + Math.abs(Number(m.importe)), 0),
@@ -268,10 +274,28 @@ export function FacturaPanel({
       icon: Unlink,
       onSelect: () => handleUnlink(m.id),
     })),
+    // Eliminar vive aquí y no en el pie: es la acción más rara de las tres y
+    // era la que hacía que el pie no cupiera en un móvil.
+    ...(factura
+      ? [
+          {
+            label: "Eliminar factura",
+            confirmLabel: "Sí, eliminar la factura",
+            icon: Trash2,
+            destructive: true,
+            onSelect: () => void handleDelete(),
+          },
+        ]
+      : []),
   ]
 
   return (
-    <div className={cn("relative flex min-h-0 flex-col bg-background", className)}>
+    // `min-w-0` no es decorativo: sin él, un hijo ancho (el pie con sus
+    // botones) fija el ancho mínimo de la columna, el panel crece por encima
+    // del viewport y el `overflow-hidden` del workspace le corta el lado
+    // derecho — que es exactamente el corte que se veía en móvil y en pantallas
+    // estrechas de escritorio.
+    <div className={cn("relative flex min-h-0 min-w-0 flex-col bg-background", className)}>
       {/* Cabecera */}
       <div className="flex items-start gap-3 border-b border-border/40 px-4 py-3 sm:px-5 sm:py-4">
         {factura?.contacto ? (
@@ -320,10 +344,14 @@ export function FacturaPanel({
         </Button>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1">
+      {/* Radix envuelve el contenido en un `display: table` que crece con lo
+          más ancho que haya dentro; en un panel estrecho eso se traduce en
+          contenido cortado por la derecha sin barra que lo delate. Se le
+          fuerza a comportarse como un bloque normal. */}
+      <ScrollArea className="min-h-0 w-full flex-1 [&>div>div]:!block [&>div>div]:!min-w-0">
         <fieldset
           disabled={!canEdit}
-          className="m-0 space-y-5 border-0 px-4 py-4 sm:px-5 disabled:opacity-70"
+          className="m-0 min-w-0 space-y-5 border-0 px-4 py-4 sm:px-5 disabled:opacity-70"
         >
           {/* Lectura automática: una tira, arriba del todo, porque explica de
               dónde salen los datos que hay justo debajo. */}
@@ -366,6 +394,7 @@ export function FacturaPanel({
                   importeYaPagado={importeYaPagado}
                   fechaEmision={value.fechaEmision}
                   contactoId={value.contactoId}
+                  contactoNombre={contactoSeleccionado?.nombre ?? null}
                   seleccion={seleccion}
                   onSeleccionChange={setSeleccion}
                 />
@@ -430,36 +459,34 @@ export function FacturaPanel({
       </ScrollArea>
 
       {canEdit && (
-        <div className="flex items-center gap-2 border-t border-border/40 px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2 border-t border-border/40 px-4 py-3 sm:px-5">
           {factura && menuItems.length > 0 && (
-            <ActionMenu ariaLabel="Más acciones de la factura" items={menuItems} align="start" />
-          )}
-          {factura && (
-            <ConfirmButton
-              label="Eliminar"
-              confirmLabel="Sí, eliminar"
-              busyLabel="Eliminando…"
-              icon={Trash2}
-              onConfirm={handleDelete}
-              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            <ActionMenu
+              ariaLabel="Más acciones de la factura"
+              items={menuItems}
+              align="start"
+              side="top"
+              // El pie vive dentro del workspace (z-[60]); sin esto el menú se
+              // dibuja por debajo y en un móvil parece que no abre nada.
+              contentClassName="z-[80]"
             />
           )}
-          <div className="ml-auto flex items-center gap-2">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={saving} className="shrink-0">
               Cancelar
             </Button>
-            <Button type="button" onClick={handleSubmit} disabled={saving}>
+            <Button type="button" onClick={handleSubmit} disabled={saving} className="min-w-0">
               {saving ? (
                 <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Guardando…
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" /> Guardando…
                 </>
               ) : enBandeja ? (
                 <>
-                  <Check className="mr-1.5 h-3.5 w-3.5" />
-                  {seleccion ? "Confirmar y vincular" : "Confirmar"}
+                  <Check className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{seleccion ? "Confirmar y vincular" : "Confirmar"}</span>
                 </>
               ) : seleccion ? (
-                "Guardar y vincular"
+                <span className="truncate">Guardar y vincular</span>
               ) : (
                 "Guardar"
               )}

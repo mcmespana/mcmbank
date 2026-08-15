@@ -1479,7 +1479,12 @@ export class DatabaseService {
    */
   static async findCandidatosMovimientoParaFactura(
     delegacionId: string,
-    factura: { importe?: number | null; fecha_emision?: string | null; contacto_id?: string | null },
+    factura: {
+      importe?: number | null
+      fecha_emision?: string | null
+      contacto_id?: string | null
+      contacto_nombre?: string | null
+    },
     opts: { limit?: number; signal?: AbortSignal } = {},
   ): Promise<MovimientoConRelaciones[]> {
     const supabase = this.getClient() as any
@@ -1550,7 +1555,7 @@ export class DatabaseService {
 
     const { data: movimiento, error: movErr } = await supabase
       .from("movimiento")
-      .select("id, delegacion_id, fecha, importe, contacto_id")
+      .select("id, delegacion_id, fecha, importe, contacto_id, concepto, descripcion")
       .eq("id", movimientoId)
       .maybeSingle()
     if (movErr) throw movErr
@@ -1575,8 +1580,19 @@ export class DatabaseService {
         const pagado = (f.movimientos ?? []).reduce((sum, m) => sum + Math.abs(Number(m.importe)), 0)
         const pendiente = f.importe != null ? Math.max(Number(f.importe) - pagado, 0) : null
         const score = scoreCandidatoMovimiento(
-          { importe: pendiente, fecha_emision: f.fecha_emision, contacto_id: f.contacto_id },
-          { importe: movimiento.importe, fecha: movimiento.fecha, contacto_id: movimiento.contacto_id } as any,
+          {
+            importe: pendiente,
+            fecha_emision: f.fecha_emision,
+            contacto_id: f.contacto_id,
+            contacto_nombre: f.contacto?.nombre ?? null,
+          },
+          {
+            importe: movimiento.importe,
+            fecha: movimiento.fecha,
+            contacto_id: movimiento.contacto_id,
+            concepto: movimiento.concepto,
+            descripcion: movimiento.descripcion,
+          } as any,
         )
         // Descarta las que se van mucho de precio (si el pendiente es conocido)
         const fueraDeMargen = pendiente != null && Math.abs(pendiente - importeMov) > margenImporteFactura(importeMov)

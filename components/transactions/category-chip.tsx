@@ -80,7 +80,7 @@ export function CategoryChip({
         </Button>
 
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-3xl w-full p-0 overflow-hidden z-[60]">
+          <DialogContent className="max-w-3xl w-full p-0 overflow-hidden z-[80]" overlayClassName="z-[70]">
             <DialogHeader className="sr-only">
               <DialogTitle>Cambiar categoría</DialogTitle>
               <DialogDescription>
@@ -123,7 +123,7 @@ export function CategoryChip({
         Etiquetar
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl w-full p-0 overflow-hidden">
+        <DialogContent className="max-w-3xl w-full p-0 overflow-hidden z-[80]" overlayClassName="z-[70]">
           <DialogHeader className="sr-only">
             <DialogTitle>Asignar categoría</DialogTitle>
             <DialogDescription>

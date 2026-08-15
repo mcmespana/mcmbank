@@ -95,9 +95,11 @@ export function FacturaDatosFields({
         />
       </div>
 
-      {/* Importe + fecha */}
+      {/* Importe + fecha. Las dos celdas llevan `min-w-0`: un input trae de
+          fábrica un ancho mínimo de unos 170px y, sin eso, la rejilla se niega
+          a bajar de la suma de los dos y desborda el panel en un móvil. */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <Label htmlFor={FACTURA_CAMPO_IDS.importe}>Importe</Label>
           <div className="relative">
             <MoneyInput
@@ -112,7 +114,7 @@ export function FacturaDatosFields({
             </span>
           </div>
         </div>
-        <div className="space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <Label htmlFor={FACTURA_CAMPO_IDS.fecha}>Fecha de emisión</Label>
           <DateField
             id={FACTURA_CAMPO_IDS.fecha}

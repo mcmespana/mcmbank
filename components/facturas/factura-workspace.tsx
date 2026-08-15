@@ -34,6 +34,8 @@ interface FacturaWorkspaceProps {
   onDelete: (factura: FacturaConRelaciones) => Promise<void> | void
   onRefrescar?: () => void | Promise<void>
   onContactosCambiados?: () => void
+  /** Si se llegó aquí desde un movimiento, la URL para volver a él. */
+  volverHref?: string | null
 }
 
 /**

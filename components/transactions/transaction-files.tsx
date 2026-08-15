@@ -271,7 +271,7 @@ export function TransactionFiles({ movementId, delegacionId, onCountChange }: Tr
                   className="h-8 w-8 p-0 text-emerald-800 hover:bg-emerald-100 hover:text-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
                   title="Ver la factura"
                 >
-                  <Link href={`/facturas?factura=${facturaVinculada.id}`}>
+                  <Link href={`/facturas?factura=${facturaVinculada.id}${movementId ? `&mov=${movementId}` : ""}`}>
                     <ArrowUpRight className="h-4 w-4" />
                     <span className="sr-only">Ver la factura</span>
                   </Link>

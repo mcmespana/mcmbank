@@ -34,3 +34,5 @@ next-env.d.ts
 .claude/worktrees/quizzical-rhodes
 
 .claude/settings.local.json
+
+coverage/

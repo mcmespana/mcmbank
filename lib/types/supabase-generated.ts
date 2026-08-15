@@ -1180,6 +1180,7 @@ export type Database = {
       }
       movimiento: {
         Row: {
+          actualizado_en: string
           adjunto_principal_url: string | null
           booking_date: string | null
           categoria_id: string | null
@@ -1211,6 +1212,7 @@ export type Database = {
           value_date: string | null
         }
         Insert: {
+          actualizado_en?: string
           adjunto_principal_url?: string | null
           booking_date?: string | null
           categoria_id?: string | null
@@ -1242,6 +1244,7 @@ export type Database = {
           value_date?: string | null
         }
         Update: {
+          actualizado_en?: string
           adjunto_principal_url?: string | null
           booking_date?: string | null
           categoria_id?: string | null

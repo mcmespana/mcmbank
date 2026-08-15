@@ -40,8 +40,11 @@ export const FACTURA_ESTADO_INFO: Record<FacturaEstado, FacturaEstadoInfo> = {
   },
   sin_pagar: {
     value: "sin_pagar",
-    label: "Sin pagar",
-    descripcion: "Registrada, pendiente de pago.",
+    // "Sin pagar" a secas se leía como "alguien tiene que ir al banco". El
+    // estado es en realidad las dos cosas —ni pagada, ni emparejada con ningún
+    // movimiento— y muchas veces el dinero sí salió: lo que falta es vincularla.
+    label: "Sin pagar · sin vincular",
+    descripcion: "Registrada, sin ningún movimiento del banco vinculado.",
     icon: Clock,
     tone: "amber",
     dotClass: "bg-amber-500",

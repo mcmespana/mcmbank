@@ -1,11 +1,13 @@
 "use client"
 
+import { CalendarRange } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { MoneyInput } from "@/components/ui/money-input"
 import { DateField } from "@/components/ui/date-field"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
 import { CategoryChip } from "@/components/transactions/category-chip"
+import type { CategoriaEntorno } from "@/hooks/use-categoria-entorno"
 import type { Categoria, ContactoConCategoriaPredeterminada } from "@/lib/types/database"
 
 export interface FacturaDatosFieldsValue {
@@ -38,6 +40,11 @@ interface FacturaDatosFieldsProps {
   onCreateContacto?: (initialNombre: string) => void
   /** Recarga la lista de contactos tras adoptar uno del catálogo. */
   onContactoAdoptado?: () => void
+  /**
+   * Categoría que domina los movimientos de alrededor de la fecha de la
+   * factura (ver `useCategoriaEntorno`). Se ofrece bajo el selector.
+   */
+  sugerenciaCategoria?: CategoriaEntorno | null
 }
 
 /**
@@ -53,6 +60,7 @@ export function FacturaDatosFields({
   categorias,
   onCreateContacto,
   onContactoAdoptado,
+  sugerenciaCategoria,
 }: FacturaDatosFieldsProps) {
   const categoria = categorias.find((c) => c.id === value.categoriaId)
 
@@ -82,6 +90,21 @@ export function FacturaDatosFields({
           categories={categorias}
           onCategoryChange={(categoriaId) => onChange({ categoriaId })}
         />
+        {sugerenciaCategoria && sugerenciaCategoria.categoria.id !== value.categoriaId && (
+          <button
+            type="button"
+            onClick={() => onChange({ categoriaId: sugerenciaCategoria.categoria.id })}
+            className="flex w-full items-start gap-1.5 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-left text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
+          >
+            <CalendarRange className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+            <span className="min-w-0">
+              Por esas fechas casi todo va a{" "}
+              <span className="font-medium text-primary">{sugerenciaCategoria.categoria.nombre}</span> (
+              {sugerenciaCategoria.movimientos} de {sugerenciaCategoria.total} movimientos). Toca aquí
+              para ponerla.
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Concepto */}
@@ -116,8 +139,13 @@ export function FacturaDatosFields({
         </div>
         <div className="min-w-0 space-y-1.5">
           <Label htmlFor={FACTURA_CAMPO_IDS.fecha}>Fecha de emisión</Label>
+          {/* `size="md"`: el alto de fábrica de Input, el mismo que el importe
+              de al lado. Con el "sm" de serie la fecha quedaba dos píxeles más
+              baja, con menos borde y otro radio: dos campos hermanos que se
+              veían distintos sin motivo. */}
           <DateField
             id={FACTURA_CAMPO_IDS.fecha}
+            size="md"
             value={value.fechaEmision}
             onChange={(iso) => onChange({ fechaEmision: iso })}
           />

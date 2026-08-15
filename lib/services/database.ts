@@ -38,6 +38,36 @@ type CategoriaWithOverrides = Categoria & {
   overrides?: CategoriaOrdenDelegacion[] | null
 }
 
+/** Movimiento que ya tiene factura, con lo justo de esa factura para nombrarla. */
+export type MovimientoVinculadoSimilar = MovimientoConRelaciones & {
+  factura?: { id: string; concepto: string | null; numero: string | null; fecha_emision: string | null } | null
+}
+
+/**
+ * El concepto que debe quedar en los dos lados al vincular una factura con un
+ * movimiento: el del lado que se editó más tarde.
+ *
+ * `movimiento.actualizado_en` lo añade scripts/067; mientras la migración no
+ * esté aplicada se cae a `creado_en`, que para un movimiento que nadie ha
+ * tocado dice exactamente lo mismo (el concepto es el que trajo el banco).
+ * Si uno de los dos está vacío, gana el otro sin mirar fechas.
+ */
+function conceptoMasReciente(
+  factura: { concepto?: string | null; actualizado_en?: string | null; creado_en?: string | null },
+  movimiento: { concepto?: string | null; actualizado_en?: string | null; creado_en?: string | null },
+): string | null {
+  const deFactura = factura.concepto?.trim() || ""
+  const deMovimiento = movimiento.concepto?.trim() || ""
+  if (!deFactura) return deMovimiento || null
+  if (!deMovimiento) return deFactura
+  if (deFactura === deMovimiento) return deFactura
+
+  const ts = (v?: string | null) => (v ? new Date(v).getTime() : 0)
+  const tFactura = ts(factura.actualizado_en) || ts(factura.creado_en)
+  const tMovimiento = ts(movimiento.actualizado_en) || ts(movimiento.creado_en)
+  return tMovimiento > tFactura ? deMovimiento : deFactura
+}
+
 const selectCategoriasWithOverrides = `
   *,
   overrides:categoria_orden_delegacion!left (
@@ -113,8 +143,25 @@ export class DatabaseService {
   /** Actualiza campos sueltos de un movimiento (concepto, fecha, importe, notas…). */
   static async updateMovimiento(movimientoId: string, patch: Partial<Movimiento>): Promise<void> {
     const supabase = this.getClient() as any
-    const { error } = await supabase.from("movimiento").update(patch).eq("id", movimientoId)
+    const { data, error } = await supabase
+      .from("movimiento")
+      .update(patch)
+      .eq("id", movimientoId)
+      .select("id, factura_id")
+      .maybeSingle()
     if (error) throw error
+
+    // El otro sentido de la sincronización de conceptos (ver updateFactura):
+    // corregir el texto de un movimiento conciliado corrige también el de su
+    // factura, para que no queden contando dos historias distintas.
+    const concepto = typeof patch.concepto === "string" ? patch.concepto.trim() : ""
+    if (concepto && data?.factura_id) {
+      const { error: err } = await supabase
+        .from("factura")
+        .update({ concepto })
+        .eq("id", data.factura_id)
+      if (err) console.warn("No se pudo propagar el concepto a la factura:", err)
+    }
   }
 
   // Categoria operations (client-side only)
@@ -1222,6 +1269,20 @@ export class DatabaseService {
     const supabase = this.getClient() as any
     const { error } = await supabase.from("factura").update(updates).eq("id", id)
     if (error) throw error
+
+    // Factura y movimiento describen el mismo gasto, así que el concepto vive
+    // en los dos y se mantiene igual: si se reescribe aquí, se reescribe allí.
+    // Best-effort: que no se caiga el guardado por no poder propagarlo.
+    const concepto = typeof updates.concepto === "string" ? updates.concepto.trim() : ""
+    if (concepto) {
+      await supabase
+        .from("movimiento")
+        .update({ concepto })
+        .eq("factura_id", id)
+        .then(({ error: err }: { error: unknown }) => {
+          if (err) console.warn("No se pudo propagar el concepto a los movimientos:", err)
+        })
+    }
   }
 
   /**
@@ -1270,11 +1331,7 @@ export class DatabaseService {
 
     const [{ data: factura, error: facturaErr }, { data: movimiento, error: movErr }] = await Promise.all([
       supabase.from("factura").select("*").eq("id", facturaId).maybeSingle(),
-      supabase
-        .from("movimiento")
-        .select("id, fecha, importe, contacto_id, categoria_id, factura_id")
-        .eq("id", movimientoId)
-        .maybeSingle(),
+      supabase.from("movimiento").select("*").eq("id", movimientoId).maybeSingle(),
     ])
     if (facturaErr) throw facturaErr
     if (movErr) throw movErr
@@ -1284,6 +1341,15 @@ export class DatabaseService {
 
     const movimientoUpdates: Record<string, unknown> = { factura_id: facturaId }
     if (factura.contacto_id && !movimiento.contacto_id) movimientoUpdates.contacto_id = factura.contacto_id
+    // Concepto: a partir de aquí los dos cuentan el mismo gasto, así que se
+    // quedan con el mismo texto — el que se haya tocado más tarde, que es el
+    // que alguien ha escrito a conciencia. El del banco suele ser un galimatías
+    // ("COMPRA TARJ. 4021"), y el de la factura suele venir de la IA; gana el
+    // último editado, no un lado fijo.
+    const conceptoGanador = conceptoMasReciente(factura, movimiento)
+    if (conceptoGanador && conceptoGanador !== movimiento.concepto) {
+      movimientoUpdates.concepto = conceptoGanador
+    }
     // La categoría de la factura solo existe si alguien la aceptó (la IA nunca
     // la escribe sola), así que propagarla al movimiento es seguro.
     if (factura.categoria_id && !movimiento.categoria_id) movimientoUpdates.categoria_id = factura.categoria_id
@@ -1296,6 +1362,7 @@ export class DatabaseService {
 
     // Relleno best-effort de datos de la factura (no bloquea el vínculo si falla).
     const facturaUpdates: Record<string, unknown> = {}
+    if (conceptoGanador && conceptoGanador !== factura.concepto) facturaUpdates.concepto = conceptoGanador
     if (factura.importe == null) facturaUpdates.importe = Math.abs(Number(movimiento.importe))
     if (!factura.fecha_emision && movimiento.fecha) facturaUpdates.fecha_emision = movimiento.fecha
     if (!factura.contacto_id && movimiento.contacto_id) facturaUpdates.contacto_id = movimiento.contacto_id
@@ -1539,6 +1606,206 @@ export class DatabaseService {
       .map((m) => ({ m, s: scoreCandidatoMovimiento(factura, m) }))
       .sort((a, b) => b.s.score - a.s.score || (a.m.fecha < b.m.fecha ? 1 : -1))
       .map(({ m }) => m)
+  }
+
+  /**
+   * Movimientos que pegarían con esta factura pero que YA tienen otra factura
+   * vinculada. No sirven para conciliar; sirven para avisar de lo que casi
+   * siempre significan: que la factura que se está mirando ya está metida, y
+   * esta es un duplicado (el mismo PDF reenviado dos veces al buzón).
+   *
+   * Se exige mucho más que para un candidato normal —importe exacto y encima
+   * fecha cercana o el proveedor nombrado en el concepto— porque el aviso es
+   * llamativo y en falso sería ruido en cada factura.
+   */
+  static async findMovimientosVinculadosSimilares(
+    delegacionId: string,
+    factura: {
+      id?: string | null
+      importe?: number | null
+      fecha_emision?: string | null
+      contacto_id?: string | null
+      contacto_nombre?: string | null
+    },
+    opts: { limit?: number; signal?: AbortSignal } = {},
+  ): Promise<MovimientoVinculadoSimilar[]> {
+    if (factura.importe == null || factura.importe <= 0) return []
+
+    const supabase = this.getClient() as any
+    const margen = margenImporteFactura(factura.importe)
+    let query = supabase
+      .from("movimiento")
+      .select(`
+        id,
+        delegacion_id,
+        cuenta_id,
+        fecha,
+        concepto,
+        descripcion,
+        importe,
+        ignorado,
+        categoria_id,
+        contacto_id,
+        factura_id,
+        creado_en,
+        cuenta:cuenta_id ( id, nombre, banco_nombre, color ),
+        factura:factura_id ( id, concepto, numero, fecha_emision )
+      `)
+      .eq("delegacion_id", delegacionId)
+      .not("factura_id", "is", null)
+      .eq("ignorado", false)
+      .lt("importe", 0)
+      .gte("importe", -(Number(factura.importe) + margen))
+      .lte("importe", -(Number(factura.importe) - margen))
+      .order("fecha", { ascending: false })
+      .limit(opts.limit ?? 5)
+
+    if (factura.id) query = query.neq("factura_id", factura.id)
+    if (opts.signal) query = query.abortSignal(opts.signal)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    return ((data ?? []) as MovimientoVinculadoSimilar[])
+      .map((m) => ({ m, s: scoreCandidatoMovimiento(factura, m) }))
+      .filter(({ s }) => s.importeExacto && !s.otroProveedorEnConcepto && (s.fechaCercana || s.nombreEnConcepto || s.mismoContacto))
+      .sort((a, b) => b.s.score - a.s.score)
+      .map(({ m }) => m)
+  }
+
+  /**
+   * Lista paginada de movimientos para vincular a mano, cuando las sugerencias
+   * no traen el bueno. Se navega desde una fecha ancla (la de la factura) hacia
+   * atrás o hacia delante, de 10 en 10, y se puede filtrar por texto.
+   *
+   * Solo gastos sin factura: son los únicos que se pueden vincular.
+   */
+  static async buscarMovimientosParaVincular(
+    delegacionId: string,
+    opts: {
+      /** Fecha desde la que se navega (ISO). Por defecto, hoy. */
+      ancla?: string | null
+      /** "antes" = fechas <= ancla (más recientes primero); "despues" = fechas > ancla. */
+      direccion?: "antes" | "despues"
+      texto?: string | null
+      offset?: number
+      limit?: number
+      signal?: AbortSignal
+    } = {},
+  ): Promise<MovimientoConRelaciones[]> {
+    const supabase = this.getClient() as any
+    const direccion = opts.direccion ?? "antes"
+    const limit = opts.limit ?? 10
+    const offset = opts.offset ?? 0
+    const ancla = opts.ancla || new Date().toISOString().slice(0, 10)
+
+    let query = supabase
+      .from("movimiento")
+      .select(`
+        id,
+        delegacion_id,
+        cuenta_id,
+        fecha,
+        concepto,
+        descripcion,
+        importe,
+        ignorado,
+        categoria_id,
+        contacto_id,
+        factura_id,
+        creado_en,
+        cuenta:cuenta_id ( id, nombre, banco_nombre, color )
+      `)
+      .eq("delegacion_id", delegacionId)
+      .is("factura_id", null)
+      .eq("ignorado", false)
+      .lt("importe", 0)
+
+    // El orden acompaña a la dirección para que "la siguiente página" sea
+    // siempre "un poco más lejos del ancla", en el sentido que se esté yendo.
+    if (direccion === "antes") {
+      query = query.lte("fecha", ancla).order("fecha", { ascending: false })
+    } else {
+      query = query.gt("fecha", ancla).order("fecha", { ascending: true })
+    }
+
+    // `id` como segundo criterio: sin él, dos movimientos del mismo día pueden
+    // salir en distinto orden en cada página y repetirse o desaparecer.
+    query = query.order("id", { ascending: direccion !== "antes" }).range(offset, offset + limit - 1)
+
+    const texto = opts.texto?.trim()
+    if (texto) {
+      const patron = `%${texto.replace(/[%,]/g, " ")}%`
+      query = query.or(`concepto.ilike.${patron},descripcion.ilike.${patron},contraparte.ilike.${patron}`)
+    }
+
+    if (opts.signal) query = query.abortSignal(opts.signal)
+
+    const { data, error } = await query
+    if (error) throw error
+    return (data ?? []) as MovimientoConRelaciones[]
+  }
+
+  /**
+   * La categoría que domina los movimientos de alrededor de una fecha.
+   *
+   * Es la primera piedra de la autocategorización: en una delegación, los
+   * apuntes se agrupan por temporada (todo junio es del campamento de julio),
+   * así que si la inmensa mayoría de lo que se movió esos días es de una
+   * actividad, lo que llega con esa fecha casi seguro también.
+   *
+   * Devuelve null salvo que haya suficientes movimientos y una mayoría clara:
+   * una sugerencia floja es peor que ninguna, porque se acepta sin mirar.
+   */
+  static async getCategoriaDominanteCerca(
+    delegacionId: string,
+    fecha: string,
+    opts: { dias?: number; minimoMovimientos?: number; minimoRatio?: number; signal?: AbortSignal } = {},
+  ): Promise<{ categoriaId: string; movimientos: number; total: number; ratio: number } | null> {
+    const dias = opts.dias ?? 30
+    const minimo = opts.minimoMovimientos ?? 6
+    const minimoRatio = opts.minimoRatio ?? 0.6
+
+    const ancla = new Date(fecha)
+    if (Number.isNaN(ancla.getTime())) return null
+    const desde = new Date(ancla.getTime() - dias * 86400000).toISOString().slice(0, 10)
+    const hasta = new Date(ancla.getTime() + dias * 86400000).toISOString().slice(0, 10)
+
+    const supabase = this.getClient() as any
+    let query = supabase
+      .from("movimiento")
+      .select("categoria_id")
+      .eq("delegacion_id", delegacionId)
+      .eq("ignorado", false)
+      .not("categoria_id", "is", null)
+      .gte("fecha", desde)
+      .lte("fecha", hasta)
+      .limit(500)
+
+    if (opts.signal) query = query.abortSignal(opts.signal)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    const filas = (data ?? []) as { categoria_id: string | null }[]
+    const total = filas.length
+    if (total < minimo) return null
+
+    const conteo = new Map<string, number>()
+    for (const fila of filas) {
+      if (!fila.categoria_id) continue
+      conteo.set(fila.categoria_id, (conteo.get(fila.categoria_id) ?? 0) + 1)
+    }
+
+    let ganadora: { categoriaId: string; movimientos: number } | null = null
+    for (const [categoriaId, movimientos] of conteo) {
+      if (!ganadora || movimientos > ganadora.movimientos) ganadora = { categoriaId, movimientos }
+    }
+    if (!ganadora) return null
+
+    const ratio = ganadora.movimientos / total
+    if (ratio < minimoRatio) return null
+    return { ...ganadora, total, ratio }
   }
 
   /**

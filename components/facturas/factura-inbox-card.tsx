@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, FileText, Loader2, Sparkles, Trash2 } from "lucide-react"
+import { AlertTriangle, CalendarDays, FileText, Loader2, Sparkles, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
 import { EntityAvatar } from "@/components/ui/entity-avatar"
@@ -136,11 +136,33 @@ export function FacturaInboxCard({ factura, canEdit, onOpenDetail, onDelete }: F
             </span>
           </div>
         )}
-        <div className="text-[10px] text-muted-foreground">{formatDate(fechaSubida)}</div>
-        {factura.origen === "email" && factura.email_remitente && (
-          <div className="flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+        {/* Dos fechas: la del papel y la de su llegada. Se distinguen por el
+            icono (un calendario para la factura; el del origen —sobre, nube—
+            para cuándo entró) y por el peso: la de la factura es la que se
+            compara con el extracto del banco, así que va en primer lugar y con
+            algo más de contraste. */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+          {factura.fecha_emision && (
+            <span
+              className="inline-flex items-center gap-0.5 font-medium text-foreground/75"
+              title={`Fecha de la factura: ${formatDate(factura.fecha_emision)}`}
+            >
+              <CalendarDays className="h-2.5 w-2.5 shrink-0" aria-hidden />
+              {formatDate(factura.fecha_emision)}
+            </span>
+          )}
+          <span
+            className="inline-flex items-center gap-0.5"
+            title={`${FACTURA_ORIGEN_INFO[factura.origen].label}: ${formatDate(fechaSubida)}`}
+          >
             <OrigenIcon className="h-2.5 w-2.5 shrink-0" aria-hidden />
-            <span className="truncate">{factura.email_remitente}</span>
+            {formatDate(fechaSubida)}
+          </span>
+        </div>
+        {factura.origen === "email" && factura.email_remitente && (
+          // El icono del sobre ya sale en la fecha de llegada, justo encima.
+          <div className="truncate text-[10px] text-muted-foreground" title={factura.email_remitente}>
+            {factura.email_remitente}
           </div>
         )}
       </div>

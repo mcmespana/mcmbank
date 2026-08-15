@@ -16,6 +16,13 @@ interface DateFieldProps {
   onChange: (isoDate: string) => void
   id?: string
   className?: string
+  /**
+   * Alto del campo. "sm" (h-9) es el de los formularios compactos de
+   * Movimientos; "md" es el alto de fábrica de `Input` (h-11), que es lo que
+   * hay que usar cuando el campo comparte fila con otro `Input` normal —si no,
+   * la fecha queda visiblemente más baja que el importe de al lado.
+   */
+  size?: "sm" | "md"
 }
 
 /**
@@ -24,7 +31,8 @@ interface DateFieldProps {
  * - Incluye botón "Hoy".
  * - Al escribir en medio del campo el cursor no salta al final.
  */
-export function DateField({ value, onChange, id, className }: DateFieldProps) {
+export function DateField({ value, onChange, id, className, size = "sm" }: DateFieldProps) {
+  const alto = size === "md" ? "h-11" : "h-9"
   const [open, setOpen] = useState(false)
   const [text, setText] = useState(() => formatIsoDateToInput(value))
   const inputRef = useRef<HTMLInputElement>(null)
@@ -69,7 +77,7 @@ export function DateField({ value, onChange, id, className }: DateFieldProps) {
         inputMode="numeric"
         autoComplete="off"
         placeholder="DD/MM/AAAA"
-        className="flex-1 h-9"
+        className={`flex-1 min-w-0 ${alto}`}
         value={text}
         onChange={(e) => {
           const el = e.target
@@ -88,7 +96,7 @@ export function DateField({ value, onChange, id, className }: DateFieldProps) {
             type="button"
             variant="outline"
             size="icon"
-            className="h-9 w-9 flex-shrink-0"
+            className={`${alto} w-9 flex-shrink-0 ${size === "md" ? "rounded-xl border-2" : ""}`}
             title="Abrir calendario"
           >
             <CalendarIcon className="h-4 w-4" />

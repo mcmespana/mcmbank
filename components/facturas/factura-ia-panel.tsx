@@ -16,6 +16,13 @@ interface FacturaIaPanelProps {
   onChanged: () => void | Promise<void>
   /** Refleja en el formulario abierto la categoría recién aceptada. */
   onCategoriaAceptada?: (categoriaId: string) => void
+  /**
+   * Esconde la sugerencia de categoría de la IA. Se usa cuando hay otra mejor:
+   * la que sale de mirar en qué se gastó el dinero por esas fechas, que en
+   * esta casa acierta más porque el gasto va por temporadas (todo junio es del
+   * campamento de julio, lo diga o no el papel).
+   */
+  ocultarSugerenciaCategoria?: boolean
 }
 
 /**
@@ -34,6 +41,7 @@ export function FacturaIaPanel({
   canEdit,
   onChanged,
   onCategoriaAceptada,
+  ocultarSugerenciaCategoria,
 }: FacturaIaPanelProps) {
   const [trabajando, setTrabajando] = useState<"leyendo" | "aceptando" | null>(null)
   // La sugerencia desaparece en cuanto se acepta, sin esperar a que vuelva la
@@ -41,7 +49,8 @@ export function FacturaIaPanel({
   // que ya está respondido.
   const [aceptadaAqui, setAceptadaAqui] = useState(false)
   const datos = leerDatosIa(factura.datos_ia)
-  const categoriaPendiente = aceptadaAqui ? null : categoriaPendienteDeAceptar(datos)
+  const categoriaPendiente =
+    aceptadaAqui || ocultarSugerenciaCategoria ? null : categoriaPendienteDeAceptar(datos)
 
   const leer = async (forzar: boolean) => {
     setTrabajando("leyendo")
@@ -87,7 +96,12 @@ export function FacturaIaPanel({
         <span className="flex-1 text-xs text-muted-foreground">
           Puedo leer el documento y rellenar los datos.
         </span>
-        <BotonTira onClick={() => leer(false)} disabled={trabajando !== null} icon={Sparkles}>
+        <BotonTira
+          onClick={() => leer(false)}
+          disabled={trabajando !== null}
+          icon={Sparkles}
+          cargando={trabajando === "leyendo"}
+        >
           {trabajando === "leyendo" ? "Leyendo…" : "Leer con IA"}
         </BotonTira>
       </Tira>
@@ -111,8 +125,13 @@ export function FacturaIaPanel({
           {datos.error || "No se pudo leer la factura."}
         </span>
         {canEdit && (
-          <BotonTira onClick={() => leer(true)} disabled={trabajando !== null} icon={RefreshCw}>
-            Reintentar
+          <BotonTira
+            onClick={() => leer(true)}
+            disabled={trabajando !== null}
+            icon={RefreshCw}
+            cargando={trabajando === "leyendo"}
+          >
+            {trabajando === "leyendo" ? "Leyendo…" : "Reintentar"}
           </BotonTira>
         )}
       </Tira>
@@ -143,7 +162,12 @@ export function FacturaIaPanel({
           </span>
         )}
         {canEdit && (
-          <BotonTira onClick={() => leer(true)} disabled={trabajando !== null} icon={RefreshCw}>
+          <BotonTira
+            onClick={() => leer(true)}
+            disabled={trabajando !== null}
+            icon={RefreshCw}
+            cargando={trabajando === "leyendo"}
+          >
             {trabajando === "leyendo" ? "Leyendo…" : "Releer"}
           </BotonTira>
         )}
@@ -213,20 +237,25 @@ function BotonTira({
   onClick,
   disabled,
   icon: Icon,
+  cargando,
 }: {
   children: React.ReactNode
   onClick: () => void
   disabled?: boolean
   icon: typeof Sparkles
+  /** Leer tarda varios segundos: sin esto el botón parecía no hacer nada. */
+  cargando?: boolean
 }) {
+  const Icono = cargando ? Loader2 : Icon
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-busy={cargando || undefined}
       className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
     >
-      <Icon className="h-3 w-3" aria-hidden />
+      <Icono className={cn("h-3 w-3", cargando && "animate-spin")} aria-hidden />
       {children}
     </button>
   )

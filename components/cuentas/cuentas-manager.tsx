@@ -752,22 +752,34 @@ export function CuentasManager() {
                         )}
 
                         {/* Personas autorizadas y botones de acción */}
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          {/* `min-w-0`: sin él esta columna se niega a encoger y
+                              empuja los botones de la derecha fuera de la
+                              tarjeta — que es lo que pasaba en una cuenta
+                              conectada, donde hay dos botones más. El texto
+                              largo solo aparece a partir de sm; en móvil basta
+                              el número y "autorizadas". */}
+                          <div className="min-w-0 flex-1">
                             {cuenta.personas_autorizadas && (
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
-                                    <div className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                                      <div className="h-4 w-4 rounded-full bg-muted flex items-center justify-center">
-                                        <span className="text-xs font-medium">
+                                  <Button variant="ghost" className="h-auto max-w-full p-0 hover:bg-transparent">
+                                    <div className="flex min-w-0 items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+                                      <div className="h-4 w-4 shrink-0 rounded-full bg-muted flex items-center justify-center">
+                                        <span className="text-[10px] font-medium">
                                           {cuenta.personas_autorizadas.split(",").length}
                                         </span>
                                       </div>
-                                      <span className="text-sm">
-                                        {cuenta.personas_autorizadas.split(",").length === 1
-                                          ? " persona autorizada"
-                                          : ` personas autorizadas`}
+                                      <span className="truncate text-xs">
+                                        {cuenta.personas_autorizadas.split(",").length === 1 ? (
+                                          <>
+                                            <span className="hidden sm:inline">persona </span>autorizada
+                                          </>
+                                        ) : (
+                                          <>
+                                            <span className="hidden sm:inline">personas </span>autorizadas
+                                          </>
+                                        )}
                                       </span>
                                     </div>
                                   </Button>

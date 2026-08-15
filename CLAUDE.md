@@ -167,6 +167,13 @@ place, read by the same code (`plans/022`, `docs/FACTURAS_EMAIL_IA.md`).
   (`scripts/061`), which the `factura_adoptar_contacto` trigger then adopts for
   the delegation; **the category is never applied automatically** — it waits in `datos_ia` until someone accepts it, which is
   what writes `factura.categoria_id` and propagates it to the movement.
+- **La categoría que se sugiere no siempre es la de la IA.** Si la mayoría de los
+  movimientos de alrededor de la fecha de la factura van a una misma actividad,
+  manda esa (`useCategoriaEntorno` + `getCategoriaDominanteCerca()`) y la de la
+  IA se esconde: aquí el gasto va por temporadas —todo junio es del campamento de
+  julio, lo diga o no el papel—. Solo se propone con bastantes movimientos en la
+  ventana y mayoría clara; una sugerencia floja es peor que ninguna porque se
+  acepta sin mirar. Es la primera piedra de la autocategorización.
 - **The document is untrusted input.** One `generateContent` call with a
   `responseSchema` and no tools; every field re-validated in
   `lib/utils/facturas-ia.ts`, and the category must exist in the list that was
@@ -212,6 +219,19 @@ Lo que conviene no deshacer:
   De ahí los `min-w-0` de `factura-panel.tsx` y `factura-datos-fields.tsx`, y el
   `[&>div>div]:!block` sobre el `ScrollArea` (Radix mete dentro un
   `display: table` que crece con su contenido).
+- **En móvil el documento se enseña dentro de la app** (`factura-visor-dialog.tsx`,
+  `z-[90]`), no en una pestaña nueva: la URL firmada tarda en llegar y para
+  entonces el `window.open` ya no cuenta como gesto del usuario, así que Chrome
+  lo bloquea y el botón parece roto (el de descargar funcionaba porque no abre
+  ventana). El botón de pestaña nueva sigue estando, con el visor como red si
+  el navegador la bloquea.
+- **El foco al abrir va siempre al concepto.** Enfocar "el primer campo que
+  falte" suena más listo, pero el cursor caía en un sitio distinto en cada
+  factura y había que mirar dónde antes de escribir.
+- **El concepto de una factura y el de su movimiento son el mismo texto.** Al
+  vincular gana el que se editó más tarde (`conceptoMasReciente`, que necesita
+  `movimiento.actualizado_en` de scripts/067), y después editar cualquiera de
+  los dos actualiza el otro (`updateFactura` / `updateMovimiento`).
 - **Los menús que se abren desde el panel necesitan `z-[80]`**: el workspace va
   en `z-[60]` y un popover con el `z-50` de serie se dibuja por debajo, lo que
   desde fuera parece que el botón no hace nada.
@@ -234,6 +254,14 @@ niveles de exigencia distintos y a propósito:
   Ver **otra** cadena en el concepto marca `otroProveedorEnConcepto` y eso
   **nunca** es match directo, por mucho que el importe cuadre al céntimo — ni en
   la web, ni en `conciliar_facturas` con `aplicar: true`.
+
+Cuando las sugerencias no traen el bueno hay una **búsqueda a mano** en el mismo
+sitio: `buscarMovimientosParaVincular()` pagina de diez en diez desde la fecha de
+la factura, hacia atrás o hacia delante, con filtro de texto (y el panel se
+ensancha mientras dura). Y al revés: un movimiento que cuadra clavado pero **ya
+tiene factura** no se ofrece como candidato, se enseña en rojo
+(`findMovimientosVinculadosSimilares()`), porque casi siempre significa que la
+factura abierta es un duplicado del mismo papel.
 
 Los patrones se comparan por palabras completas (`dia` no se cuela dentro de
 "diagonal") y sobre el nombre normalizado con `normalizarClaveProveedor()`, el

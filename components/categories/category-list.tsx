@@ -303,11 +303,14 @@ export function CategoryList() {
       await DatabaseService.deleteCategoria(deletingCategory.id)
       await fetchCategorias()
       toast.success("Categoría eliminada")
+      setDeletingCategory(null)
     } catch (err) {
       console.error("Error deleting category:", err)
-      toast.error("Error al eliminar la categoría")
-    } finally {
-      setDeletingCategory(null)
+      // El diálogo se queda abierto: ya enseña qué la está usando, y cerrarlo
+      // dejaría al usuario con un error suelto y sin contexto.
+      toast.error("No se pudo eliminar la categoría", {
+        description: err instanceof Error ? err.message : "Algo sigue dependiendo de ella.",
+      })
     }
   }
 
@@ -934,7 +937,10 @@ export function CategoryList() {
             }}
             className={cn(
               parentId ? "space-y-1" : "space-y-3",
-              parentId && "ml-4 border-l border-dashed border-muted-foreground/30 pl-3",
+              // La sangría de subcategorías se reduce en móvil: con ml-4+pl-3 en
+              // los dos niveles, una subcategoría perdía 56px de los 375 del
+              // viewport y el nombre se quedaba sin sitio.
+              parentId && "ml-1.5 border-l border-dashed border-muted-foreground/30 pl-2 sm:ml-4 sm:pl-3",
               items.length === 0 && "py-1.5",
               snapshot.isDraggingOver && !dropDisabled && depth < 1 && "rounded-lg bg-muted/40",
             )}
@@ -1166,6 +1172,15 @@ export function CategoryList() {
           categoria={deletingCategory}
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeletingCategory(null)}
+          onUnlinked={fetchCategorias}
+          onDeactivate={
+            canToggleCategoryActive(deletingCategory) && deletingCategory.esta_activa
+              ? async () => {
+                  await handleToggleActive(deletingCategory)
+                  setDeletingCategory(null)
+                }
+              : undefined
+          }
         />
       )}
 

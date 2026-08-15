@@ -567,6 +567,94 @@ export class DatabaseService {
     }
   }
 
+  /**
+   * Qué se lleva por delante borrar una categoría.
+   *
+   * Las claves ajenas no tratan igual a todos: `movimiento.categoria_id`,
+   * `regla.categoria_id` y `categoria.categoria_padre_id` son `NO ACTION`, así
+   * que **impiden** el borrado con un error de Postgres que no explica nada;
+   * `factura.categoria_id` y las categorías predeterminadas de contactos son
+   * `SET NULL`, así que se pierden **en silencio**. Ninguna de las dos cosas se
+   * veía antes de pulsar.
+   */
+  static async getUsosCategoria(categoriaId: string): Promise<{
+    movimientos: Pick<Movimiento, "id" | "fecha" | "concepto" | "importe">[]
+    totalMovimientos: number
+    /** Bloquean el borrado: hay que moverlas o borrarlas antes. */
+    subcategorias: Pick<Categoria, "id" | "nombre">[]
+    totalFacturas: number
+    /** Reglas de auto-categorización que apuntan aquí; también bloquean. */
+    reglas: number
+  }> {
+    const supabase = this.getClient() as any
+
+    const [movimientosRes, subcategoriasRes, facturasRes, reglasRes] = await Promise.all([
+      supabase
+        .from("movimiento")
+        .select("id, fecha, concepto, importe", { count: "exact" })
+        .eq("categoria_id", categoriaId)
+        .order("fecha", { ascending: false })
+        .limit(50),
+      supabase.from("categoria").select("id, nombre").eq("categoria_padre_id", categoriaId).order("nombre"),
+      supabase.from("factura").select("id", { head: true, count: "exact" }).eq("categoria_id", categoriaId),
+      supabase.from("regla").select("id", { head: true, count: "exact" }).eq("categoria_id", categoriaId),
+    ])
+
+    if (movimientosRes.error) throw movimientosRes.error
+    if (subcategoriasRes.error) throw subcategoriasRes.error
+
+    return {
+      movimientos: movimientosRes.data ?? [],
+      totalMovimientos: movimientosRes.count ?? (movimientosRes.data?.length ?? 0),
+      subcategorias: subcategoriasRes.data ?? [],
+      totalFacturas: facturasRes.error ? 0 : (facturasRes.count ?? 0),
+      // `regla` tiene RLS activo sin políticas (deny-all hoy): si no se puede
+      // leer, se cuenta como 0 en vez de romper el diálogo entero.
+      reglas: reglasRes.error ? 0 : (reglasRes.count ?? 0),
+    }
+  }
+
+  /**
+   * Quita la categoría de sus movimientos y facturas sin borrar nada más.
+   *
+   * Es lo que el diálogo de borrado venía prometiendo desde siempre ("las
+   * transacciones no se eliminarán, solo perderán su categoría") y que en
+   * realidad no ocurría: la FK es `NO ACTION`, así que el borrado fallaba.
+   */
+  static async desvincularCategoria(categoriaId: string): Promise<{ movimientos: number; facturas: number }> {
+    const supabase = this.getClient() as any
+
+    const [movimientosRes, facturasRes] = await Promise.all([
+      supabase.from("movimiento").update({ categoria_id: null }).eq("categoria_id", categoriaId).select("id"),
+      supabase.from("factura").update({ categoria_id: null }).eq("categoria_id", categoriaId).select("id"),
+    ])
+
+    if (movimientosRes.error) throw movimientosRes.error
+    if (facturasRes.error) throw facturasRes.error
+
+    return {
+      movimientos: movimientosRes.data?.length ?? 0,
+      facturas: facturasRes.data?.length ?? 0,
+    }
+  }
+
+  /**
+   * Cuántos movimientos se llevaría por delante borrar una cuenta.
+   *
+   * `movimiento.cuenta_id` es `ON DELETE CASCADE`: aquí no falla nada, se borra
+   * de verdad. Una cuenta puede llevar años de histórico, así que el número
+   * tiene que estar delante de quien escribe "ELIMINAR".
+   */
+  static async getConteoMovimientosCuenta(cuentaId: string): Promise<number> {
+    const supabase = this.getClient() as any
+    const { count, error } = await supabase
+      .from("movimiento")
+      .select("id", { head: true, count: "exact" })
+      .eq("cuenta_id", cuentaId)
+    if (error) throw error
+    return count ?? 0
+  }
+
   /** Cambia lo que esta delegación sobrescribe de un contacto compartido. */
   static async actualizarAdopcion(
     contactoId: string,

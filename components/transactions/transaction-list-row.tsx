@@ -248,9 +248,11 @@ export const TransactionListRow = memo(function TransactionListRow({
                     >
                       {movement.concepto}
                     </h3>
-                    <TransactionRowIndicators 
-                      description={movement.descripcion} 
+                    <TransactionRowIndicators
+                      description={movement.descripcion}
                       fileCount={movement.archivos?.length || 0}
+                      facturaId={movement.factura_id}
+                      facturaPendiente={movement.factura_pendiente}
                       onOpenFiles={() => onOpenFiles?.(movement)}
                     />
                   </div>

@@ -160,6 +160,29 @@ export function TransactionManager() {
   const isAdmin = useIsAdminHook()
   const { user: currentUser } = useCurrentUser()
 
+  // Al cambiar de filtro (o de delegación) la selección deja de tener sentido:
+  // se hizo sobre otra lista. Antes solo se podaba contra los movimientos ya
+  // cargados, y con paginación eso descartaba en silencio lo seleccionado en
+  // páginas que aún no habían llegado — se pulsaba "Eliminar 40" y se borraban
+  // los 12 que quedaban visibles. Ahora se vacía de golpe, y se dice.
+  const filtrosFirma = JSON.stringify([selectedDelegation, filters])
+  const filtrosFirmaRef = useRef(filtrosFirma)
+  const seleccionRef = useRef(selectedMovementIds)
+  seleccionRef.current = selectedMovementIds
+  useEffect(() => {
+    if (filtrosFirmaRef.current === filtrosFirma) return
+    filtrosFirmaRef.current = filtrosFirma
+    const anteriores = seleccionRef.current.length
+    if (anteriores === 0) return
+    setSelectedMovementIds([])
+    setSelectionAnchorId(null)
+    toast.info(
+      anteriores === 1
+        ? "Se ha quitado la selección al cambiar los filtros"
+        : `Se han quitado los ${anteriores} movimientos seleccionados al cambiar los filtros`,
+    )
+  }, [filtrosFirma])
+
   useEffect(() => {
     if (movements.length === 0) {
       setSelectedMovementIds((prev) => (prev.length === 0 ? prev : []))

@@ -8,10 +8,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { supabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import type { Delegacion } from "@/lib/types/database"
-import { useIsAdmin } from "@/hooks/use-is-admin"
+import { useIsAdminState } from "@/hooks/use-is-admin"
 import { PlantillaMemoriaSection } from "@/components/configuracion/plantilla-memoria-section"
 import { EnableBankingHealthSection } from "@/components/configuracion/enable-banking-health-section"
 import { ConexionesMcpSection } from "@/components/configuracion/conexiones-mcp-section"
+import { PageSkeleton } from "@/components/ui/page-skeleton"
+import { ConfirmButton } from "@/components/ui/confirm-button"
+import { Pencil } from "lucide-react"
+import { useSubmitGuard } from "@/hooks/use-submit-guard"
 
 interface DelegacionWithCount extends Delegacion {
   movimientos?: number
@@ -31,7 +35,12 @@ interface UserData {
 }
 
 export function ConfigPage() {
-  const isAdmin = useIsAdmin()
+  const { isAdmin, loading: adminLoading } = useIsAdminState()
+  // Los cuatro formularios de esta pantalla (crear/editar delegación y
+  // usuario) no tenían ninguna protección: pulsar "Crear" dos veces creaba dos
+  // delegaciones. El cerrojo es síncrono, así que el segundo envío se descarta
+  // aunque llegue antes del re-render.
+  const { enviando, guard: guardarEnvio } = useSubmitGuard()
   const [delegaciones, setDelegaciones] = useState<DelegacionWithCount[]>([])
   const [users, setUsers] = useState<UserData[]>([])
   const [editingDelegacion, setEditingDelegacion] = useState<DelegacionWithCount | null>(null)
@@ -117,6 +126,13 @@ export function ConfigPage() {
     [],
   )
 
+  // Mientras se comprueba el rol no se sabe nada todavía: decir "Acceso
+  // restringido" ahí le dice a un gestor central que no tiene permiso justo
+  // antes de dejarle pasar (que es lo que se veía al entrar en /configuracion).
+  if (adminLoading) {
+    return <PageSkeleton />
+  }
+
   if (!isAdmin) {
     return <p className="text-center text-muted-foreground">Acceso restringido</p>
   }
@@ -154,8 +170,18 @@ export function ConfigPage() {
                 <TableCell className="hidden md:table-cell font-mono text-xs">{d.id}</TableCell>
                 <TableCell>{d.movimientos || 0}</TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" variant="outline" onClick={() => setEditingDelegacion(d)}>
-                    Editar
+                  {/* En móvil solo el icono: con el texto, la columna de
+                      acciones no cabía en la vista inicial de la tabla y no
+                      había ninguna pista de que hubiera que desplazarla. */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditingDelegacion(d)}
+                    aria-label={`Editar ${d.nombre}`}
+                    className="px-2 sm:px-3"
+                  >
+                    <Pencil className="h-4 w-4 sm:hidden" aria-hidden />
+                    <span className="hidden sm:inline">Editar</span>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -220,19 +246,29 @@ export function ConfigPage() {
                             })),
                         })
                       }}
+                      aria-label={`Editar ${u.email ?? "usuario"}`}
+                      className="px-2 sm:px-3"
                     >
-                      Editar
+                      <Pencil className="h-4 w-4 sm:hidden" aria-hidden />
+                      <span className="hidden sm:inline">Editar</span>
                     </Button>
-                    <Button
-                      size="sm"
+                    {/* Borrar un usuario era un solo clic, sin confirmación —
+                        en móvil, a un dedo de distancia del botón de editar. */}
+                    <ConfirmButton
                       variant="destructive"
-                      onClick={async () => {
-                        await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" })
+                      label="Eliminar"
+                      busyLabel="Eliminando…"
+                      className="px-2 sm:px-3"
+                      onConfirm={async () => {
+                        const res = await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" })
+                        if (!res.ok) {
+                          toast.error("No se ha podido eliminar el usuario")
+                          return
+                        }
                         setUsers((prev) => prev.filter((x) => x.id !== u.id))
+                        toast.success("Usuario eliminado")
                       }}
-                    >
-                      Eliminar
-                    </Button>
+                    />
                   </TableCell>
                 </TableRow>
               )
@@ -250,7 +286,7 @@ export function ConfigPage() {
           {editingDelegacion && (
             <form
               className="space-y-4 py-4"
-              onSubmit={async (e) => {
+              onSubmit={guardarEnvio(async (e) => {
                 e.preventDefault()
                 const formData = new FormData(e.currentTarget)
                 const nombre = formData.get("nombre") as string
@@ -265,7 +301,7 @@ export function ConfigPage() {
                   )
                 )
                 setEditingDelegacion(null)
-              }}
+              })}
             >
               <div className="space-y-2">
                 <label className="text-sm font-medium">UUID</label>
@@ -280,7 +316,7 @@ export function ConfigPage() {
                 <Input name="codigo" defaultValue={editingDelegacion.codigo || ""} />
               </div>
               <div className="pt-4 flex justify-end">
-                <Button type="submit">Guardar</Button>
+                <Button type="submit" disabled={enviando}>{enviando ? "Guardando…" : "Guardar"}</Button>
               </div>
             </form>
           )}
@@ -295,7 +331,7 @@ export function ConfigPage() {
           </SheetHeader>
           <form
             className="space-y-4 py-4"
-            onSubmit={async (e) => {
+            onSubmit={guardarEnvio(async (e) => {
               e.preventDefault()
               const formData = new FormData(e.currentTarget)
               const nombre = formData.get("nombre") as string
@@ -314,7 +350,7 @@ export function ConfigPage() {
               }
               await loadDelegaciones()
               setCreatingDelegacionOpen(false)
-            }}
+            })}
           >
             <div className="space-y-2">
               <label className="text-sm font-medium">Nombre</label>
@@ -325,7 +361,7 @@ export function ConfigPage() {
               <Input name="codigo" />
             </div>
             <div className="pt-4 flex justify-end">
-              <Button type="submit">Crear</Button>
+              <Button type="submit" disabled={enviando}>{enviando ? "Creando…" : "Crear"}</Button>
             </div>
           </form>
         </SheetContent>
@@ -340,7 +376,7 @@ export function ConfigPage() {
           {editingUser && (
             <form
               className="space-y-4 py-4"
-              onSubmit={async (e) => {
+              onSubmit={guardarEnvio(async (e) => {
                 e.preventDefault()
                 await fetch(`/api/admin/users/${editingUser.id}`, {
                   method: "PUT",
@@ -363,7 +399,7 @@ export function ConfigPage() {
                     await loadUsers()
                     setEditingUser(null)
                   })
-              }}
+              })}
             >
               <div className="space-y-2">
                 <label className="text-sm font-medium">Mail</label>
@@ -444,7 +480,7 @@ export function ConfigPage() {
                 </div>
               </div>
               <div className="pt-4 flex justify-end">
-                <Button type="submit">Guardar</Button>
+                <Button type="submit" disabled={enviando}>{enviando ? "Guardando…" : "Guardar"}</Button>
               </div>
             </form>
           )}
@@ -459,7 +495,7 @@ export function ConfigPage() {
           </SheetHeader>
           <form
             className="space-y-4 py-4"
-            onSubmit={async (e) => {
+            onSubmit={guardarEnvio(async (e) => {
               e.preventDefault()
               if (!userForm.email || !userForm.password) return
               await fetch(`/api/admin/users`, {
@@ -485,7 +521,7 @@ export function ConfigPage() {
                   setCreatingUserOpen(false)
                   setUserForm({ email: "", name: "", password: "", memberships: [] })
                 })
-            }}
+            })}
           >
             <div className="space-y-2">
               <label className="text-sm font-medium">Mail</label>
@@ -572,7 +608,7 @@ export function ConfigPage() {
               </div>
             </div>
             <div className="pt-4 flex justify-end">
-              <Button type="submit">Crear</Button>
+              <Button type="submit" disabled={enviando}>{enviando ? "Creando…" : "Crear"}</Button>
             </div>
           </form>
         </SheetContent>

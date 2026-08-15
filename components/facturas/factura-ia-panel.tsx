@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, Check, Loader2, RefreshCw, Sparkles, UserPlus } from "lucide-react"
+import { AlertTriangle, Check, Loader2, RefreshCw, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -19,23 +19,16 @@ interface FacturaIaPanelProps {
   onCategoriaAceptada?: (categoriaId: string) => void
 }
 
-const ETIQUETAS_CAMPO: Record<string, string> = {
-  numero: "número",
-  fecha_emision: "fecha",
-  importe: "importe",
-  concepto: "concepto",
-  contacto_id: "proveedor",
-  moneda: "moneda",
-}
-
 /**
- * Lo que la IA ha leído de la factura, y lo único que hace falta decidir: la
- * categoría.
+ * Una línea contando qué ha hecho la lectura automática, y como mucho una
+ * decisión que tomar.
  *
- * El resto de campos ya están en el formulario de al lado (se rellenaron solos
- * si estaban vacíos), así que aquí no se repiten como un formulario paralelo:
- * se resumen para que se pueda comprobar de un vistazo que la lectura tiene
- * sentido, y se deja un único botón que sí cambia algo.
+ * Antes esto era una caja con el resumen de la lectura, la lista de campos
+ * rellenados, el aviso de proveedor nuevo, el de confianza baja, la categoría
+ * sugerida y un "volver a leer" — seis cosas para una tarea que en el 90% de
+ * los casos es "vale, correcto". El resumen sobra porque los datos leídos ya
+ * están ahí abajo, en los campos; lo que no se ve en ningún otro sitio es la
+ * categoría sugerida, y eso es lo único que se mantiene con botón propio.
  */
 export function FacturaIaPanel({
   factura,
@@ -85,155 +78,145 @@ export function FacturaIaPanel({
   if (!datos) {
     if (!canEdit) return null
     return (
-      <Caja>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
-            Puedo leer el documento y rellenar proveedor, número, fecha e importe.
-          </p>
-          <Button type="button" size="sm" variant="outline" onClick={() => leer(false)} disabled={trabajando !== null}>
-            {trabajando === "leyendo" ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Leer con IA
-          </Button>
-        </div>
-      </Caja>
+      <Tira tono="neutro">
+        <span className="flex-1 text-xs text-muted-foreground">
+          Puedo leer el documento y rellenar los datos.
+        </span>
+        <BotonTira onClick={() => leer(false)} disabled={trabajando !== null} icon={Sparkles}>
+          {trabajando === "leyendo" ? "Leyendo…" : "Leer con IA"}
+        </BotonTira>
+      </Tira>
     )
   }
 
   if (datos.estado === "procesando") {
     return (
-      <Caja>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Leyendo el documento…
-        </div>
-      </Caja>
+      <Tira tono="neutro">
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> Leyendo el documento…
+        </span>
+      </Tira>
     )
   }
 
   if (datos.estado === "error" || datos.estado === "sin_documento") {
     return (
-      <Caja tono="aviso">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <p className="flex-1 text-xs text-amber-800 dark:text-amber-200">
-            {datos.error || "No se pudo leer la factura."}
-          </p>
-          {canEdit && (
-            <Button type="button" size="sm" variant="outline" onClick={() => leer(true)} disabled={trabajando !== null}>
-              {trabajando === "leyendo" ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Reintentar
-            </Button>
-          )}
-        </div>
-      </Caja>
+      <Tira tono="aviso">
+        <span className="flex-1 text-xs text-amber-800 dark:text-amber-200">
+          {datos.error || "No se pudo leer la factura."}
+        </span>
+        {canEdit && (
+          <BotonTira onClick={() => leer(true)} disabled={trabajando !== null} icon={RefreshCw}>
+            Reintentar
+          </BotonTira>
+        )}
+      </Tira>
     )
   }
 
+  const dudosa = datos.es_factura === false || (datos.confianza != null && datos.confianza < 0.5)
   const s = datos.sugerencias
-  const resumen = [
-    s?.proveedor?.nombre,
-    s?.numero ? `nº ${s.numero}` : null,
+  const leido = [
     s?.fecha_emision ? formatDate(s.fecha_emision) : null,
     s?.importe != null ? formatCurrency(s.importe) : null,
-  ].filter(Boolean) as string[]
-
-  const dudosa = datos.es_factura === false || (datos.confianza != null && datos.confianza < 0.5)
+  ]
+    .filter(Boolean)
+    .join(" · ")
 
   return (
-    <Caja>
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="text-xs text-foreground">{resumen.join(" · ") || "Sin datos claros"}</span>
-          {datos.campos_rellenados.length > 0 && (
-            <span className="text-[11px] text-muted-foreground">
-              (rellenados: {datos.campos_rellenados.map((c) => ETIQUETAS_CAMPO[c] ?? c).join(", ")})
-            </span>
-          )}
-        </div>
-
-        {s?.proveedor?.creado && (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <UserPlus className="h-3 w-3 shrink-0" aria-hidden />
-            Proveedor creado automáticamente: revisa sus datos cuando puedas.
-          </div>
-        )}
-
-        {dudosa && (
-          <div className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">
-            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+    <div className="space-y-2">
+      <Tira tono={dudosa ? "aviso" : "ok"}>
+        {dudosa ? (
+          <span className="flex-1 text-xs text-amber-800 dark:text-amber-200">
             {datos.es_factura === false
-              ? "El documento no parece una factura: comprueba los datos antes de darlos por buenos."
+              ? "Esto no parece una factura: comprueba los datos antes de darlos por buenos."
               : "Lectura poco segura: comprueba los datos."}
-          </div>
+          </span>
+        ) : (
+          <span className="flex-1 text-xs text-emerald-800 dark:text-emerald-200">
+            Leída con IA{leido ? ` · ${leido}` : ""}. Revisa y confirma.
+          </span>
         )}
-
-        {categoriaPendiente && canEdit && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-background px-2.5 py-2">
-            <div className="min-w-0">
-              <div className="text-xs font-medium">
-                Categoría sugerida: <span className="text-primary">{categoriaPendiente.nombre}</span>
-              </div>
-              {categoriaPendiente.motivo && (
-                <div className="truncate text-[11px] text-muted-foreground">{categoriaPendiente.motivo}</div>
-              )}
-            </div>
-            <Button type="button" size="sm" onClick={aceptar} disabled={trabajando !== null}>
-              {trabajando === "aceptando" ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Check className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Aceptar
-            </Button>
-          </div>
-        )}
-
-        {datos.categoria_aceptada && s?.categoria?.nombre && (
-          <div className="text-[11px] text-muted-foreground">
-            Categoría «{s.categoria.nombre}» aceptada.
-          </div>
-        )}
-
         {canEdit && (
-          <button
-            type="button"
-            onClick={() => leer(true)}
-            disabled={trabajando !== null}
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:opacity-50"
-          >
-            {trabajando === "leyendo" ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3 w-3" />
-            )}
-            Volver a leer
-          </button>
+          <BotonTira onClick={() => leer(true)} disabled={trabajando !== null} icon={RefreshCw}>
+            {trabajando === "leyendo" ? "Leyendo…" : "Releer"}
+          </BotonTira>
         )}
-      </div>
-    </Caja>
+      </Tira>
+
+      {categoriaPendiente && canEdit && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-2">
+          <div className="min-w-0">
+            <div className="text-xs font-medium">
+              ¿La categorizo como <span className="text-primary">{categoriaPendiente.nombre}</span>?
+            </div>
+            {categoriaPendiente.motivo && (
+              <div className="truncate text-[11px] text-muted-foreground">{categoriaPendiente.motivo}</div>
+            )}
+          </div>
+          <Button type="button" size="sm" onClick={aceptar} disabled={trabajando !== null}>
+            {trabajando === "aceptando" ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Check className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Sí, ponla
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }
 
-function Caja({ children, tono }: { children: React.ReactNode; tono?: "aviso" }) {
+function Tira({ children, tono }: { children: React.ReactNode; tono: "ok" | "aviso" | "neutro" }) {
+  const Icono = tono === "aviso" ? AlertTriangle : Sparkles
   return (
     <div
       className={cn(
-        "rounded-lg border p-3",
+        "flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border px-2.5 py-1.5",
         tono === "aviso"
-          ? "border-amber-300/70 bg-amber-50/60 dark:border-amber-900/60 dark:bg-amber-950/30"
-          : "border-primary/25 bg-primary/[0.04]",
+          ? "border-amber-300/70 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30"
+          : tono === "ok"
+            ? "border-emerald-200/70 bg-emerald-50/60 dark:border-emerald-900/60 dark:bg-emerald-950/25"
+            : "border-border/60 bg-muted/30",
       )}
     >
-      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <Sparkles className="h-3 w-3" aria-hidden /> Lectura automática
-      </div>
+      <Icono
+        className={cn(
+          "h-3.5 w-3.5 shrink-0",
+          tono === "aviso"
+            ? "text-amber-600 dark:text-amber-400"
+            : tono === "ok"
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-muted-foreground",
+        )}
+        aria-hidden
+      />
       {children}
     </div>
+  )
+}
+
+function BotonTira({
+  children,
+  onClick,
+  disabled,
+  icon: Icon,
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  disabled?: boolean
+  icon: typeof Sparkles
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
+    >
+      <Icon className="h-3 w-3" aria-hidden />
+      {children}
+    </button>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import type { LucideIcon } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
@@ -9,6 +10,8 @@ export interface FilterTabItem {
   label: string
   count?: number
   dotClass?: string
+  /** Icono a la izquierda. Manda sobre `dotClass`: dibujar los dos es ruido. */
+  icon?: LucideIcon
 }
 
 interface FilterTabsProps {
@@ -50,7 +53,11 @@ export function FilterTabs({ value, onValueChange, items, className }: FilterTab
               }}
               className="shrink-0 snap-start gap-1.5"
             >
-              {item.dotClass && <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", item.dotClass)} aria-hidden />}
+              {item.icon ? (
+                <item.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              ) : item.dotClass ? (
+                <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", item.dotClass)} aria-hidden />
+              ) : null}
               <span>{item.label}</span>
               {Boolean(item.count) && (
                 <span className="min-w-[1.25rem] rounded-full bg-primary/10 px-1.5 py-0.5 text-center text-xs font-medium tabular-nums text-primary">

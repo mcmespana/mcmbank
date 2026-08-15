@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Loader2, Sparkles } from "lucide-react"
+import { Loader2, PartyPopper, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DatabaseService } from "@/lib/services/database"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
@@ -87,11 +87,21 @@ export function FacturaConciliacionPanel({
         </p>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        {importePendiente != null
-          ? "Gastos con un importe parecido (con un pelín de margen) sin factura vinculada, ordenados por afinidad."
-          : "Últimos gastos sin factura vinculada. Añade el importe a la factura para afinar la búsqueda."}
-      </p>
+      {matchDirecto && candidatos[0] ? (
+        <p className="flex items-start gap-1.5 rounded-md bg-primary/5 px-2.5 py-1.5 text-xs text-primary">
+          <PartyPopper className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>
+            Fijo que es este. Mismo importe y por las mismas fechas: ya te lo he marcado, tú solo
+            guarda.
+          </span>
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {importePendiente != null
+            ? "Gastos con un importe parecido (con un pelín de margen) sin factura vinculada, ordenados por afinidad."
+            : "Últimos gastos sin factura vinculada. Añade el importe a la factura para afinar la búsqueda."}
+        </p>
+      )}
 
       {loading ? (
         <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
@@ -131,7 +141,7 @@ export function FacturaConciliacionPanel({
                   {m.cuenta?.nombre && <span>· {m.cuenta.nombre}</span>}
                   {esTop && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                      <Sparkles className="h-3 w-3" /> Match directo
+                      <Sparkles className="h-3 w-3" /> Este es
                     </span>
                   )}
                   {s?.importeExacto && !esTop && (

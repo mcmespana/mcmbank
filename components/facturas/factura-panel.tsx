@@ -192,7 +192,12 @@ export function FacturaPanel({
       if (isEdit && factura) {
         await onSave({ update: base })
       } else {
-        const created = await onSave({ insert: { ...base, delegacion_id: delegacionId } })
+        // Una factura escrita a mano no pasa por la bandeja (que por defecto es
+        // donde caería): la bandeja es lo que ha llegado sin revisar, y esto lo
+        // acaba de teclear una persona mirando el papel.
+        const created = await onSave({
+          insert: { ...base, delegacion_id: delegacionId, estado: "sin_pagar" },
+        })
         facturaId = created && "id" in created ? created.id : undefined
       }
 

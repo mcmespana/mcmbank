@@ -334,10 +334,9 @@ CREATE INDEX idx_cuenta_delegacion
 
 ## 🚀 **Próximos Pasos (Opcional - Media Prioridad)**
 
-La lista única de trabajo pendiente vive en `docs/ANALISIS_MEJORAS.md`. Entre lo no urgente destaca:
-
-1. **Virtualización en listas largas** - Para +500 movimientos (item 24)
-2. **Continuar migración a TanStack Query** - El piloto ya cubre `useCategoryBreakdown` (item 68)
+El trabajo pendiente vive en `docs/ANALISIS_MEJORAS.md`. De lo que queda aquí,
+sigue abierto **terminar la migración a TanStack Query** (10 de 36 hooks). La
+virtualización de listas largas ya está hecha (`@tanstack/react-virtual`).
 
 ---
 

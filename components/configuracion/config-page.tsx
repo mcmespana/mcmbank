@@ -15,6 +15,7 @@ import { ConexionesMcpSection } from "@/components/configuracion/conexiones-mcp-
 import { PageSkeleton } from "@/components/ui/page-skeleton"
 import { ConfirmButton } from "@/components/ui/confirm-button"
 import { Pencil } from "lucide-react"
+import { useSubmitGuard } from "@/hooks/use-submit-guard"
 
 interface DelegacionWithCount extends Delegacion {
   movimientos?: number
@@ -35,6 +36,11 @@ interface UserData {
 
 export function ConfigPage() {
   const { isAdmin, loading: adminLoading } = useIsAdminState()
+  // Los cuatro formularios de esta pantalla (crear/editar delegación y
+  // usuario) no tenían ninguna protección: pulsar "Crear" dos veces creaba dos
+  // delegaciones. El cerrojo es síncrono, así que el segundo envío se descarta
+  // aunque llegue antes del re-render.
+  const { enviando, guard: guardarEnvio } = useSubmitGuard()
   const [delegaciones, setDelegaciones] = useState<DelegacionWithCount[]>([])
   const [users, setUsers] = useState<UserData[]>([])
   const [editingDelegacion, setEditingDelegacion] = useState<DelegacionWithCount | null>(null)
@@ -280,7 +286,7 @@ export function ConfigPage() {
           {editingDelegacion && (
             <form
               className="space-y-4 py-4"
-              onSubmit={async (e) => {
+              onSubmit={guardarEnvio(async (e) => {
                 e.preventDefault()
                 const formData = new FormData(e.currentTarget)
                 const nombre = formData.get("nombre") as string
@@ -295,7 +301,7 @@ export function ConfigPage() {
                   )
                 )
                 setEditingDelegacion(null)
-              }}
+              })}
             >
               <div className="space-y-2">
                 <label className="text-sm font-medium">UUID</label>
@@ -310,7 +316,7 @@ export function ConfigPage() {
                 <Input name="codigo" defaultValue={editingDelegacion.codigo || ""} />
               </div>
               <div className="pt-4 flex justify-end">
-                <Button type="submit">Guardar</Button>
+                <Button type="submit" disabled={enviando}>{enviando ? "Guardando…" : "Guardar"}</Button>
               </div>
             </form>
           )}
@@ -325,7 +331,7 @@ export function ConfigPage() {
           </SheetHeader>
           <form
             className="space-y-4 py-4"
-            onSubmit={async (e) => {
+            onSubmit={guardarEnvio(async (e) => {
               e.preventDefault()
               const formData = new FormData(e.currentTarget)
               const nombre = formData.get("nombre") as string
@@ -344,7 +350,7 @@ export function ConfigPage() {
               }
               await loadDelegaciones()
               setCreatingDelegacionOpen(false)
-            }}
+            })}
           >
             <div className="space-y-2">
               <label className="text-sm font-medium">Nombre</label>
@@ -355,7 +361,7 @@ export function ConfigPage() {
               <Input name="codigo" />
             </div>
             <div className="pt-4 flex justify-end">
-              <Button type="submit">Crear</Button>
+              <Button type="submit" disabled={enviando}>{enviando ? "Creando…" : "Crear"}</Button>
             </div>
           </form>
         </SheetContent>
@@ -370,7 +376,7 @@ export function ConfigPage() {
           {editingUser && (
             <form
               className="space-y-4 py-4"
-              onSubmit={async (e) => {
+              onSubmit={guardarEnvio(async (e) => {
                 e.preventDefault()
                 await fetch(`/api/admin/users/${editingUser.id}`, {
                   method: "PUT",
@@ -393,7 +399,7 @@ export function ConfigPage() {
                     await loadUsers()
                     setEditingUser(null)
                   })
-              }}
+              })}
             >
               <div className="space-y-2">
                 <label className="text-sm font-medium">Mail</label>
@@ -474,7 +480,7 @@ export function ConfigPage() {
                 </div>
               </div>
               <div className="pt-4 flex justify-end">
-                <Button type="submit">Guardar</Button>
+                <Button type="submit" disabled={enviando}>{enviando ? "Guardando…" : "Guardar"}</Button>
               </div>
             </form>
           )}
@@ -489,7 +495,7 @@ export function ConfigPage() {
           </SheetHeader>
           <form
             className="space-y-4 py-4"
-            onSubmit={async (e) => {
+            onSubmit={guardarEnvio(async (e) => {
               e.preventDefault()
               if (!userForm.email || !userForm.password) return
               await fetch(`/api/admin/users`, {
@@ -515,7 +521,7 @@ export function ConfigPage() {
                   setCreatingUserOpen(false)
                   setUserForm({ email: "", name: "", password: "", memberships: [] })
                 })
-            }}
+            })}
           >
             <div className="space-y-2">
               <label className="text-sm font-medium">Mail</label>
@@ -602,7 +608,7 @@ export function ConfigPage() {
               </div>
             </div>
             <div className="pt-4 flex justify-end">
-              <Button type="submit">Crear</Button>
+              <Button type="submit" disabled={enviando}>{enviando ? "Creando…" : "Crear"}</Button>
             </div>
           </form>
         </SheetContent>

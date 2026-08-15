@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { AlertTriangle, Trash2, ArrowRightLeft } from "lucide-react"
+import { useEffect, useState } from "react"
+import { AlertTriangle, Trash2, ArrowRightLeft, Loader2 } from "lucide-react"
+import { DatabaseService } from "@/lib/services/database"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,6 +27,25 @@ export function DeleteAccountDialog({ cuenta, otherCuentas, onConfirm, onCancel 
   const [isDeleting, setIsDeleting] = useState(false)
   const [mode, setMode] = useState<Mode>("delete")
   const [targetCuentaId, setTargetCuentaId] = useState<string>("")
+  // `movimiento.cuenta_id` es ON DELETE CASCADE: aquí no falla nada, se borra
+  // de verdad. Una cuenta puede llevar años de histórico, así que el número
+  // tiene que estar delante de quien escribe "ELIMINAR", no detrás.
+  const [totalMovimientos, setTotalMovimientos] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelado = false
+    DatabaseService.getConteoMovimientosCuenta(cuenta.id)
+      .then((total) => {
+        if (!cancelado) setTotalMovimientos(total)
+      })
+      .catch((error) => {
+        console.error("Error contando los movimientos de la cuenta:", error)
+        if (!cancelado) setTotalMovimientos(null)
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [cuenta.id])
 
   const canMigrate = otherCuentas.length > 0
   const isConfirmationValid = confirmationText === "ELIMINAR"
@@ -70,6 +90,32 @@ export function DeleteAccountDialog({ cuenta, otherCuentas, onConfirm, onCancel 
               )}
             </AlertDescription>
           </Alert>
+
+          {/* Cuántos movimientos hay detrás. Sin este número, "eliminarlos
+              junto con la cuenta" es una abstracción: son años de histórico. */}
+          {totalMovimientos === null ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Comprobando cuántos movimientos tiene…
+            </p>
+          ) : totalMovimientos === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No tiene ningún movimiento. Se puede borrar sin consecuencias.
+            </p>
+          ) : (
+            <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800 text-sm dark:text-amber-200">
+                Tiene <strong>{totalMovimientos.toLocaleString("es-ES")}</strong>{" "}
+                {totalMovimientos === 1 ? "movimiento" : "movimientos"}
+                {mode === "migrate" ? " que se migrarán a la cuenta destino." : ", y se borrarán con ella."}
+                {mode !== "migrate" && !canMigrate && (
+                  <span className="mt-1 block text-xs">
+                    No hay otra cuenta en esta delegación a la que moverlos.
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Qué hacer con los movimientos */}
           {canMigrate && (

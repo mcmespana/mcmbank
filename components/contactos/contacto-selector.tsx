@@ -171,7 +171,19 @@ export function ContactoSelector({
             value={search}
             onValueChange={setSearch}
           />
-          <CommandList>
+          <CommandList
+            // Este desplegable se abre casi siempre desde un panel lateral, y
+            // Radix bloquea la rueda del ratón en todo lo que se portalea fuera
+            // del panel: la lista se quedaba quieta y había que arrastrar la
+            // barra. Cuando ese bloqueo ha cancelado el scroll nativo
+            // (defaultPrevented), se mueve la lista a mano; si no lo ha
+            // cancelado, no se toca nada y desplaza el navegador como siempre.
+            onWheel={(event) => {
+              if (event.defaultPrevented) {
+                event.currentTarget.scrollTop += event.deltaY
+              }
+            }}
+          >
             <CommandEmpty>Sin resultados.</CommandEmpty>
 
             {value && (

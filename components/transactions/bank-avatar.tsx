@@ -2,15 +2,19 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Landmark, PiggyBank } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { Cuenta } from "@/lib/types/database"
 import { useState } from "react"
 
 interface BankAvatarProps {
   account?: Cuenta
   size?: "sm" | "md" | "lg"
+  /** Sobrescribe el tamaño; lo usa la insignia de la cuenta cuando en la fila
+   *  manda el logo del proveedor y el banco baja a 18px. */
+  className?: string
 }
 
-export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
+export function BankAvatar({ account, size = "md", className }: BankAvatarProps) {
   const bankName = account?.banco_nombre || account?.nombre || "Caja"
   const normalizedBankName = bankName.toLowerCase()
 
@@ -40,7 +44,7 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
   if (!account) {
     const iconClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-7 w-7" : "h-6 w-6"
     return (
-      <Avatar className={size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"}>
+      <Avatar className={cn(size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10", className)}>
         <AvatarFallback className="bg-slate-600">
           <Landmark className={iconClass} />
         </AvatarFallback>
@@ -49,7 +53,7 @@ export function BankAvatar({ account, size = "md" }: BankAvatarProps) {
   }
 
   const iconClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-7 w-7" : "h-6 w-6"
-  const avatarClassName = size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10"
+  const avatarClassName = cn(size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10", className)
   const backgroundColor = account.color || "#334155"
   const backgroundStyle = { backgroundColor }
   const fallbackIcon = isCaja ? <PiggyBank className={iconClass} /> : <Landmark className={iconClass} />

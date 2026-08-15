@@ -234,11 +234,15 @@ export function CategorySelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[calc(100vw-2rem)] sm:w-[380px] p-0"
+          // Los nombres de las actividades son largos ("Actividad Verano COM
+          // (parque acuatico)"), así que 380px se quedaban cortos y las píldoras
+          // se salían por la derecha. Y con avoidCollisions desactivado el panel
+          // no se recolocaba: se quedaba cortado contra el borde.
+          className="w-[calc(100vw-2rem)] p-0 sm:w-[min(34rem,calc(100vw-3rem))]"
           align="start"
           side="bottom"
           sideOffset={6}
-          avoidCollisions={false}
+          collisionPadding={12}
         >
           <div className="border-b p-3">
             <div className="relative">
@@ -456,14 +460,14 @@ function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCateg
             <span className="h-2.5 w-2.5 rounded-full bg-[var(--category-color)]" />
           )}
         </div>
-        <span className="flex items-center gap-2 text-sm font-semibold leading-none text-foreground">
+        <span className="flex min-w-0 items-center gap-2 text-left text-sm font-semibold leading-tight text-foreground">
           {parent.emoji && <span className="text-base leading-none">{parent.emoji}</span>}
           {parent.nombre}
         </span>
       </button>
 
       {children.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2 pl-11">
+        <div className="mt-3 flex flex-wrap gap-2 pl-2 sm:pl-11">
           {children.map((child) => (
             <CategoryChipButton
               key={child.id}
@@ -504,7 +508,7 @@ function CategoryChipButton({ category, colorSource, selected, onSelect, disable
       disabled={disabled}
       title={disabled ? "Ya asignada en otra fila" : undefined}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2",
+        "inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-left text-xs font-medium leading-tight transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.45)] focus-visible:ring-offset-2",
         selected
           ? "border-transparent bg-[var(--category-color)] text-[var(--category-text-color)] shadow-sm"
           : "border-[rgba(var(--category-color-rgb),0.35)] bg-[rgba(var(--category-color-rgb),0.25)] text-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.35)] shadow-sm dark:bg-[rgba(var(--category-color-rgb),0.18)] dark:hover:bg-[rgba(var(--category-color-rgb),0.26)] dark:border-transparent dark:shadow-none",
@@ -512,9 +516,9 @@ function CategoryChipButton({ category, colorSource, selected, onSelect, disable
       )}
       style={style}
     >
-      {category.emoji && <span className="text-sm leading-none">{category.emoji}</span>}
-      <span className="leading-none">{category.nombre}</span>
-      {selected && <Check className="h-3.5 w-3.5" />}
+      {category.emoji && <span className="shrink-0 text-sm leading-none">{category.emoji}</span>}
+      <span className="min-w-0 break-words">{category.nombre}</span>
+      {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
     </button>
   )
 }

@@ -19,6 +19,7 @@ import type {
   FacturaResumenRow,
   FinancialSummary,
   MonthlyTrendRow,
+  Movimiento,
   MovimientoConRelaciones,
   PagoMcm,
   SaldoContactoRow,
@@ -106,6 +107,13 @@ export class DatabaseService {
     const supabase = this.getClient() as any
     const { error } = await supabase.from("movimiento").update({ categoria_id: categoriaId }).eq("id", movimientoId)
 
+    if (error) throw error
+  }
+
+  /** Actualiza campos sueltos de un movimiento (concepto, fecha, importe, notas…). */
+  static async updateMovimiento(movimientoId: string, patch: Partial<Movimiento>): Promise<void> {
+    const supabase = this.getClient() as any
+    const { error } = await supabase.from("movimiento").update(patch).eq("id", movimientoId)
     if (error) throw error
   }
 
@@ -413,6 +421,103 @@ export class DatabaseService {
 
     if (error) throw error
     return (data ?? null) as ContactoConCategoriaPredeterminada | null
+  }
+
+  /**
+   * Qué está usando un contacto antes de borrarlo.
+   *
+   * Hace falta porque las consecuencias de borrar no son las mismas en los tres
+   * casos, y hasta ahora no se veía ninguna: los movimientos y las facturas son
+   * `ON DELETE SET NULL`, así que el borrado sale bien y les quita el contacto
+   * en silencio; los pagos MCM son `RESTRICT`, así que el borrado falla con un
+   * error de base de datos que no dice qué lo impide.
+   */
+  static async getUsosContacto(
+    contactoId: string,
+    delegacionId?: string | null,
+  ): Promise<{
+    movimientos: Pick<Movimiento, "id" | "fecha" | "concepto" | "importe" | "delegacion_id">[]
+    totalMovimientos: number
+    facturas: Pick<Factura, "id" | "numero" | "fecha_emision" | "importe">[]
+    totalFacturas: number
+    pagosMcm: number
+    /** Otras delegaciones que también lo usan; borrarlo se las llevaría por delante. */
+    otrasDelegaciones: number
+  }> {
+    const supabase = this.getClient() as any
+
+    const [movimientosRes, facturasRes, pagosRes, adopcionesRes] = await Promise.all([
+      supabase
+        .from("movimiento")
+        .select("id, fecha, concepto, importe, delegacion_id", { count: "exact" })
+        .eq("contacto_id", contactoId)
+        .order("fecha", { ascending: false })
+        .limit(50),
+      supabase
+        .from("factura")
+        .select("id, numero, fecha_emision, importe", { count: "exact" })
+        .eq("contacto_id", contactoId)
+        .order("fecha_emision", { ascending: false })
+        .limit(20),
+      supabase.from("pago_mcm").select("id", { head: true, count: "exact" }).eq("contacto_id", contactoId),
+      supabase.from("contacto_delegacion").select("delegacion_id").eq("contacto_id", contactoId),
+    ])
+
+    if (movimientosRes.error) throw movimientosRes.error
+    if (facturasRes.error) throw facturasRes.error
+
+    const adopciones: { delegacion_id: string }[] = adopcionesRes.data ?? []
+
+    return {
+      movimientos: movimientosRes.data ?? [],
+      totalMovimientos: movimientosRes.count ?? (movimientosRes.data?.length ?? 0),
+      facturas: facturasRes.data ?? [],
+      totalFacturas: facturasRes.count ?? (facturasRes.data?.length ?? 0),
+      pagosMcm: pagosRes.error ? 0 : (pagosRes.count ?? 0),
+      otrasDelegaciones: delegacionId
+        ? adopciones.filter((a) => a.delegacion_id !== delegacionId).length
+        : Math.max(0, adopciones.length - 1),
+    }
+  }
+
+  /**
+   * Quita el contacto de sus movimientos y facturas sin borrar nada más.
+   *
+   * Es la alternativa honesta a "eliminar": el movimiento se queda, con su
+   * importe y su fecha, y solo pierde el proveedor. Casi siempre es lo que
+   * quería quien iba a borrar el contacto.
+   */
+  static async desvincularContacto(
+    contactoId: string,
+    delegacionId?: string | null,
+  ): Promise<{ movimientos: number; facturas: number }> {
+    const supabase = this.getClient() as any
+
+    let movimientosQuery = supabase
+      .from("movimiento")
+      .update({ contacto_id: null })
+      .eq("contacto_id", contactoId)
+    let facturasQuery = supabase.from("factura").update({ contacto_id: null }).eq("contacto_id", contactoId)
+
+    // Con un proveedor compartido, se desvincula solo lo de esta delegación:
+    // los movimientos de las demás no son asunto de quien pulsa el botón.
+    if (delegacionId) {
+      movimientosQuery = movimientosQuery.eq("delegacion_id", delegacionId)
+      facturasQuery = facturasQuery.eq("delegacion_id", delegacionId)
+    }
+
+    const [movimientosRes, facturasRes] = await Promise.all([
+      movimientosQuery.select("id"),
+      facturasQuery.select("id"),
+    ])
+
+    if (movimientosRes.error) throw movimientosRes.error
+    if (facturasRes.error) throw facturasRes.error
+
+    return {
+      movimientos: movimientosRes.data?.length ?? 0,
+      facturas: facturasRes.data?.length ?? 0,
+    }
   }
 
   /** Cambia lo que esta delegación sobrescribe de un contacto compartido. */
@@ -1541,12 +1646,14 @@ export class DatabaseService {
     desde: string,
     hasta: string,
     signal?: AbortSignal,
+    contactoId?: string | null,
   ): Promise<CategoryBreakdownRow[]> {
     const client = this.getClient() as any
     let query = client.rpc("get_category_breakdown", {
       p_delegacion_id: delegacionId,
       p_desde: desde,
       p_hasta: hasta,
+      p_contacto_id: contactoId ?? null,
     })
     if (signal) query = query.abortSignal(signal)
     const { data, error } = await query

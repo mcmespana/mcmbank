@@ -11,7 +11,6 @@ import {
   Loader2,
   Plus,
   Search,
-  Sparkles,
   Trash2,
   TriangleAlert,
   Users,
@@ -93,46 +92,6 @@ export function ContactosManager() {
     if (tab === "todos") return contactos
     return contactos.filter((c) => c.tipo === tab)
   }, [contactos, tab])
-
-  const proveedoresSinLogo = useMemo(
-    () => contactos.filter((c) => c.tipo === "proveedor" && !c.en_catalogo && !archivadoEfectivoContacto(c) && !c.logo_url).length,
-    [contactos],
-  )
-  const [buscandoLogos, setBuscandoLogos] = useState(false)
-
-  const buscarLogosPendientes = async () => {
-    setBuscandoLogos(true)
-    try {
-      const respuesta = await fetch("/api/contactos/logos-pendientes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ delegacionId: selectedDelegation }),
-      })
-      const datos = await respuesta.json()
-
-      if (!respuesta.ok) {
-        toast.error(datos?.error ?? "No se pudieron buscar los logos")
-        return
-      }
-
-      await refetch()
-
-      const encontrados = datos.resueltos?.length ?? 0
-      if (encontrados === 0) {
-        toast.info("No se ha encontrado ningún logo. Puedes subirlos a mano desde cada ficha.")
-      } else {
-        toast.success(
-          `${encontrados} ${encontrados === 1 ? "logo encontrado" : "logos encontrados"}` +
-            (datos.fallidos?.length ? `. Sin logo: ${datos.fallidos.join(", ")}` : ""),
-        )
-      }
-    } catch (error) {
-      console.error("Error buscando logos pendientes:", error)
-      toast.error("No se pudieron buscar los logos")
-    } finally {
-      setBuscandoLogos(false)
-    }
-  }
 
   const handleSubmitForm = async (payload: ContactoFormSubmitPayload) => {
     if (editing) {
@@ -226,16 +185,6 @@ export function ContactosManager() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {canEdit && proveedoresSinLogo > 0 && (
-            <Button variant="outline" size="sm" onClick={buscarLogosPendientes} disabled={buscandoLogos}>
-              {buscandoLogos ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Buscar {proveedoresSinLogo} {proveedoresSinLogo === 1 ? "logo" : "logos"}
-            </Button>
-          )}
           <Button
             variant="outline"
             size="sm"
@@ -403,6 +352,8 @@ export function ContactosManager() {
       {/* Delete dialog */}
       <DeleteContactoDialog
         contacto={deleting}
+        delegacionId={selectedDelegation}
+        onUnlinked={refetch}
         open={Boolean(deleting)}
         onOpenChange={(open) => !open && setDeleting(null)}
         onDelete={async (id) => {

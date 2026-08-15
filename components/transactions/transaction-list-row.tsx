@@ -12,7 +12,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Check, Pencil } from "lucide-react"
-import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
+import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
+import { EntityAvatar } from "@/components/ui/entity-avatar"
 import type { Movimiento, MovimientoConRelaciones, Cuenta, Categoria } from "@/lib/types/database"
 
 interface TransactionListRowProps {
@@ -135,38 +136,44 @@ export const TransactionListRow = memo(function TransactionListRow({
             <AccountTooltip account={account}>
               <div
                 className={cn(
-                  "rounded-full p-0.5 cursor-pointer transition-[transform,opacity] duration-200 shadow-sm",
+                  "relative rounded-full p-0.5 cursor-pointer transition-[transform,opacity] duration-200 shadow-sm",
                   isSelected
                     ? "scale-90 opacity-0"
                     : selectionActive
                     ? "scale-95 opacity-0"
                     : "group-hover:scale-95 group-hover:opacity-0 group-hover:rotate-3",
                 )}
+                // El aro conserva el color de la cuenta también cuando manda el
+                // proveedor: se sigue distinguiendo de qué cuenta sale el dinero.
                 style={{ backgroundColor: account?.color || "#4ECDC4" }}
                 data-testid="account-info"
                 title={`Cuenta: ${account?.nombre || 'Sin nombre'} - Delegación ID: ${account?.delegacion_id || 'Sin delegación'}`}
               >
-                <BankAvatar account={account} />
-
-                {/* Logo del proveedor como insignia, no en lugar del círculo de
-                    la cuenta: ese círculo dice de qué cuenta sale el dinero y
-                    además es el único sitio desde el que se selecciona la fila.
-                    Así el movimiento con proveedor se reconoce de un vistazo sin
-                    perder ninguna de las dos cosas, y los que no tienen
-                    proveedor se ven exactamente igual que antes. */}
-                {movement.contacto?.logo_url && (
-                  <span
-                    className="absolute -bottom-0.5 -right-0.5 flex h-[17px] w-[17px] items-center justify-center overflow-hidden rounded-full bg-white ring-2 ring-card"
-                    title={movement.contacto.nombre}
-                  >
-                    <img
-                      src={movement.contacto.logo_url}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className="h-full w-full object-contain"
+                {/* Cuando el movimiento tiene proveedor, manda el proveedor: es
+                    lo que distingue una fila de otra de un vistazo, porque la
+                    cuenta suele ser siempre la misma. El banco baja a insignia,
+                    y el color de la cuenta se queda en el aro. Sin proveedor,
+                    todo se ve exactamente como antes. */}
+                {movement.contacto ? (
+                  <>
+                    <EntityAvatar
+                      name={movement.contacto.nombre}
+                      emoji={movement.contacto.emoji}
+                      defaultEmojis={CONTACTO_TIPO_DEFAULT_EMOJIS}
+                      logoUrl={movement.contacto.logo_url}
+                      size="md"
+                      className="h-10 w-10 rounded-full bg-white dark:bg-white"
                     />
-                  </span>
+                    <span
+                      className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center overflow-hidden rounded-full ring-2 ring-card"
+                      style={{ backgroundColor: account?.color || "#4ECDC4" }}
+                      title={account?.nombre ?? "Cuenta"}
+                    >
+                      <BankAvatar account={account} size="sm" className="h-full w-full" />
+                    </span>
+                  </>
+                ) : (
+                  <BankAvatar account={account} />
                 )}
               </div>
             </AccountTooltip>
@@ -267,7 +274,7 @@ export const TransactionListRow = memo(function TransactionListRow({
                   {movement.contacto && (
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                        "hidden sm:inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
                         CONTACTO_TIPO_INFO[movement.contacto.tipo].bgClass,
                         CONTACTO_TIPO_INFO[movement.contacto.tipo].textClass,
                         CONTACTO_TIPO_INFO[movement.contacto.tipo].borderClass,

@@ -152,7 +152,7 @@ attached to a movement, or **emailed** to
 `facturas+<alias>@movimientoconsolacion.com` — and all three end up in the same
 place, read by the same code (`plans/022`, `docs/FACTURAS_EMAIL_IA.md`).
 
-- **Address → delegation**: `delegacion.alias_email` (`scripts/065`). The parser
+- **Address → delegation**: `delegacion.alias_email` (`scripts/066`). The parser
   accepts `facturas+alias@`, `facturas-alias@` and `alias@facturas.…`, and also
   reads forwarding headers, because a forwarded mail only keeps the original
   recipient there. Falls back to `codigo`.

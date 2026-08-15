@@ -16,7 +16,7 @@ Sin configurar nada, la app sigue funcionando exactamente igual que hasta ahora.
 
 ## 1. Base de datos
 
-`scripts/065_facturas_email_ia.sql` — **aplicada el 14-08-2026**. Añadió
+`scripts/066_facturas_email_ia.sql` — **aplicada el 14-08-2026**. Añadió
 `delegacion.alias_email`, `factura.categoria_id` y la tabla `factura_email`.
 
 Los alias se sembraron a partir del nombre y salieron los esperados: `castellon`,

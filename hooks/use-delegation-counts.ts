@@ -27,7 +27,7 @@ async function fetchCounts(
   organizacionId: string | null,
   signal: AbortSignal,
 ): Promise<DelegationCounts> {
-  const [movimientosRes, cuentasRes, categoriasRes, contactosRes, pagosMcmRes, facturasRes] =
+  const [movimientosRes, cuentasRes, categoriasRes, contactosPropiosRes, contactosAdoptadosRes, pagosMcmRes, facturasRes] =
     await Promise.all([
       supabase
         .from("movimiento")
@@ -47,10 +47,21 @@ async function fetchCounts(
             .eq("organizacion_id", organizacionId)
             .abortSignal(signal)
         : Promise.resolve({ count: null, error: null }),
+      // Los contactos propios de la delegación (personas y destinatarios).
       supabase
         .from("contacto")
         .select("id", { head: true, count: "exact" })
-        .or(`delegacion_id.eq.${delegationId},es_global.is.true`)
+        .eq("delegacion_id", delegationId)
+        .eq("es_global", false)
+        .eq("archivado", false)
+        .abortSignal(signal),
+      // Y los compartidos que ESTA delegación usa. Contar todos los globales,
+      // como se hacía antes, daba el mismo número en las 18 delegaciones en
+      // cuanto los proveedores pasaron a ser de todo MCM.
+      supabase
+        .from("contacto_delegacion")
+        .select("contacto_id", { head: true, count: "exact" })
+        .eq("delegacion_id", delegationId)
         .eq("archivado", false)
         .abortSignal(signal),
       supabase
@@ -71,7 +82,8 @@ async function fetchCounts(
     movimientosRes.error,
     cuentasRes.error,
     organizacionId ? categoriasRes.error : null,
-    contactosRes.error,
+    contactosPropiosRes.error,
+    contactosAdoptadosRes.error,
     pagosMcmRes.error,
     facturasRes.error,
   ].filter(Boolean)
@@ -84,7 +96,10 @@ async function fetchCounts(
     movimientos: movimientosRes.error ? null : (movimientosRes.count ?? 0),
     cuentas: cuentasRes.error ? null : (cuentasRes.count ?? 0),
     categorias: organizacionId === null ? null : categoriasRes.error ? null : (categoriasRes.count ?? 0),
-    contactos: contactosRes.error ? null : (contactosRes.count ?? 0),
+    contactos:
+      contactosPropiosRes.error || contactosAdoptadosRes.error
+        ? null
+        : (contactosPropiosRes.count ?? 0) + (contactosAdoptadosRes.count ?? 0),
     pagosMcmPendientes: pagosMcmRes.error ? null : (pagosMcmRes.count ?? 0),
     facturasBandeja: facturasRes.error ? null : (facturasRes.count ?? 0),
   }

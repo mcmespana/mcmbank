@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import { ArrowUpRight, ExternalLink, Loader2, SearchX } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,16 @@ import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { CONTACTO_TIPO_DEFAULT_EMOJIS } from "@/lib/utils/contacto-tipos"
 import type { ContactoConCategoriaPredeterminada, MovimientoConRelaciones } from "@/lib/types/database"
 import { nombreEfectivoContacto } from "@/lib/types/database"
+import { useCuentas } from "@/hooks/use-cuentas"
+import { useCategorias } from "@/hooks/use-categorias"
+import type { Cuenta, Categoria } from "@/lib/types/database"
+
+// El detalle arrastra medio Movimientos (adjuntos, facturas, historial); que no
+// entre en el bundle de Contactos hasta que alguien abre un movimiento.
+const TransactionDetail = dynamic(
+  () => import("@/components/transactions/transaction-detail").then((m) => m.TransactionDetail),
+  { ssr: false },
+)
 
 interface ProveedorMovimientosSheetProps {
   contacto: ContactoConCategoriaPredeterminada | null
@@ -43,6 +54,13 @@ export function ProveedorMovimientosSheet({
   const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // El movimiento cuyo detalle se está mirando. Se abre encima de esta lista y
+  // `onBack` devuelve aquí, que es lo que hace que ir y volver sea un gesto.
+  const [detalle, setDetalle] = useState<MovimientoConRelaciones | null>(null)
+
+  const { cuentas } = useCuentas(delegacionId)
+  // Ojo con el nombre: la prop `categorias` son los ids del filtro, no las fichas.
+  const { categorias: fichasCategorias } = useCategorias(delegacionId)
 
   const categoriasClave = (categorias ?? []).slice().sort().join(",")
   const contactoId = contacto?.id ?? null
@@ -151,7 +169,16 @@ export function ProveedorMovimientosSheet({
               movimientos.map((movimiento) => (
                 <div
                   key={movimiento.id}
-                  className="group flex items-center gap-3 rounded-lg border border-border/50 bg-card p-3 transition-colors hover:border-border hover:bg-muted/40"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setDetalle(movimiento)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault()
+                      setDetalle(movimiento)
+                    }
+                  }}
+                  className="group flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-card p-3 transition-colors hover:border-border hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium leading-tight">{movimiento.concepto}</p>
@@ -190,6 +217,7 @@ export function ProveedorMovimientosSheet({
                       href={`/transacciones?mov=${movimiento.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
                       title="Abrir este movimiento en una ventana nueva"
                     >
                       <ArrowUpRight className="h-4 w-4" />
@@ -202,6 +230,24 @@ export function ProveedorMovimientosSheet({
           </div>
         </ScrollArea>
       </SheetContent>
+
+      {/* Sin capa propia: se abre sobre este panel, que ya oscurece el fondo. */}
+      <TransactionDetail
+        movement={detalle}
+        accounts={cuentas as unknown as Cuenta[]}
+        categories={fichasCategorias as unknown as Categoria[]}
+        open={Boolean(detalle)}
+        onOpenChange={(abierto) => !abierto && setDetalle(null)}
+        onBack={() => setDetalle(null)}
+        onUpdate={async (movimientoId, patch) => {
+          await DatabaseService.updateMovimiento(movimientoId, patch)
+          // Se refleja en la lista de detrás sin volver a pedirla al servidor.
+          setMovimientos((prev) =>
+            prev.map((m) => (m.id === movimientoId ? { ...m, ...(patch as Partial<MovimientoConRelaciones>) } : m)),
+          )
+          setDetalle((prev) => (prev && prev.id === movimientoId ? { ...prev, ...(patch as Partial<MovimientoConRelaciones>) } : prev))
+        }}
+      />
     </Sheet>
   )
 }

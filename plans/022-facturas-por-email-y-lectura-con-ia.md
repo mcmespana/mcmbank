@@ -151,7 +151,7 @@ Un buzón abierto es una entrada de datos no autenticada, y el PDF que llega es
 
 ## Plan de ejecución
 
-### Fase 1 — `scripts/065_facturas_email_ia.sql`
+### Fase 1 — `scripts/066_facturas_email_ia.sql`
 
 - `delegacion.alias_email TEXT` + índice único parcial; sembrado por slug del
   nombre (sin acentos, sin el prefijo `MCM`, `[a-z0-9-]`), con overrides

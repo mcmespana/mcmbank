@@ -333,6 +333,139 @@ function textoPlano(email: EmailCompleto): string | null {
   )
 }
 
+/** Adjuntos que vale la pena descargar: MIME en la lista blanca, no una imagen diminuta, no demasiado grandes. */
+function adjuntosDescargables(adjuntos: AdjuntoResend[]): AdjuntoResend[] {
+  return adjuntos
+    .filter((a) => MIME_ACEPTADOS.includes(String(a.content_type).toLowerCase()))
+    .filter(
+      (a) =>
+        !String(a.content_type).toLowerCase().startsWith("image/") ||
+        (a.size ?? MIN_BYTES_IMAGEN) >= MIN_BYTES_IMAGEN,
+    )
+    .filter((a) => (a.size ?? 0) <= MAX_BYTES_ADJUNTO_EMAIL)
+    .slice(0, MAX_ADJUNTOS_POR_CORREO)
+}
+
+// ---------------------------------------------------------------------------
+// Aviso a la oficina técnica cuando no se sabe la delegación
+// ---------------------------------------------------------------------------
+
+/** A quién se avisa. Configurable porque el destino puede cambiar; con un valor por defecto para que funcione sin tocar nada. */
+const EMAIL_SIN_DELEGACION_POR_DEFECTO = "ajmcm@movimientoconsolacion.com"
+const REMITENTE_NOTIFICACION = "MCM Bank <no-reply@movimientoconsolacion.com>"
+
+function escapeHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+/**
+ * El HTML del aviso. Es una función pura (sin red) a propósito, para poder
+ * comprobar en un test que lleva el remitente y la guía de alias, sin tener
+ * que simular una llamada a Resend.
+ */
+export function renderNotificacionSinDelegacion(datos: {
+  remitente: string | null
+  asunto: string | null
+  buzon: string
+}): string {
+  const remitente = escapeHtml(datos.remitente || "un remitente desconocido")
+  const asunto = datos.asunto ? escapeHtml(datos.asunto) : null
+
+  return `<!doctype html>
+<html lang="es">
+  <body style="margin:0;padding:32px 16px;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111827;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
+      <tr>
+        <td style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:28px;">
+          <p style="margin:0 0 18px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#b45309;">
+            Factura sin delegación
+          </p>
+          <p style="margin:0 0 16px;font-size:17px;line-height:1.6;color:#111827;">
+            Alguien ha enviado una factura a <strong>${datos.buzon}</strong> sin indicar la delegación.
+          </p>
+          <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#374151;">
+            El parguelilla en cuestión es: <strong>${remitente}</strong>${
+              asunto ? `<br />Asunto: <em>${asunto}</em>` : ""
+            }
+          </p>
+          <p style="margin:0 0 4px;font-size:15px;line-height:1.65;color:#111827;">
+            Por favor, estimado, queridísimo y tremendamente bello equipo técnico: reenviadla a la
+            delegación que corresponda —
+            <code style="background:#f3f4f6;border-radius:4px;padding:1px 5px;">facturas+castellon@</code>,
+            <code style="background:#f3f4f6;border-radius:4px;padding:1px 5px;">facturas+villacanas@</code>…
+            o <code style="background:#f3f4f6;border-radius:4px;padding:1px 5px;">facturas+aj@</code> si es
+            de Holded — para que no se quede huérfana.
+          </p>
+          <p style="margin:20px 0 0;font-size:13px;color:#6b7280;">
+            Adjunto va lo que mandó, por si ayuda a identificar de qué delegación es.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px 4px 0;text-align:center;font-size:12px;color:#9ca3af;">
+          Buzón de facturas de MCM Bank · no respondas a este correo
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`
+}
+
+/**
+ * Avisa a la oficina técnica de que ha llegado una factura sin delegación
+ * reconocible, con el documento adjunto para que puedan identificarla sin
+ * tener que ir a rebuscar en el buzón.
+ *
+ * Best-effort a propósito: si Resend no está configurado o falla, se registra
+ * un aviso en consola y se sigue — no tiene sentido que la fila quede como
+ * `error` (lo importante, que es dejar constancia del correo, ya se ha hecho)
+ * solo porque no se pudo avisar por email.
+ */
+async function notificarSinDelegacion(
+  evento: EventoEmailRecibido,
+  adjuntos: { filename: string; contenido: Buffer; mime: string }[],
+): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.warn("No se pudo avisar de la factura sin delegación: falta RESEND_API_KEY.")
+    return
+  }
+  const destino = process.env.FACTURAS_SIN_DELEGACION_EMAIL?.trim() || EMAIL_SIN_DELEGACION_POR_DEFECTO
+  const buzon = process.env.NEXT_PUBLIC_FACTURAS_EMAIL?.trim() || "facturas@movimientoconsolacion.com"
+
+  try {
+    const respuesta = await fetch(`${RESEND_API}/emails`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: REMITENTE_NOTIFICACION,
+        to: [destino],
+        subject: "[MCM Bank] Factura sin delegación detectada",
+        html: renderNotificacionSinDelegacion({
+          remitente: evento.remitente,
+          asunto: evento.asunto,
+          buzon,
+        }),
+        attachments: adjuntos.map((a) => ({
+          filename: a.filename,
+          content: a.contenido.toString("base64"),
+          content_type: a.mime,
+        })),
+      }),
+    })
+    if (!respuesta.ok) {
+      console.warn("Resend rechazó la notificación de factura sin delegación:", await respuesta.text())
+    }
+  } catch (err) {
+    console.warn("No se pudo enviar la notificación de factura sin delegación:", (err as any)?.message ?? err)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Procesado
 // ---------------------------------------------------------------------------
@@ -414,6 +547,26 @@ export async function procesarCorreoEntrante(
         }`,
         cuerpo_extracto: extracto,
       })
+
+      // Aquí no hay factura ni delegación a la que colgar el archivo, así que
+      // se descarga solo para adjuntarlo al aviso: es la única copia que va a
+      // quedar de lo que mandaron.
+      const adjuntosCrudos = await listarAdjuntos(evento.emailId).catch(() => [] as AdjuntoResend[])
+      const adjuntosParaAvisar: { filename: string; contenido: Buffer; mime: string }[] = []
+      for (const adjunto of adjuntosDescargables(adjuntosCrudos)) {
+        try {
+          const contenido = await descargarAdjunto(evento.emailId, adjunto)
+          adjuntosParaAvisar.push({
+            filename: adjunto.filename || "adjunto",
+            contenido,
+            mime: adjunto.content_type,
+          })
+        } catch (err) {
+          console.warn(`No se pudo descargar '${adjunto.filename}' para el aviso:`, (err as any)?.message ?? err)
+        }
+      }
+      await notificarSinDelegacion(evento, adjuntosParaAvisar)
+
       return {
         estado: "sin_delegacion",
         delegacionId: null,
@@ -430,15 +583,7 @@ export async function procesarCorreoEntrante(
       return [] as AdjuntoResend[]
     })
 
-    const utiles = adjuntos
-      .filter((a) => MIME_ACEPTADOS.includes(String(a.content_type).toLowerCase()))
-      .filter(
-        (a) =>
-          !String(a.content_type).toLowerCase().startsWith("image/") ||
-          (a.size ?? MIN_BYTES_IMAGEN) >= MIN_BYTES_IMAGEN,
-      )
-      .filter((a) => (a.size ?? 0) <= MAX_BYTES_ADJUNTO_EMAIL)
-      .slice(0, MAX_ADJUNTOS_POR_CORREO)
+    const utiles = adjuntosDescargables(adjuntos)
 
     const creadas: string[] = []
     const problemas: string[] = []

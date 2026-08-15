@@ -133,8 +133,17 @@ FROM factura_email ORDER BY creado_en DESC LIMIT 10;
 |---|---|
 | `procesado` | Bien: hay facturas nuevas en la bandeja |
 | `sin_adjuntos` | Llegó sin archivos legibles; se guardó el texto |
-| `sin_delegacion` | La dirección no casa con ningún alias (mira `destinatarios`) |
+| `sin_delegacion` | La dirección no casa con ningún alias (mira `destinatarios`); se avisa por correo, ver abajo |
 | `error` | Fallo al descargar o guardar; el motivo está en `error` |
+
+### Aviso automático de "sin delegación"
+
+Cuando llega algo a `facturas@` sin ninguna etiqueta `+alias` reconocible, además
+de quedar registrado en `factura_email`, se manda un correo con el documento
+adjunto a quien esté en `FACTURAS_SIN_DELEGACION_EMAIL` (por defecto,
+`ajmcm@movimientoconsolacion.com`), para que se reenvíe a mano a la delegación
+que toque. Es best-effort: si falla el envío (o no hay `RESEND_API_KEY`), el
+correo entrante ya ha quedado registrado igualmente, solo se pierde el aviso.
 
 ## 5. Reglas que conviene conocer
 

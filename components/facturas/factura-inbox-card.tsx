@@ -2,7 +2,6 @@
 
 import { FileText, Loader2, Sparkles, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ActionMenu } from "@/components/ui/action-menu"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { leerDatosIa } from "@/lib/types/factura-ia"
@@ -43,12 +42,19 @@ export function FacturaInboxCard({ factura, canEdit, onOpenDetail, onDelete }: F
       className="group relative flex cursor-pointer flex-col gap-2 rounded-lg border border-border/50 bg-card p-2 shadow-sm transition-[background-color,border-color,box-shadow] duration-150 hover:bg-muted/50 hover:border-border hover:shadow-md"
     >
       {canEdit && (
-        <div className="absolute right-1.5 top-1.5 z-10" onClick={(e) => e.stopPropagation()}>
-          <ActionMenu
-            ariaLabel={`Más acciones de ${nombre}`}
-            items={[{ label: "Eliminar", icon: Trash2, destructive: true, onSelect: onDelete }]}
-          />
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={`Eliminar ${nombre}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          className="absolute right-1.5 top-1.5 z-10 h-8 w-8 rounded-full bg-background/90 text-muted-foreground shadow-sm hover:bg-destructive/10 hover:text-destructive"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
       )}
 
       {archivo ? (

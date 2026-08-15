@@ -1,6 +1,11 @@
 import { createHmac } from "node:crypto"
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { aliasesDeDestinatarios, parsearEventoResend, verificarFirmaResend } from "./facturas-email"
+import {
+  aliasesDeDestinatarios,
+  parsearEventoResend,
+  renderNotificacionSinDelegacion,
+  verificarFirmaResend,
+} from "./facturas-email"
 
 /**
  * El buzón de facturas es la única entrada no autenticada de la app, así que
@@ -164,5 +169,29 @@ describe("parsearEventoResend", () => {
   it("ignora otros eventos", () => {
     expect(parsearEventoResend({ type: "email.delivered", data: { email_id: "em_1" } })).toBeNull()
     expect(parsearEventoResend({ type: "email.received", data: {} })).toBeNull()
+  })
+})
+
+describe("renderNotificacionSinDelegacion", () => {
+  it("incluye el remitente, el asunto y la guía de alias, y escapa el HTML", () => {
+    const html = renderNotificacionSinDelegacion({
+      remitente: "Proveedor <malo@ejemplo.es>",
+      asunto: "Factura <script>alert(1)</script>",
+      buzon: "facturas@movimientoconsolacion.com",
+    })
+    expect(html).toContain("Proveedor &lt;malo@ejemplo.es&gt;")
+    expect(html).toContain("&lt;script&gt;")
+    expect(html).not.toContain("<script>alert(1)</script>")
+    expect(html).toContain("facturas@movimientoconsolacion.com")
+    expect(html).toContain("facturas+aj@")
+  })
+
+  it("no revienta sin remitente ni asunto", () => {
+    const html = renderNotificacionSinDelegacion({
+      remitente: null,
+      asunto: null,
+      buzon: "facturas@movimientoconsolacion.com",
+    })
+    expect(html).toContain("un remitente desconocido")
   })
 })

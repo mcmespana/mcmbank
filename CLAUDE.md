@@ -570,6 +570,69 @@ Transactions are the core data type. Key fields:
 
 Import flow uses Excel/CSV parsing (`lib/utils/export-to-excel.ts`) with guided column mapping UI (`components/transactions/transaction-import-panel.tsx`).
 
+### Excel: `@e965/xlsx`, not `xlsx`
+
+SheetJS stopped publishing to npm at 0.18.5, and that version carries the
+prototype-pollution and ReDoS advisories fixed in 0.19.3/0.20.2. `@e965/xlsx` is
+the same 0.20.3 the project used to pull from `cdn.sheetjs.com`, but from the
+registry: integrity hash in the lockfile, and the build no longer depends on a
+CDN being up. **Going back to plain `xlsx` is a downgrade into known CVEs.**
+
+### Acciones en lote
+
+Todo lo que actúa sobre la selección pasa por `ejecutarEnLote()`
+(`transaction-manager.tsx`): tandas de diez con barra de progreso. No es un
+detalle estético — con `Promise.all` de golpe no hay nada intermedio que contar,
+y con doscientos seleccionados la barra se quedaba muda varios segundos sin que
+se supiera si iba o se había colgado.
+
+**Cambiar de filtro vacía la selección entera** y avisa. Podarla contra los
+movimientos ya cargados descartaba en silencio lo seleccionado en páginas que
+aún no habían llegado.
+
+**"Falta factura" se apaga solo.** `factura_pendiente` es una marca manual, pero
+en cuanto se vincula una factura deja de ser cierta. Lo apaga un trigger
+(`scripts/068`), no la web, porque hay cuatro caminos que vinculan una factura:
+la pantalla, la API externa, el MCP y el correo entrante. Solo apaga, nunca
+enciende: que un movimiento necesite factura es un juicio de quien lleva las
+cuentas.
+
+**El borrado en lote se puede deshacer** durante 12 segundos. `deleteMovimientos()`
+lee las filas antes de borrarlas y `restoreMovimientos()` las reinserta **con su
+id original**, así que lo que vuelve es el movimiento y no una copia. Los
+adjuntos no vuelven (`movimiento_archivo` cae por cascada y los ficheros de
+Storage se borran aparte), y el toast lo dice.
+
+### Errores: `describirError()`
+
+`lib/utils/describir-error.ts` enseña lo que trae el error de verdad — `message`,
+`details`, `hint` y código de Postgres — asumiendo que sale feo. Un texto feo que
+se puede copiar en un mensaje vale más que un "Error al guardar" que no dice
+nada y deja el detalle en la consola de otra persona. Ojo: los errores de
+PostgREST **no son `Error`**, son objetos planos, así que `instanceof Error` no
+sirve para leerlos.
+
+## PWA
+
+La app es instalable: `public/site.webmanifest` (con iconos `any` **y**
+`maskable` — con solo `maskable` Android no tiene icono plano que usar y lo
+recorta mal), `public/sw.js` y `components/service-worker-register.tsx`, que
+registra el worker tras la carga y **solo en producción** (en `dev` interfiere
+con la recarga en caliente).
+
+El service worker existe por dos motivos, y ninguno es funcionar sin conexión:
+Chrome no ofrece instalar sin un `fetch` handler, y abrir la app sin cobertura
+enseñaba el dinosaurio del navegador, que sin barra de direcciones parece que la
+app está rota (`public/offline.html`).
+
+**No cachea ni una sola respuesta de datos, a propósito.** Esto es tesorería: un
+saldo de hace dos horas servido como si fuera de ahora es peor que un error de
+red, porque nadie lo nota. Solo guarda la página de sin conexión y
+`/_next/static/`, que lleva hash en la URL y por tanto no puede quedarse
+obsoleto. `/sw.js` se sirve con `Cache-Control: max-age=0` desde
+`next.config.mjs`: un service worker cacheado se queda para siempre y no hay
+forma de desplegar un cambio.
+
 ## Common Workflows
 
 ### Adding a New Page
@@ -601,9 +664,9 @@ This returns `CategoriaConOrdenEfectivo[]` with proper ordering and visibility.
 
 ## Documentation
 
-- **User manual**: `docs/README.md` and numbered chapters (`docs/01-acceso.md` through `docs/14-avisos-tareas.md`, see `docs/SUMMARY.md` for the full index)
+- **User manual**: `docs/manual/` (index in `docs/manual/SUMMARY.md`, which is what GitBook publishes). `docs/README.md` is the index of the whole `docs/` folder — manual on one side, technical notes on the other
 - **Pending work (single backlog)**: `docs/ANALISIS_MEJORAS.md` — lo que queda por hacer, sin numerar y ordenado por prioridad. Al terminar algo se **borra** de ahí, no se marca
-- **Technical docs**: `docs/SUMMARY.md`, `docs/NEXTJS_16_UPGRADE.md`
+- **Technical docs**: listed in `docs/README.md` (`ENABLE_BANKING.md`, `FACTURAS_EMAIL_IA.md`, `NEXTJS_16_UPGRADE.md`…)
 - **History (frozen, don't add to)**: `docs/ARCHIVO_MEJORAS.md` (análisis 2026 completo con su numeración original) y `docs/OPTIMIZACIONES_REALIZADAS.md` (rendimiento)
 - **Agent guidelines**: `AGENTS.md` for contributor coding conventions (in Spanish)
 - **README**: `README.md` for setup and quick start (in Spanish)

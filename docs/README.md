@@ -1,91 +1,55 @@
-# 0. Manual de MCM Bank
+# Documentación de MCM Bank
 
-Bienvenido 👋. Aquí encontrarás cómo aprovechar al máximo la aplicación que usamos en las Delegaciones Locales del Movimiento Consolación para el Mundo para llevar la economía.
+Esto es el índice de la carpeta `docs/`. Hay dos cosas distintas aquí y conviene
+no mezclarlas: **el manual**, que se escribe para quien lleva la tesorería de una
+delegación, y **las notas técnicas**, que se escriben para quien toca el código.
 
-{% hint style="success" %}
-**Todo en la nube, sin tocar la banca online.** Tus datos se guardan de forma segura en Supabase. MCM Bank solo lee movimientos de tu banco cuando tú (o tu delegación) lo autoriza expresamente.
-{% endhint %}
+## Manual de usuario
 
-## Qué puedes hacer con MCM Bank
+Vive entero en [`manual/`](manual/README.md), con su propio índice en
+`manual/SUMMARY.md` (es lo que publica GitBook). Empieza por ahí si buscas cómo
+se usa la aplicación.
 
-- 💶 Registrar ingresos y gastos, a mano o importados del banco.
-- 🔄 Conectar cuentas del banco para que los movimientos entren solos cada noche (Enable Banking).
-- 🏷️ Clasificar todo con categorías comunes a nivel nacional y propias de tu delegación.
-- 🧾 Guardar facturas y conciliarlas con su movimiento bancario.
-- 🤝 Llevar un registro de contactos (proveedores, socios, destinatarios) reutilizable en toda la app.
-- 💸 Anotar los pagos internos pendientes (reembolsos, ayudas) hasta que se transfieren.
-- 📊 Generar la memoria económica del curso en unos pocos pasos, directamente en Google Sheets.
-- 📈 Analizar el balance y el gasto por categoría desde el Panel de Control.
-- 💡 Proponer ideas y reportar errores para seguir mejorando la aplicación entre todos.
+| | |
+|---|---|
+| [1. Acceso](manual/1.-acceso.md) | Entrar, contraseña, perfil |
+| [2. MCM Locales](manual/2.-mcm-locales.md) | Qué es una delegación y cómo se cambia de una a otra |
+| [3. Categorías](manual/3.-categorias.md) | Actividades y categorías, globales y propias |
+| [4. Cuentas](manual/4.-cuentas/README.md) | Bancos y cajas, y la [sincronización automática](manual/4.-cuentas/actualizacion-automatica-de-movimientos.md) |
+| [5. Movimientos](manual/5.-movimientos.md) | El día a día: registrar, importar, filtrar, editar en lote |
+| [6. Panel de control](manual/6.-dashboard.md) | Resumen, balance y análisis |
+| [7. Contactos](manual/7.-contactos.md) | Proveedores, personas y destinatarios |
+| [8. Facturas](manual/8.-facturas.md) | Bandeja, buzón de email, lectura con IA y conciliación |
+| [9. Pagos MCM](manual/9.-pagos-mcm.md) | Pagos internos pendientes |
+| [10. Informes anuales](manual/10.-informes-anuales.md) | La memoria económica del curso |
+| [11. Avisos y tareas](manual/11.-avisos-y-tareas.md) | Notas entre la oficina técnica y las delegaciones |
+| [20. Configuración](manual/20.-configuracion-solo-administradores.md) | Solo administradores |
+| [21. API externa](manual/21.-api-externa-solo-pros.md) · [22. Servidor MCP](manual/22.-servidor-mcp.md) | Integraciones |
 
-## Cómo está organizado este manual
+## Trabajo pendiente
 
-### Primeros pasos
+- [**ANALISIS_MEJORAS.md**](ANALISIS_MEJORAS.md) — la lista única de lo que
+  queda por hacer. Sin numerar, ordenada por prioridad. **Al terminar algo se
+  borra de ahí**, no se marca.
+- [ARCHIVO_MEJORAS.md](ARCHIVO_MEJORAS.md) — el análisis de 2026 completo, con
+  su numeración original. **Congelado**: se conserva porque explica por qué se
+  hizo cada cosa y contra qué se verificó. No añadas nada aquí.
+- [OPTIMIZACIONES_REALIZADAS.md](OPTIMIZACIONES_REALIZADAS.md) — registro
+  histórico de las optimizaciones de rendimiento. También congelado.
 
-{% content-ref url="01-acceso.md" %}
-[01-acceso.md](01-acceso.md)
-{% endcontent-ref %}
+## Notas técnicas
 
-{% content-ref url="02-delegaciones.md" %}
-[02-delegaciones.md](02-delegaciones.md)
-{% endcontent-ref %}
+Cada una explica una pieza que no cabía en `CLAUDE.md`.
 
-### El día a día
+| | |
+|---|---|
+| [ENABLE_BANKING.md](ENABLE_BANKING.md) | La sincronización con los bancos: consentimientos PSD2, cron nocturno |
+| [FACTURAS_EMAIL_IA.md](FACTURAS_EMAIL_IA.md) | El buzón de facturas por delegación y la lectura con Gemini |
+| [DESIGN_AUTO_CATEGORIZACION.md](DESIGN_AUTO_CATEGORIZACION.md) | Diseño de la auto-categorización (todavía sin construir) |
+| [API_PRUEBA_RAPIDA.md](API_PRUEBA_RAPIDA.md) | Cómo probar la API externa en dos minutos |
+| [CONFIG_GOOGLE_DRIVE.md](CONFIG_GOOGLE_DRIVE.md) | La cuenta de servicio que genera la memoria en Sheets |
+| [NEXTJS_16_UPGRADE.md](NEXTJS_16_UPGRADE.md) | Qué cambió al subir a Next 16 |
+| [TAB_SWITCH_HANG_FIX.md](TAB_SWITCH_HANG_FIX.md) | Por qué la app se colgaba al volver a la pestaña |
 
-{% content-ref url="03-categorias.md" %}
-[03-categorias.md](03-categorias.md)
-{% endcontent-ref %}
-
-{% content-ref url="04-cuentas.md" %}
-[04-cuentas.md](04-cuentas.md)
-{% endcontent-ref %}
-
-{% content-ref url="05-contactos.md" %}
-[05-contactos.md](05-contactos.md)
-{% endcontent-ref %}
-
-{% content-ref url="06-movimientos.md" %}
-[06-movimientos.md](06-movimientos.md)
-{% endcontent-ref %}
-
-{% content-ref url="07-facturas.md" %}
-[07-facturas.md](07-facturas.md)
-{% endcontent-ref %}
-
-{% content-ref url="08-pagos-mcm.md" %}
-[08-pagos-mcm.md](08-pagos-mcm.md)
-{% endcontent-ref %}
-
-### Mirar atrás y hacia delante
-
-{% content-ref url="09-informes.md" %}
-[09-informes.md](09-informes.md)
-{% endcontent-ref %}
-
-{% content-ref url="10-dashboard.md" %}
-[10-dashboard.md](10-dashboard.md)
-{% endcontent-ref %}
-
-{% content-ref url="11-propuestas.md" %}
-[11-propuestas.md](11-propuestas.md)
-{% endcontent-ref %}
-
-### Administración y equipo técnico
-
-{% content-ref url="12-configuracion.md" %}
-[12-configuracion.md](12-configuracion.md)
-{% endcontent-ref %}
-
-{% content-ref url="13-api-externa.md" %}
-[13-api-externa.md](13-api-externa.md)
-{% endcontent-ref %}
-
-## Cómo leer este manual
-
-- 📸 Cuando veas este icono, es el hueco reservado para una captura de pantalla real.
-- Los recuadros de color son avisos: 🔵 información, 🟢 buenas prácticas, 🟠 hay que prestar atención, 🔴 puede tener consecuencias importantes.
-- 🔐 marca algo restringido a ciertos roles (por ejemplo, **Gestor Central**, **Tesorería** o administración).
-
-{% hint style="info" %}
-¿Falta algo o algo no cuadra con lo que ves en la app? Cuéntalo desde **Propuestas** (capítulo 11) — así lo revisamos y actualizamos el manual.
-{% endhint %}
+Las convenciones de arquitectura y las reglas que un cambio no debe romper están
+en [`CLAUDE.md`](../CLAUDE.md), en la raíz del repositorio.

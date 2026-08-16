@@ -123,7 +123,7 @@ export const TransactionListRow = memo(function TransactionListRow({
     <div className="relative" data-testid="transaction-row">
       <div
         className={cn(
-          "bg-card rounded-lg border border-border/50 p-3 hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-150 cursor-pointer shadow-sm hover:shadow-md",
+          "bg-card rounded-lg border border-border/50 p-2 sm:p-3 hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-150 cursor-pointer shadow-sm hover:shadow-md",
           !category && "border-l-4 border-l-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10",
           isSelected && "border-primary/60 bg-primary/5 ring-1 ring-primary/40 hover:bg-primary/10",
         )}
@@ -131,7 +131,7 @@ export const TransactionListRow = memo(function TransactionListRow({
         data-account-id={movement.cuenta_id}
         data-delegation-id={account?.delegacion_id}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2 sm:gap-3">
           <div className="relative flex-shrink-0 group" data-testid="transaction-selection">
             <AccountTooltip account={account}>
               <div
@@ -225,7 +225,7 @@ export const TransactionListRow = memo(function TransactionListRow({
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2 sm:gap-3">
               <div className="flex-1 min-w-0">
                 {editing ? (
                   <Input
@@ -241,9 +241,12 @@ export const TransactionListRow = memo(function TransactionListRow({
                     autoFocus
                   />
                 ) : (
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                    {/* En móvil el concepto baja un punto: es texto de banco en
+                        mayúsculas, y un punto menos deja entrar varios
+                        caracteres más antes del recorte. */}
                     <h3
-                      className="font-semibold text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors flex-1"
+                      className="font-semibold text-[13px] sm:text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors flex-1 min-w-0"
                       onClick={handleConceptClick}
                     >
                       {movement.concepto}
@@ -300,19 +303,19 @@ export const TransactionListRow = memo(function TransactionListRow({
                 </div>
               </div>
 
-              <div className="flex-shrink-0 flex items-start gap-2 min-w-0">
+              <div className="flex-shrink-0 flex items-start gap-0.5 sm:gap-2 min-w-0">
                 <div className="text-right">
                   <div className="mb-0.5">
                     <AmountDisplay amount={movement.importe} size="sm" />
                   </div>
-                  <div className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-md whitespace-nowrap inline-block">
+                  <div className="text-xs text-muted-foreground bg-muted/30 px-1.5 sm:px-2 py-0.5 rounded-md whitespace-nowrap inline-block">
                     {formatDate(movement.fecha)}
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-7 w-7 sm:h-8 sm:w-8"
                   onClick={(e) => {
                     e.stopPropagation()
                     onClick(movement, e)

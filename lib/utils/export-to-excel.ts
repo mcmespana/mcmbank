@@ -7,7 +7,13 @@ export async function exportMovementsToExcel(
   categories: Categoria[],
 ) {
   try {
-    const XLSX = await import("xlsx")
+    // `@e965/xlsx` y no `xlsx`: SheetJS dejó de publicar en npm en la 0.18.5, y
+    // esa versión arrastra los CVE de prototype pollution y ReDoS que se
+    // arreglaron en la 0.19.3/0.20.2. Este paquete es el mismo 0.20.3 que se
+    // instalaba desde `cdn.sheetjs.com`, pero desde el registro: con hash de
+    // integridad en el lockfile y sin depender de que el CDN esté vivo al
+    // compilar. Volver a `xlsx` a secas sería bajar a una versión vulnerable.
+    const XLSX = await import("@e965/xlsx")
 
     const data = movements.map((m) => ({
       Fecha: formatDate(m.fecha),

@@ -62,6 +62,16 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // El service worker no se cachea nunca: si el navegador se queda con
+        // una copia vieja de /sw.js, se queda con ella para siempre y no hay
+        // forma de desplegar un cambio. Es la trampa clásica de los PWA.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
     ]
   },
 }

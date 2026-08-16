@@ -17,11 +17,18 @@ export const isSupabaseConfigured =
 const protectedRoutes = [
   "/transacciones", "/categorias", "/cuentas", "/delegaciones",
   "/movimientos", "/contactos", "/pagos-mcm", "/facturas",
-  "/configuracion", "/propuestas",
+  "/configuracion", "/propuestas", "/informes",
 ]
 
+// El dashboard va aparte porque con `startsWith` un "/" en la lista de arriba
+// protegería la aplicación entera, incluidas `/auth/*` y las rutas públicas, y
+// el redirect a login se comería a sí mismo.
+const isDashboardRoute = (pathname: string) => pathname === "/" || pathname === ""
+
 export async function updateSession(request: NextRequest) {
-  const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
+  const isProtectedRoute =
+    isDashboardRoute(request.nextUrl.pathname) ||
+    protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
 
   // If Supabase is not configured, fail closed on protected routes (a
   // misconfigured deployment must not silently let requests through

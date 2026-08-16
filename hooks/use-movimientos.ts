@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { supabase } from "@/lib/supabase/client"
-import type { MovimientoConRelaciones } from "@/lib/types/database"
+import type { Movimiento, MovimientoConRelaciones } from "@/lib/types/database"
 import { useRevalidateOnFocusJitter } from "./use-app-status"
 import { registerAC, unregisterAC } from "@/lib/db/in-flight"
 import { applyAbsoluteAmountFilter } from "@/lib/db/amount-filter"
@@ -492,19 +492,50 @@ export function useMovimientos(
     }
   }
 
-  const deleteMovimientos = async (movimientoIds: string[]) => {
-    if (movimientoIds.length === 0) return
+  /**
+   * Borra movimientos y devuelve las filas tal cual estaban.
+   *
+   * Se leen **antes** de borrar precisamente para poder deshacer: un borrado en
+   * lote es la acción más destructiva de la aplicación y hasta ahora no tenía
+   * vuelta atrás ninguna. Con las filas en la mano, `restoreMovimientos()` las
+   * vuelve a insertar con su mismo `id`, así que lo que se recupera es el
+   * movimiento original y no una copia nueva.
+   */
+  const deleteMovimientos = async (movimientoIds: string[]): Promise<Movimiento[]> => {
+    if (movimientoIds.length === 0) return []
 
     try {
+      const { data: filas, error: readError } = await (supabase as any)
+        .from("movimiento")
+        .select("*")
+        .in("id", movimientoIds)
+      if (readError) throw readError
+
       const { error } = await (supabase as any).from("movimiento").delete().in("id", movimientoIds)
       if (error) throw error
 
       // Optimistically remove from local state
       const idsSet = new Set(movimientoIds)
       setMovimientos(prev => prev.filter(mov => !idsSet.has(mov.id)))
+      return (filas ?? []) as Movimiento[]
     } catch (err) {
       throw err
     }
+  }
+
+  /**
+   * Vuelve a insertar movimientos borrados, con su id original.
+   *
+   * No recupera los archivos adjuntos: `movimiento_archivo` cae por cascada y
+   * los ficheros de Storage se borran aparte. Quien llame a esto tiene que
+   * decirlo si el movimiento los tenía.
+   */
+  const restoreMovimientos = async (filas: Movimiento[]): Promise<void> => {
+    if (filas.length === 0) return
+    const { error } = await (supabase as any).from("movimiento").insert(filas)
+    if (error) throw error
+    lastFetchKeyRef.current = ""
+    await fetchMovimientos(0, false)
   }
 
   const updateCategoria = async (movimientoId: string, categoriaId: string | null) => {
@@ -534,6 +565,7 @@ export function useMovimientos(
     updateCategoria,
     updateMovimiento,
     deleteMovimientos,
+    restoreMovimientos,
     createMovimiento,
     loadMore,
     hasMore,

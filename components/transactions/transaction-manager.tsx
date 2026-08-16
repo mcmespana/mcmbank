@@ -41,6 +41,7 @@ import {
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { exportMovementsToExcel } from "@/lib/utils/export-to-excel"
+import { describirError } from "@/lib/utils/describir-error"
 import type { MovimientoConRelaciones, Categoria, Cuenta } from "@/lib/types/database"
 import dynamic from "next/dynamic"
 
@@ -113,6 +114,11 @@ export function TransactionManager() {
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [bulkConceptLoading, setBulkConceptLoading] = useState(false)
   const [bulkDescriptionLoading, setBulkDescriptionLoading] = useState(false)
+  const [bulkFacturaLoading, setBulkFacturaLoading] = useState(false)
+  // Progreso de la acción en lote en curso. Con 200 movimientos seleccionados
+  // la barra de acciones se quedaba muda varios segundos y no había forma de
+  // saber si iba, ni por dónde.
+  const [bulkProgress, setBulkProgress] = useState<{ hechos: number; total: number; etiqueta: string } | null>(null)
   const searchParams = useSearchParams()
 
   const {
@@ -123,6 +129,7 @@ export function TransactionManager() {
     updateMovimiento,
     createMovimiento,
     deleteMovimientos,
+    restoreMovimientos,
     refetch,
     loadMore,
     hasMore,
@@ -220,6 +227,11 @@ export function TransactionManager() {
 
   const selectionActive = selectionCount > 0
 
+  // Si todo lo seleccionado ya está marcado, el botón de la barra se invierte y
+  // sirve para quitar la marca; así una sola acción cubre los dos sentidos.
+  const todoMarcadoFaltaFactura =
+    selectedMovements.length > 0 && selectedMovements.every((movement) => movement.factura_pendiente)
+
   const clearSelection = () => {
     setSelectedMovementIds([])
     setSelectionAnchorId(null)
@@ -300,6 +312,31 @@ export function TransactionManager() {
     setDetailInitialTab("datos")
   }
 
+  /**
+   * Ejecuta una acción sobre cada movimiento seleccionado informando del avance.
+   *
+   * Va de diez en diez en vez de soltar los N `UPDATE` a la vez: así el
+   * contador se mueve de verdad (con `Promise.all` de golpe no hay nada
+   * intermedio que contar) y no se abre una petición por movimiento contra
+   * PostgREST cuando hay doscientos seleccionados.
+   */
+  const ejecutarEnLote = useCallback(
+    async <T,>(items: T[], etiqueta: string, accion: (item: T) => Promise<unknown>) => {
+      const TANDA = 10
+      setBulkProgress({ hechos: 0, total: items.length, etiqueta })
+      try {
+        for (let i = 0; i < items.length; i += TANDA) {
+          await Promise.all(items.slice(i, i + TANDA).map(accion))
+          const hechos = Math.min(i + TANDA, items.length)
+          setBulkProgress({ hechos, total: items.length, etiqueta })
+        }
+      } finally {
+        setBulkProgress(null)
+      }
+    },
+    [],
+  )
+
   const handleBulkCategorySelect = async (categoryId: string) => {
     if (!selectionCount) {
       return
@@ -307,10 +344,8 @@ export function TransactionManager() {
 
     setBulkCategoryLoading(true)
     try {
-      await Promise.all(
-        selectedMovementIds.map((movementId) =>
-          handleMovementUpdate(movementId, { categoria_id: categoryId } as Partial<MovimientoConRelaciones>),
-        ),
+      await ejecutarEnLote(selectedMovementIds, "Asignando categoría", (movementId) =>
+        handleMovementUpdate(movementId, { categoria_id: categoryId } as Partial<MovimientoConRelaciones>),
       )
       toast.success(`Categoría actualizada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       refreshUncategorizedCount()
@@ -318,7 +353,7 @@ export function TransactionManager() {
       // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error updating categories in bulk", error)
-      toast.error("No se pudieron actualizar las categorías seleccionadas")
+      toast.error(describirError(error, "No se pudieron actualizar las categorías"))
     } finally {
       setBulkCategoryLoading(false)
     }
@@ -349,10 +384,8 @@ export function TransactionManager() {
 
     setBulkConceptLoading(true)
     try {
-      await Promise.all(
-        selectedMovementIds.map((movementId) =>
-          handleMovementUpdate(movementId, { concepto: nextConcept }),
-        ),
+      await ejecutarEnLote(selectedMovementIds, "Unificando concepto", (movementId) =>
+        handleMovementUpdate(movementId, { concepto: nextConcept }),
       )
       toast.success(`Concepto actualizado en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkConceptOpen(false)
@@ -360,7 +393,7 @@ export function TransactionManager() {
       // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error updating concept in bulk", error)
-      toast.error("No se pudieron actualizar los conceptos seleccionados")
+      toast.error(describirError(error, "No se pudieron actualizar los conceptos"))
     } finally {
       setBulkConceptLoading(false)
     }
@@ -375,24 +408,63 @@ export function TransactionManager() {
 
     setBulkDescriptionLoading(true)
     try {
-      await Promise.all(
-        selectedMovements.map((movement) => {
-          const currentDescription = (movement.descripcion || "").trimEnd()
-          const newDescription = currentDescription
-            ? `${currentDescription}\n${appendText}`
-            : appendText
-          return handleMovementUpdate(movement.id, { descripcion: newDescription })
-        }),
-      )
+      await ejecutarEnLote(selectedMovements, "Añadiendo nota", (movement) => {
+        const currentDescription = (movement.descripcion || "").trimEnd()
+        const newDescription = currentDescription ? `${currentDescription}\n${appendText}` : appendText
+        return handleMovementUpdate(movement.id, { descripcion: newDescription })
+      })
       toast.success(`Descripción ampliada en ${selectionCount} transacciones. Selección mantenida para más acciones.`)
       setBulkDescriptionOpen(false)
       setBulkDescriptionValue("")
       // Mantener selección para permitir acciones adicionales
     } catch (error) {
       console.error("Error appending description in bulk", error)
-      toast.error("No se pudieron actualizar las descripciones seleccionadas")
+      toast.error(describirError(error, "No se pudieron actualizar las descripciones"))
     } finally {
       setBulkDescriptionLoading(false)
+    }
+  }
+
+  /**
+   * Marca (o desmarca) "falta factura" en todo lo seleccionado.
+   *
+   * Es la acción en lote que más falta hacía: repasar el extracto de un mes y
+   * señalar de una vez los veinte cargos de los que no ha llegado el papel.
+   * Los que ya tienen factura vinculada se saltan — ahí la marca es mentira.
+   */
+  const handleBulkFacturaPendiente = async (pendiente: boolean) => {
+    const objetivo = pendiente
+      ? selectedMovements.filter((movement) => !movement.factura_id && !movement.factura_pendiente)
+      : selectedMovements.filter((movement) => movement.factura_pendiente)
+
+    if (objetivo.length === 0) {
+      toast.info(
+        pendiente
+          ? "Los seleccionados ya están marcados o ya tienen factura"
+          : "Ninguno de los seleccionados estaba marcado",
+      )
+      return
+    }
+
+    setBulkFacturaLoading(true)
+    try {
+      await ejecutarEnLote(
+        objetivo,
+        pendiente ? "Marcando falta factura" : "Quitando la marca",
+        (movement) => handleMovementUpdate(movement.id, { factura_pendiente: pendiente }),
+      )
+      const conFactura = pendiente ? selectionCount - objetivo.length : 0
+      toast.success(
+        pendiente
+          ? `Marcados ${objetivo.length} movimientos como "falta factura"` +
+              (conFactura > 0 ? ` (${conFactura} se han saltado: ya tenían factura)` : "")
+          : `Marca quitada en ${objetivo.length} movimientos`,
+      )
+    } catch (error) {
+      console.error("Error updating factura_pendiente in bulk", error)
+      toast.error(describirError(error, "No se pudo cambiar la marca de factura"))
+    } finally {
+      setBulkFacturaLoading(false)
     }
   }
 
@@ -403,17 +475,36 @@ export function TransactionManager() {
 
     setBulkDeleting(true)
     try {
-      await deleteMovimientos(selectedMovementIds)
+      const borrados = await deleteMovimientos(selectedMovementIds)
       if (selectedMovementId && selectedMovementIds.includes(selectedMovementId)) {
         setSelectedMovementId(null)
         setSelectedMovementSnapshot(null)
       }
-      toast.success(`Has eliminado ${selectionCount} transacciones. ¡Adiós!`)
+      const cuantos = selectionCount
       clearSelection()
       setBulkDeleteOpen(false)
+
+      // Deshacer, que es la acción más destructiva de la app y hasta ahora no
+      // tenía vuelta atrás. Se reinsertan con su id original, así que lo que
+      // vuelve es el movimiento y no una copia. Doce segundos porque darse
+      // cuenta de que has borrado el mes equivocado lleva más de cinco.
+      toast.success(`Has eliminado ${cuantos} ${cuantos === 1 ? "transacción" : "transacciones"}`, {
+        duration: 12000,
+        action:
+          borrados.length > 0
+            ? {
+                label: "Deshacer",
+                onClick: () => {
+                  restoreMovimientos(borrados)
+                    .then(() => toast.success("Recuperadas. Los archivos adjuntos no vuelven."))
+                    .catch((err) => toast.error(describirError(err, "No se han podido recuperar")))
+                },
+              }
+            : undefined,
+      })
     } catch (error) {
       console.error("Error deleting movements in bulk", error)
-      toast.error("No se pudieron eliminar las transacciones seleccionadas")
+      toast.error(describirError(error, "No se pudieron eliminar las transacciones"))
     } finally {
       setBulkDeleting(false)
     }
@@ -846,6 +937,27 @@ export function TransactionManager() {
                     <FilePlus className="h-4 w-4" />
                     <span className="hidden sm:inline">Añadir nota</span>
                   </Button>
+                  {/* Marcar "falta factura" de golpe: repasar el extracto de un
+                      mes y señalar los cargos sin papel es justo lo que se hace
+                      en tanda. Si todo lo seleccionado ya está marcado, el
+                      botón se invierte y sirve para quitar la marca. */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkFacturaPendiente(!todoMarcadoFaltaFactura)}
+                    disabled={bulkFacturaLoading}
+                    className="flex items-center gap-1"
+                    title={
+                      todoMarcadoFaltaFactura
+                        ? "Quitar la marca de falta factura"
+                        : "Marcar como pendientes de factura"
+                    }
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      {todoMarcadoFaltaFactura ? "Quitar falta factura" : "Falta factura"}
+                    </span>
+                  </Button>
                   <Button
                     variant="destructive"
                     size="sm"
@@ -867,6 +979,31 @@ export function TransactionManager() {
                   </Button>
                 </div>
               </div>
+
+              {/* Progreso de la acción en curso. Antes la barra se quedaba muda
+                  hasta que terminaba: con doscientos seleccionados eso son
+                  varios segundos sin saber si va o se ha colgado. */}
+              {bulkProgress && (
+                <div className="mt-3 space-y-1.5" role="status" aria-live="polite">
+                  <div className="flex items-center justify-between gap-2 text-xs font-medium text-primary">
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <LoadingSpinner size="sm" />
+                      <span className="truncate">{bulkProgress.etiqueta}…</span>
+                    </span>
+                    <span className="tabular-nums shrink-0">
+                      {bulkProgress.hechos}/{bulkProgress.total}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-primary/15">
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-200"
+                      style={{
+                        width: `${bulkProgress.total ? (bulkProgress.hechos / bulkProgress.total) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

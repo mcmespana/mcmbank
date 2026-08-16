@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
-import * as XLSX from "xlsx"
+import * as XLSX from "@e965/xlsx"
 
 import { supabase } from "@/lib/supabase/client"
 import type { Cuenta } from "@/lib/types/database"

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sin conexión · MCM Bank</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <style>
+      /* Sin dependencias externas: esta página tiene que pintarse justamente
+         cuando no hay red. */
+      :root {
+        color-scheme: light dark;
+        --fondo: #ffffff;
+        --texto: #0f172a;
+        --suave: #64748b;
+        --acento: #0b42db;
+        --borde: #e2e8f0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fondo: #0b1120;
+          --texto: #e2e8f0;
+          --suave: #94a3b8;
+          --acento: #6b8dff;
+          --borde: #1e293b;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.5rem;
+        background: var(--fondo);
+        color: var(--texto);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        text-align: center;
+      }
+      .caja { max-width: 26rem; }
+      .icono {
+        width: 3.5rem;
+        height: 3.5rem;
+        margin: 0 auto 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        border: 1px solid var(--borde);
+        font-size: 1.75rem;
+      }
+      h1 { margin: 0 0 0.5rem; font-size: 1.375rem; letter-spacing: -0.01em; }
+      p { margin: 0 0 1.5rem; color: var(--suave); line-height: 1.55; font-size: 0.95rem; }
+      button {
+        font: inherit;
+        font-weight: 600;
+        color: #fff;
+        background: var(--acento);
+        border: 0;
+        border-radius: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        min-height: 44px;
+        cursor: pointer;
+      }
+      button:active { opacity: 0.85; }
+    </style>
+  </head>
+  <body>
+    <div class="caja">
+      <div class="icono" aria-hidden="true">📶</div>
+      <h1>Sin conexión</h1>
+      <p>
+        MCM Bank necesita conexión para enseñarte tus cuentas al día. No se guardan
+        saldos en el móvil a propósito: es preferible no enseñar nada a enseñar
+        una cifra vieja.
+      </p>
+      <button type="button" onclick="location.reload()">Reintentar</button>
+    </div>
+  </body>
+</html>

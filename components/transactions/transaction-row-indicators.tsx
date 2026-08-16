@@ -37,8 +37,27 @@ export function TransactionRowIndicators({
     return null
   }
 
+  // Los indicadores son lo único que compite con el concepto por el ancho de la
+  // fila, y en móvil el concepto siempre pierde. Con dos o más se apilan en una
+  // rejilla de dos filas (la fila ya mide dos líneas de alto, así que no crece)
+  // y ocupan la mitad de ancho. En escritorio sobra sitio: van en línea.
+  const total =
+    Number(hasDescription) +
+    Number(hasPagoMcm) +
+    Number(hasFactura) +
+    Number(Boolean(facturaPendiente) && !hasFactura) +
+    Number(hasFiles)
+
   return (
-    <div className={cn("flex items-center gap-1.5", className)}>
+    <div
+      className={cn(
+        "shrink-0",
+        total > 1
+          ? "grid grid-rows-2 grid-flow-col gap-0.5 sm:flex sm:items-center sm:gap-1.5"
+          : "flex items-center gap-1.5",
+        className,
+      )}
+    >
       {/* Indicador de descripción: móvil (popover al clic) */}
       {hasDescription && (
         <div className="sm:hidden">
@@ -50,7 +69,7 @@ export function TransactionRowIndicators({
                 onClick={(e) => e.stopPropagation()}
                 aria-label="Ver descripción"
               >
-                <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                <div className="h-[18px] w-[18px] sm:h-5 sm:w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                   <MessageSquare className="h-3 w-3 text-gray-600 dark:text-gray-400" />
                 </div>
               </Button>
@@ -88,7 +107,7 @@ export function TransactionRowIndicators({
                         }}
                         aria-label="Descripción"
                       >
-                        <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                        <div className="h-[18px] w-[18px] sm:h-5 sm:w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                           <MessageSquare className="h-3 w-3 text-gray-600 dark:text-gray-400" />
                         </div>
                       </Button>
@@ -120,7 +139,7 @@ export function TransactionRowIndicators({
         <TooltipProvider delayDuration={150}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center" aria-label="Pago MCM">
+              <div className="h-[18px] w-[18px] sm:h-5 sm:w-5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center" aria-label="Pago MCM">
                 <HandCoins className="h-3 w-3 text-emerald-700 dark:text-emerald-300" />
               </div>
             </TooltipTrigger>
@@ -138,7 +157,7 @@ export function TransactionRowIndicators({
           <Tooltip>
             <TooltipTrigger asChild>
               <div
-                className="h-5 w-5 rounded-full bg-sky-100 dark:bg-sky-950/40 flex items-center justify-center"
+                className="h-[18px] w-[18px] sm:h-5 sm:w-5 rounded-full bg-sky-100 dark:bg-sky-950/40 flex items-center justify-center"
                 aria-label="Factura vinculada"
               >
                 <Receipt className="h-3 w-3 text-sky-700 dark:text-sky-300" />
@@ -156,7 +175,7 @@ export function TransactionRowIndicators({
           <Tooltip>
             <TooltipTrigger asChild>
               <div
-                className="h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center"
+                className="h-[18px] w-[18px] sm:h-5 sm:w-5 rounded-full bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center"
                 aria-label="Falta factura"
               >
                 <AlertTriangle className="h-3 w-3 text-amber-700 dark:text-amber-300" />
@@ -178,7 +197,7 @@ export function TransactionRowIndicators({
           }}
           aria-label="Archivos adjuntos"
         >
-          <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+          <div className="h-[18px] w-[18px] sm:h-5 sm:w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
             <FileText className="h-3 w-3 text-gray-600 dark:text-gray-400" />
           </div>
         </Button>

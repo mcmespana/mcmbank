@@ -16,6 +16,8 @@ import type {
   MovimientoConRelaciones,
 } from "@/lib/types/database"
 
+const formatNumber = (n: number) => new Intl.NumberFormat("es-ES").format(n)
+
 /**
  * A partir de este número de filas se monta el virtualizador. Por debajo se
  * renderiza la lista completa, igual que siempre: con pocas filas el ahorro es
@@ -99,7 +101,10 @@ interface TransactionListProps {
   categories: Categoria[]
   loading: boolean
   error: string | null
+  /** Movimientos que cumplen los filtros, no los que hay cargados en pantalla. */
   total: number
+  /** Cuántos de esos se han traído ya (paginación). Por defecto, todos. */
+  loaded?: number
   onMovementClick: (movement: MovimientoConRelaciones, event?: React.MouseEvent) => void
   onMovementUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onLoadMore?: () => void
@@ -117,6 +122,7 @@ export function TransactionList({
   loading,
   error,
   total,
+  loaded,
   onMovementClick,
   onMovementUpdate,
   onLoadMore,
@@ -250,6 +256,15 @@ export function TransactionList({
     ],
   )
 
+  // "Mostrando 100 de 956 movimientos": el número cargado por sí solo se leía
+  // como si no hubiera más, justo cuando lo que se quiere saber es cuántos
+  // dejan fuera los filtros. Cuando ya están todos, sobra la primera mitad.
+  const cargados = loaded ?? movements.length
+  const textoRecuento =
+    cargados < total
+      ? `Mostrando ${formatNumber(cargados)} de ${formatNumber(total)} movimientos`
+      : `${formatNumber(total)} ${total === 1 ? "movimiento" : "movimientos"}`
+
   if (loading && movements.length === 0) {
     return (
       <div className="h-full overflow-auto">
@@ -283,8 +298,8 @@ export function TransactionList({
       {/* Cabecera fuera del área de scroll: el virtualizador posiciona las filas
           respecto al scrollTop del contenedor, así que cualquier contenido en
           flujo por encima de ellas desplazaría todas las medidas. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-3 pb-2 sm:px-4">
-        <p className="text-sm text-muted-foreground font-medium">{total} transacciones encontradas</p>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-3 pb-2 sm:px-4">
+        <p className="text-sm text-muted-foreground font-medium">{textoRecuento}</p>
         {!selectionActive && movements.length > 1 && (
           <p className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
             <MousePointerClick className="h-3.5 w-3.5" />
@@ -297,7 +312,9 @@ export function TransactionList({
         )}
       </div>
 
-      <div ref={setScrollElement} className="flex-1 min-h-0 overflow-auto px-2 pb-2 sm:px-4 sm:pb-4">
+      {/* En móvil el margen lateral se queda en lo justo para que se vea la
+          sombra de la tarjeta: cada píxel aquí es ancho de concepto. */}
+      <div ref={setScrollElement} className="flex-1 min-h-0 overflow-auto px-1 pb-2 sm:px-4 sm:pb-4">
         {shouldVirtualize ? (
           <VirtualizedRows scrollElement={scrollElement} movements={movements} renderRow={renderRow} />
         ) : (

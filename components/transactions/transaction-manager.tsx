@@ -133,6 +133,7 @@ export function TransactionManager() {
     refetch,
     loadMore,
     hasMore,
+    total: totalMovimientos,
   } = useMovimientos(selectedDelegation, {
     fechaDesde: filters.dateFrom,
     fechaHasta: filters.dateTo,
@@ -1048,7 +1049,8 @@ export function TransactionManager() {
             categories={categories as unknown as Categoria[]}
             loading={loading}
             error={error}
-            total={movements.length}
+            total={totalMovimientos}
+            loaded={movements.length}
             onMovementClick={(movement) => handleMovementClick(movement as unknown as MovimientoConRelaciones)}
             onMovementUpdate={async (movementId, patch) => {
               const fullPatch: Partial<MovimientoConRelaciones> = patch

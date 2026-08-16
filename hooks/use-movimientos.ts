@@ -37,6 +37,10 @@ export function useMovimientos(
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
+  // Total de movimientos que cumplen los filtros, no los que se han cargado.
+  // Supabase ya lo devuelve en cada página (`count: "exact"`), así que enseñar
+  // "100 de 956" no cuesta ninguna consulta extra.
+  const [total, setTotal] = useState(0)
 
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
   const timeoutMs = options.timeoutMs ?? 15000
@@ -91,6 +95,7 @@ export function useMovimientos(
         setLoading(false)
         setError(null)
         setHasMore(false)
+        setTotal(0)
         return
       }
 
@@ -278,6 +283,7 @@ export function useMovimientos(
           setMovimientos(movimientosData)
         }
 
+        setTotal(totalCount)
         setHasMore(movimientosData.length === pageSize && (pageIndex + 1) * pageSize < totalCount)
       } catch (err: any) {
         if (abortController.signal.aborted) {
@@ -466,6 +472,7 @@ export function useMovimientos(
 
       // Optimistically add to local state
       setMovimientos(prev => [created as MovimientoConRelaciones, ...prev])
+      setTotal(prev => prev + 1)
 
       return created as MovimientoConRelaciones
     } catch (err) {
@@ -517,6 +524,7 @@ export function useMovimientos(
       // Optimistically remove from local state
       const idsSet = new Set(movimientoIds)
       setMovimientos(prev => prev.filter(mov => !idsSet.has(mov.id)))
+      setTotal(prev => Math.max(0, prev - movimientoIds.length))
       return (filas ?? []) as Movimiento[]
     } catch (err) {
       throw err
@@ -569,5 +577,6 @@ export function useMovimientos(
     createMovimiento,
     loadMore,
     hasMore,
+    total,
   }
 }

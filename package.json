@@ -11,6 +11,8 @@
     "lint:fix": "eslint . --fix",
     "start": "next start",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
@@ -83,6 +85,7 @@
     "@types/node": "^22",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.1.10",
     "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.9.15",
     "eslint": "^9.39.1",

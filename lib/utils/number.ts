@@ -52,17 +52,22 @@ export function parseEuropeanNumber(value: string | number | null | undefined): 
     return parseFloat(cleanValue.replace(",", "."))
   }
 
-  if (commaCount === 1 && dotCount >= 1) {
-    // Formato europeo: 1.234.567,89 -> 1234567.89
+  if (commaCount >= 1 && dotCount >= 1) {
+    // Hay de los dos: el separador decimal es el que va el último, porque el
+    // de miles nunca puede ir detrás del decimal. Así "1.234,56" (europeo) y
+    // "1,234.56" (americano) salen los dos bien; mirar solo cuántos hay de
+    // cada uno no distingue el caso de uno y uno.
     const lastCommaIndex = cleanValue.lastIndexOf(",")
-    const beforeComma = cleanValue.substring(0, lastCommaIndex).replace(/\./g, "")
-    const afterComma = cleanValue.substring(lastCommaIndex + 1)
-    return parseFloat(beforeComma + "." + afterComma)
-  }
-
-  if (dotCount === 1 && commaCount >= 1) {
-    // Formato americano: 1,234,567.89 -> 1234567.89
     const lastDotIndex = cleanValue.lastIndexOf(".")
+
+    if (lastCommaIndex > lastDotIndex) {
+      // Formato europeo: 1.234.567,89 -> 1234567.89
+      const beforeComma = cleanValue.substring(0, lastCommaIndex).replace(/\./g, "")
+      const afterComma = cleanValue.substring(lastCommaIndex + 1)
+      return parseFloat(beforeComma + "." + afterComma)
+    }
+
+    // Formato americano: 1,234,567.89 -> 1234567.89
     const beforeDot = cleanValue.substring(0, lastDotIndex).replace(/,/g, "")
     const afterDot = cleanValue.substring(lastDotIndex + 1)
     return parseFloat(beforeDot + "." + afterDot)

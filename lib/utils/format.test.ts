@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatCurrency, toLocalDateString } from "./format"
+import { formatCurrency, formatDate, getAmountColorClass, toLocalDateString } from "./format"
 
 describe("toLocalDateString", () => {
   it("formatea una fecha normal como yyyy-mm-dd con la fecha local", () => {
@@ -43,5 +43,30 @@ describe("formatCurrency", () => {
 
   it("acepta una divisa personalizada", () => {
     expect(formatCurrency(10, "$")).toBe("10,00 $")
+  })
+})
+
+describe("formatDate", () => {
+  it("pinta una fecha ISO en formato español", () => {
+    expect(formatDate("2026-06-13T12:00:00")).toBe("13/06/2026")
+  })
+
+  it("rellena con ceros el día y el mes", () => {
+    expect(formatDate("2026-01-05T12:00:00")).toBe("05/01/2026")
+  })
+})
+
+describe("getAmountColorClass", () => {
+  it("los ingresos van en verde y los gastos en rojo", () => {
+    expect(getAmountColorClass(10)).toContain("text-green-600")
+    expect(getAmountColorClass(-10)).toContain("text-red-600")
+  })
+
+  it("el cero cuenta como gasto (no hay un tercer color)", () => {
+    expect(getAmountColorClass(0)).toContain("text-red-600")
+  })
+
+  it("siempre incluye el peso de fuente", () => {
+    expect(getAmountColorClass(1)).toContain("font-medium")
   })
 })

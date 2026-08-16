@@ -242,11 +242,11 @@ export const TransactionListRow = memo(function TransactionListRow({
                   />
                 ) : (
                   <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-                    {/* En móvil el concepto baja un punto: es texto de banco en
-                        mayúsculas, y un punto menos deja entrar varios
+                    {/* En móvil el concepto baja a 12px: es texto de banco en
+                        mayúsculas, y cada punto que baja deja entrar varios
                         caracteres más antes del recorte. */}
                     <h3
-                      className="font-semibold text-[13px] sm:text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors flex-1 min-w-0"
+                      className="font-semibold text-xs sm:text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors flex-1 min-w-0"
                       onClick={handleConceptClick}
                     >
                       {movement.concepto}

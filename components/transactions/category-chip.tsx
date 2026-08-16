@@ -54,30 +54,36 @@ export function CategoryChip({
       ["--category-color-rgb" as string]: rgbValue,
     }
 
+    // La X va dentro de la píldora, no suelta al lado: con un nombre largo la
+    // píldora pasaba a dos líneas y la X se quedaba flotando en medio de la
+    // nada, que era lo que hacía que la fila pareciera descuadrada.
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center">
         <Badge
           variant="outline"
-          className="group cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium inline-flex items-center gap-2 transition-[color,background-color,box-shadow,transform] duration-200 border border-transparent shadow-sm hover:shadow-md hover:scale-105 bg-[var(--category-color)] text-[var(--category-text-color)] hover:bg-[var(--category-color)] dark:bg-transparent dark:border-[var(--category-color)] dark:text-[var(--category-color)] dark:hover:bg-[var(--category-color)]/15"
+          className="group cursor-pointer rounded-full rounded-r-none py-1 pl-2.5 pr-1.5 sm:py-1.5 sm:pl-3 text-xs font-medium inline-flex min-w-0 items-center gap-1.5 transition-[color,background-color,box-shadow] duration-200 border border-transparent shadow-sm hover:shadow-md bg-[var(--category-color)] text-[var(--category-text-color)] hover:bg-[var(--category-color)] dark:bg-transparent dark:border-[var(--category-color)] dark:text-[var(--category-color)] dark:hover:bg-[var(--category-color)]/15"
           style={badgeStyles}
           onClick={openDialog}
         >
           {category.emoji && <span className="text-xs">{category.emoji}</span>}
-          <span className="text-xs font-medium leading-none">{category.nombre}</span>
+          <span className="text-xs font-medium leading-none truncate max-w-[9rem] sm:max-w-none">
+            {category.nombre}
+          </span>
         </Badge>
 
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation()
             handleCategoryRemove()
           }}
-          className="h-5 w-5 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+          className="inline-flex h-[26px] w-6 shrink-0 items-center justify-center rounded-full rounded-l-none border border-l-0 border-transparent bg-[var(--category-color)] text-[var(--category-text-color)] opacity-70 shadow-sm transition-opacity hover:opacity-100 dark:bg-transparent dark:border-[var(--category-color)] dark:text-[var(--category-color)] sm:h-7"
+          style={badgeStyles}
           title="Quitar categoría"
+          aria-label={`Quitar la categoría ${category.nombre}`}
         >
           <X className="h-3 w-3" />
-        </Button>
+        </button>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-3xl w-full p-0 overflow-hidden z-[80]" overlayClassName="z-[70]">

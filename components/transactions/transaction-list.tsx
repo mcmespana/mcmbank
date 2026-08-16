@@ -313,8 +313,9 @@ export function TransactionList({
       </div>
 
       {/* En móvil el margen lateral se queda en lo justo para que se vea la
-          sombra de la tarjeta: cada píxel aquí es ancho de concepto. */}
-      <div ref={setScrollElement} className="flex-1 min-h-0 overflow-auto px-1 pb-2 sm:px-4 sm:pb-4">
+          sombra de la tarjeta, y es el mismo que el de la cabecera de arriba
+          para que las tarjetas no bailen respecto al texto. */}
+      <div ref={setScrollElement} className="flex-1 min-h-0 overflow-auto px-2 pb-2 sm:px-4 sm:pb-4">
         {shouldVirtualize ? (
           <VirtualizedRows scrollElement={scrollElement} movements={movements} renderRow={renderRow} />
         ) : (

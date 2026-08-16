@@ -134,6 +134,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       href: "/",
       icon: LayoutDashboard,
       count: null,
+      attention: false,
       enabled: true,
     },
     {
@@ -141,6 +142,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       href: "/transacciones",
       icon: ArrowLeftRight,
       count: getCountBadge(counts.movimientos),
+      attention: false,
       enabled: true,
     },
     {
@@ -148,6 +150,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       href: "/categorias",
       icon: Tag,
       count: getCountBadge(counts.categorias),
+      attention: false,
       enabled: true,
     },
     {
@@ -155,6 +158,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       href: "/cuentas",
       icon: Banknote,
       count: getCountBadge(counts.cuentas),
+      attention: false,
       enabled: true,
     },
     {
@@ -162,13 +166,17 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       href: "/pagos-mcm",
       icon: HandCoins,
       count: getCountBadge(counts.pagosMcmPendientes),
+      attention: false,
       enabled: true,
     },
     {
       name: "Facturas",
       href: "/facturas",
       icon: FileText,
-      count: getCountBadge(counts.facturasBandeja),
+      count: getCountBadge(counts.facturasAtencion),
+      // Bandeja o pendientes de pago: piden que alguien las mire, así que el
+      // número lleva un color de aviso en vez del neutro del resto de badges.
+      attention: true,
       enabled: true,
     },
     {
@@ -176,6 +184,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       href: "/informes",
       icon: BarChart3,
       count: null,
+      attention: false,
       enabled: true,
     },
     {
@@ -183,6 +192,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       href: "/contactos",
       icon: Users,
       count: getCountBadge(counts.contactos),
+      attention: false,
       enabled: true,
     },
     ...(isAdmin
@@ -192,6 +202,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
           href: "/configuracion",
           icon: Settings,
           count: null,
+          attention: false,
           enabled: true,
         },
       ]
@@ -201,6 +212,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       href: "/propuestas",
       icon: Sparkles,
       count: null,
+      attention: false,
       enabled: true,
     },
   ]
@@ -233,6 +245,10 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
         {navigation.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = !item.enabled
+          // Facturas en bandeja o sin pagar piden que alguien las mire, así
+          // que su número lleva un color de aviso en vez del neutro de un
+          // simple contador informativo (movimientos, categorías…).
+          const hasAttention = item.attention && item.count !== null && item.count !== 0 && !isDisabled
 
           // Modo encogido: solo icono, centrado, con indicador de activo y tooltip nativo
           const linkContent = collapsed ? (
@@ -254,7 +270,12 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
               )}
               {/* Punto de aviso si hay contador (sin número, no cabe) */}
               {item.count !== null && item.count !== 0 && !isDisabled && (
-                <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                <span
+                  className={cn(
+                    "absolute right-1 top-1 h-1.5 w-1.5 rounded-full",
+                    hasAttention ? "bg-amber-500" : "bg-primary",
+                  )}
+                />
               )}
             </div>
           ) : (
@@ -283,7 +304,9 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
                     "rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm relative z-10",
                     isDisabled
                       ? "bg-muted text-muted-foreground"
-                      : "bg-primary/90 text-primary-foreground border border-primary/20",
+                      : hasAttention
+                        ? "bg-amber-500 text-white border border-amber-600/30"
+                        : "bg-primary/90 text-primary-foreground border border-primary/20",
                   )}
                 >
                   {item.count}

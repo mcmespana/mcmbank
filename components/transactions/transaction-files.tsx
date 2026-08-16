@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { useMovimientoArchivos } from "@/hooks/use-movimiento-archivos"
+import { useFacturaVinculada } from "@/hooks/use-factura-vinculada"
 import { supabase } from "@/lib/supabase/client"
 import { DatabaseService } from "@/lib/services/database"
 import { VincularFacturaDialog } from "@/components/facturas/vincular-factura-dialog"
@@ -42,7 +43,7 @@ interface TransactionFilesProps {
 export function TransactionFiles({ movementId, delegacionId, onCountChange }: TransactionFilesProps) {
   const [delegacionCodigo, setDelegacionCodigo] = useState<string | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
-  const [facturaVinculada, setFacturaVinculada] = useState<FacturaConRelaciones | null>(null)
+  const { facturaVinculada, fetchFacturaVinculada } = useFacturaVinculada(movementId)
   const [vincularOpen, setVincularOpen] = useState(false)
   // Desvincular es un paso; borrar la factura de la bandeja es otro, y se
   // pregunta después, para que quede claro qué se está eliminando en cada uno.
@@ -81,23 +82,6 @@ export function TransactionFiles({ movementId, delegacionId, onCountChange }: Tr
 
     getDelegacionCodigo()
   }, [delegacionId])
-
-  const fetchFacturaVinculada = useCallback(async () => {
-    if (!movementId) {
-      setFacturaVinculada(null)
-      return
-    }
-    try {
-      const factura = await DatabaseService.getFacturaByMovimiento(movementId)
-      setFacturaVinculada(factura)
-    } catch {
-      setFacturaVinculada(null)
-    }
-  }, [movementId])
-
-  useEffect(() => {
-    fetchFacturaVinculada()
-  }, [fetchFacturaVinculada])
 
   const {
     archivos,

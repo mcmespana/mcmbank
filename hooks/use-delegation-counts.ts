@@ -10,7 +10,8 @@ export interface DelegationCounts {
   cuentas: number | null
   contactos: number | null
   pagosMcmPendientes: number | null
-  facturasBandeja: number | null
+  /** Facturas que piden algo: en la bandeja sin revisar, o sin pagar. */
+  facturasAtencion: number | null
 }
 
 const INITIAL_COUNTS: DelegationCounts = {
@@ -19,7 +20,7 @@ const INITIAL_COUNTS: DelegationCounts = {
   cuentas: null,
   contactos: null,
   pagosMcmPendientes: null,
-  facturasBandeja: null,
+  facturasAtencion: null,
 }
 
 async function fetchCounts(
@@ -70,11 +71,14 @@ async function fetchCounts(
         .eq("delegacion_id", delegationId)
         .eq("estado", "pendiente")
         .abortSignal(signal),
+      // Bandeja (sin revisar) y sin pagar (sin_pagar/pagada_parcial): lo mismo
+      // que las pestañas "Bandeja" y "Pendientes" de Facturas, lo que pide
+      // acción de alguien. "Pagada"/"pagada_fuera" ya están resueltas.
       supabase
         .from("factura")
         .select("id", { head: true, count: "exact" })
         .eq("delegacion_id", delegationId)
-        .eq("estado", "bandeja")
+        .in("estado", ["bandeja", "sin_pagar", "pagada_parcial"])
         .abortSignal(signal),
     ])
 
@@ -101,7 +105,7 @@ async function fetchCounts(
         ? null
         : (contactosPropiosRes.count ?? 0) + (contactosAdoptadosRes.count ?? 0),
     pagosMcmPendientes: pagosMcmRes.error ? null : (pagosMcmRes.count ?? 0),
-    facturasBandeja: facturasRes.error ? null : (facturasRes.count ?? 0),
+    facturasAtencion: facturasRes.error ? null : (facturasRes.count ?? 0),
   }
 }
 

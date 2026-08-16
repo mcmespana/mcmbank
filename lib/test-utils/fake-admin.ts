@@ -43,6 +43,67 @@ function comparar(fila: Fila, columna: string, valor: any): boolean {
   return fila[columna] === valor
 }
 
+/**
+ * Parte un `or=(...)` de PostgREST por comas, respetando las que van dentro de
+ * comillas dobles (el texto de búsqueda puede llevarlas: "Mercadona, S.A.").
+ */
+function partirOr(expresion: string): string[] {
+  const partes: string[] = []
+  let actual = ""
+  let entreComillas = false
+  for (let i = 0; i < expresion.length; i++) {
+    const c = expresion[i]
+    if (c === "\\" && entreComillas) {
+      actual += expresion[++i] ?? ""
+      continue
+    }
+    if (c === '"') {
+      entreComillas = !entreComillas
+      continue
+    }
+    if (c === "," && !entreComillas) {
+      partes.push(actual)
+      actual = ""
+      continue
+    }
+    actual += c
+  }
+  if (actual) partes.push(actual)
+  return partes
+}
+
+/** Convierte `"importe.gte.50"` o `"concepto.ilike.%merca%"` en un predicado. */
+function condicionDeTexto(condicion: string): Filtro {
+  const primero = condicion.indexOf(".")
+  const segundo = condicion.indexOf(".", primero + 1)
+  const columna = condicion.slice(0, primero)
+  const operador = condicion.slice(primero + 1, segundo)
+  const bruto = condicion.slice(segundo + 1)
+  const numero = Number(bruto)
+
+  switch (operador) {
+    case "gte":
+      return (fila) => Number(fila[columna]) >= numero
+    case "lte":
+      return (fila) => Number(fila[columna]) <= numero
+    case "gt":
+      return (fila) => Number(fila[columna]) > numero
+    case "lt":
+      return (fila) => Number(fila[columna]) < numero
+    case "is":
+      return (fila) => (bruto === "null" ? fila[columna] == null : String(fila[columna]) === bruto)
+    case "ilike": {
+      const regex = new RegExp(
+        `^${bruto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*")}$`,
+        "i",
+      )
+      return (fila) => regex.test(String(fila[columna] ?? ""))
+    }
+    default:
+      return (fila) => String(fila[columna]) === bruto
+  }
+}
+
 export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {}): FakeAdmin {
   const consultas: FakeAdmin["consultas"] = []
   const escrituras: FakeAdmin["escrituras"] = []
@@ -53,11 +114,11 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
     const filtros: Filtro[] = []
     const descripcion: string[] = []
     let rango: [number, number] | undefined
-    let orden: string | undefined
-    let ascendente = true
+    const ordenes: { columna: string; ascendente: boolean }[] = []
     let limite: number | undefined
     let unico: "single" | "maybeSingle" | undefined
     let mutacion: { tipo: "insert" | "update" | "delete"; valores?: Fila | Fila[] } | undefined
+    let contarExacto = false
 
     const ejecutar = () => {
       const error = opciones.errores?.[tabla]
@@ -66,31 +127,37 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
       if (mutacion) return aplicarMutacion()
 
       let filas = (tablas[tabla] ?? []).filter((fila) => filtros.every((f) => f(fila)))
+      // `count: "exact"` cuenta TODAS las filas que casan, antes de paginar.
+      const total = filas.length
 
-      if (orden) {
-        const columna = orden
+      if (ordenes.length > 0) {
+        // PostgREST encadena los `order()`: el segundo desempata al primero.
         filas = [...filas].sort((a, b) => {
-          const x = a[columna]
-          const y = b[columna]
-          const cmp = x === y ? 0 : x > y ? 1 : -1
-          return ascendente ? cmp : -cmp
+          for (const { columna, ascendente } of ordenes) {
+            const x = a[columna]
+            const y = b[columna]
+            if (x === y) continue
+            const cmp = x > y ? 1 : -1
+            return ascendente ? cmp : -cmp
+          }
+          return 0
         })
       }
 
       if (rango) filas = filas.slice(rango[0], rango[1] + 1)
       if (limite !== undefined) filas = filas.slice(0, limite)
 
-      consultas.push({ tabla, rango, orden, filtros: [...descripcion] })
+      consultas.push({ tabla, rango, orden: ordenes[0]?.columna, filtros: [...descripcion] })
 
       if (unico) {
         if (filas.length === 0) {
           return unico === "maybeSingle"
-            ? { data: null, error: null }
-            : { data: null, error: { message: "No rows found" } }
+            ? { data: null, error: null, count: 0 }
+            : { data: null, error: { message: "No rows found" }, count: 0 }
         }
-        return { data: filas[0], error: null }
+        return { data: filas[0], error: null, count: total }
       }
-      return { data: filas, error: null }
+      return { data: filas, error: null, count: contarExacto ? total : null }
     }
 
     const aplicarMutacion = () => {
@@ -131,7 +198,10 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
     }
 
     const api: any = {
-      select: () => api,
+      select: (_columnas?: string, opciones?: { count?: string }) => {
+        if (opciones?.count === "exact") contarExacto = true
+        return api
+      },
       insert: (valores: Fila | Fila[]) => {
         mutacion = { tipo: "insert", valores }
         return api
@@ -149,8 +219,7 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
         return api
       },
       order: (columna: string, opts?: { ascending?: boolean }) => {
-        orden = columna
-        ascendente = opts?.ascending !== false
+        ordenes.push({ columna, ascendente: opts?.ascending !== false })
         return api
       },
       range: (desde: number, hasta: number) => {
@@ -211,16 +280,9 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
         return api
       },
       or: (expresion: string) => {
-        // `or("a.ilike.%x%,b.ilike.%x%")`: basta con un OR de "contiene".
-        const partes = expresion.split(",").map((p) => p.split("."))
         descripcion.push("or")
-        filtros.push((fila) =>
-          partes.some(([columna, , valor]) =>
-            String(fila[columna] ?? "")
-              .toLowerCase()
-              .includes(String(valor ?? "").replace(/%/g, "").toLowerCase()),
-          ),
-        )
+        const condiciones = partirOr(expresion).map(condicionDeTexto)
+        filtros.push((fila) => condiciones.some((c) => c(fila)))
         return api
       },
       // `not("estado", "in", "(a,b)")` es como lo escribe PostgREST.

@@ -185,7 +185,10 @@ export function CategoryMegaSelector({
   }
 
   return (
-    <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-[calc(100vh-2rem)] sm:h-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
+    // Alturas en `dvh`, no en `vh`: en el móvil `100vh` cuenta con la barra del
+    // navegador retraída, así que el selector medía más que el hueco real y el
+    // final de la lista quedaba por debajo del borde, sin forma de llegar.
+    <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-[calc(100dvh-2rem)] sm:h-auto max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
       <div className="border-b bg-muted/40 p-4 sm:p-6">
         <div className="flex flex-row items-start justify-between gap-3 sm:gap-6">
           <div className="flex flex-1 items-start gap-3 sm:items-center">
@@ -252,8 +255,8 @@ export function CategoryMegaSelector({
 
       <div className="flex-1 overflow-hidden p-4 sm:p-6 flex flex-col min-h-0">
         <div className="flex h-full flex-col gap-4 sm:gap-5 min-h-0">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <div className="relative flex-1">
+          <div className="flex flex-row items-center gap-2 sm:gap-3">
+            <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={inputRef}
@@ -271,17 +274,24 @@ export function CategoryMegaSelector({
                 }}
               />
             </div>
-            <Button
-              variant="outline"
-              className="rounded-xl h-10 px-3 w-full sm:w-auto"
-              type="button"
-              onClick={() => onCreateCategory?.()}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+            {/* Ocupaba todo el ancho en móvil, con un icono suelto en medio:
+                parecía la acción principal de la pantalla cuando es la de
+                último recurso. Y si nadie pasa `onCreateCategory` no se pinta,
+                en vez de quedarse ahí sin hacer nada. */}
+            {onCreateCategory && (
+              <Button
+                variant="outline"
+                className="h-10 shrink-0 gap-1.5 rounded-xl px-3"
+                type="button"
+                onClick={() => onCreateCategory()}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="text-sm">Nueva</span>
+              </Button>
+            )}
           </div>
 
-          <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y pr-1 sm:pr-3 [-webkit-overflow-scrolling:touch]">
+          <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y pr-1 pb-[env(safe-area-inset-bottom)] sm:pr-3 [-webkit-overflow-scrolling:touch]">
             {normalizedSearch ? (
               <div className="space-y-2 pb-4">
                 {filteredResults.length === 0 ? (

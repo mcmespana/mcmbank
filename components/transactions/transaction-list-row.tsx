@@ -240,16 +240,23 @@ export const TransactionListRow = memo(function TransactionListRow({
                       if (e.key === "Enter") handleConceptSave()
                       else if (e.key === "Escape") handleConceptCancel()
                     }}
-                    className="text-sm font-semibold h-6 px-2"
+                    // Mismo tamaño que el texto que sustituye: si no, al tocar
+                    // para editar el concepto pegaba un salto.
+                    className="text-xs sm:text-sm font-semibold h-6 px-2"
                     autoFocus
                   />
                 ) : (
                   <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                     {/* En móvil el concepto baja a 12px: es texto de banco en
                         mayúsculas, y cada punto que baja deja entrar varios
-                        caracteres más antes del recorte. */}
+                        caracteres más antes del recorte.
+
+                        `truncate` y no `line-clamp-1`: el recorte por líneas
+                        parte por palabras, así que si la siguiente era larga
+                        ("COMPRA TARJ. …" seguido del comercio) cortaba mucho
+                        antes del borde y dejaba media fila en blanco. */}
                     <h3
-                      className="font-semibold text-xs sm:text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors flex-1 min-w-0"
+                      className="font-semibold text-xs sm:text-sm leading-tight cursor-pointer hover:text-primary truncate transition-colors flex-1 min-w-0"
                       onClick={handleConceptClick}
                     >
                       {movement.concepto}

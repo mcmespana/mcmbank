@@ -27,6 +27,8 @@ interface TransactionListRowProps {
   isSelected: boolean
   selectionActive: boolean
   onSelectionChange: (movementId: string, selected: boolean, rangeFromAnchor?: boolean) => void
+  /** Abre el panel de crear categoría y asigna la recién creada a esta fila. */
+  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -40,6 +42,7 @@ export const TransactionListRow = memo(function TransactionListRow({
   isSelected,
   selectionActive,
   onSelectionChange,
+  onRequestCreateCategory,
 }: TransactionListRowProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -242,11 +245,11 @@ export const TransactionListRow = memo(function TransactionListRow({
                   />
                 ) : (
                   <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-                    {/* En móvil el concepto baja un punto: es texto de banco en
-                        mayúsculas, y un punto menos deja entrar varios
+                    {/* En móvil el concepto baja a 12px: es texto de banco en
+                        mayúsculas, y cada punto que baja deja entrar varios
                         caracteres más antes del recorte. */}
                     <h3
-                      className="font-semibold text-[13px] sm:text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors flex-1 min-w-0"
+                      className="font-semibold text-xs sm:text-sm leading-tight cursor-pointer hover:text-primary line-clamp-1 transition-colors flex-1 min-w-0"
                       onClick={handleConceptClick}
                     >
                       {movement.concepto}
@@ -274,6 +277,11 @@ export const TransactionListRow = memo(function TransactionListRow({
                       movement={movement}
                       account={account}
                       onCategoryChange={(categoryId) => handleCategoryChange(categoryId)}
+                      onCreateCategory={
+                        onRequestCreateCategory
+                          ? () => onRequestCreateCategory((categoryId) => handleCategoryChange(categoryId))
+                          : undefined
+                      }
                     />
                   )}
                   {movement.contacto && (

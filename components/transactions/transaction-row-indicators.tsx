@@ -37,27 +37,11 @@ export function TransactionRowIndicators({
     return null
   }
 
-  // Los indicadores son lo único que compite con el concepto por el ancho de la
-  // fila, y en móvil el concepto siempre pierde. Con dos o más se apilan en una
-  // rejilla de dos filas (la fila ya mide dos líneas de alto, así que no crece)
-  // y ocupan la mitad de ancho. En escritorio sobra sitio: van en línea.
-  const total =
-    Number(hasDescription) +
-    Number(hasPagoMcm) +
-    Number(hasFactura) +
-    Number(Boolean(facturaPendiente) && !hasFactura) +
-    Number(hasFiles)
-
+  // Van siempre en línea. Apilarlos de dos en dos ahorraba ancho sobre el papel,
+  // pero cada fila acababa con los iconos a una altura distinta según cuántos
+  // tuviera, y la lista se leía como si estuviera rota.
   return (
-    <div
-      className={cn(
-        "shrink-0",
-        total > 1
-          ? "grid grid-rows-2 grid-flow-col gap-0.5 sm:flex sm:items-center sm:gap-1.5"
-          : "flex items-center gap-1.5",
-        className,
-      )}
-    >
+    <div className={cn("flex shrink-0 items-center gap-1 sm:gap-1.5", className)}>
       {/* Indicador de descripción: móvil (popover al clic) */}
       {hasDescription && (
         <div className="sm:hidden">

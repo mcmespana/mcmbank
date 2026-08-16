@@ -737,7 +737,10 @@ export function TransactionManager() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-6rem)] md:h-[calc(100vh-7rem)] lg:h-[calc(100vh-8rem)] overflow-hidden">
+    // En móvil la pantalla va a sangre: el `p-3` del `main` dejaba un canal
+    // vacío a cada lado que no aporta nada aquí y sí le quita ancho a cada
+    // concepto. A partir de `sm` manda el margen de la página, como el resto.
+    <div className="-mx-3 flex h-[calc(100vh-5rem)] overflow-hidden sm:mx-0 sm:h-[calc(100vh-6rem)] md:h-[calc(100vh-7rem)] lg:h-[calc(100vh-8rem)]">
       {/* Desktop Sidebar Filters */}
       <div
         className={`hidden lg:block border-r bg-card transition-[width] duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
@@ -775,7 +778,7 @@ export function TransactionManager() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Header with Date Filter and Actions */}
-        <div className="sticky top-0 z-10 bg-background border-b p-4 space-y-4">
+        <div className="sticky top-0 z-10 bg-background border-b p-2 space-y-4 sm:p-4">
           <div className="flex items-center justify-between gap-2 min-h-[40px]">
             {/* Date Filter with show filters button - Responsive width */}
             <div className="flex items-center gap-2 flex-1 min-w-0">

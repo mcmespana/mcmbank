@@ -130,6 +130,7 @@ export function TransactionList({
   onOpenFiles,
   selectedMovementIds,
   onMovementSelectionChange,
+  onRequestCreateCategory,
 }: TransactionListProps) {
   // Refs de callback guardadas en estado (no en useRef): tanto el
   // virtualizador como el IntersectionObserver necesitan re-ejecutarse en
@@ -148,6 +149,7 @@ export function TransactionList({
     onMovementUpdate,
     onOpenFiles,
     onMovementSelectionChange,
+    onRequestCreateCategory,
   })
 
   useEffect(() => {
@@ -156,8 +158,15 @@ export function TransactionList({
       onMovementUpdate,
       onOpenFiles,
       onMovementSelectionChange,
+      onRequestCreateCategory,
     }
-  }, [onMovementClick, onMovementUpdate, onOpenFiles, onMovementSelectionChange])
+  }, [
+    onMovementClick,
+    onMovementUpdate,
+    onOpenFiles,
+    onMovementSelectionChange,
+    onRequestCreateCategory,
+  ])
 
   const handleRowClick = useCallback(
     (movement: MovimientoConRelaciones, event: React.MouseEvent) =>
@@ -173,6 +182,15 @@ export function TransactionList({
 
   const handleRowOpenFiles = useCallback(
     (movement: MovimientoConRelaciones) => handlersRef.current.onOpenFiles?.(movement),
+    [],
+  )
+
+  // Crear una categoría desde el selector de una fila. Estaba declarada en las
+  // props pero no llegaba a la fila, así que el botón "+" del mega selector no
+  // hacía nada en la lista (en el detalle sí, que era lo que despistaba).
+  const handleRowRequestCreateCategory = useCallback(
+    (assign: (categoryId: string) => void | Promise<void>) =>
+      handlersRef.current.onRequestCreateCategory?.(assign),
     [],
   )
 
@@ -240,6 +258,7 @@ export function TransactionList({
         isSelected={selectedIds.has(movement.id)}
         selectionActive={selectionActive}
         onSelectionChange={handleRowSelectionChange}
+        onRequestCreateCategory={onRequestCreateCategory ? handleRowRequestCreateCategory : undefined}
       />
     ),
     [
@@ -248,6 +267,8 @@ export function TransactionList({
       categories,
       handleRowUpdate,
       handleRowClick,
+      handleRowRequestCreateCategory,
+      onRequestCreateCategory,
       handleRowOpenFiles,
       handleRowSelectionChange,
       onOpenFiles,
@@ -313,8 +334,9 @@ export function TransactionList({
       </div>
 
       {/* En móvil el margen lateral se queda en lo justo para que se vea la
-          sombra de la tarjeta: cada píxel aquí es ancho de concepto. */}
-      <div ref={setScrollElement} className="flex-1 min-h-0 overflow-auto px-1 pb-2 sm:px-4 sm:pb-4">
+          sombra de la tarjeta, y es el mismo que el de la cabecera de arriba
+          para que las tarjetas no bailen respecto al texto. */}
+      <div ref={setScrollElement} className="flex-1 min-h-0 overflow-auto px-2 pb-2 sm:px-4 sm:pb-4">
         {shouldVirtualize ? (
           <VirtualizedRows scrollElement={scrollElement} movements={movements} renderRow={renderRow} />
         ) : (

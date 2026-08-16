@@ -3,9 +3,10 @@
 import type React from "react"
 
 import { useState, useEffect, useMemo } from "react"
+import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
-import { CalendarIcon, AlertTriangle, Check, Loader2, ArrowLeft, Copy } from "lucide-react"
+import { CalendarIcon, AlertTriangle, ArrowUpRight, Check, Loader2, ArrowLeft, Copy, ReceiptText } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -31,6 +32,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
 import { ContactoForm } from "@/components/contactos/contacto-form"
 import { useCreateContactoInline } from "@/hooks/use-create-contacto-inline"
+import { useFacturaVinculada } from "@/hooks/use-factura-vinculada"
 import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 
 interface TransactionDetailProps {
@@ -74,6 +76,7 @@ export function TransactionDetail({
     onCreateContacto,
     onContactoCreated: (contactoId) => setFormData((prev) => ({ ...prev, contacto_id: contactoId })),
   })
+  const { facturaVinculada } = useFacturaVinculada(movement?.id ?? null)
   const [formMovementId, setFormMovementId] = useState<string | null>(movement?.id ?? null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
@@ -567,32 +570,53 @@ export function TransactionDetail({
                         </span>
                       </p>
                     )}
+                    {facturaVinculada && (
+                      <Link
+                        href={`/facturas?factura=${facturaVinculada.id}${movement?.id ? `&mov=${movement.id}` : ""}`}
+                        className="flex items-center gap-2.5 rounded-lg border border-emerald-200/70 bg-emerald-50/60 px-3 py-2 text-emerald-900 transition-colors hover:bg-emerald-100/60 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
+                          <ReceiptText className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="min-w-0 flex-1 text-xs">
+                          <span className="block font-medium">Vinculada con una factura</span>
+                          <span className="block truncate text-emerald-800/80 dark:text-emerald-300/80">
+                            {facturaVinculada.concepto?.trim() || "Sin título"}
+                          </span>
+                        </span>
+                        <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-700/70 dark:text-emerald-300/70" />
+                      </Link>
+                    )}
                   </div>
 
-                  <label
-                    htmlFor="factura-pendiente"
-                    className={cn(
-                      "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors",
-                      formData.factura_pendiente
-                        ? "border-amber-300/70 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30"
-                        : "border-border/60 bg-muted/20 hover:bg-muted/30",
-                    )}
-                  >
-                    <Checkbox
-                      id="factura-pendiente"
-                      checked={Boolean(formData.factura_pendiente)}
-                      onCheckedChange={(checked) =>
-                        setFormData((prev) => ({ ...prev, factura_pendiente: Boolean(checked) }))
-                      }
-                      className="mt-0.5"
-                    />
-                    <span className="text-sm">
-                      <span className="font-medium">Falta la factura</span>
-                      <span className="block text-[11px] text-muted-foreground">
-                        Márcalo para acordarte de subirla o vincularla más tarde.
+                  {/* Si ya hay una factura vinculada, preguntar "¿falta la factura?"
+                      no tiene sentido: ya está. */}
+                  {!facturaVinculada && (
+                    <label
+                      htmlFor="factura-pendiente"
+                      className={cn(
+                        "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors",
+                        formData.factura_pendiente
+                          ? "border-amber-300/70 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30"
+                          : "border-border/60 bg-muted/20 hover:bg-muted/30",
+                      )}
+                    >
+                      <Checkbox
+                        id="factura-pendiente"
+                        checked={Boolean(formData.factura_pendiente)}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({ ...prev, factura_pendiente: Boolean(checked) }))
+                        }
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm">
+                        <span className="font-medium">Falta la factura</span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          Márcalo para acordarte de subirla o vincularla más tarde.
+                        </span>
                       </span>
-                    </span>
-                  </label>
+                    </label>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="descripcion" className="text-sm font-medium">

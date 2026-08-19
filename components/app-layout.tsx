@@ -35,6 +35,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
   }, [sidebarCollapsed])
 
+  // El toaster de Sonner se portea al <body>, fuera de este árbol, así que la
+  // anchura del menú lateral se publica como variable CSS para que pueda
+  // apartarse de él (ver `--mcm-toaster-left` en globals.css).
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--mcm-sidebar-width",
+      sidebarCollapsed ? "4rem" : "18rem",
+    )
+  }, [sidebarCollapsed])
+
   useEffect(() => {
     if (!loading && !user && !isRedirecting) {
       // Sincroniza el flag de redirección con el estado de auth externo antes

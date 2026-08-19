@@ -11,6 +11,14 @@ import { Toaster } from "sonner"
  *
  * Va en su propio componente porque `useTheme()` necesita estar por debajo del
  * `ThemeProvider`, y `AppProviders` es quien lo renderiza.
+ *
+ * Posición: abajo a la izquierda porque abajo a la derecha vive el botón
+ * flotante de avisos (y su panel de 27rem). El `left` no es fijo: se aparta del
+ * menú lateral, que es fijo y mide 18rem o 4rem plegado. Sin eso el toast se
+ * dibujaba encima del menú —Sonner se pinta con z-index 999999, así que gana
+ * siempre— y quedaba a caballo entre el panel lateral y el contenido.
+ * `--mcm-toaster-left` se define en globals.css y la anchura del menú la publica
+ * `app-layout.tsx`.
  */
 export function AppToaster() {
   const { resolvedTheme } = useTheme()
@@ -20,6 +28,7 @@ export function AppToaster() {
       theme={resolvedTheme === "dark" ? "dark" : "light"}
       richColors
       position="bottom-left"
+      offset={{ left: "var(--mcm-toaster-left)" }}
     />
   )
 }

@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeStateWatcher } from "@/components/theme-state-watcher"
 import { ConnectionMonitor } from "@/components/connection-monitor"
 import { QueryProvider } from "./query-provider"
-import { Toaster } from "sonner"
+import { AppToaster } from "@/components/app-toaster"
 
 interface AppProvidersProps {
   children: React.ReactNode
@@ -27,7 +27,7 @@ export function AppProviders({ children }: AppProvidersProps) {
           <DelegationProvider>
             <ConnectionMonitor />
             {children}
-            <Toaster richColors position="bottom-left" />
+            <AppToaster />
           </DelegationProvider>
         </AuthProvider>
       </QueryProvider>

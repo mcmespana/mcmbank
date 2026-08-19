@@ -951,10 +951,45 @@ export class DatabaseService {
     if (error) throw error
   }
 
-  static async deletePagoMcm(id: string): Promise<void> {
+  /**
+   * Borra un pago MCM y devuelve la fila tal cual estaba, para poder deshacer.
+   *
+   * Se lee **antes** de borrar, igual que en el borrado en lote de movimientos:
+   * sin la fila en la mano no hay vuelta atrás posible.
+   */
+  static async deletePagoMcm(id: string): Promise<PagoMcm | null> {
     const supabase = this.getClient() as any
+
+    const { data: fila } = await supabase.from("pago_mcm").select("*").eq("id", id).maybeSingle()
+
     const { error } = await supabase.from("pago_mcm").delete().eq("id", id)
     if (error) throw error
+
+    return (fila ?? null) as PagoMcm | null
+  }
+
+  /**
+   * Vuelve a insertar un pago MCM borrado, con su id original.
+   *
+   * Hay que recomponer los **dos** lados del vínculo con el movimiento:
+   * `movimiento.pago_mcm_id` es `ON DELETE SET NULL`, así que al borrar el pago
+   * el movimiento se quedó suelto y reinsertar la fila no lo devuelve. El
+   * `pago_mcm.movimiento_id` sí viaja en la fila, y el trigger de INSERT
+   * (`set_pago_mcm_insert_defaults`) le repone solo el estado 'pagado'.
+   */
+  static async restorePagoMcm(fila: PagoMcm): Promise<void> {
+    const supabase = this.getClient() as any
+
+    const { error } = await supabase.from("pago_mcm").insert(fila as any)
+    if (error) throw error
+
+    if (fila.movimiento_id) {
+      const { error: linkError } = await supabase
+        .from("movimiento")
+        .update({ pago_mcm_id: fila.id })
+        .eq("id", fila.movimiento_id)
+      if (linkError) throw linkError
+    }
   }
 
   /**

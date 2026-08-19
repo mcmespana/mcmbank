@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { CheckCircle2, Copy, Plus, Search, Wallet } from "lucide-react"
 import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -70,6 +71,7 @@ export function PagosMcmManager() {
     createPago,
     updatePago,
     deletePago,
+    restorePago,
     convertToMovimiento,
     linkToMovimiento,
     unlinkFromMovimiento,
@@ -522,9 +524,24 @@ export function PagosMcmManager() {
         open={Boolean(deleting)}
         onOpenChange={(open) => !open && setDeleting(null)}
         onDelete={async (id) => {
-          await deletePago(id)
+          const fila = await deletePago(id)
           setDeleting(null)
-          toast.success("Pago eliminado")
+          // Mismo trato que el borrado en lote de movimientos: se recupera el
+          // pago con su id original, no una copia. Los adjuntos no se tocan al
+          // borrar, así que aquí sí vuelve todo.
+          toast.success("Pago eliminado", {
+            duration: 12000,
+            action: fila
+              ? {
+                  label: "Deshacer",
+                  onClick: () => {
+                    restorePago(fila)
+                      .then(() => toast.success("Pago recuperado"))
+                      .catch((err) => toast.error(describirError(err, "No se ha podido recuperar el pago")))
+                  },
+                }
+              : undefined,
+          })
         }}
       />
     </div>

@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 import {
   DragDropContext,
   Droppable,
@@ -257,7 +258,7 @@ export function CategoryList() {
       // (override de visibilidad por delegación; tesorero o gestor central).
       if (canHideGlobalCategory(category)) {
         if (!selectedDelegation) {
-          alert("Selecciona una delegación para gestionar la visibilidad")
+          toast.error("Selecciona una delegación para gestionar la visibilidad")
           return
         }
 
@@ -377,17 +378,17 @@ export function CategoryList() {
 
         // Validación de permisos
         if (targetIsGlobal && !isCentralManager) {
-          alert("Solo el gestor central puede crear categorías globales")
+          toast.error("Solo el gestor central puede crear categorías globales")
           return
         }
 
         if (isCreatingSubcategoryOfGlobal && !isCentralManager && !isDelegationTreasurer) {
-          alert("Solo el gestor central o tesoreros pueden crear subcategorías de categorías globales")
+          toast.error("Solo el gestor central o tesoreros pueden crear subcategorías de categorías globales")
           return
         }
 
         if (!targetIsGlobal && !selectedDelegation) {
-          alert("Selecciona una delegación para crear categorías locales")
+          toast.error("Selecciona una delegación para crear categorías locales")
           return
         }
 
@@ -784,7 +785,7 @@ export function CategoryList() {
       await Promise.all(updates)
     } catch (err) {
       console.error("Error reordenando categorías:", err)
-      alert("No se pudo reordenar la categoría.")
+      toast.error(describirError(err, "No se ha podido reordenar la categoría"))
     }
   }
 
@@ -850,7 +851,7 @@ export function CategoryList() {
     if (!evaluation) return
     if (!evaluation.allowed) {
       if (evaluation.reason) {
-        alert(evaluation.reason)
+        toast.error(evaluation.reason)
       }
       return
     }

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { supabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 import type { Delegacion } from "@/lib/types/database"
 import { useIsAdminState } from "@/hooks/use-is-admin"
 import { PlantillaMemoriaSection } from "@/components/configuracion/plantilla-memoria-section"
@@ -338,14 +339,14 @@ export function ConfigPage() {
               const codigo = (formData.get("codigo") as string) || null
               const orgId = delegaciones[0]?.organizacion_id
               if (!orgId) {
-                alert("No se puede crear: falta organizacion_id")
+                toast.error("No se puede crear: falta organizacion_id")
                 return
               }
               const { error } = await (supabase as any)
                 .from("delegacion")
                 .insert({ nombre, codigo, organizacion_id: orgId } as any)
               if (error) {
-                alert(error.message)
+                toast.error(describirError(error, "No se ha podido crear la delegación"))
                 return
               }
               await loadDelegaciones()

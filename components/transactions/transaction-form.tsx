@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -65,19 +67,19 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
     e.preventDefault()
 
     if (!formData.concepto.trim() || !formData.cuenta_id || !formData.categoria_id) {
-      alert("Por favor completa todos los campos obligatorios")
+      toast.error("Faltan campos obligatorios: concepto, cuenta y categoría")
       return
     }
 
     const importe = parseEuropeanNumber(formData.importe)
 
     if (!Number.isFinite(importe)) {
-      alert("Introduce un importe válido")
+      toast.error("Introduce un importe válido")
       return
     }
 
     if (importe === 0) {
-      alert("El importe no puede ser 0")
+      toast.error("El importe no puede ser 0")
       return
     }
 
@@ -94,7 +96,7 @@ export function TransactionForm({ movement, accounts, categories, onSave, onCanc
       })
     } catch (error) {
       console.error("Error saving transaction:", error)
-      alert("Error al guardar la transacción")
+      toast.error(describirError(error, "No se ha podido guardar la transacción"))
     } finally {
       setLoading(false)
     }

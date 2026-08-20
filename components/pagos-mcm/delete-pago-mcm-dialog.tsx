@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 import { AlertTriangle } from "lucide-react"
 import {
   Dialog,
@@ -33,7 +34,7 @@ export function DeletePagoMcmDialog({ pago, open, onOpenChange, onDelete }: Dele
     try {
       await onDelete(pago.id)
     } catch (err) {
-      toast.error("No se pudo eliminar: " + (err instanceof Error ? err.message : "error desconocido"))
+      toast.error(describirError(err, "No se ha podido eliminar el pago"))
     } finally {
       setBusy(false)
     }
@@ -48,10 +49,11 @@ export function DeletePagoMcmDialog({ pago, open, onOpenChange, onDelete }: Dele
             Eliminar pago MCM
           </DialogTitle>
           <DialogDescription>
-            Esta acción no se puede deshacer. El pago se eliminará definitivamente.
+            El pago se eliminará. Tendrás unos segundos para deshacerlo desde el aviso.
             {pago.movimiento && (
               <span className="mt-2 block text-amber-700 dark:text-amber-300">
-                Este pago está vinculado a un movimiento bancario. El movimiento NO se eliminará, solo perderá el vínculo.
+                Este pago está vinculado a un movimiento bancario. El movimiento NO se eliminará, solo perderá el
+                vínculo (que se recupera si deshaces).
               </span>
             )}
           </DialogDescription>

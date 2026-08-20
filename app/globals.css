@@ -294,3 +294,35 @@
 .force-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.6);
 }
+
+/* Toasts (Sonner) -------------------------------------------------------- */
+
+/*
+ * Separación del toast respecto al borde izquierdo. En móvil y tablet el menú
+ * lateral no está fijo, así que basta con el margen de siempre (32px, el que
+ * trae Sonner). A partir de `lg` el menú sí es fijo y hay que apartarse de él:
+ * `--mcm-sidebar-width` la publica `app-layout.tsx` según esté plegado o no.
+ */
+:root {
+  --mcm-toaster-left: 32px;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --mcm-toaster-left: calc(var(--mcm-sidebar-width, 18rem) + 32px);
+  }
+}
+
+/*
+ * Sonner fija el ancho en 356px, que es su decisión de diseño y está bien casi
+ * siempre. La excepción son nuestros errores: `describirError()` enseña el
+ * mensaje real de Postgres —con `details` y `hint`—, y a 356px eso salían seis
+ * o siete líneas en una columna estrecha. En pantallas grandes hay sitio de
+ * sobra, así que se ensancha un poco. Necesita `!important` porque Sonner pone
+ * `--width` como estilo en línea sobre el propio elemento.
+ */
+@media (min-width: 1536px) {
+  [data-sonner-toaster] {
+    --width: 420px !important;
+  }
+}

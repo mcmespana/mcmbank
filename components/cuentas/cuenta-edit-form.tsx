@@ -1,6 +1,8 @@
 "use client"
 
 import type React from "react"
+import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 
 import { useState, useEffect } from "react"
 import { Building2, PiggyBank, User, X } from "lucide-react"
@@ -48,12 +50,12 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
     e.preventDefault()
 
     if (!formData.nombre.trim()) {
-      alert("El nombre de la cuenta es obligatorio")
+      toast.error("El nombre de la cuenta es obligatorio")
       return
     }
 
     if (formData.tipo === "banco" && !formData.banco_nombre.trim()) {
-      alert("El nombre del banco es obligatorio para cuentas bancarias")
+      toast.error("El nombre del banco es obligatorio para cuentas bancarias")
       return
     }
 
@@ -74,7 +76,7 @@ export function CuentaEditForm({ cuenta, onSave, onCancel }: CuentaEditFormProps
       })
     } catch (error) {
       console.error("Error saving account:", error)
-      alert("Error al guardar la cuenta: " + error)
+      toast.error(describirError(error, "No se ha podido guardar la cuenta"))
     } finally {
       setLoading(false)
     }

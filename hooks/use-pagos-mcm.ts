@@ -102,9 +102,19 @@ export function usePagosMcm(delegacionId?: string | null, options: UsePagosMcmOp
     [invalidate],
   )
 
+  /** Borra el pago y devuelve su fila, para que quien llame pueda ofrecer deshacer. */
   const deletePago = useCallback(
     async (id: string) => {
-      await DatabaseService.deletePagoMcm(id)
+      const fila = await DatabaseService.deletePagoMcm(id)
+      invalidate()
+      return fila
+    },
+    [invalidate],
+  )
+
+  const restorePago = useCallback(
+    async (fila: PagoMcm) => {
+      await DatabaseService.restorePagoMcm(fila)
       invalidate()
     },
     [invalidate],
@@ -149,6 +159,7 @@ export function usePagosMcm(delegacionId?: string | null, options: UsePagosMcmOp
     createPago,
     updatePago,
     deletePago,
+    restorePago,
     convertToMovimiento,
     linkToMovimiento,
     unlinkFromMovimiento,

@@ -1,6 +1,8 @@
 "use client"
 
 import type React from "react"
+import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -65,7 +67,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
     e.preventDefault()
 
     if (!formData.nombre.trim()) {
-      alert("El nombre de la categoría es obligatorio")
+      toast.error("El nombre de la categoría es obligatorio")
       return
     }
 
@@ -93,7 +95,7 @@ export function CategoryEditForm({ category, parentCategory, onSave, onCancel, c
       })
     } catch (error) {
       console.error("Error saving category:", error)
-      alert("Error al guardar la categoría" + error)
+      toast.error(describirError(error, "No se ha podido guardar la categoría"))
     } finally {
       setLoading(false)
     }

@@ -292,17 +292,27 @@ export function TransactionManager() {
 
   const handleDownload = async () => {
     setDownloadState("downloading")
-    toast.success("Descarga iniciada")
+
+    // Un solo toast que pasa de "generando" a "listo" o a error. Antes se
+    // cantaba "Descarga iniciada" como éxito **antes** de generar nada, así que
+    // cuando fallaba salían dos toasts seguidos diciendo lo contrario.
+    const promesa = exportMovementsToExcel(
+      movements as unknown as MovimientoConRelaciones[],
+      accounts as unknown as Cuenta[],
+      categories as unknown as Categoria[],
+    )
+
+    toast.promise(promesa, {
+      loading: `Generando el Excel de ${movements.length} ${movements.length === 1 ? "movimiento" : "movimientos"}…`,
+      success: "Excel descargado",
+      error: (err) => describirError(err, "No se ha podido generar el archivo"),
+    })
+
     try {
-      await exportMovementsToExcel(
-        movements as unknown as MovimientoConRelaciones[],
-        accounts as unknown as Cuenta[],
-        categories as unknown as Categoria[],
-      )
+      await promesa
       setDownloadState("success")
       setTimeout(() => setDownloadState("idle"), 2000)
     } catch {
-      toast.error("No se pudo generar el archivo")
       setDownloadState("idle")
     }
   }

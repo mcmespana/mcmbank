@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 import {
   DragDropContext,
   Droppable,
@@ -257,7 +258,7 @@ export function CategoryList() {
       // (override de visibilidad por delegación; tesorero o gestor central).
       if (canHideGlobalCategory(category)) {
         if (!selectedDelegation) {
-          alert("Selecciona una delegación para gestionar la visibilidad")
+          toast.error("Selecciona una delegación para gestionar la visibilidad")
           return
         }
 
@@ -299,17 +300,36 @@ export function CategoryList() {
   const handleConfirmDelete = async () => {
     if (!deletingCategory) return
 
+    const nombre = deletingCategory.nombre
+
     try {
-      await DatabaseService.deleteCategoria(deletingCategory.id)
+      const borrada = await DatabaseService.deleteCategoria(deletingCategory.id)
       await fetchCategorias()
-      toast.success("Categoría eliminada")
+      // Se recupera la ficha con su id original y, con ella, el orden y la
+      // visibilidad que cada delegación le tenía puestos y las facturas,
+      // contactos y pagos que la apuntaban. Nada de eso vuelve solo: son
+      // CASCADE y SET NULL, así que `deleteCategoria()` los guarda antes.
+      toast.success(`${nombre} eliminada`, {
+        duration: 12000,
+        action: borrada
+          ? {
+              label: "Deshacer",
+              onClick: () => {
+                DatabaseService.restoreCategoria(borrada)
+                  .then(() => fetchCategorias())
+                  .then(() => toast.success(`${nombre} recuperada`))
+                  .catch((error) => toast.error(describirError(error, `No se ha podido recuperar ${nombre}`)))
+              },
+            }
+          : undefined,
+      })
       setDeletingCategory(null)
     } catch (err) {
       console.error("Error deleting category:", err)
       // El diálogo se queda abierto: ya enseña qué la está usando, y cerrarlo
       // dejaría al usuario con un error suelto y sin contexto.
-      toast.error("No se pudo eliminar la categoría", {
-        description: err instanceof Error ? err.message : "Algo sigue dependiendo de ella.",
+      toast.error("No se ha podido eliminar la categoría", {
+        description: describirError(err, "Algo sigue dependiendo de ella."),
       })
     }
   }
@@ -377,17 +397,17 @@ export function CategoryList() {
 
         // Validación de permisos
         if (targetIsGlobal && !isCentralManager) {
-          alert("Solo el gestor central puede crear categorías globales")
+          toast.error("Solo el gestor central puede crear categorías globales")
           return
         }
 
         if (isCreatingSubcategoryOfGlobal && !isCentralManager && !isDelegationTreasurer) {
-          alert("Solo el gestor central o tesoreros pueden crear subcategorías de categorías globales")
+          toast.error("Solo el gestor central o tesoreros pueden crear subcategorías de categorías globales")
           return
         }
 
         if (!targetIsGlobal && !selectedDelegation) {
-          alert("Selecciona una delegación para crear categorías locales")
+          toast.error("Selecciona una delegación para crear categorías locales")
           return
         }
 
@@ -784,7 +804,7 @@ export function CategoryList() {
       await Promise.all(updates)
     } catch (err) {
       console.error("Error reordenando categorías:", err)
-      alert("No se pudo reordenar la categoría.")
+      toast.error(describirError(err, "No se ha podido reordenar la categoría"))
     }
   }
 
@@ -850,7 +870,7 @@ export function CategoryList() {
     if (!evaluation) return
     if (!evaluation.allowed) {
       if (evaluation.reason) {
-        alert(evaluation.reason)
+        toast.error(evaluation.reason)
       }
       return
     }

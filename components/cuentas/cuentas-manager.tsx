@@ -392,7 +392,7 @@ export function CuentasManager() {
     } catch (err) {
       console.error("Error copying to clipboard:", err)
       // Mostrar un mensaje al usuario o usar un fallback
-      alert("No se pudo copiar al portapapeles. Por favor, selecciona y copia el texto manualmente.")
+      toast.error("No se ha podido copiar al portapapeles. Selecciona y copia el texto a mano.")
     }
   }
 

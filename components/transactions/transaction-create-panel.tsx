@@ -1,6 +1,8 @@
 "use client"
 
 import type React from "react"
+import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 
 import { useState } from "react"
 import { format } from "date-fns"
@@ -74,7 +76,7 @@ export function TransactionCreatePanel({
 
   const handleCreate = async () => {
     if (!isFormValid) {
-      alert("Por favor completa los campos obligatorios: concepto, cuenta e importe")
+      toast.error("Faltan campos obligatorios: concepto, cuenta e importe")
       return
     }
 
@@ -102,7 +104,7 @@ export function TransactionCreatePanel({
       onOpenChange(false)
     } catch (error) {
       console.error("Error creating transaction:", error)
-      alert("Error al crear la transacción. Por favor, inténtalo de nuevo.")
+      toast.error(describirError(error, "No se ha podido crear la transacción"))
     } finally {
       setIsCreating(false)
     }

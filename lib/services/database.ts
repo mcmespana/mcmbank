@@ -38,6 +38,24 @@ type CategoriaWithOverrides = Categoria & {
   overrides?: CategoriaOrdenDelegacion[] | null
 }
 
+/**
+ * Todo lo que se lleva por delante borrar una categoría, para poder deshacerlo.
+ *
+ * Ver `DatabaseService.deleteCategoria()`: no incluye movimientos ni reglas
+ * porque esas FK son `NO ACTION` y con una sola fila detrás la base de datos
+ * rechaza el borrado, así que aquí nunca se llega con ellas.
+ */
+export interface CategoriaBorrada {
+  categoria: Categoria
+  /** Orden y visibilidad por delegación; cae por CASCADE. */
+  ordenes: CategoriaOrdenDelegacion[]
+  facturaIds: string[]
+  contactoIds: string[]
+  /** Filas de `contacto_delegacion`, que tiene clave compuesta. */
+  adopciones: { delegacion_id: string; contacto_id: string }[]
+  pagoMcmIds: string[]
+}
+
 /** Movimiento que ya tiene factura, con lo justo de esa factura para nombrarla. */
 export type MovimientoVinculadoSimilar = MovimientoConRelaciones & {
   factura?: { id: string; concepto: string | null; numero: string | null; fecha_emision: string | null } | null
@@ -221,11 +239,94 @@ export class DatabaseService {
     if (error) throw error
   }
 
-  static async deleteCategoria(id: string): Promise<void> {
+  /**
+   * Borra una categoría y devuelve todo lo que hace falta para deshacerlo.
+   *
+   * El diálogo solo deja llegar aquí cuando nada la bloquea —sin subcategorías,
+   * sin movimientos y sin reglas, que son las FK `NO ACTION`—, así que lo único
+   * que se pierde al borrar es esto, y es lo que se guarda:
+   *
+   * - `categoria_orden_delegacion`: cae por CASCADE. Es el orden y la
+   *   visibilidad que cada delegación le había puesto, y sin esto volvería con
+   *   la ficha pero colocada en otro sitio y quizá visible donde estaba oculta.
+   * - Los cuatro `SET NULL` que la apuntan: facturas, la categoría
+   *   predeterminada de un contacto (ficha global y adopción por delegación) y
+   *   la sugerida de un pago MCM. Se guardan los ids para volver a apuntarlos.
+   */
+  static async deleteCategoria(id: string): Promise<CategoriaBorrada | null> {
     const supabase = this.getClient() as any
-    const { error } = await supabase.from("categoria").delete().eq("id", id)
 
+    const { data: categoria } = await supabase.from("categoria").select("*").eq("id", id).maybeSingle()
+    if (!categoria) {
+      const { error } = await supabase.from("categoria").delete().eq("id", id)
+      if (error) throw error
+      return null
+    }
+
+    const [ordenesRes, facturasRes, contactosRes, adopcionesRes, pagosRes] = await Promise.all([
+      supabase.from("categoria_orden_delegacion").select("*").eq("categoria_id", id),
+      supabase.from("factura").select("id").eq("categoria_id", id),
+      supabase.from("contacto").select("id").eq("categoria_id_predeterminada", id),
+      supabase
+        .from("contacto_delegacion")
+        .select("delegacion_id, contacto_id")
+        .eq("categoria_id_predeterminada", id),
+      supabase.from("pago_mcm").select("id").eq("categoria_id_sugerida", id),
+    ])
+
+    const { error } = await supabase.from("categoria").delete().eq("id", id)
     if (error) throw error
+
+    const ids = (res: { data?: { id: string }[] | null; error?: unknown }) =>
+      res.error ? [] : (res.data ?? []).map((fila) => fila.id)
+
+    return {
+      categoria: categoria as Categoria,
+      ordenes: (ordenesRes.error ? [] : (ordenesRes.data ?? [])) as CategoriaOrdenDelegacion[],
+      facturaIds: ids(facturasRes),
+      contactoIds: ids(contactosRes),
+      adopciones: (adopcionesRes.error ? [] : (adopcionesRes.data ?? [])) as {
+        delegacion_id: string
+        contacto_id: string
+      }[],
+      pagoMcmIds: ids(pagosRes),
+    }
+  }
+
+  /**
+   * Devuelve una categoría borrada, con su id original y todo lo que colgaba.
+   *
+   * El orden importa: primero la ficha, porque las demás tablas la referencian
+   * por FK y cualquier `UPDATE` anterior fallaría.
+   */
+  static async restoreCategoria(snapshot: CategoriaBorrada): Promise<void> {
+    const supabase = this.getClient() as any
+
+    const { error } = await supabase.from("categoria").insert(snapshot.categoria as any)
+    if (error) throw error
+
+    const id = snapshot.categoria.id
+
+    if (snapshot.ordenes.length > 0) {
+      await supabase.from("categoria_orden_delegacion").insert(snapshot.ordenes as any)
+    }
+    if (snapshot.facturaIds.length > 0) {
+      await supabase.from("factura").update({ categoria_id: id }).in("id", snapshot.facturaIds)
+    }
+    if (snapshot.contactoIds.length > 0) {
+      await supabase.from("contacto").update({ categoria_id_predeterminada: id }).in("id", snapshot.contactoIds)
+    }
+    if (snapshot.pagoMcmIds.length > 0) {
+      await supabase.from("pago_mcm").update({ categoria_id_sugerida: id }).in("id", snapshot.pagoMcmIds)
+    }
+    // `contacto_delegacion` tiene clave compuesta, así que va fila a fila.
+    for (const { delegacion_id, contacto_id } of snapshot.adopciones) {
+      await supabase
+        .from("contacto_delegacion")
+        .update({ categoria_id_predeterminada: id })
+        .eq("delegacion_id", delegacion_id)
+        .eq("contacto_id", contacto_id)
+    }
   }
 
   static async setDelegacionCategoryOrder(

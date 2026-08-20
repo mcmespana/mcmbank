@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
+import { describirError } from "@/lib/utils/describir-error"
 import { ArrowUpRight, EyeOff, Link2Off, Loader2, ShieldAlert, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -120,7 +121,7 @@ export function DeleteCategoryDialog({
       onUnlinked?.()
       await cargarUsos({ cancelado: false })
     } catch (err) {
-      toast.error("No se pudo desvincular: " + (err instanceof Error ? err.message : "error desconocido"))
+      toast.error(describirError(err, "No se ha podido desvincular"))
     } finally {
       setBusy(false)
     }

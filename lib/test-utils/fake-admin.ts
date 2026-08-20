@@ -16,7 +16,7 @@ export type Tablas = Record<string, Fila[]>
 
 export interface FakeAdminOpciones {
   /** Error a devolver para una tabla concreta, en vez de datos. */
-  errores?: Record<string, { message: string; details?: string; hint?: string }>
+  errores?: Record<string, { message: string; details?: string; hint?: string; code?: string }>
   /** Usuarios que devuelve `auth.admin.listUsers`. */
   usuarios?: { id: string; email?: string | null }[]
   /** Error de `auth.admin.listUsers`. */
@@ -117,7 +117,14 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
     const ordenes: { columna: string; ascendente: boolean }[] = []
     let limite: number | undefined
     let unico: "single" | "maybeSingle" | undefined
-    let mutacion: { tipo: "insert" | "update" | "delete"; valores?: Fila | Fila[] } | undefined
+    let mutacion:
+      | {
+          tipo: "insert" | "update" | "delete" | "upsert"
+          valores?: Fila | Fila[]
+          onConflict?: string
+          ignoreDuplicates?: boolean
+        }
+      | undefined
     let contarExacto = false
 
     const ejecutar = () => {
@@ -149,15 +156,21 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
 
       consultas.push({ tabla, rango, orden: ordenes[0]?.columna, filtros: [...descripcion] })
 
+      // Clonado a propósito: en Supabase real cada respuesta es JSON
+      // deserializado aparte, así que mutar la fila ya leída (p. ej. tras un
+      // `update()` posterior sobre la misma id) nunca cambia un objeto que
+      // ya tenías en la mano. Sin este clon, dos pasos típicos —"leo la fila,
+      // luego la actualizo"— comparten referencia y el `update` reescribe
+      // retroactivamente el valor "antiguo" que se acababa de leer.
       if (unico) {
         if (filas.length === 0) {
           return unico === "maybeSingle"
             ? { data: null, error: null, count: 0 }
             : { data: null, error: { message: "No rows found" }, count: 0 }
         }
-        return { data: filas[0], error: null, count: total }
+        return { data: structuredClone(filas[0]), error: null, count: total }
       }
-      return { data: filas, error: null, count: contarExacto ? total : null }
+      return { data: structuredClone(filas), error: null, count: contarExacto ? total : null }
     }
 
     const aplicarMutacion = () => {
@@ -176,6 +189,40 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
         escrituras.push({ tabla, tipo: "insert", valores: nuevas[0], filas: nuevas.length })
         const data = unico ? nuevas[0] : nuevas
         return { data, error: null, count: nuevas.length }
+      }
+
+      // `upsert(..., { onConflict })`: a diferencia de `insert`, una fila cuyas
+      // columnas de conflicto ya existen se actualiza en el sitio en vez de
+      // duplicarse (salvo `ignoreDuplicates`, que la deja tal cual).
+      if (m.tipo === "upsert") {
+        const entradas = Array.isArray(m.valores) ? m.valores : [m.valores!]
+        const columnas = m.onConflict?.split(",").map((c) => c.trim())
+        const afectadas: Fila[] = []
+        let insertadas = 0
+
+        for (const entrada of entradas) {
+          const existente = columnas
+            ? filas.find((f) => columnas.every((c) => f[c] === entrada[c]))
+            : undefined
+          if (existente) {
+            if (!m.ignoreDuplicates) Object.assign(existente, entrada)
+            afectadas.push(existente)
+          } else {
+            const nueva = {
+              id: `fake-${tabla}-${++secuencia}`,
+              creado_en: "2026-01-01T00:00:00Z",
+              actualizado_en: "2026-01-01T00:00:00Z",
+              ...entrada,
+            }
+            filas.push(nueva)
+            afectadas.push(nueva)
+            insertadas += 1
+          }
+        }
+
+        escrituras.push({ tabla, tipo: "insert", valores: afectadas[0], filas: insertadas })
+        const data = unico ? (afectadas[0] ?? null) : afectadas
+        return { data, error: null, count: afectadas.length }
       }
 
       const afectadas = filas.filter((fila) => filtros.every((f) => f(fila)))
@@ -206,8 +253,17 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
         mutacion = { tipo: "insert", valores }
         return api
       },
-      upsert: (valores: Fila | Fila[]) => {
-        mutacion = { tipo: "insert", valores }
+      upsert: (
+        valores: Fila | Fila[],
+        opciones?: { onConflict?: string; ignoreDuplicates?: boolean; count?: string },
+      ) => {
+        mutacion = {
+          tipo: "upsert",
+          valores,
+          onConflict: opciones?.onConflict,
+          ignoreDuplicates: opciones?.ignoreDuplicates,
+        }
+        if (opciones?.count === "exact") contarExacto = true
         return api
       },
       update: (valores: Fila) => {
@@ -233,6 +289,13 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
       in: (columna: string, valores: any[]) => {
         descripcion.push(`in:${columna}`)
         filtros.push((fila) => valores.includes(fila[columna]))
+        return api
+      },
+      match: (condiciones: Record<string, any>) => {
+        for (const [columna, valor] of Object.entries(condiciones)) {
+          descripcion.push(`eq:${columna}`)
+          filtros.push((fila) => comparar(fila, columna, valor))
+        }
         return api
       },
       eq: (columna: string, valor: any) => {
@@ -299,6 +362,7 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
         }
         return api
       },
+      abortSignal: (_signal: AbortSignal) => api,
       single: () => {
         unico = "single"
         return api
@@ -329,6 +393,10 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
         upload: async () => ({ data: { path: "subido" }, error: null }),
         createSignedUrl: async (path: string) => ({
           data: { signedUrl: `https://storage.test/${bucket}/${path}?firma=1` },
+          error: null,
+        }),
+        download: async (_path: string) => ({
+          data: { arrayBuffer: async () => new TextEncoder().encode("contenido de mentira").buffer },
           error: null,
         }),
       }),

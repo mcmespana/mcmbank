@@ -156,15 +156,21 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
 
       consultas.push({ tabla, rango, orden: ordenes[0]?.columna, filtros: [...descripcion] })
 
+      // Clonado a propósito: en Supabase real cada respuesta es JSON
+      // deserializado aparte, así que mutar la fila ya leída (p. ej. tras un
+      // `update()` posterior sobre la misma id) nunca cambia un objeto que
+      // ya tenías en la mano. Sin este clon, dos pasos típicos —"leo la fila,
+      // luego la actualizo"— comparten referencia y el `update` reescribe
+      // retroactivamente el valor "antiguo" que se acababa de leer.
       if (unico) {
         if (filas.length === 0) {
           return unico === "maybeSingle"
             ? { data: null, error: null, count: 0 }
             : { data: null, error: { message: "No rows found" }, count: 0 }
         }
-        return { data: filas[0], error: null, count: total }
+        return { data: structuredClone(filas[0]), error: null, count: total }
       }
-      return { data: filas, error: null, count: contarExacto ? total : null }
+      return { data: structuredClone(filas), error: null, count: contarExacto ? total : null }
     }
 
     const aplicarMutacion = () => {
@@ -283,6 +289,13 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
       in: (columna: string, valores: any[]) => {
         descripcion.push(`in:${columna}`)
         filtros.push((fila) => valores.includes(fila[columna]))
+        return api
+      },
+      match: (condiciones: Record<string, any>) => {
+        for (const [columna, valor] of Object.entries(condiciones)) {
+          descripcion.push(`eq:${columna}`)
+          filtros.push((fila) => comparar(fila, columna, valor))
+        }
         return api
       },
       eq: (columna: string, valor: any) => {

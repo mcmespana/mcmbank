@@ -502,6 +502,14 @@ Docs: `docs/manual/21.-api-externa-solo-pros.md`,
 
 ## Styling Conventions
 
+> **Lee `design.md` (raíz del repo) antes de tocar cualquier cosa visual.** Es el sistema de
+> diseño compartido por las cuatro apps MCM (`mcmbank`, `mcmrecursos`, `mcmshop`,
+> `mcmvotaciones`): color, tipografía, espacio, movimiento, estados de acción, patrón de
+> deshacer, accesibilidad, microcopia y la lista de anti-defaults. Su §7 describe esta app en
+> concreto y su §8 apunta a `design-plans/`, donde está la deuda de diseño con planes
+> ejecutables. Lo de aquí abajo es el resumen operativo; en caso de conflicto manda `design.md`.
+
+
 - **Tailwind CSS 3** for all styling with class-based dark mode
 - Use `cn()` utility from `@/lib/utils` to merge className strings:
   ```typescript
@@ -668,6 +676,8 @@ This returns `CategoriaConOrdenEfectivo[]` with proper ordering and visibility.
 - **Pending work (single backlog)**: `docs/ANALISIS_MEJORAS.md` — lo que queda por hacer, sin numerar y ordenado por prioridad. Al terminar algo se **borra** de ahí, no se marca
 - **Technical docs**: listed in `docs/README.md` (`ENABLE_BANKING.md`, `FACTURAS_EMAIL_IA.md`, `NEXTJS_16_UPGRADE.md`…)
 - **History (frozen, don't add to)**: `docs/ARCHIVO_MEJORAS.md` (análisis 2026 completo con su numeración original) y `docs/OPTIMIZACIONES_REALIZADAS.md` (rendimiento)
+- **Design system**: `design.md` (root) — shared across the four MCM apps; §7 is Bank-specific
+- **Design debt**: `design-plans/` — numbered, self-contained, executable plans with a status table
 - **Agent guidelines**: `AGENTS.md` for contributor coding conventions (in Spanish)
 - **README**: `README.md` for setup and quick start (in Spanish)
 

@@ -63,8 +63,16 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-title" content="MCM Bank" />
         <meta name="application-name" content="MCM Bank" />
-        <meta name="theme-color" content="#0b42db" />
-        <meta name="msapplication-TileColor" content="#0b42db" />
+        {/*
+          Los dos valores salen de los tokens de `globals.css`: en claro, el
+          primario (`--brand-500`, #276ee1); en oscuro, el FONDO
+          (`--n-900`, #0b0e14) y no el primario, porque la barra del navegador
+          imita a la página, no a la marca. Antes había uno solo, #0b42db, que
+          además no era ninguno de los azules de la app.
+        */}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#276ee1" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0e14" />
+        <meta name="msapplication-TileColor" content="#276ee1" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body suppressHydrationWarning>

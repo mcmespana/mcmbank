@@ -86,7 +86,7 @@ export default function LoginForm() {
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 transition-[transform,box-shadow] duration-300 hover:scale-110 hover:shadow-xl border border-primary/20">
             <Building2 className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
+          <CardTitle className="text-3xl font-semibold tracking-tight">
             MCM Bank
           </CardTitle>
           <CardDescription className="text-base text-muted-foreground/90">

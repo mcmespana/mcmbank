@@ -7,6 +7,7 @@ import { TimeframeFilter, type Timeframe, getTimeframeRange } from "@/components
 import { OverviewDashboard } from "@/components/dashboard/overview-dashboard"
 import { ConsentAlertBanner } from "@/components/dashboard/consent-alert-banner"
 import { Button } from "@/components/ui/button"
+import { PageHeader } from "@/components/ui/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLocalStorageState } from "@/hooks/use-local-storage"
 import { TrendingUp, PieChart, Home, RotateCcw } from "lucide-react"
@@ -101,22 +102,18 @@ export function DashboardHome({ initialTab }: Props) {
       {/* Aviso de consentimiento bancario próximo a caducar (solo gestor central/tesorero) */}
       <ConsentAlertBanner />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="h-10 w-2 bg-gradient-to-b from-primary via-primary/70 to-primary/40 rounded-full shadow-lg shadow-primary/30" />
-          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
-            Dashboard
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <TimeframeFilter value={activeTimeframe} onChange={handleTimeframeChange} />
-          <Button variant="outline" onClick={handleResetAll} className="gap-2">
-            <RotateCcw className="h-4 w-4" />
-            Eliminar todos los filtros
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        actions={
+          <>
+            <TimeframeFilter value={activeTimeframe} onChange={handleTimeframeChange} />
+            <Button variant="outline" onClick={handleResetAll} className="gap-2">
+              <RotateCcw className="h-4 w-4" />
+              Eliminar todos los filtros
+            </Button>
+          </>
+        }
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">

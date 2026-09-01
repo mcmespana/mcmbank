@@ -236,7 +236,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
           <div className="bg-gradient-to-br from-primary to-primary/70 p-2 rounded-xl shadow-lg flex-shrink-0">
             <Building2 className="h-5 w-5 text-white" />
           </div>
-          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground bg-gradient-to-r from-sidebar-foreground to-sidebar-foreground/70 bg-clip-text text-transparent">MCM Bank</span>}
+          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">MCM Bank</span>}
         </button>
       </div>
 

@@ -12,6 +12,7 @@ import {
   type DragUpdate,
 } from "@hello-pangea/dnd"
 import { Button } from "@/components/ui/button"
+import { PageHeader } from "@/components/ui/page-header"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -1048,42 +1049,35 @@ export function CategoryList() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="space-y-3">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-2 bg-gradient-to-b from-primary via-primary/70 to-primary/40 rounded-full shadow-lg shadow-primary/30" />
-            <h2 className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
-              Categorías
-            </h2>
-          </div>
-          <p className="text-muted-foreground ml-6 pl-4 text-base">
-            {totalCount} categorías en total ({globalCount} globales).
-          </p>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button onClick={handleCreate} className="flex-1 sm:flex-none" disabled={!organizacionId}>
-            <Plus className="h-4 w-4 mr-2" />
-            Añadir categoría
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="flex-1 sm:flex-none sm:w-auto"
-            asChild
-            title="¿Qué añado en cada categoría?"
-          >
-            <a
-              href="https://docs.movimientoconsolacion.com/mcmespana/tesoreria/mcm-bank-guia/3.-categorias#que-pongo-en-cada-categoria"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2"
+      <PageHeader
+        title="Categorías"
+        description={`${totalCount} categorías en total (${globalCount} globales).`}
+        actions={
+          <>
+            <Button onClick={handleCreate} className="flex-1 sm:flex-none" disabled={!organizacionId}>
+              <Plus className="h-4 w-4 mr-2" />
+              Añadir categoría
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="flex-1 sm:flex-none sm:w-auto"
+              asChild
+              title="¿Qué añado en cada categoría?"
             >
-              <HelpCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">¿Qué añado en cada categoría?</span>
-            </a>
-          </Button>
-        </div>
-      </div>
+              <a
+                href="https://docs.movimientoconsolacion.com/mcmespana/tesoreria/mcm-bank-guia/3.-categorias#que-pongo-en-cada-categoria"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2"
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">¿Qué añado en cada categoría?</span>
+              </a>
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex gap-2 sm:gap-3 flex-wrap sm:flex-row items-center">
         <div className="flex-1 min-w-[200px]">

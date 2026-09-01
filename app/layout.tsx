@@ -22,7 +22,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MCM Bank",
   description: "Sistema de tesorería para MCM Locales",
-  generator: "v0.app",
   appleWebApp: {
     title: "MCM Bank",
     statusBarStyle: "default",

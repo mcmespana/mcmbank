@@ -51,7 +51,6 @@
 
 @layer base {
   :root {
-    /* Liquid Glass Light Theme */
     --background: 220 20% 98%;
     --foreground: 220 15% 10%;
     --card: 0 0% 100%;
@@ -78,16 +77,7 @@
     --chart-5: 340 80% 60%;
     --radius: 1rem;
 
-    /* Liquid Glass specific variables */
-    --glass-bg: 255 255 255 / 0.7;
-    --glass-border: 255 255 255 / 0.2;
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
-    --glass-shadow-lg: 0 16px 48px 0 rgba(0, 0, 0, 0.12);
-    --blur-sm: 8px;
-    --blur-md: 16px;
-    --blur-lg: 24px;
-
-    /* Sidebar with glass effect */
+    /* Sidebar */
     --sidebar-background: 255 255 255 / 0.8;
     --sidebar-foreground: 220 15% 20%;
     --sidebar-primary: 217 91% 60%;
@@ -99,7 +89,6 @@
   }
 
   .dark {
-    /* Liquid Glass Dark Theme */
     --background: 220 20% 8%;
     --foreground: 220 15% 95%;
     --card: 220 20% 12%;
@@ -125,13 +114,7 @@
     --chart-4: 43 90% 65%;
     --chart-5: 340 80% 65%;
 
-    /* Liquid Glass dark specific */
-    --glass-bg: 0 0 0 / 0.5;
-    --glass-border: 255 255 255 / 0.1;
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-    --glass-shadow-lg: 0 16px 48px 0 rgba(0, 0, 0, 0.6);
-
-    /* Sidebar dark glass */
+    /* Sidebar en oscuro */
     --sidebar-background: 0 0 0 / 0.6;
     --sidebar-foreground: 220 15% 90%;
     --sidebar-primary: 217 91% 65%;
@@ -156,53 +139,13 @@
   }
 }
 
-/* Liquid Glass Components */
+/*
+ * Importes de movimiento. Son los dos únicos supervivientes del bloque de
+ * componentes original: el resto (`.glass-card`, `.transaction-card`,
+ * `.glass-panel`, `.floating`…) no lo usaba nadie y se retiró en design-plans/020.
+ * Viven aquí y no en `AmountDisplay` porque los usan también las categorías.
+ */
 @layer components {
-  /* Glass card with backdrop blur effect */
-  .glass-card {
-    @apply relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg transition-all duration-300;
-  }
-
-  .glass-card-hover {
-    @apply glass-card hover:shadow-xl hover:scale-[1.02] hover:-translate-y-0.5;
-  }
-
-  /* Transaction cards with liquid glass effect */
-  .transaction-card {
-    @apply relative bg-card/90 backdrop-blur-md border border-border/40 rounded-2xl p-4 sm:p-5
-           hover:bg-card/95 hover:border-primary/30 hover:shadow-xl
-           transition-all duration-300 cursor-pointer
-           hover:scale-[1.01] hover:-translate-y-0.5;
-  }
-
-  .transaction-card::before {
-    content: '';
-    @apply absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-transparent
-           opacity-0 transition-opacity duration-300;
-  }
-
-  .transaction-card:hover::before {
-    @apply opacity-100;
-  }
-
-  /* Glass buttons */
-  .glass-button {
-    @apply bg-card/60 backdrop-blur-md border border-border/50 rounded-xl
-           hover:bg-card/80 hover:border-primary/40 hover:shadow-lg
-           transition-all duration-300;
-  }
-
-  /* Account avatar with glass effect */
-  .account-avatar {
-    @apply rounded-full p-1.5 cursor-pointer
-           hover:scale-110 hover:rotate-6
-           transition-all duration-300 flex-shrink-0
-           shadow-md hover:shadow-xl
-           bg-gradient-to-br from-primary/10 to-accent/10
-           backdrop-blur-sm border border-border/30;
-  }
-
-  /* Positive amounts with glass effect */
   .transaction-amount-positive {
     @apply bg-emerald-500/10 text-emerald-600
            border border-emerald-500/20
@@ -212,7 +155,6 @@
            shadow-sm;
   }
 
-  /* Negative amounts with glass effect */
   .transaction-amount-negative {
     @apply bg-rose-500/10 text-rose-600
            border border-rose-500/20
@@ -220,45 +162,6 @@
            dark:bg-rose-400/10 dark:text-rose-400
            dark:border-rose-400/20
            shadow-sm;
-  }
-
-  /* Gradient overlays */
-  .gradient-overlay {
-    @apply absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 rounded-2xl;
-  }
-
-  /* Floating elements */
-  .floating {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-
-  /* Glass panel */
-  .glass-panel {
-    @apply bg-background/60 backdrop-blur-2xl border border-border/30 rounded-3xl shadow-2xl;
-  }
-
-  /* Mobile-specific improvements */
-  @media (max-width: 640px) {
-    .transaction-card {
-      @apply p-3 mx-2 rounded-xl;
-    }
-
-    .account-avatar {
-      @apply p-1;
-    }
-
-    .glass-card {
-      @apply rounded-xl;
-    }
   }
 }
 

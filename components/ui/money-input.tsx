@@ -128,7 +128,7 @@ export const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
         onChange={handleChange}
         onBlur={handleBlur}
         className={cn(
-          "flex h-11 w-full rounded-md border-2 border-input bg-card/60 backdrop-blur-md px-4 py-2.5 text-base ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm transition-[color,border-color,box-shadow] duration-200 shadow-sm focus-visible:shadow-md tabular-nums",
+          "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-base ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 md:h-8 md:text-sm transition-[color,border-color,box-shadow] duration-150 tabular-nums",
           className
         )}
         {...props}

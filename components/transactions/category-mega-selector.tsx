@@ -281,7 +281,7 @@ export function CategoryMegaSelector({
             {onCreateCategory && (
               <Button
                 variant="outline"
-                className="h-10 shrink-0 gap-1.5 px-3"
+                className="shrink-0 gap-1.5 px-3"
                 type="button"
                 onClick={() => onCreateCategory()}
               >

@@ -461,7 +461,6 @@ export function CuentasManager() {
                 setSearchOpen(false)
                 setSearchTerm("")
               }}
-              className="h-10"
             >
               Cerrar
             </Button>
@@ -471,14 +470,12 @@ export function CuentasManager() {
             <Button
               variant="outline"
               onClick={() => setSearchOpen(true)}
-              className="h-10"
             >
               <Search className="h-4 w-4 mr-2" />
               Buscar
             </Button>
             <Button
               onClick={() => setIsCreateSheetOpen(true)}
-              className="h-10"
               size="default"
               disabled={Object.values(operationStates).some(state => state === 'creating')}
             >

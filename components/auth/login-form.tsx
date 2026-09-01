@@ -83,7 +83,7 @@ export default function LoginForm() {
 
       <Card className="backdrop-blur-2xl bg-card/90 border-2 border-border/30 shadow-2xl transition-shadow duration-300 hover:shadow-3xl">
         <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
             <Building2 className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-3xl font-semibold tracking-tight">

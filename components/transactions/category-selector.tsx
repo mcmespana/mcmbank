@@ -429,7 +429,7 @@ function CategoryGroupCard({ group, onSelectParent, onSelectChild, selectedCateg
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/60 bg-[rgba(var(--category-color-rgb),0.08)] p-3 transition-[border-color,background-color,box-shadow] duration-200",
+        "rounded-lg border border-border/60 bg-[rgba(var(--category-color-rgb),0.08)] p-3 transition-[border-color,background-color,box-shadow] duration-200",
         "hover:border-[var(--category-color)] hover:bg-[rgba(var(--category-color-rgb),0.12)] hover:shadow-[0_12px_30px_-18px_rgba(var(--category-color-rgb),0.6)]",
         isActive &&
           "border-[var(--category-color)] bg-[rgba(var(--category-color-rgb),0.16)] shadow-[0_16px_40px_-24px_rgba(var(--category-color-rgb),0.7)]",
@@ -547,7 +547,7 @@ function CategorySearchResult({ category, parent, isSelected, isDisabled = false
       disabled={isDisabled}
       title={isDisabled ? "Ya asignada en otra fila" : undefined}
       className={cn(
-        "w-full rounded-2xl border border-transparent bg-[rgba(var(--category-color-rgb),0.08)] px-4 py-3 text-left transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.4)] focus-visible:ring-offset-2",
+        "w-full rounded-lg border border-transparent bg-[rgba(var(--category-color-rgb),0.08)] px-4 py-3 text-left transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--category-color-rgb),0.4)] focus-visible:ring-offset-2",
         "hover:bg-[rgba(var(--category-color-rgb),0.14)]",
         isSelected &&
           "border-[var(--category-color)] bg-[rgba(var(--category-color-rgb),0.16)] shadow-[0_12px_32px_-20px_rgba(var(--category-color-rgb),0.6)]",

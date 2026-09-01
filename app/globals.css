@@ -75,7 +75,7 @@
     --chart-3: 280 70% 60%;
     --chart-4: 43 90% 60%;
     --chart-5: 340 80% 60%;
-    --radius: 1rem;
+    --radius: 0.625rem;
 
     /* Sidebar */
     --sidebar-background: 255 255 255 / 0.8;
@@ -144,24 +144,27 @@
  * componentes original: el resto (`.glass-card`, `.transaction-card`,
  * `.glass-panel`, `.floating`…) no lo usaba nadie y se retiró en design-plans/020.
  * Viven aquí y no en `AmountDisplay` porque los usan también las categorías.
+ *
+ * Son chips pequeños, así que `rounded-md` (design.md §3.3): con el radio
+ * anterior salían con forma de cápsula, y una cápsula ya significa otra cosa
+ * en este sistema. El `backdrop-blur` se va porque nunca hay nada detrás de
+ * un importe que merezca desenfocarse, y la sombra porque un chip no se eleva.
  */
 @layer components {
   .transaction-amount-positive {
     @apply bg-emerald-500/10 text-emerald-600
            border border-emerald-500/20
-           backdrop-blur-sm rounded-xl px-3 py-1.5
+           rounded-md px-2.5 py-1
            dark:bg-emerald-400/10 dark:text-emerald-400
-           dark:border-emerald-400/20
-           shadow-sm;
+           dark:border-emerald-400/20;
   }
 
   .transaction-amount-negative {
     @apply bg-rose-500/10 text-rose-600
            border border-rose-500/20
-           backdrop-blur-sm rounded-xl px-3 py-1.5
+           rounded-md px-2.5 py-1
            dark:bg-rose-400/10 dark:text-rose-400
-           dark:border-rose-400/20
-           shadow-sm;
+           dark:border-rose-400/20;
   }
 }
 

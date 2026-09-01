@@ -118,7 +118,7 @@ export function ImprovementProposalsPanel() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-primary/10 bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-4 text-white shadow-md sm:px-6">
+      <section className="rounded-lg border border-primary/10 bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-4 text-white shadow-md sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-lg font-semibold sm:text-xl">

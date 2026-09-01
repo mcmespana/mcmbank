@@ -52,7 +52,7 @@ export function FacturaVisorDialog({ archivo, open, onOpenChange }: FacturaVisor
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/70 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         {/* z-[90]: el workspace va en z-[60] y sus menús en z-[80]. */}
-        <DialogPrimitive.Content className="fixed inset-0 z-[90] flex flex-col bg-background outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:inset-4 sm:rounded-2xl sm:border sm:border-border/60 sm:shadow-2xl">
+        <DialogPrimitive.Content className="fixed inset-0 z-[90] flex flex-col bg-background outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:inset-4 sm:rounded-xl sm:border sm:border-border/60 sm:shadow-2xl">
           <DialogPrimitive.Title asChild>
             <VisuallyHidden>{archivo?.nombre_original ?? "Documento"}</VisuallyHidden>
           </DialogPrimitive.Title>

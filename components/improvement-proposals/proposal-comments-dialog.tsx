@@ -160,7 +160,7 @@ export function ProposalCommentsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
           {commentCountLabel}
         </div>
 
@@ -207,7 +207,7 @@ export function ProposalCommentsDialog({
                 return (
                   <div
                     key={comment.id}
-                    className="flex gap-3 rounded-2xl border border-border/60 bg-card/70 p-4 text-sm shadow-sm"
+                    className="flex gap-3 rounded-lg border border-border/60 bg-card/70 p-4 text-sm shadow-sm"
                   >
                     <Avatar className="mt-0.5 h-9 w-9">
                       <AvatarFallback className="bg-muted text-[11px] font-semibold uppercase">
@@ -230,7 +230,7 @@ export function ProposalCommentsDialog({
               })}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-8 text-center text-sm text-muted-foreground">
               Sé la primera persona en dejar un comentario.
             </div>
           )}

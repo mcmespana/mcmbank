@@ -72,9 +72,14 @@ const config: Config = {
   			}
   		},
   		borderRadius: {
-  			lg: 'var(--radius)',
+  			// Escala del sistema (design.md §3.3). `xl` es el techo: lo usan las
+  			// superficies grandes —hojas, diálogos, el visor de facturas—, y por
+  			// eso se define aquí en vez de heredar el de Tailwind, que a 12px se
+  			// quedaba por debajo de `lg` en cuanto `--radius` subía.
+  			sm: 'calc(var(--radius) - 4px)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			lg: 'var(--radius)',
+  			xl: 'calc(var(--radius) + 4px)'
   		},
   		keyframes: {
   			'accordion-down': {

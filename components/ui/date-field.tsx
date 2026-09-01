@@ -96,7 +96,7 @@ export function DateField({ value, onChange, id, className, size = "sm" }: DateF
             type="button"
             variant="outline"
             size="icon"
-            className={`${alto} w-9 flex-shrink-0 ${size === "md" ? "rounded-xl border-2" : ""}`}
+            className={`${alto} w-9 flex-shrink-0 ${size === "md" ? "rounded-md border-2" : ""}`}
             title="Abrir calendario"
           >
             <CalendarIcon className="h-4 w-4" />

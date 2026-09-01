@@ -67,7 +67,7 @@ export function FacturaWorkspace({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
-          className="fixed inset-0 z-[60] flex overflow-hidden bg-background outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 lg:inset-4 lg:rounded-2xl lg:border lg:border-border/60 lg:shadow-2xl"
+          className="fixed inset-0 z-[60] flex overflow-hidden bg-background outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 lg:inset-4 lg:rounded-xl lg:border lg:border-border/60 lg:shadow-2xl"
           // El foco lo coloca el panel en el primer campo que falte; dejar que
           // Radix lo lleve al primer elemento enfocable pondría el cursor en el
           // botón de cerrar.

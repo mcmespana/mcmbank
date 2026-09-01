@@ -50,79 +50,163 @@
 }
 
 @layer base {
+  /*
+   * ── Paleta ────────────────────────────────────────────────────────────────
+   *
+   * OKLCH, en dos capas (design.md §3.1):
+   *
+   *   1. Rampa cruda (`--brand-*`, `--n-*`, `--ok/--warn/--bad`): números sin
+   *      significado. Ningún componente los usa directamente.
+   *   2. Tokens semánticos (`--background`, `--primary`…): apuntan a la rampa
+   *      y cambian en `.dark`. Esto es lo que se usa, vía clases de Tailwind.
+   *
+   * Van como componentes sueltos («L C H», sin `oklch(...)`) a propósito:
+   * `tailwind.config.ts` los envuelve en `oklch(var(--x) / <alpha-value>)`, y
+   * eso es lo que permite que `bg-primary/10` o `border-border/50` sigan
+   * funcionando. Guardar el color entero los rompería en silencio.
+   *
+   * Por qué OKLCH y no el HSL de antes: en HSL, aclarar un color para el modo
+   * oscuro le cambia el tono percibido, y por eso el azul oscuro de la app se
+   * veía más lavado que el claro. Y de camino se arregla un fallo de
+   * accesibilidad real: el primario de antes —hsl(217 91% 60%)— daba 3,63:1
+   * con texto blanco encima, por debajo del 4,5 que exige AA. Es decir, el
+   * texto de todos los botones primarios de la app estaba por debajo de la
+   * norma. `--brand-500` es el mismo azul un punto más hondo: 4,79:1.
+   *
+   * Los neutros llevan un sesgo de matiz hacia el azul de marca (262°),
+   * elegido y no heredado: un gris puro al lado de este azul se ve sucio.
+   */
   :root {
-    --background: 220 20% 98%;
-    --foreground: 220 15% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 10%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 15% 10%;
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 10% 45%;
-    --accent: 217 91% 95%;
-    --accent-foreground: 217 91% 40%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 90%;
-    --input: 220 13% 94%;
-    --ring: 217 91% 60%;
-    --chart-1: 217 91% 60%;
-    --chart-2: 173 70% 50%;
-    --chart-3: 280 70% 60%;
-    --chart-4: 43 90% 60%;
-    --chart-5: 340 80% 60%;
+    /* Rampa cruda — marca */
+    --brand-50: 0.975 0.014 260;
+    --brand-100: 0.945 0.032 260;
+    --brand-200: 0.895 0.062 260;
+    --brand-300: 0.82 0.1 260;
+    --brand-400: 0.7 0.145 260;
+    --brand-500: 0.56 0.19 260;
+    --brand-600: 0.48 0.185 260;
+    --brand-700: 0.415 0.165 260;
+    --brand-800: 0.34 0.13 260;
+    --brand-900: 0.27 0.095 260;
+
+    /* Rampa cruda — neutros */
+    --n-0: 1 0 0;
+    --n-50: 0.985 0.003 262;
+    --n-100: 0.968 0.005 262;
+    --n-150: 0.948 0.007 262;
+    --n-200: 0.918 0.009 262;
+    --n-300: 0.865 0.011 262;
+    --n-400: 0.725 0.014 262;
+    --n-500: 0.585 0.016 262;
+    --n-600: 0.47 0.018 262;
+    --n-700: 0.36 0.016 262;
+    --n-750: 0.3 0.015 262;
+    --n-800: 0.25 0.014 262;
+    --n-850: 0.205 0.013 262;
+    --n-900: 0.165 0.012 262;
+    --n-950: 0.125 0.011 262;
+    --n-1000: 0.08 0.009 262;
+
+    /* Rampa cruda — semánticos. `-fill` es la mancha o el punto (basta 3:1);
+       el token a secas es el que se usa como texto y llega a 4,5:1. */
+    --ok: 0.52 0.14 150;
+    --ok-fill: 0.62 0.15 150;
+    --warn: 0.52 0.13 75;
+    --warn-fill: 0.7 0.15 78;
+    --bad: 0.545 0.19 25;
+    --bad-fill: 0.6 0.2 25;
+
+    /* Tokens semánticos — claro */
+    --background: var(--n-50);
+    --foreground: var(--n-900);
+    --card: var(--n-0);
+    --card-foreground: var(--n-900);
+    --popover: var(--n-0);
+    --popover-foreground: var(--n-900);
+    --primary: var(--brand-500);
+    --primary-foreground: var(--n-0);
+    --secondary: var(--n-100);
+    --secondary-foreground: var(--n-800);
+    --muted: var(--n-100);
+    --muted-foreground: var(--n-600);
+    --accent: var(--brand-50);
+    --accent-foreground: var(--brand-700);
+    --destructive: var(--bad);
+    --destructive-foreground: var(--n-0);
+    --border: var(--n-200);
+    --input: var(--n-200);
+    --ring: var(--brand-500);
     --radius: 0.625rem;
 
-    /* Sidebar */
-    --sidebar-background: 255 255 255 / 0.8;
-    --sidebar-foreground: 220 15% 20%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 91% 95%;
-    --sidebar-accent-foreground: 217 91% 40%;
-    --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 217 91% 60%;
+    /* Serie categórica de gráficas. Cinco tonos repartidos a luminosidad y
+       croma constantes, para que ninguno pese más que otro por su sitio en la
+       leyenda. No se recicla ninguno de los semánticos (design.md §3.9). */
+    --chart-1: 0.6 0.16 260;
+    --chart-2: 0.66 0.12 195;
+    --chart-3: 0.6 0.16 305;
+    --chart-4: 0.72 0.14 70;
+    --chart-5: 0.62 0.17 15;
+
+    /* Barra lateral. Sólida a propósito: la translucidez era de la estética
+       anterior y sobre una lista con contenido detrás se lee peor. */
+    --sidebar-background: var(--n-0);
+    --sidebar-foreground: var(--n-800);
+    --sidebar-primary: var(--brand-500);
+    --sidebar-primary-foreground: var(--n-0);
+    --sidebar-accent: var(--brand-50);
+    --sidebar-accent-foreground: var(--brand-700);
+    --sidebar-border: var(--n-200);
+    --sidebar-ring: var(--brand-500);
   }
 
   .dark {
-    --background: 220 20% 8%;
-    --foreground: 220 15% 95%;
-    --card: 220 20% 12%;
-    --card-foreground: 220 15% 95%;
-    --popover: 220 20% 12%;
-    --popover-foreground: 220 15% 95%;
-    --primary: 217 91% 65%;
-    --primary-foreground: 220 20% 10%;
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 220 15% 95%;
-    --muted: 220 15% 20%;
-    --muted-foreground: 220 10% 60%;
-    --accent: 217 91% 20%;
-    --accent-foreground: 217 91% 70%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 20%;
-    --input: 220 15% 18%;
-    --ring: 217 91% 65%;
-    --chart-1: 217 91% 65%;
-    --chart-2: 173 70% 55%;
-    --chart-3: 280 70% 65%;
-    --chart-4: 43 90% 65%;
-    --chart-5: 340 80% 65%;
+    /*
+     * Oscuro diseñado, no invertido (design.md §3.1): el fondo es azul-noche y
+     * no negro puro, y el primario SUBE de luminosidad para mantener AA sobre
+     * él —de ahí `--brand-400`, y por eso el texto que va encima es el fondo
+     * oscuro y no blanco—. Los semánticos también suben.
+     */
+    --ok: 0.72 0.15 150;
+    --ok-fill: 0.72 0.15 150;
+    --warn: 0.8 0.14 80;
+    --warn-fill: 0.8 0.14 80;
+    --bad: 0.7 0.17 25;
+    --bad-fill: 0.7 0.17 25;
 
-    /* Sidebar en oscuro */
-    --sidebar-background: 0 0 0 / 0.6;
-    --sidebar-foreground: 220 15% 90%;
-    --sidebar-primary: 217 91% 65%;
-    --sidebar-primary-foreground: 220 20% 10%;
-    --sidebar-accent: 217 91% 20%;
-    --sidebar-accent-foreground: 217 91% 70%;
-    --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 217 91% 65%;
+    --background: var(--n-900);
+    --foreground: var(--n-100);
+    --card: var(--n-850);
+    --card-foreground: var(--n-100);
+    --popover: var(--n-850);
+    --popover-foreground: var(--n-100);
+    --primary: var(--brand-400);
+    --primary-foreground: var(--n-950);
+    --secondary: var(--n-800);
+    --secondary-foreground: var(--n-100);
+    --muted: var(--n-800);
+    --muted-foreground: var(--n-400);
+    --accent: var(--brand-900);
+    --accent-foreground: var(--brand-200);
+    --destructive: var(--bad);
+    --destructive-foreground: var(--n-950);
+    --border: var(--n-750);
+    --input: var(--n-750);
+    --ring: var(--brand-400);
+
+    --chart-1: 0.7 0.15 260;
+    --chart-2: 0.74 0.11 195;
+    --chart-3: 0.7 0.15 305;
+    --chart-4: 0.8 0.13 70;
+    --chart-5: 0.72 0.15 15;
+
+    --sidebar-background: var(--n-850);
+    --sidebar-foreground: var(--n-200);
+    --sidebar-primary: var(--brand-400);
+    --sidebar-primary-foreground: var(--n-950);
+    --sidebar-accent: var(--brand-900);
+    --sidebar-accent-foreground: var(--brand-200);
+    --sidebar-border: var(--n-750);
+    --sidebar-ring: var(--brand-400);
   }
 }
 

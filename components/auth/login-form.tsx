@@ -20,7 +20,7 @@ function SubmitButton() {
     <Button
       type="submit"
       disabled={pending}
-      className="w-full group relative overflow-hidden transition-transform duration-300 hover:scale-[1.02]"
+      className="w-full group relative overflow-hidden"
     >
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
       {pending ? (
@@ -83,7 +83,7 @@ export default function LoginForm() {
 
       <Card className="backdrop-blur-2xl bg-card/90 border-2 border-border/30 shadow-2xl transition-shadow duration-300 hover:shadow-3xl">
         <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 transition-[transform,box-shadow] duration-300 hover:scale-110 hover:shadow-xl border border-primary/20">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
             <Building2 className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-3xl font-semibold tracking-tight">
@@ -104,7 +104,7 @@ export default function LoginForm() {
             type="button"
             onClick={handleGoogleLogin}
             variant="outline"
-            className="w-full group relative overflow-hidden transition-transform duration-300 hover:scale-[1.02]"
+            className="w-full group relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
             <svg

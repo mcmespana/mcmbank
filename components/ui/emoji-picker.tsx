@@ -118,7 +118,7 @@ export function EmojiPickerButton({ value = "📁", onChange, className, size = 
                         key={`${emoji}-${emojiIndex}`}
                         variant="ghost"
                         size="sm"
-                        className="h-10 w-10 p-0 hover:bg-accent hover:scale-110 transition-[background-color,transform] duration-150"
+                        className="h-10 w-10 p-0 hover:bg-accent transition-colors duration-150"
                         onClick={() => handleQuickEmojiSelect(emoji)}
                       >
                         <span className="text-xl">{emoji}</span>

@@ -584,7 +584,7 @@ export function CuentasManager() {
                         {/* Account Icon */}
                         <div className="relative flex-shrink-0">
                           <div
-                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 overflow-hidden ${isCreating ? 'animate-pulse' :
+                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center shadow-sm ring-4 ring-white dark:ring-gray-800 overflow-hidden ${isCreating ? 'animate-pulse' :
                               isUpdating ? 'animate-pulse' :
                                 isDeleting ? 'animate-pulse' : ''
                               }`}

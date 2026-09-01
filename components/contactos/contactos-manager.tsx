@@ -391,7 +391,7 @@ function ContactoCard({
   return (
     <Card
       className={cn(
-        "group cursor-pointer transition-[border-color,box-shadow,transform] hover:border-foreground/15 hover:shadow-md hover:-translate-y-0.5",
+        "group cursor-pointer transition-[border-color,box-shadow] hover:border-foreground/25 hover:shadow-md",
         archivadoEfectivoContacto(contacto) && "opacity-60",
         contacto.en_catalogo && "border-dashed bg-muted/20",
       )}

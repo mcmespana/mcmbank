@@ -413,7 +413,7 @@ export function Sidebar({
             <Button
               variant="outline"
               size="icon"
-              className="relative h-8 w-8 rounded-full bg-card/90 backdrop-blur-xl border-2 border-border/50 shadow-lg hover:shadow-xl hover:scale-110 transition-[transform,box-shadow] duration-300 after:absolute after:-inset-1 after:content-['']"
+              className="relative h-8 w-8 rounded-full bg-card border border-border shadow-sm hover:bg-muted hover:border-foreground/20 transition-[background-color,border-color] duration-150 after:absolute after:-inset-1 after:content-['']"
               onClick={onToggleCollapse}
               aria-label={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
               title={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}

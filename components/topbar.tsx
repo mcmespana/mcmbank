@@ -151,7 +151,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           <Button
             variant="ghost"
             size="sm"
-            className="hidden sm:flex w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-[transform,background-color,color] duration-150 hover:scale-110 flex-shrink-0"
+            className="hidden sm:flex w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-[background-color,color] duration-150 flex-shrink-0"
             onClick={handleThemeCycle}
             title={`Cambiar tema (actual: ${currentThemeLabel})`}
           >
@@ -187,7 +187,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
-            className="text-muted-foreground hover:text-red-600 hover:bg-red-500/10 w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl transition-[transform,background-color,color] duration-150 hover:scale-110 flex-shrink-0"
+            className="text-muted-foreground hover:text-red-600 hover:bg-red-500/10 w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl transition-[background-color,color] duration-150 flex-shrink-0"
             title="Cerrar sesión"
           >
             <LogOut className="h-4 w-4" />

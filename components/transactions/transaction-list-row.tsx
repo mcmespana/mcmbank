@@ -144,7 +144,9 @@ export const TransactionListRow = memo(function TransactionListRow({
                     ? "scale-90 opacity-0"
                     : selectionActive
                     ? "scale-95 opacity-0"
-                    : "group-hover:scale-95 group-hover:opacity-0 group-hover:rotate-3",
+                    // Excepción a design.md §5.3: el avatar no crece por adorno, se
+                    // encoge y se va para dejar ver la casilla de selección que hay debajo.
+                    : "group-hover:scale-95 group-hover:opacity-0",
                 )}
                 // El aro conserva el color de la cuenta también cuando manda el
                 // proveedor: se sigue distinguiendo de qué cuenta sale el dinero.

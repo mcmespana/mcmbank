@@ -50,7 +50,7 @@ export const QuickActions = memo(function QuickActions() {
       {actions.map((action) => (
         <Card
           key={action.title}
-          className={`bg-gradient-to-br ${action.bgGradient} border-2 border-transparent hover:border-current transition-[transform,box-shadow,border-color] duration-300 cursor-pointer group hover:shadow-lg hover:scale-105 active:scale-[0.98]`}
+          className={`bg-gradient-to-br ${action.bgGradient} border-2 border-transparent hover:border-current transition-[box-shadow,border-color] duration-150 cursor-pointer group hover:shadow-md`}
           onClick={action.action}
         >
           <CardHeader className="pb-3">

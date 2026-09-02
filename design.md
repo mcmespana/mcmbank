@@ -455,28 +455,40 @@ formularios largos y flujos de dos paneles.
 
 **Lo que hay que saber para no tropezar:**
 
-- Hay **dos** `globals.css`. Se carga `app/globals.css`; `styles/globals.css` es un resto
-  muerto (§8). No edites el segundo.
-- El repo lleva **dos estéticas superpuestas**: la original *Liquid Glass* generada con v0
-  (radios de 1 rem, `backdrop-blur`, degradados, `hover:scale`, botones de 44 px) y una capa
-  posterior sobria tipo Linear/Vercel (`StatusPill`, `ListRow`, `FilterTabs`). **La sobria es
-  la buena.** Todo lo nuevo se escribe en la sobria; §8 tiene el plan para retirar la otra.
+- El repo venía con **dos estéticas superpuestas**: la original *Liquid Glass* generada con
+  v0 (radios de 1 rem, `backdrop-blur`, degradados, `hover:scale`, botones de 44 px) y una
+  capa posterior sobria tipo Linear/Vercel. Los planes `020`–`028` retiraron la primera
+  (2026-09-02). Si te encuentras un resto —`backdrop-blur` decorativo, una `shadow-2xl`, un
+  `border-2`— es eso: un resto, no una decisión. Está fichado en `design-plans/029`.
+- El único `globals.css` es `app/globals.css`. Había una copia muerta en `styles/` que ya no
+  está: si vuelve a aparecer, es un error de fusión.
+- **Los tokens de color guardan solo los componentes** («L C H», sin `oklch(...)`), y
+  `tailwind.config.ts` los envuelve en `oklch(var(--x) / <alpha-value>)`. Eso es lo que hace
+  que `bg-primary/10` y `border-border/50` sigan aplicando opacidad. Si algún día guardas el
+  color entero en el token, todos los modificadores de opacidad de la app dejan de aplicar
+  **en silencio**.
+- El azul de esta app es el tono **260** en OKLCH. La rampa `--avd-*` de `mcmvotaciones`
+  está en 235–250 y sale visiblemente más cian: es otro azul, aunque las dos apps lo llamen
+  «azul institucional».
 
 ## 8. Deuda de diseño conocida
 
 Los planes ejecutables viven en **`design-plans/`**, numerados y autocontenidos, con su tabla
 de estado en `design-plans/README.md`. Un agente que venga a "arreglar diseño" empieza ahí.
 
-Pendientes abiertos en este repo (detalle en cada plan):
+Los planes **`020`–`028`, que llevaron esta app al sistema, están hechos** (2026-09-02): CSS
+muerto fuera, botones y campos a la escala compartida, radios, `hover:scale`, cabeceras,
+tokens en OKLCH y tipografía. De ellos, dos merecen recordarse porque arreglaron fallos
+reales y no solo forma:
+
+- El primario de antes daba **3,63:1** con texto blanco encima —por debajo del 4,5 de AA—,
+  así que el texto de todos los botones primarios estaba fuera de norma. Ahora da 4,79:1, y
+  los 16 pares texto/fondo de los dos temas están comprobados uno a uno.
+- El `theme-color` de la barra del navegador era un azul que no estaba en la app, y no había
+  variante oscura.
+
+**Lo que queda:**
 
 | Plan | Qué |
 |---|---|
-| `020` | **Borrar el CSS muerto**: `.glass-card`, `.glass-card-hover`, `.glass-button`, `.glass-panel`, `.transaction-card`, `.floating` y las variables `--glass-*` no los usa **ningún** componente. Y borrar `styles/globals.css`, que no se carga |
-| `021` | **Botones al sistema**: de `rounded-2xl` + `h-11` + `shadow-sm hover:shadow-lg` + `backdrop-blur` + `active:scale-95` a la escala compartida (§3.3). Es el cambio más visible de todos |
-| `022` | **`PageHeader` sin degradado**: quitar el `bg-clip-text` del título y la franja con `shadow-primary/30` (§5.2, §5.4) |
-| `023` | **`--radius` de 1 rem a 0,625 rem** y barrido de `rounded-2xl` en superficies pequeñas |
-| `024` | **Quitar los `hover:scale`** que quedan en filas y tarjetas (§5.3) |
-| `025` | **HSL → OKLCH** en los tokens, y rampa cruda + capa semántica (§3.1) |
-| `026` | **Tipografía**: Geist → Figtree + Bricolage, autoalojadas (requiere visto bueno, cambia la cara de la app) |
-| `027` | **`theme-color` y `--primary` no coinciden** (`#0b42db` en `layout.tsx` frente a `hsl(217 91% 60%)`): la barra del navegador en Android sale de otro azul |
-| `028` | **Quitar `generator: "v0.app"`** de la metadata |
+| [`029`](design-plans/029-destructivo-y-restos-de-liquid-glass.md) | Separar el rojo que **confirma** un borrado del que solo **abre** el diálogo; retirar los `backdrop-blur` que quedan fuera de los botones (tarjeta del login, pestañas, barra superior); y el `hidden sm:inline` de `category-list` |

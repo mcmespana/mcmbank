@@ -671,7 +671,7 @@ export function TransactionDetail({
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
                 <div
                   className={cn(
-                    "flex items-center gap-2 rounded-md border px-3 py-2 text-sm shadow-sm backdrop-blur-sm",
+                    "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
                     saveStatus === "saving"
                       ? "bg-background/90 text-muted-foreground"
                       : saveStatus === "saved"

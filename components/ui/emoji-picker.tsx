@@ -172,7 +172,7 @@ export function EmojiPickerButton({ value = "📁", onChange, className, size = 
                   components={{
                     CategoryHeader: ({ category, ...props }) => (
                       <div
-                        className="sticky top-0 bg-background/95 backdrop-blur-sm px-3 py-2 text-xs font-semibold text-primary border-b border-border/50 z-10"
+                        className="sticky top-0 bg-background px-3 py-2 text-xs font-semibold text-primary border-b border-border/50 z-10"
                         {...props}
                       >
                         {category.label}

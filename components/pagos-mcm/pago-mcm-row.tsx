@@ -149,13 +149,13 @@ export const PagoMcmRow = memo(function PagoMcmRow({
       {canEdit && pago.estado === "pendiente" && (
         <Button type="button" size="sm" variant="ghost" className="h-9 gap-1.5 px-2.5" onClick={onMarcarPagado}>
           <CheckCircle2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Marcar pagado</span>
+          <span className="sr-only sm:not-sr-only">Marcar pagado</span>
         </Button>
       )}
       {canEdit && pago.estado === "borrador" && (
         <Button type="button" size="sm" variant="ghost" className="h-9 gap-1.5 px-2.5" onClick={onConfirmarBorrador}>
           <CheckCircle2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Confirmar</span>
+          <span className="sr-only sm:not-sr-only">Confirmar</span>
         </Button>
       )}
       {canEdit && <ActionMenu ariaLabel={`Más acciones del pago ${pago.concepto}`} items={menuItems} />}

@@ -173,7 +173,7 @@ export function AvisosPanel({
               )}
             >
               <CheckCheck className="h-3.5 w-3.5" aria-hidden />
-              <span className="hidden sm:inline">Marcar leído</span>
+              <span className="sr-only sm:not-sr-only">Marcar leído</span>
             </button>
           )}
           <button

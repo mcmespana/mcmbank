@@ -15,7 +15,7 @@ improvises.
   cuatro apps. **Hechos los nueve el 2026-09-02**, un commit por plan, validando cada uno con
   `typecheck` + `lint` + los 971 tests + `build` y con capturas en claro y oscuro a 430 y
   1700 px.
-- **029** — lo que aquellos nueve apartaron a propósito para no ensanchar sus commits.
+- **029** — lo que aquellos nueve apartaron a propósito para no ensanchar sus commits. Hecho.
 
 Los planes de diseño no pisan a los funcionales de `plans/` — cada plan indica qué NO tocar.
 
@@ -42,6 +42,6 @@ Los planes de diseño no pisan a los funcionales de `plans/` — cada plan indic
 | [026](026-tipografia-figtree-bricolage.md) | Tipografía: Geist → Figtree + Bricolage (requiere visto bueno) | global | DONE (2026-09-02) |
 | [027](027-theme-color-y-primary.md) | `theme-color` y `--primary` no coinciden; falta el de oscuro | global | DONE (2026-09-02) |
 | [028](028-quitar-generator-v0.md) | Quitar `generator: "v0.app"` de la metadata | global | DONE (2026-09-02) |
-| [029](029-destructivo-y-restos-de-liquid-glass.md) | Rojo destructivo en dos variantes; restos de `backdrop-blur`; `hidden sm:inline` | global | TODO |
+| [029](029-destructivo-y-restos-de-liquid-glass.md) | Rojo destructivo en dos variantes; restos de `backdrop-blur`; etiquetas mudas en móvil | global | DONE (2026-09-02) |
 
 Estados: TODO | IN PROGRESS | DONE (fecha) | BLOCKED (motivo en una línea)

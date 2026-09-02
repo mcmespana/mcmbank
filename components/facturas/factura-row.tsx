@@ -132,7 +132,7 @@ export const FacturaRow = memo(function FacturaRow({
           title="Vincular con un movimiento del banco"
         >
           <Link2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Vincular</span>
+          <span className="sr-only sm:not-sr-only">Vincular</span>
         </Button>
       )}
       {canEdit && <ActionMenu ariaLabel={`Más acciones de la factura ${titulo}`} items={menuItems} />}

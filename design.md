@@ -359,7 +359,10 @@ Esta lista está escrita contra cosas que ya están en nuestro código y nos han
 
 1. **Nada de "glassmorphism"**: `backdrop-blur` decorativo, tarjetas semitransparentes,
    bordes blancos al 20 %. Sobre un fondo con contenido, ilegible; en un móvil normal, caro.
-   El `backdrop-filter` se reserva a **una** barra pegajosa por app.
+   El `backdrop-filter` se reserva a dos sitios y solo dos: **una** barra pegajosa por app,
+   y el **velo de un modal** —donde no es adorno, sino lo que separa el diálogo de la página
+   que hay detrás—. Un velo así va a 2 px, no a 24. Cualquier otra superficie va sólida.
+   Y un cristal dentro de otro cristal no es ninguna de las dos cosas.
 2. **Nada de gradientes como fondo de página, de tarjeta o de texto.** Un `bg-clip-text` con
    degradado en un `h1` es de 2022 y baja el contraste. El degradado se admite en una franja
    de acento fina o en un dato, no como material.
@@ -487,8 +490,12 @@ reales y no solo forma:
 - El `theme-color` de la barra del navegador era un azul que no estaba en la app, y no había
   variante oscura.
 
-**Lo que queda:**
+**Lo que queda:** nada abierto ahora mismo. El `029` cerró la lista el 2026-09-02:
+el rojo destructivo separado en dos variantes —`destructive` solo para el botón que
+ejecuta, `destructiveGhost` para el que abre el diálogo o arma la confirmación—, los
+`backdrop-blur` decorativos retirados de las superficies de contenido, y las etiquetas
+que se ocultaban en móvil convertidas en `sr-only sm:not-sr-only`, para que un botón
+que se queda en icono siga teniendo nombre para quien lo escucha.
 
-| Plan | Qué |
-|---|---|
-| [`029`](design-plans/029-destructivo-y-restos-de-liquid-glass.md) | Separar el rojo que **confirma** un borrado del que solo **abre** el diálogo; retirar los `backdrop-blur` que quedan fuera de los botones (tarjeta del login, pestañas, barra superior); y el `hidden sm:inline` de `category-list` |
+Cuando aparezca deuda nueva, un plan numerado en `design-plans/` y una fila en su
+tabla de estado.

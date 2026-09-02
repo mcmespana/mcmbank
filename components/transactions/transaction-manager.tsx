@@ -931,7 +931,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <Tag className="h-4 w-4" />
-                    <span className="hidden sm:inline">Editar categoría</span>
+                    <span className="sr-only sm:not-sr-only">Editar categoría</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -940,7 +940,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <Type className="h-4 w-4" />
-                    <span className="hidden sm:inline">Unificar concepto</span>
+                    <span className="sr-only sm:not-sr-only">Unificar concepto</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -949,7 +949,7 @@ export function TransactionManager() {
                     className="flex items-center gap-1"
                   >
                     <FilePlus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Añadir nota</span>
+                    <span className="sr-only sm:not-sr-only">Añadir nota</span>
                   </Button>
                   {/* Marcar "falta factura" de golpe: repasar el extracto de un
                       mes y señalar los cargos sin papel es justo lo que se hace
@@ -968,18 +968,18 @@ export function TransactionManager() {
                     }
                   >
                     <AlertTriangle className="h-4 w-4" />
-                    <span className="hidden sm:inline">
+                    <span className="sr-only sm:not-sr-only">
                       {todoMarcadoFaltaFactura ? "Quitar falta factura" : "Falta factura"}
                     </span>
                   </Button>
                   <Button
-                    variant="destructive"
+                    variant="destructiveGhost"
                     size="sm"
                     onClick={() => setBulkDeleteOpen(true)}
                     className="flex items-center gap-1"
                   >
                     <Trash2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Eliminar</span>
+                    <span className="sr-only sm:not-sr-only">Eliminar</span>
                   </Button>
                   <Button
                     variant="ghost"
@@ -989,7 +989,7 @@ export function TransactionManager() {
                     title="Limpiar selección"
                   >
                     <X className="h-4 w-4" />
-                    <span className="hidden sm:inline">Limpiar</span>
+                    <span className="sr-only sm:not-sr-only">Limpiar</span>
                   </Button>
                 </div>
               </div>

@@ -209,7 +209,9 @@ function ImportedList({
             </span>
             <span
               className={
-                "font-mono text-xs font-semibold shrink-0 " +
+                // Un importe no va en mono: va con `tabular-nums`, que alinea
+                // las columnas sin cambiar de familia (design.md §3.2).
+                "text-xs font-semibold tabular-nums shrink-0 " +
                 (m.importe >= 0 ? "text-green-600" : "text-red-600")
               }
             >

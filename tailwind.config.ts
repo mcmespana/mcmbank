@@ -17,6 +17,11 @@ const config: Config = {
   	// funcionando los modificadores de opacidad (`bg-primary/10`,
   	// `border-border/50`): Tailwind lo sustituye por el valor que toque.
   	extend: {
+  		fontFamily: {
+  			sans: ["'Figtree Variable'", 'ui-sans-serif', 'system-ui', 'sans-serif'],
+  			display: ["'Bricolage Grotesque Variable'", "'Figtree Variable'", 'ui-sans-serif', 'system-ui', 'sans-serif'],
+  			mono: ["'JetBrains Mono'", 'ui-monospace', 'SFMono-Regular', 'monospace'],
+  		},
   		transitionTimingFunction: {
   			// Curva de entrada/salida de paneles y hojas. Con nombre propio: la
   			// forma arbitraria equivalente lleva comas y Tailwind la marca como

@@ -1,3 +1,14 @@
+/*
+ * Tipografía del sistema MCM (design.md §3.2): Figtree para texto e interfaz,
+ * Bricolage Grotesque para titulares grandes, JetBrains Mono para códigos.
+ *
+ * Autoalojadas con Fontsource, no desde el CDN de Google: una petición
+ * bloqueante a un tercero, un parpadeo de fuente y un dato que se va fuera.
+ */
+@import '@fontsource-variable/figtree';
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/jetbrains-mono';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -253,6 +264,11 @@
   }
   h1, h2, h3 {
     text-wrap: balance;
+  }
+  /* Bricolage solo en titulares grandes: por debajo de 24 px pierde y se lee
+     peor que Figtree, así que `h3` se queda con la de texto (design.md §3.2). */
+  h1, h2 {
+    font-family: theme('fontFamily.display');
   }
 }
 

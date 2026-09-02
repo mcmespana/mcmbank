@@ -181,7 +181,7 @@ export function AvisoItem({
       onClick={aviso.noLeido ? () => onMarcarLeido(aviso.id) : undefined}
       className={cn(
         "relative flex flex-col gap-[11px] rounded-[18px] border p-[15px] transition-colors duration-150",
-        "sm:gap-2.5 sm:rounded-2xl sm:p-3.5",
+        "sm:gap-2.5 sm:rounded-lg sm:p-3.5",
         hecha
           ? "border-border bg-muted/25"
           : aviso.noLeido

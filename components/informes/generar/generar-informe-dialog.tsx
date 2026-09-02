@@ -1020,7 +1020,7 @@ export function GenerarInformeDialog({
                 href={result.driveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 px-5 py-3 font-semibold text-primary-foreground shadow-lg transition-[transform,box-shadow] duration-300 hover:scale-105 hover:shadow-xl"
+                className="group inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
               >
                 <FileSpreadsheet className="h-5 w-5" />
                 Abrir en Google Sheets

@@ -73,8 +73,8 @@ export function FacturaDropOverlay({ delegacionNombre, disabled, onFiles }: Fact
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/85 backdrop-blur-sm animate-in fade-in-0 duration-150">
-      <div className="pointer-events-none m-6 flex w-full max-w-lg flex-col items-center gap-4 rounded-3xl border-2 border-dashed border-primary bg-primary/[0.04] px-8 py-14 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+      <div className="pointer-events-none m-6 flex w-full max-w-lg flex-col items-center gap-4 rounded-xl border-2 border-dashed border-primary bg-primary/[0.04] px-8 py-14 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Inbox className="h-7 w-7" aria-hidden />
         </div>
         <div className="text-lg font-semibold tracking-tight">Suelta las facturas donde quieras</div>

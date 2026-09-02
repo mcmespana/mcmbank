@@ -545,7 +545,7 @@ export const CategoryAnalysisDashboard = memo(function CategoryAnalysisDashboard
                   innerRadius={60}
                   outerRadius={100}
                   paddingAngle={2}
-                  stroke="hsl(var(--background))"
+                  stroke="oklch(var(--background))"
                   strokeWidth={2}
                 >
                   {data.map((d) => (

@@ -45,7 +45,7 @@ export function FacturaInboxDropzone({
     <div
       {...getRootProps()}
       className={cn(
-        "group/dz relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border-2 border-dashed border-border/70 bg-gradient-to-br from-muted/40 via-background to-muted/20 px-4 py-6 text-center transition-[border-color,background-color] duration-200",
+        "group/dz relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border-2 border-dashed border-border/70 bg-gradient-to-br from-muted/40 via-background to-muted/20 px-4 py-6 text-center transition-[border-color,background-color] duration-200",
         isDragActive ? "border-primary bg-primary/5" : "hover:border-primary/50 hover:bg-primary/[0.03]",
         bloqueado && "cursor-not-allowed opacity-60",
       )}
@@ -53,7 +53,7 @@ export function FacturaInboxDropzone({
       <input {...getInputProps()} />
       <div
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform duration-200",
+          "flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform duration-200",
           isDragActive ? "scale-110" : "group-hover/dz:scale-105",
         )}
       >

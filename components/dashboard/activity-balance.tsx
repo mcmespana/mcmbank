@@ -192,7 +192,7 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
   const chartConfig = {
     ingresos: { label: "Ingresos", color: "#10b981" },
     gastos: { label: "Gastos", color: "#ef4444" },
-    acumulado: { label: "Saldo acumulado", color: "hsl(var(--primary))" },
+    acumulado: { label: "Saldo acumulado", color: "oklch(var(--primary))" },
   } satisfies ChartConfig
 
   const clearFilters = () => {

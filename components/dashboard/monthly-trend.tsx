@@ -29,9 +29,9 @@ export const MonthlyTrend = memo(function MonthlyTrend({ from, to }: Props) {
   }, [trend])
 
   const chartConfig = {
-    ingresos: { label: "Ingresos", color: "hsl(var(--chart-1))" },
-    gastos: { label: "Gastos", color: "hsl(var(--chart-2))" },
-    balance: { label: "Balance", color: "hsl(var(--chart-3))" },
+    ingresos: { label: "Ingresos", color: "oklch(var(--chart-1))" },
+    gastos: { label: "Gastos", color: "oklch(var(--chart-2))" },
+    balance: { label: "Balance", color: "oklch(var(--chart-3))" },
   } satisfies ChartConfig
 
   if (chartData.length === 0) return null

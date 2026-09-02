@@ -15,16 +15,16 @@ import { Skeleton } from "@/components/ui/skeleton"
  * contenido real, para que al llegar los datos no salte el layout.
  */
 
-/** Cabecera grande con barra de degradado, el patrón de `PageHeader`. */
+/** Cabecera de pantalla; tiene que ocupar lo mismo que `PageHeader`. */
 function HeaderSkeleton({ actions = 1 }: { actions?: number }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-10 w-2 rounded-full" />
-        <Skeleton className="h-9 w-52" />
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-8 w-1 rounded-full" />
+        <Skeleton className="h-8 w-52" />
       </div>
       {actions > 0 && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {Array.from({ length: actions }).map((_, i) => (
             <Skeleton key={i} className="h-10 w-28" />
           ))}

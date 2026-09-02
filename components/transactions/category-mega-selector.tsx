@@ -188,7 +188,7 @@ export function CategoryMegaSelector({
     // Alturas en `dvh`, no en `vh`: en el móvil `100vh` cuenta con la barra del
     // navegador retraída, así que el selector medía más que el hueco real y el
     // final de la lista quedaba por debajo del borde, sin forma de llegar.
-    <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-[calc(100dvh-2rem)] sm:h-auto max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-4rem)] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
+    <div className="bg-background shadow-xl border border-border/40 w-full max-w-3xl h-[calc(100dvh-2rem)] sm:h-auto max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-4rem)] rounded-t-xl sm:rounded-xl overflow-hidden flex flex-col">
       <div className="border-b bg-muted/40 p-4 sm:p-6">
         <div className="flex flex-row items-start justify-between gap-3 sm:gap-6">
           <div className="flex flex-1 items-start gap-3 sm:items-center">
@@ -263,7 +263,7 @@ export function CategoryMegaSelector({
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="Filtrar por nombre de la etiqueta..."
-                className="pl-9 h-10 rounded-xl"
+                className="pl-9 h-10"
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault()
@@ -281,7 +281,7 @@ export function CategoryMegaSelector({
             {onCreateCategory && (
               <Button
                 variant="outline"
-                className="h-10 shrink-0 gap-1.5 rounded-xl px-3"
+                className="shrink-0 gap-1.5 px-3"
                 type="button"
                 onClick={() => onCreateCategory()}
               >
@@ -329,7 +329,7 @@ export function CategoryMegaSelector({
 
                 {/* Categorías sin subcategorías + huérfanas: juntas en un bloque compacto */}
                 {(groups.some((g) => g.children.length === 0) || orphans.length > 0) && (
-                  <div className="rounded-2xl border border-border/50 bg-muted/20 p-3 space-y-2.5">
+                  <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2.5">
                     <p className="text-xs font-semibold text-muted-foreground uppercase">Más categorías</p>
                     <div className="flex flex-wrap gap-2">
                       {groups
@@ -416,7 +416,7 @@ function CategoryResultRow({ category, parent, isSelected, onSelect }: CategoryR
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-2xl border border-transparent bg-muted/30 px-4 py-3 text-left transition hover:bg-muted",
+        "w-full rounded-lg border border-transparent bg-muted/30 px-4 py-3 text-left transition hover:bg-muted",
         isSelected && "border-primary bg-primary/5",
       )}
     >
@@ -442,7 +442,7 @@ function CategoryGroupSection({ group, isSelected, onSelect }: CategoryGroupSect
   const { parent, children } = group
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-muted/20 p-3 space-y-2.5 transition-colors hover:border-border">
+    <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2.5 transition-colors hover:border-border">
       <div className="flex items-center gap-3">
         <CategoryPill
           category={parent}

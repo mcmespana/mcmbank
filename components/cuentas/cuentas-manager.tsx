@@ -461,7 +461,6 @@ export function CuentasManager() {
                 setSearchOpen(false)
                 setSearchTerm("")
               }}
-              className="h-10"
             >
               Cerrar
             </Button>
@@ -471,14 +470,12 @@ export function CuentasManager() {
             <Button
               variant="outline"
               onClick={() => setSearchOpen(true)}
-              className="h-10"
             >
               <Search className="h-4 w-4 mr-2" />
               Buscar
             </Button>
             <Button
               onClick={() => setIsCreateSheetOpen(true)}
-              className="h-10"
               size="default"
               disabled={Object.values(operationStates).some(state => state === 'creating')}
             >
@@ -584,7 +581,7 @@ export function CuentasManager() {
                         {/* Account Icon */}
                         <div className="relative flex-shrink-0">
                           <div
-                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105 overflow-hidden ${isCreating ? 'animate-pulse' :
+                            className={`h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center shadow-sm ring-4 ring-white dark:ring-gray-800 overflow-hidden ${isCreating ? 'animate-pulse' :
                               isUpdating ? 'animate-pulse' :
                                 isDeleting ? 'animate-pulse' : ''
                               }`}

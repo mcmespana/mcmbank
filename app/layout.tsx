@@ -1,28 +1,14 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { AppProviders } from "@/contexts/app-providers"
 import { ServiceWorkerRegister } from "@/components/service-worker-register"
 import "./globals.css"
 
-const geist = Geist({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-geist",
-})
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-geist-mono",
-})
-
 export const metadata: Metadata = {
   title: "MCM Bank",
   description: "Sistema de tesorería para MCM Locales",
-  generator: "v0.app",
   appleWebApp: {
     title: "MCM Bank",
     statusBarStyle: "default",
@@ -60,12 +46,20 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${geist.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+    <html lang="es" className="antialiased" suppressHydrationWarning>
       <head>
         <meta name="apple-mobile-web-app-title" content="MCM Bank" />
         <meta name="application-name" content="MCM Bank" />
-        <meta name="theme-color" content="#0b42db" />
-        <meta name="msapplication-TileColor" content="#0b42db" />
+        {/*
+          Los dos valores salen de los tokens de `globals.css`: en claro, el
+          primario (`--brand-500`, #276ee1); en oscuro, el FONDO
+          (`--n-900`, #0b0e14) y no el primario, porque la barra del navegador
+          imita a la página, no a la marca. Antes había uno solo, #0b42db, que
+          además no era ninguno de los azules de la app.
+        */}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#276ee1" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0e14" />
+        <meta name="msapplication-TileColor" content="#276ee1" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body suppressHydrationWarning>

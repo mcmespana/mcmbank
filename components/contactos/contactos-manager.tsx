@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FilterTabs } from "@/components/ui/filter-tabs"
+import { PageHeader } from "@/components/ui/page-header"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useDelegationContext } from "@/contexts/delegation-context"
@@ -171,36 +172,28 @@ export function ContactosManager() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-2 rounded-full bg-gradient-to-b from-primary via-primary/70 to-primary/40 shadow-lg shadow-primary/30" />
-            <h1 className="text-3xl font-extrabold sm:text-4xl bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
-              Contactos
-            </h1>
-          </div>
-          <p className="ml-5 max-w-2xl pl-4 text-sm text-muted-foreground">
-            Tu agenda para los movimientos: proveedores, personas MCM (socios, voluntarios) y destinatarios. Guarda IBAN, teléfono y notas, y vincúlalos a los movimientos.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIncluirArchivados((v) => !v)}
-            className={cn(incluirArchivados && "bg-amber-100/40 dark:bg-amber-950/30")}
-          >
-            <Archive className="mr-1.5 h-3.5 w-3.5" />
-            {incluirArchivados ? "Ocultar archivados" : "Ver archivados"}
-          </Button>
-          {canEdit && (
-            <Button onClick={() => openCreate()}>
-              <Plus className="mr-1.5 h-4 w-4" /> Nuevo contacto
+      <PageHeader
+        title="Contactos"
+        description="Tu agenda para los movimientos: proveedores, personas MCM (socios, voluntarios) y destinatarios. Guarda IBAN, teléfono y notas, y vincúlalos a los movimientos."
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIncluirArchivados((v) => !v)}
+              className={cn(incluirArchivados && "bg-amber-100/40 dark:bg-amber-950/30")}
+            >
+              <Archive className="mr-1.5 h-3.5 w-3.5" />
+              {incluirArchivados ? "Ocultar archivados" : "Ver archivados"}
             </Button>
-          )}
-        </div>
-      </div>
+            {canEdit && (
+              <Button onClick={() => openCreate()}>
+                <Plus className="mr-1.5 h-4 w-4" /> Nuevo contacto
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Tipo tabs */}
       <FilterTabs
@@ -398,7 +391,7 @@ function ContactoCard({
   return (
     <Card
       className={cn(
-        "group cursor-pointer transition-[border-color,box-shadow,transform] hover:border-foreground/15 hover:shadow-md hover:-translate-y-0.5",
+        "group cursor-pointer transition-[border-color,box-shadow] hover:border-foreground/25 hover:shadow-md",
         archivadoEfectivoContacto(contacto) && "opacity-60",
         contacto.en_catalogo && "border-dashed bg-muted/20",
       )}

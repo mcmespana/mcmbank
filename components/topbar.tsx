@@ -138,7 +138,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           variant="ghost"
           size="sm"
           onClick={handleManualClick}
-          className="hidden sm:inline-flex gap-2 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors duration-150"
+          className="hidden sm:inline-flex gap-2 rounded-md hover:bg-primary/10 hover:text-primary transition-colors duration-150"
         >
           <BookOpen className="h-4 w-4" />
           <span>Manual</span>
@@ -151,7 +151,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
           <Button
             variant="ghost"
             size="sm"
-            className="hidden sm:flex w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-[transform,background-color,color] duration-150 hover:scale-110 flex-shrink-0"
+            className="hidden sm:flex w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-md hover:bg-primary/10 hover:text-primary transition-[background-color,color] duration-150 flex-shrink-0"
             onClick={handleThemeCycle}
             title={`Cambiar tema (actual: ${currentThemeLabel})`}
           >
@@ -163,7 +163,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         {/* User info and logout. Oculto en móvil por el mismo motivo: ambos
             están duplicados en el pie del menú lateral (components/sidebar.tsx). */}
         <div className="hidden sm:flex items-center gap-1 sm:gap-3 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border/30 flex-shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 bg-card/50 backdrop-blur-sm rounded-2xl px-2 sm:px-3 py-1.5 border border-border/30 shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 bg-card/50 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-1.5 border border-border/30 shadow-sm">
             <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-primary/20 ring-offset-0 sm:ring-offset-2 ring-offset-background flex-shrink-0">
               <AvatarImage src="" alt={getUserDisplayName()} />
               <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
@@ -187,7 +187,7 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
-            className="text-muted-foreground hover:text-red-600 hover:bg-red-500/10 w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-xl transition-[transform,background-color,color] duration-150 hover:scale-110 flex-shrink-0"
+            className="text-muted-foreground hover:text-red-600 hover:bg-red-500/10 w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-md transition-[background-color,color] duration-150 flex-shrink-0"
             title="Cerrar sesión"
           >
             <LogOut className="h-4 w-4" />

@@ -220,7 +220,7 @@ export function AvisoComposer({
   // ── Escribiendo ────────────────────────────────────────────────────────────
   return (
     <div className="px-4 pb-3.5" ref={contenedorRef} onBlur={handleBlur}>
-      <div className="rounded-2xl border border-primary/45 bg-card shadow-[0_0_0_3.5px_hsl(var(--primary)/0.10)]">
+      <div className="rounded-lg border border-primary/45 bg-card shadow-[0_0_0_3.5px_oklch(var(--primary)/0.10)]">
         {/* Tipo + destinatario */}
         <div className="flex items-center gap-1 px-2.5 pt-2.5">
           {(

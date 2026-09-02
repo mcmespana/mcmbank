@@ -79,7 +79,7 @@ export function ProposalsBoard({
 
   if (loading && proposals.length === 0) {
     return (
-      <div className="flex min-h-[160px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/60 bg-muted/10 p-8 text-muted-foreground">
+      <div className="flex min-h-[160px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/60 bg-muted/10 p-8 text-muted-foreground">
         <LoadingSpinner />
         <p className="text-sm">{copy.loading}</p>
       </div>

@@ -233,10 +233,10 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
           className="flex items-center gap-3 transition-opacity duration-200 hover:opacity-80"
           title="Ir al inicio"
         >
-          <div className="bg-gradient-to-br from-primary to-primary/70 p-2 rounded-xl shadow-lg flex-shrink-0">
+          <div className="bg-primary p-2 rounded-md flex-shrink-0">
             <Building2 className="h-5 w-5 text-white" />
           </div>
-          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground bg-gradient-to-r from-sidebar-foreground to-sidebar-foreground/70 bg-clip-text text-transparent">MCM Bank</span>}
+          {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">MCM Bank</span>}
         </button>
       </div>
 
@@ -254,7 +254,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
           const linkContent = collapsed ? (
             <div
               className={cn(
-                "relative mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-transparent transition-colors duration-200",
+                "relative mx-auto flex h-10 w-10 items-center justify-center rounded-md border border-transparent transition-colors duration-200",
                 isDisabled
                   ? "text-muted-foreground cursor-not-allowed opacity-40"
                   : isActive
@@ -281,7 +281,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
           ) : (
             <div
               className={cn(
-                "flex items-center justify-between rounded-xl border border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 relative group",
+                "flex items-center justify-between rounded-md border border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 relative group",
                 isDisabled
                   ? "text-muted-foreground cursor-not-allowed opacity-50"
                   : isActive
@@ -333,7 +333,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
           había hueco para el nombre de la delegación. */}
       {accountFooter && (
         <div className="border-t border-sidebar-border/30 p-4 space-y-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-sidebar-border/30 bg-card/50 px-3 py-2">
+          <div className="flex items-center gap-3 rounded-lg border border-sidebar-border/30 bg-card/50 px-3 py-2">
             <Avatar className="h-9 w-9 ring-2 ring-primary/20 flex-shrink-0">
               <AvatarImage src="" alt={getUserDisplayName()} />
               <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
@@ -351,7 +351,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
               <Button
                 variant="outline"
                 size="sm"
-                className="justify-start gap-2 rounded-xl"
+                className="justify-start gap-2"
                 onClick={handleThemeCycle}
                 title={`Cambiar tema (actual: ${currentThemeLabel})`}
               >
@@ -359,7 +359,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
                 Tema
               </Button>
             )}
-            <Button variant="outline" size="sm" className="justify-start gap-2 rounded-xl" onClick={handleManualClick}>
+            <Button variant="outline" size="sm" className="justify-start gap-2" onClick={handleManualClick}>
               <BookOpen className="h-4 w-4" />
               Manual
             </Button>
@@ -413,7 +413,7 @@ export function Sidebar({
             <Button
               variant="outline"
               size="icon"
-              className="relative h-8 w-8 rounded-full bg-card/90 backdrop-blur-xl border-2 border-border/50 shadow-lg hover:shadow-xl hover:scale-110 transition-[transform,box-shadow] duration-300 after:absolute after:-inset-1 after:content-['']"
+              className="relative h-8 w-8 rounded-full bg-card border border-border shadow-sm hover:bg-muted hover:border-foreground/20 transition-[background-color,border-color] duration-150 after:absolute after:-inset-1 after:content-['']"
               onClick={onToggleCollapse}
               aria-label={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
               title={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}

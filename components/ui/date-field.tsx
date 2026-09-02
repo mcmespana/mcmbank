@@ -17,10 +17,10 @@ interface DateFieldProps {
   id?: string
   className?: string
   /**
-   * Alto del campo. "sm" (h-9) es el de los formularios compactos de
-   * Movimientos; "md" es el alto de fábrica de `Input` (h-11), que es lo que
-   * hay que usar cuando el campo comparte fila con otro `Input` normal —si no,
-   * la fecha queda visiblemente más baja que el importe de al lado.
+   * Alto del campo. "md" es el alto de fábrica de `Input`, que es lo que hay
+   * que usar cuando el campo comparte fila con otro `Input` normal —si no, la
+   * fecha queda visiblemente más baja que el importe de al lado. "sm" es un
+   * escalón por debajo, para los formularios más apretados de Movimientos.
    */
   size?: "sm" | "md"
 }
@@ -32,7 +32,7 @@ interface DateFieldProps {
  * - Al escribir en medio del campo el cursor no salta al final.
  */
 export function DateField({ value, onChange, id, className, size = "sm" }: DateFieldProps) {
-  const alto = size === "md" ? "h-11" : "h-9"
+  const alto = size === "md" ? "h-9 md:h-8" : "h-8 md:h-7"
   const [open, setOpen] = useState(false)
   const [text, setText] = useState(() => formatIsoDateToInput(value))
   const inputRef = useRef<HTMLInputElement>(null)
@@ -96,7 +96,7 @@ export function DateField({ value, onChange, id, className, size = "sm" }: DateF
             type="button"
             variant="outline"
             size="icon"
-            className={`${alto} w-9 flex-shrink-0 ${size === "md" ? "rounded-xl border-2" : ""}`}
+            className={`${alto} w-9 flex-shrink-0 ${size === "md" ? "rounded-md border" : ""}`}
             title="Abrir calendario"
           >
             <CalendarIcon className="h-4 w-4" />

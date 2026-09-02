@@ -134,7 +134,7 @@ export function AvisosPanel({
       aria-label="Avisos y tareas"
       className={cn(
         "flex h-full w-full flex-col overflow-hidden bg-card",
-        "sm:h-auto sm:max-h-[min(80vh,680px)] sm:rounded-3xl sm:border sm:border-border",
+        "sm:h-auto sm:max-h-[min(80vh,680px)] sm:rounded-xl sm:border sm:border-border",
         "sm:shadow-[0_1px_2px_rgba(0,0,0,0.04),0_18px_40px_-12px_rgba(0,0,0,0.18),0_40px_80px_-32px_rgba(0,0,0,0.26)]",
       )}
     >
@@ -145,7 +145,7 @@ export function AvisosPanel({
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors duration-150 hover:bg-muted sm:hidden"
+            className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors duration-150 hover:bg-muted sm:hidden"
           >
             <ChevronLeft className="h-[22px] w-[22px]" aria-hidden />
           </button>

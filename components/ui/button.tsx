@@ -19,12 +19,18 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         /**
-         * Rojo sólido. Hoy lo usan tanto los botones que **confirman** un
-         * borrado dentro de un diálogo (correcto: ahí conviene que pese) como
-         * algunos que solo **abren** ese diálogo desde una fila o una barra,
-         * donde grita de más. Separarlos en dos variantes es design-plans/029.
+         * Rojo sólido: **solo** para el botón que ejecuta el borrado — el de
+         * un diálogo de confirmación, o el estado armado de `ConfirmButton`.
+         * Ahí conviene que pese, porque el siguiente clic no tiene vuelta.
          */
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        /**
+         * Para el que solo **abre** ese diálogo o **arma** la confirmación
+         * desde una fila o una barra. Se lee como peligro sin gritar: en ese
+         * momento todavía no va a pasar nada (design.md §3.6).
+         */
+        destructiveGhost:
+          "bg-destructive/10 text-destructive hover:bg-destructive/20 dark:bg-destructive/15 dark:hover:bg-destructive/25",
         outline:
           "border border-border bg-background hover:bg-muted hover:text-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",

@@ -770,11 +770,11 @@ export function CuentasManager() {
                                       <span className="truncate text-xs">
                                         {cuenta.personas_autorizadas.split(",").length === 1 ? (
                                           <>
-                                            <span className="hidden sm:inline">persona </span>autorizada
+                                            <span className="sr-only sm:not-sr-only">persona </span>autorizada
                                           </>
                                         ) : (
                                           <>
-                                            <span className="hidden sm:inline">personas </span>autorizadas
+                                            <span className="sr-only sm:not-sr-only">personas </span>autorizadas
                                           </>
                                         )}
                                       </span>

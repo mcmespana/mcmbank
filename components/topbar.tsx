@@ -163,10 +163,10 @@ export function Topbar({ selectedDelegation, onDelegationChange }: TopbarProps) 
         {/* User info and logout. Oculto en móvil por el mismo motivo: ambos
             están duplicados en el pie del menú lateral (components/sidebar.tsx). */}
         <div className="hidden sm:flex items-center gap-1 sm:gap-3 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border/30 flex-shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 bg-card/50 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-1.5 border border-border/30 shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 bg-muted/50 rounded-lg px-2 sm:px-3 py-1.5 border border-border/60">
             <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-primary/20 ring-offset-0 sm:ring-offset-2 ring-offset-background flex-shrink-0">
               <AvatarImage src="" alt={getUserDisplayName()} />
-              <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+              <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
                 {getUserInitials(perfil?.nombre_completo, user?.email)}
               </AvatarFallback>
             </Avatar>

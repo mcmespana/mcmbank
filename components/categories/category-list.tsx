@@ -1072,7 +1072,7 @@ export function CategoryList() {
                 className="flex items-center justify-center gap-2"
               >
                 <HelpCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">¿Qué añado en cada categoría?</span>
+                <span className="sr-only sm:not-sr-only">¿Qué añado en cada categoría?</span>
               </a>
             </Button>
           </>

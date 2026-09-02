@@ -218,7 +218,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
   ]
 
   return (
-    <div className={cn("flex h-full flex-col bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border/50", className)}>
+    <div className={cn("flex h-full flex-col bg-sidebar border-r border-sidebar-border/50", className)}>
       {/* Logo */}
       <div className={cn("flex h-16 items-center border-b border-sidebar-border/30 bg-gradient-to-r from-primary/5 to-transparent", collapsed ? "justify-center px-2" : "px-6")}>
         <button

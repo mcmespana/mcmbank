@@ -126,7 +126,7 @@ export function CreateProposalDialog({
       <DialogContent className="max-w-xl gap-0 overflow-hidden p-0">
         <DialogHeader className="space-y-4 bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 p-6 text-white">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
               <copy.icon className="h-5 w-5" />
             </div>
             <div className="text-left">

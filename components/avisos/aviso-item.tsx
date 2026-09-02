@@ -420,7 +420,7 @@ export function AvisoItem({
                 ) : (
                   <Bell className="h-[17px] w-[17px] sm:h-3.5 sm:w-3.5" aria-hidden />
                 )}
-                <span className="hidden sm:inline">Recordar</span>
+                <span className="sr-only sm:not-sr-only">Recordar</span>
               </button>
             </>
           )}

@@ -182,7 +182,7 @@ export function ConfigPage() {
                     className="px-2 sm:px-3"
                   >
                     <Pencil className="h-4 w-4 sm:hidden" aria-hidden />
-                    <span className="hidden sm:inline">Editar</span>
+                    <span className="sr-only sm:not-sr-only">Editar</span>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -251,12 +251,12 @@ export function ConfigPage() {
                       className="px-2 sm:px-3"
                     >
                       <Pencil className="h-4 w-4 sm:hidden" aria-hidden />
-                      <span className="hidden sm:inline">Editar</span>
+                      <span className="sr-only sm:not-sr-only">Editar</span>
                     </Button>
                     {/* Borrar un usuario era un solo clic, sin confirmación —
                         en móvil, a un dedo de distancia del botón de editar. */}
                     <ConfirmButton
-                      variant="destructive"
+                      variant="destructiveGhost"
                       label="Eliminar"
                       busyLabel="Eliminando…"
                       className="px-2 sm:px-3"

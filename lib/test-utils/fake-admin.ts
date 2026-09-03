@@ -168,6 +168,23 @@ export function crearFakeAdmin(tablas: Tablas, opciones: FakeAdminOpciones = {})
             ? { data: null, error: null, count: 0 }
             : { data: null, error: { message: "No rows found" }, count: 0 }
         }
+        // Con más de una fila, PostgREST NO devuelve la primera: contesta 406
+        // con PGRST116. Devolver aquí `filas[0]` era mentira cómoda, y dejó
+        // pasar un `maybeSingle()` sobre las membresías de gestor central que
+        // en producción respondía error —y por tanto 403— a cualquier admin
+        // con más de una delegación.
+        if (filas.length > 1) {
+          return {
+            data: null,
+            error: {
+              message: "JSON object requested, multiple (or no) rows returned",
+              details: `Results contain ${filas.length} rows, application/vnd.pgrst.object+json requires 1 row`,
+              hint: null,
+              code: "PGRST116",
+            },
+            count: total,
+          }
+        }
         return { data: structuredClone(filas[0]), error: null, count: total }
       }
       return { data: structuredClone(filas), error: null, count: contarExacto ? total : null }

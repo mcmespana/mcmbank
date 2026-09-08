@@ -264,7 +264,7 @@ export function PagosMcmManager() {
                     <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar IBANes
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 p-1">
+                <PopoverContent align="end" collisionPadding={12} className="w-72 max-w-[calc(100vw-1.5rem)] p-1">
                   {(Object.keys(COPY_FORMATS) as CopyFormatId[]).map((id) => {
                     const fmt = COPY_FORMATS[id]
                     return (
@@ -283,19 +283,21 @@ export function PagosMcmManager() {
               </Popover>
             )}
             {pendientesConIban.length > 0 && (
-              <ActionMenu
-                ariaLabel="Más acciones de pagos pendientes"
-                items={[
-                  ...(canEdit
-                    ? [{ label: "Modo transferencia", icon: Wallet, onSelect: () => openTransferencia() }]
-                    : []),
-                  {
-                    label: "Copiar IBANes",
-                    icon: Copy,
-                    onSelect: () => handleCopyFormat(Object.keys(COPY_FORMATS)[0] as CopyFormatId),
-                  },
-                ]}
-              />
+              <div className="sm:hidden">
+                <ActionMenu
+                  ariaLabel="Más acciones de pagos pendientes"
+                  items={[
+                    ...(canEdit
+                      ? [{ label: "Modo transferencia", icon: Wallet, onSelect: () => openTransferencia() }]
+                      : []),
+                    {
+                      label: "Copiar IBANes",
+                      icon: Copy,
+                      onSelect: () => handleCopyFormat(Object.keys(COPY_FORMATS)[0] as CopyFormatId),
+                    },
+                  ]}
+                />
+              </div>
             )}
             {canEdit && (
               <Button onClick={openCreate}>

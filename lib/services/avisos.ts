@@ -80,11 +80,12 @@ export const AvisosService = {
 
     const rows = (data ?? []) as AvisoRowConLecturas[]
     const nombres = await fetchNombres(rows, options.signal)
+    const lados = await fetchLados(rows, options.signal)
 
-    return rows.map((row) => mapAviso(row, ctx, nombres))
+    return rows.map((row) => mapAviso(row, ctx, nombres, lados))
   },
 
-  async crear(delegacionId: string, usuarioId: string, payload: NuevoAviso): Promise<Aviso> {
+  async crear(delegacionId: string, usuarioId: string, miLado: AvisoDestinatario, payload: NuevoAviso): Promise<Aviso> {
     const contenido = payload.contenido.trim()
     if (!contenido) throw new Error("El aviso no puede estar vacío")
     if (contenido.length > AVISO_MAX_CONTENIDO) {
@@ -115,7 +116,7 @@ export const AvisosService = {
 
     const row = data as AvisoRowConLecturas
     const nombres = await fetchNombres([row])
-    return mapAviso(row, { usuarioId, miLado: payload.destinatario }, nombres)
+    return mapAviso(row, { usuarioId, miLado }, nombres, {})
   },
 
   async cambiarEstado(id: string, estado: AvisoEstado, usuarioId?: string): Promise<void> {
@@ -242,14 +243,53 @@ async function fetchNombres(
   }, {})
 }
 
+/**
+ * Lado real (oficina técnica / delegación) de quien escribió cada aviso.
+ * No se puede deducir invirtiendo `destinatario`: un aviso autoasignado (la
+ * oficina técnica se lo escribe a sí misma, o la delegación a sí misma) tiene
+ * el mismo lado en origen y destino. Un gestor central lleva rol
+ * "gestor_central" en `membresia` independientemente de la delegación; quien
+ * no lo sea y aun así vea el aviso (gracias a la RLS) es tesorero de esta
+ * delegación.
+ */
+async function fetchLados(
+  rows: AvisoRowConLecturas[],
+  signal?: AbortSignal,
+): Promise<Record<string, AvisoDestinatario>> {
+  const ids = Array.from(new Set(rows.map((row) => row.creado_por).filter(Boolean) as string[]))
+  if (ids.length === 0) return {}
+
+  const client = supabase as any
+  let query = client.from("membresia").select("usuario_id").eq("rol", "gestor_central").in("usuario_id", ids)
+  if (signal) query = query.abortSignal(signal)
+
+  const { data, error } = await query
+  if (error) {
+    // El lado del autor es decorativo (solo afecta al "de X a Y" mostrado);
+    // si falla, se sigue asumiendo el lado por defecto de la delegación.
+    console.warn("AvisosService: no se pudo resolver el lado de los autores", error)
+    return {}
+  }
+
+  const oficina = new Set((data ?? []).map((m: any) => String(m.usuario_id)))
+  return ids.reduce((acc: Record<string, AvisoDestinatario>, id) => {
+    acc[id] = oficina.has(id) ? "oficina_tecnica" : "delegacion"
+    return acc
+  }, {})
+}
+
 function mapAviso(
   row: AvisoRowConLecturas,
   ctx: ListarAvisosContexto,
   nombres: Record<string, string>,
+  lados: Record<string, AvisoDestinatario>,
 ): Aviso {
   const lecturas = row.lecturas ?? []
   const esMio = row.creado_por === ctx.usuarioId
   const loHeLeido = lecturas.some((l) => l.usuario_id === ctx.usuarioId)
+  // Del propio usuario ya se sabe el lado con certeza (ctx.miLado); del resto
+  // se recurre al mapa resuelto por fetchLados.
+  const autorLado: AvisoDestinatario = esMio ? ctx.miLado : lados[row.creado_por] ?? "delegacion"
 
   return {
     ...row,
@@ -257,6 +297,7 @@ function mapAviso(
     destinatario: row.destinatario as AvisoDestinatario,
     estado: row.estado as AvisoEstado,
     autorNombre: nombres[row.creado_por] ?? null,
+    autorLado,
     completadoPorNombre: row.completado_por ? nombres[row.completado_por] ?? null : null,
     responsableNombre: row.responsable_id ? nombres[row.responsable_id] ?? null : null,
     esMio,

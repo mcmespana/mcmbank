@@ -112,6 +112,7 @@ export function PagoMcmDetailSheet({
             {canEdit && (
               <ActionMenu
                 ariaLabel="Más acciones del pago"
+                contentClassName="z-[80]"
                 items={[
                   { label: "Editar", icon: Edit3, onSelect: () => onEdit(pago) },
                   { label: "Duplicar", icon: Copy, onSelect: () => onDuplicate(pago) },

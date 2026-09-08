@@ -1061,7 +1061,7 @@ export function CategoryList() {
             <Button
               variant="outline"
               size="icon"
-              className="flex-1 sm:flex-none sm:w-auto"
+              className="flex-1 sm:flex-none sm:w-auto sm:gap-1.5 sm:px-3"
               asChild
               title="¿Qué añado en cada categoría?"
             >
@@ -1071,7 +1071,7 @@ export function CategoryList() {
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2"
               >
-                <HelpCircle className="h-4 w-4" />
+                <HelpCircle className="h-4 w-4 shrink-0" />
                 <span className="sr-only sm:not-sr-only">¿Qué añado en cada categoría?</span>
               </a>
             </Button>

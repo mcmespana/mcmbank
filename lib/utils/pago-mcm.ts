@@ -107,34 +107,38 @@ export interface PagoMcmGasolinaPresetInfo {
 }
 
 export const PAGO_MCM_GASOLINA_PRESETS: Record<PagoMcmGasolinaPreset, PagoMcmGasolinaPresetInfo> = {
+  // Los identificadores ("ivaj_0_12", "estandar_0_26"...) se guardan tal cual
+  // en la BD (columna gasolina_preset, con CHECK), así que se mantienen
+  // aunque ya no coincidan con el precio que representan: solo cambian aquí
+  // la etiqueta y el precio, nunca la clave.
   ivaj_0_12: {
     value: "ivaj_0_12",
-    label: "IVAJ · 0,12 €",
+    label: "Mínimo · 0,12 €",
     precio: 0.12,
-    descripcion: "Precio de referencia del IVAJ.",
+    descripcion: "Mínimo recomendado.",
   },
   min_0_18: {
     value: "min_0_18",
-    label: "Mínimo · 0,18 €",
+    label: "Estándar · 0,18 €",
     precio: 0.18,
-    descripcion: "Mínimo recomendado.",
+    descripcion: "Precio estándar habitual.",
   },
   max_0_20: {
     value: "max_0_20",
-    label: "Máximo · 0,20 €",
+    label: "Intermedio · 0,20 €",
     precio: 0.20,
-    descripcion: "Máximo recomendado.",
+    descripcion: "Un punto intermedio entre el estándar y el máximo del IVAJ.",
   },
   estandar_0_26: {
     value: "estandar_0_26",
-    label: "Estándar · 0,26 €",
+    label: "IVAJ · máximo · 0,26 €",
     precio: 0.26,
-    descripcion: "Estándar habitual.",
+    descripcion: "Lo máximo que paga el IVAJ.",
   },
   personalizado: {
     value: "personalizado",
     label: "Personalizado",
-    precio: 0.26,
+    precio: 0.18,
     descripcion: "Define tu propio precio por kilómetro.",
   },
 }
@@ -167,7 +171,7 @@ export function calcularImporteGasolinaKm(
  * Si no coincide ninguno, devuelve 'personalizado'.
  */
 export function inferirPresetGasolina(precioKm: number | null | undefined): PagoMcmGasolinaPreset {
-  if (precioKm == null) return "estandar_0_26"
+  if (precioKm == null) return "min_0_18"
   const eps = 0.0001
   for (const preset of PAGO_MCM_GASOLINA_PRESETS_ORDER) {
     if (preset === "personalizado") continue

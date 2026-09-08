@@ -116,6 +116,26 @@ describe("listar · banderas derivadas para la UI", () => {
     expect(aviso.lecturas).toBe(1)
   })
 
+  it("autorLado se resuelve por quién lo escribió, no invirtiendo destinatario (autoasignación)", async () => {
+    // Un gestor central se autoasigna una tarea: destinatario y autor son el
+    // mismo lado. Invertir destinatario (como se hacía antes en la UI) daría
+    // "delegacion", que es justo el bug a evitar.
+    const AvisosService = await servicio(
+      tablas({
+        aviso: [avisoRow({ creado_por: OTRO, destinatario: "oficina_tecnica" })],
+        membresia: [{ usuario_id: OTRO, delegacion_id: "del-1", rol: "gestor_central" }],
+      }),
+    )
+    const [aviso] = await AvisosService.listar("del-1", { usuarioId: YO, miLado: "delegacion" })
+    expect(aviso.autorLado).toBe("oficina_tecnica")
+  })
+
+  it("autorLado de mis propios avisos usa mi lado directamente, sin consultar membresia", async () => {
+    const AvisosService = await servicio(tablas({ aviso: [avisoRow({ creado_por: YO })] }))
+    const [aviso] = await AvisosService.listar("del-1", { usuarioId: YO, miLado: "oficina_tecnica" })
+    expect(aviso.autorLado).toBe("oficina_tecnica")
+  })
+
   it("resuelve el nombre del autor desde perfil", async () => {
     const AvisosService = await servicio(
       tablas({
@@ -132,13 +152,17 @@ describe("crear", () => {
   it("rechaza el contenido vacío sin llegar a insertar", async () => {
     const AvisosService = await servicio()
     await expect(
-      AvisosService.crear("del-1", YO, { tipo: "nota", contenido: "   ", destinatario: "delegacion" }),
+      AvisosService.crear("del-1", YO, "delegacion", {
+        tipo: "nota",
+        contenido: "   ",
+        destinatario: "delegacion",
+      }),
     ).rejects.toThrow("no puede estar vacío")
   })
 
   it("una nota no guarda campos de tarea aunque se manden", async () => {
     const AvisosService = await servicio()
-    await AvisosService.crear("del-1", YO, {
+    await AvisosService.crear("del-1", YO, "delegacion", {
       tipo: "nota",
       contenido: "hola",
       destinatario: "delegacion",

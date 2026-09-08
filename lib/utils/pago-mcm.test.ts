@@ -49,8 +49,8 @@ describe("inferirPresetGasolina", () => {
   })
 
   it("sin precio propone el estándar", () => {
-    expect(inferirPresetGasolina(null)).toBe("estandar_0_26")
-    expect(inferirPresetGasolina(undefined)).toBe("estandar_0_26")
+    expect(inferirPresetGasolina(null)).toBe("min_0_18")
+    expect(inferirPresetGasolina(undefined)).toBe("min_0_18")
   })
 
   it("tolera el ruido de coma flotante", () => {

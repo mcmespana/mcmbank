@@ -152,7 +152,7 @@ export function useAvisos(delegacionId?: string | null): UseAvisosResult {
   const crear = useCallback(
     async (payload: NuevoAviso) => {
       if (!delegacionId || !usuarioId) throw new Error("Falta la delegación o el usuario")
-      const creado = await AvisosService.crear(delegacionId, usuarioId, payload)
+      const creado = await AvisosService.crear(delegacionId, usuarioId, miLado, payload)
       setAvisos((prev) => [creado, ...prev])
       if (payload.notificar) {
         try {
@@ -171,7 +171,7 @@ export function useAvisos(delegacionId?: string | null): UseAvisosResult {
       }
       return creado
     },
-    [delegacionId, usuarioId],
+    [delegacionId, usuarioId, miLado],
   )
 
   const completar = useCallback(

@@ -79,12 +79,12 @@ export function PagoMcmForm({
   const [idaVuelta, setIdaVuelta] = useState<boolean>(pago?.gasolina_ida_vuelta ?? false)
   const [preset, setPreset] = useState<PagoMcmGasolinaPreset>(
     pago?.gasolina_preset ??
-      (pago?.gasolina_precio_km != null ? inferirPresetGasolina(Number(pago.gasolina_precio_km)) : "estandar_0_26"),
+      (pago?.gasolina_precio_km != null ? inferirPresetGasolina(Number(pago.gasolina_precio_km)) : "min_0_18"),
   )
   const [precioKm, setPrecioKm] = useState<string>(
     pago?.gasolina_precio_km != null
       ? Number(pago.gasolina_precio_km).toFixed(4).replace(/\.?0+$/, "")
-      : String(PAGO_MCM_GASOLINA_PRESETS.estandar_0_26.precio),
+      : String(PAGO_MCM_GASOLINA_PRESETS.min_0_18.precio),
   )
 
   const [loading, setLoading] = useState<PagoMcmEstado | null>(null)
@@ -296,7 +296,7 @@ export function PagoMcmForm({
                   inputMode="decimal"
                   value={precioKm}
                   onChange={(e) => setPrecioKm(e.target.value)}
-                  placeholder="0,26"
+                  placeholder="0,18"
                   className="mt-1.5 tabular-nums"
                 />
               )}

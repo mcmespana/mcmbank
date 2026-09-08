@@ -98,9 +98,13 @@ export function AvisoItem({
   const hecha = aviso.estado === "hecha"
   const notificado = Boolean(aviso.notificado_en)
   const vencida = !hecha && estaVencida(aviso.fecha_limite)
-  const saliente = !aviso.esParaMi
-  const origenLado: AvisoDestinatario =
-    aviso.destinatario === "delegacion" ? "oficina_tecnica" : "delegacion"
+  // El origen es el lado de quien lo escribió de verdad (autorLado), no "el
+  // otro lado" del destinatario: una tarea autoasignada tiene el mismo lado
+  // en origen y destino, y esa inversión los mostraba siempre al revés.
+  const origenLado: AvisoDestinatario = aviso.autorLado
+  // "Saliente" (lo hemos enviado nosotros) solo si de verdad lo escribió mi
+  // lado y va dirigido al otro; si es autoasignado no sale de "nuestro" buzón.
+  const saliente = origenLado === miLado && !aviso.esParaMi
 
   const pedirBorrado = () => {
     if (confirmandoBorrado) {

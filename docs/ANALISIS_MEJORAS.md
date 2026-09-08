@@ -22,6 +22,12 @@
   borrado de un movimiento suelto y al de facturas, que son los otros dos que
   duelen. Aviso: los adjuntos no vuelven, porque `movimiento_archivo` cae por
   cascada y los ficheros de Storage se borran aparte.
+- **Rediseño del panel de avisos y tareas** — `components/avisos/` ha ido
+  creciendo tarjeta a tarjeta hasta quedarse grande e incómodo de leer en el
+  panel flotante actual (`avisos-widget.tsx`, `w-[27.25rem]` en escritorio).
+  Falta pensar el layout de la tarjeta (`aviso-item.tsx`) para que quepa más
+  sin apretar, y añadir un botón opcional para pasar el panel a pantalla
+  completa. No es urgente, pero anotado para no perderlo.
 - **Terminar la migración a TanStack Query** — *priorizado para otro momento.*
   10 de 36 hooks. El resto sigue con `useState`/`useEffect` y gestión manual de
   abort y caché que React Query ya cubre. Mismo contrato de salida, hook a hook.

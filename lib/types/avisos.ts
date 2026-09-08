@@ -27,6 +27,12 @@ export type Aviso = Omit<AvisoRow, "tipo" | "destinatario" | "estado"> & {
   estado: AvisoEstado
   /** Nombre del autor (perfil.nombre_completo) o null si no tiene perfil. */
   autorNombre: string | null
+  /**
+   * Lado real de quien lo escribió (oficina técnica o delegación). No se
+   * puede deducir invirtiendo `destinatario`: una tarea puede ir dirigida al
+   * propio lado que la escribe (autoasignación).
+   */
+  autorLado: AvisoDestinatario
   /** Nombre de quien la marcó como hecha. */
   completadoPorNombre: string | null
   /** Nombre de quien tiene asignada la tarea (perfil.nombre_completo), si hay responsable. */

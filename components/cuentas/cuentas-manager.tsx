@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check, User, Link2, RefreshCw, Unlink, Power, PowerOff } from "lucide-react"
+import { Plus, Search, Building2, PiggyBank, Copy, Info, Edit, Trash2, Check, User, Link2, RefreshCw, Unlink, Power, PowerOff, AlertTriangle } from "lucide-react"
 import { BankAvatar } from "@/components/bank-avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase/client"
 import { DatabaseService } from "@/lib/services/database"
 import { formatCurrency } from "@/lib/utils/format"
 import { formatearIban } from "@/lib/utils/iban"
+import { getConsentStatus, textoConsentimiento } from "@/lib/utils/consent-status"
 import { toast } from "sonner"
 
 export function CuentasManager() {
@@ -175,6 +176,33 @@ export function CuentasManager() {
       forceRefresh()
     } catch (e) {
       toast.error("Error al desconectar: " + (e instanceof Error ? e.message : String(e)))
+    }
+  }
+
+  // Renovar un consentimiento caducado/por caducar es, por debajo, desconectar
+  // y volver a conectar (PSD2 no tiene "extender", solo re-autorizar desde
+  // cero). Aquí saltamos la confirmación de "Desconectar" porque el usuario
+  // ya está pulsando un botón que dice explícitamente "Renovar": pedirle que
+  // confirme un desconectar intermedio solo añade un paso que no entiende.
+  const handleRenew = async (cuenta: Cuenta) => {
+    setOperationState(cuenta.id, 'updating')
+    try {
+      const res = await fetch("/api/bank-sync/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cuenta_id: cuenta.id, revoke_consent: true }),
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        toast.error("Error al preparar la renovación: " + (body.error || body.detalle || res.status))
+        return
+      }
+      await forceRefresh()
+      setConnectingCuenta(cuenta)
+    } catch (e) {
+      toast.error("Error al preparar la renovación: " + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setOperationState(cuenta.id, null)
     }
   }
 
@@ -565,6 +593,9 @@ export function CuentasManager() {
               const isUpdating = operationStates[cuenta.id] === 'updating'
               const isDeleting = operationStates[cuenta.id] === 'deleting'
               const isInactive = (cuenta as any).activa === false
+              const consentStatus = cuenta.sync_enabled
+                ? getConsentStatus(cuenta.banco_conexion?.estado, cuenta.banco_conexion?.consent_valid_until)
+                : null
 
               return (
                 <Card
@@ -656,6 +687,17 @@ export function CuentasManager() {
                                 {isInactive && (
                                   <Badge variant="outline" className="text-xs text-muted-foreground border-dashed flex-shrink-0">
                                     Desactivada
+                                  </Badge>
+                                )}
+                                {consentStatus?.requiereAviso && (
+                                  <Badge
+                                    className={`text-xs flex-shrink-0 gap-1 ${consentStatus.expirado
+                                      ? "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900 dark:text-red-100"
+                                      : "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-100"
+                                      }`}
+                                  >
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {textoConsentimiento(consentStatus)}
                                   </Badge>
                                 )}
                                 {cuenta.descripcion && (
@@ -825,6 +867,26 @@ export function CuentasManager() {
                                 title="Conectar con el banco"
                               >
                                 <Link2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            )}
+
+                            {/* Enable Banking: Renovar (consentimiento caducado o a punto de caducar).
+                                Antes de esto, para renovar había que caer en la cuenta de pulsar
+                                Desconectar y luego Conectar por separado: nada en pantalla lo decía. */}
+                            {consentStatus?.requiereAviso && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRenew(cuenta)}
+                                disabled={isCreating || isUpdating || isDeleting}
+                                className={`h-8 sm:h-9 px-2 sm:px-3 gap-1.5 ${consentStatus.expirado
+                                  ? "text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950"
+                                  : "text-amber-600 hover:text-amber-700 hover:bg-amber-50 hover:border-amber-200 dark:hover:bg-amber-950"
+                                  }`}
+                                title="Renovar la conexión con el banco (Enable Banking)"
+                              >
+                                <Link2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="text-xs sm:text-sm">Renovar conexión</span>
                               </Button>
                             )}
 

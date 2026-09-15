@@ -238,10 +238,10 @@ También en el UI: cada sync manual muestra el log completo en pantalla; los cro
 ### Renovar un consentimiento caducado
 
 - Si `banco_conexion.estado = 'expirada'` o `consent_valid_until < now()`, la cuenta deja de sincronizar.
-- El usuario va a `/cuentas`, pulsa 🔓 **Desconectar**, y luego 🔗 **Conectar con el banco** de nuevo.
+- El usuario va a `/cuentas`: la cuenta afectada muestra una insignia ("Consentimiento caducado" / "Caduca en N días", umbral `CONSENT_WARNING_DAYS = 20`) y un botón **"Renovar conexión"** junto a Sincronizar/Desconectar.
+- Ese botón hace, en un solo clic, lo que antes eran dos pasos manuales (Desconectar y luego Conectar): llama a `/api/bank-sync/disconnect` y a continuación abre el mismo diálogo de conexión (`CuentaConnectDialog`) que arranca el `/auth` de Enable Banking.
 - El sistema crea una **nueva** `banco_conexion` y linka la misma cuenta. Los movimientos históricos ya importados **se conservan** (están en `movimiento`, no en la conexión).
-
-> 💡 Mejora futura sugerida: banner en `/cuentas` con botón "Renovar" cuando `consent_valid_until < now() + 7 días`.
+- El mismo aviso, a nivel de toda la delegación, aparece también como banner en el Dashboard (`components/dashboard/consent-alert-banner.tsx`, hook `use-consent-alerts.ts`), con un botón que lleva a `/cuentas`. Ambos comparten el cálculo de estado en `lib/utils/consent-status.ts`.
 
 ### Desconectar definitivamente una cuenta
 

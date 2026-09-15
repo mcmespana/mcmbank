@@ -2,12 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase/client"
+import { getConsentStatus, CONSENT_WARNING_DAYS } from "@/lib/utils/consent-status"
 
-/**
- * Umbral (en días) por debajo del cual avisamos de que el consentimiento PSD2
- * de una cuenta conectada está a punto de caducar y hay que renovarlo.
- */
-export const CONSENT_WARNING_DAYS = 20
+export { CONSENT_WARNING_DAYS }
 
 export interface ConsentAlert {
   cuentaId: string
@@ -66,31 +63,24 @@ export function useConsentAlerts(delegacionId: string | null): UseConsentAlertsR
         return
       }
 
-      const now = Date.now()
       const result: ConsentAlert[] = []
 
       for (const c of data || []) {
         const conn = Array.isArray(c.banco_conexion) ? c.banco_conexion[0] : c.banco_conexion
         if (!conn?.consent_valid_until) continue
 
-        const until = new Date(conn.consent_valid_until).getTime()
-        if (Number.isNaN(until)) continue
+        const status = getConsentStatus(conn.estado, conn.consent_valid_until)
+        if (!status || !status.requiereAviso) continue
 
-        const diasRestantes = Math.ceil((until - now) / 86_400_000)
-        const expirado =
-          until < now || conn.estado === "expirada" || conn.estado === "revocada"
-
-        if (expirado || diasRestantes <= CONSENT_WARNING_DAYS) {
-          result.push({
-            cuentaId: c.id,
-            cuentaNombre: c.nombre,
-            bancoNombre: c.banco_nombre ?? null,
-            consentValidUntil: conn.consent_valid_until,
-            diasRestantes,
-            expirado,
-            estado: conn.estado ?? null,
-          })
-        }
+        result.push({
+          cuentaId: c.id,
+          cuentaNombre: c.nombre,
+          bancoNombre: c.banco_nombre ?? null,
+          consentValidUntil: conn.consent_valid_until,
+          diasRestantes: status.diasRestantes,
+          expirado: status.expirado,
+          estado: conn.estado ?? null,
+        })
       }
 
       // Lo más urgente primero (menos días / ya caducado arriba).

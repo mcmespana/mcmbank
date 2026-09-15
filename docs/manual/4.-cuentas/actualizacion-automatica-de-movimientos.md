@@ -56,7 +56,7 @@ Cada noche entran los movimientos nuevos. Un punto verde en el icono del banco i
 | 🔓 naranja | Desconectar       | Revoca el permiso con el banco. Los movimientos ya importados se conservan; la cuenta pasa a manual.    |
 
 {% hint style="info" %}
-Los permisos bancarios (PSD2) caducan cada 90-180 días según el banco. Cuando falten pocos días, verás un aviso ámbar o rojo en el **Panel de Control** (capítulo 10) con un botón **"Renovar conexión"** que te trae aquí a reconectar.
+Los permisos bancarios (PSD2) caducan cada 90-180 días según el banco. Cuando falten 20 días o menos, la propia tarjeta de la cuenta en **Cuentas** muestra una etiqueta ("Caduca en N días" o "Consentimiento caducado") y un botón **"Renovar conexión"**: un solo clic hace lo mismo que desconectar y volver a conectar, y te lleva directo a autorizar de nuevo con tu banco. El mismo aviso aparece también, a nivel general, en el **Panel de Control** (capítulo 10) con un botón que te trae aquí.
 {% endhint %}
 
 #### Todas las cuentas del Sabadell, sincronizadas de serie

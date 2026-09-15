@@ -38,6 +38,10 @@ const SELECT = `
     codigo,
     nombre,
     creado_en
+  ),
+  banco_conexion:banco_conexion_id (
+    estado,
+    consent_valid_until
   )
 `
 
@@ -70,6 +74,7 @@ async function fetchCuentas(
   return (data || []).map((item: any) => ({
     ...item,
     delegacion: Array.isArray(item.delegacion) ? item.delegacion[0] : item.delegacion,
+    banco_conexion: Array.isArray(item.banco_conexion) ? item.banco_conexion[0] : item.banco_conexion,
   })) as CuentaConDelegacion[]
 }
 

@@ -41,6 +41,7 @@ import type { ContactoConCategoriaPredeterminada } from "@/lib/types/database"
 
 interface ContactoDetailSheetProps {
   contactoId: string | null
+  delegacionId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onEdit: (contacto: ContactoConCategoriaPredeterminada) => void
@@ -52,6 +53,7 @@ interface ContactoDetailSheetProps {
 
 export function ContactoDetailSheet({
   contactoId,
+  delegacionId,
   open,
   onOpenChange,
   onEdit,
@@ -60,7 +62,7 @@ export function ContactoDetailSheet({
   onCreateMovimiento,
   canEdit,
 }: ContactoDetailSheetProps) {
-  const { contacto, movimientos, totales, loading, error } = useContactoDetalle(open ? contactoId : null)
+  const { contacto, movimientos, totales, loading, error } = useContactoDetalle(open ? contactoId : null, delegacionId)
   const { copy, isCopied } = useClipboard()
   const [tab, setTab] = useState("info")
 

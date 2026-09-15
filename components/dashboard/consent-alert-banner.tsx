@@ -8,6 +8,7 @@ import { useConsentAlerts, type ConsentAlert } from "@/hooks/use-consent-alerts"
 import { useLocalStorageState } from "@/hooks/use-local-storage"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { textoConsentimiento } from "@/lib/utils/consent-status"
 
 // Solo quienes pueden renovar la conexión ven el aviso.
 const ROLES_GESTION = ["gestor_central", "tesorero"]
@@ -17,10 +18,7 @@ function hoyISO(): string {
 }
 
 function textoEstado(a: ConsentAlert): string {
-  if (a.expirado) return "consentimiento caducado"
-  if (a.diasRestantes <= 0) return "caduca hoy"
-  if (a.diasRestantes === 1) return "caduca mañana"
-  return `caduca en ${a.diasRestantes} días`
+  return textoConsentimiento(a).toLowerCase()
 }
 
 export function ConsentAlertBanner() {

@@ -210,6 +210,7 @@ export type MovimientoConRelaciones = Movimiento & {
 
 export type CuentaConDelegacion = Cuenta & {
   delegacion: Delegacion
+  banco_conexion?: Pick<BancoConexion, "estado" | "consent_valid_until"> | null
 }
 
 // RPC return types for dashboard aggregations

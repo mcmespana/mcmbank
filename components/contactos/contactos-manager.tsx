@@ -327,6 +327,7 @@ export function ContactosManager() {
       {/* Detail */}
       <ContactoDetailSheet
         contactoId={detailId}
+        delegacionId={selectedDelegation}
         open={detailOpen}
         onOpenChange={setDetailOpen}
         canEdit={canEdit}

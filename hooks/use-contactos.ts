@@ -193,7 +193,10 @@ export function useContactos(delegacionId?: string | null, options: UseContactos
 export type UseContactosReturn = ReturnType<typeof useContactos>
 
 // Hook ligero para el detalle de un contacto (información + movimientos vinculados)
-export function useContactoDetalle(contactoId: string | null) {
+// Las delegaciones son estancas en dinero: un proveedor global puede estar
+// vinculado a movimientos de otras delegaciones, pero esta ficha solo puede
+// enseñar los de la delegación activa (los mismos que se ven en Movimientos).
+export function useContactoDetalle(contactoId: string | null, delegacionId: string | null) {
   const [contacto, setContacto] = useState<ContactoConCategoriaPredeterminada | null>(null)
   const [movimientos, setMovimientos] = useState<Awaited<ReturnType<typeof DatabaseService.getMovimientosByContacto>>>([])
   const [loading, setLoading] = useState(false)
@@ -210,7 +213,7 @@ export function useContactoDetalle(contactoId: string | null) {
     try {
       const [c, m] = await Promise.all([
         DatabaseService.getContactoById(contactoId),
-        DatabaseService.getMovimientosByContacto(contactoId, { limite: 200 }),
+        DatabaseService.getMovimientosByContacto(contactoId, { delegacionId, limite: 200 }),
       ])
       setContacto(c)
       setMovimientos(m)
@@ -219,7 +222,7 @@ export function useContactoDetalle(contactoId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [contactoId])
+  }, [contactoId, delegacionId])
 
   useEffect(() => {
     fetchDetalle()

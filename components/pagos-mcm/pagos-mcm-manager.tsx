@@ -87,7 +87,14 @@ export function PagosMcmManager() {
   const { pagos: pendientesRaw } = usePagosMcm(selectedDelegation, { estados: ["pendiente"] })
   const pendientesConIban = useMemo(() => getPagosTransferibles(pendientesRaw), [pendientesRaw])
 
-  const { contactos } = useContactos(selectedDelegation, { incluirGlobales: true })
+  // Con catálogo: dar de alta un contacto desde aquí es el momento en el que se
+  // crean los duplicados, así que el selector tiene que ofrecer antes el que ya
+  // existe en MCM (mismo criterio que en Movimientos).
+  const {
+    contactos,
+    createContacto: createContactoFn,
+    refetch: refetchContactos,
+  } = useContactos(selectedDelegation, { incluirGlobales: true, incluirCatalogo: true })
   const { categorias } = useCategorias(selectedDelegation, { includeGlobal: true, includeInactive: false })
 
   const [formOpen, setFormOpen] = useState(false)
@@ -455,6 +462,12 @@ export function PagosMcmManager() {
             pago={editing}
             contactos={contactos}
             categorias={categorias}
+            canManageGlobalContact={isAdmin}
+            onCreateContacto={async (payload) => {
+              if (!payload.insert) return
+              return await createContactoFn({ ...payload.insert, creado_por: user?.id ?? null })
+            }}
+            onContactosChanged={refetchContactos}
             onRequestCreateCategory={requestCreateCategory}
             onSubmit={handleSubmitForm}
             onCancel={() => { setFormOpen(false); setEditing(null) }}

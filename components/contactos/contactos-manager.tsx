@@ -51,7 +51,12 @@ export function ContactosManager() {
   const { user } = useAuth()
   const isAdmin = useIsAdmin()
   const { role } = useDelegationRole(selectedDelegation)
-  const canEdit = role === "gestor_central" || role === "administrador" || isAdmin
+  // Un tesorero de delegación da de alta contactos: es quien lleva las cuentas
+  // del día a día, y la propia RLS (scripts/061) ya se lo permite —el gate de
+  // aquí lo dejaba fuera, y encima por un rol, "administrador", que no existe
+  // en `rol_usuario`. Hacer global una persona o un destinatario sigue siendo
+  // de gestor central (canManageGlobal): ahí hay datos personales.
+  const canEdit = isAdmin || role === "gestor_central" || role === "tesorero"
   const canManageGlobal = isAdmin
 
   const [tab, setTab] = useState<TabValue>("todos")

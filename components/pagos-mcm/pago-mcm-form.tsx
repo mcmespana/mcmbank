@@ -14,6 +14,8 @@ import { Separator } from "@/components/ui/separator"
 import { CategoryChip } from "@/components/transactions/category-chip"
 import { cn } from "@/lib/utils"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
+import type { ContactoForm } from "@/components/contactos/contacto-form"
+import { useCreateContactoInline } from "@/hooks/use-create-contacto-inline"
 import { PagoMcmArchivos } from "./pago-mcm-archivos"
 import {
   PAGO_MCM_GASOLINA_PRESETS,
@@ -25,6 +27,7 @@ import {
 import { formatCurrency } from "@/lib/utils/format"
 import type {
   Categoria,
+  Contacto,
   ContactoConCategoriaPredeterminada,
   PagoMcm,
   PagoMcmConRelaciones,
@@ -45,6 +48,14 @@ interface PagoMcmFormProps {
   pago?: PagoMcmConRelaciones | null
   contactos: ContactoConCategoriaPredeterminada[]
   categorias: Categoria[]
+  /** Solo decide si las personas y destinatarios pueden hacerse globales: dar
+      de alta un contacto local (o un proveedor compartido) puede cualquiera de
+      la delegación, igual que en la pantalla de Contactos. */
+  canManageGlobalContact?: boolean
+  onCreateContacto?: (
+    payload: Parameters<NonNullable<React.ComponentProps<typeof ContactoForm>["onSubmit"]>>[0],
+  ) => Promise<Contacto | void>
+  onContactosChanged?: () => void
   onRequestCreateCategory?: (
     assign: (categoryId: string) => void | Promise<void>,
     parent?: Categoria,
@@ -60,6 +71,9 @@ export function PagoMcmForm({
   pago,
   contactos,
   categorias,
+  canManageGlobalContact,
+  onCreateContacto,
+  onContactosChanged,
   onRequestCreateCategory,
   onSubmit,
   onCancel,
@@ -74,6 +88,19 @@ export function PagoMcmForm({
   const [categoriaSugeridaId, setCategoriaSugeridaId] = useState<string | null>(pago?.categoria_id_sugerida ?? null)
   const [notas, setNotas] = useState(pago?.notas ?? "")
   const [detallesOpen, setDetallesOpen] = useState(false)
+
+  // Dar de alta al vuelo a quien hay que pagar: aquí es donde más falta hace,
+  // porque un pago MCM suele ser la primera vez que aparece esa persona.
+  const { onCreateNew: onCreateContactoNew, dialog: createContactoDialog } = useCreateContactoInline({
+    delegacionId,
+    categorias,
+    canManageGlobal: canManageGlobalContact,
+    onCreateContacto,
+    onContactoCreated: (nuevoContactoId) => {
+      setContactoId(nuevoContactoId)
+      onContactosChanged?.()
+    },
+  })
 
   // Datos gasolina por km
   const [km, setKm] = useState<string>(
@@ -200,6 +227,8 @@ export function PagoMcmForm({
             contactos={contactos}
             value={contactoId}
             onChange={setContactoId}
+            onCreateNew={onCreateContactoNew}
+            onAdopted={onContactosChanged}
             placeholder="¿A quién hay que pagar?"
           />
         </div>
@@ -409,6 +438,8 @@ export function PagoMcmForm({
           {loading === "pendiente" ? "Guardando…" : "Guardar como pendiente"}
         </Button>
       </div>
+
+      {createContactoDialog}
     </form>
   )
 }

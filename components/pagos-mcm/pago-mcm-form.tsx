@@ -45,7 +45,10 @@ interface PagoMcmFormProps {
   pago?: PagoMcmConRelaciones | null
   contactos: ContactoConCategoriaPredeterminada[]
   categorias: Categoria[]
-  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
+  onRequestCreateCategory?: (
+    assign: (categoryId: string) => void | Promise<void>,
+    parent?: Categoria,
+  ) => void
   onSubmit: (payload: PagoMcmFormSubmit) => Promise<PagoMcm | void>
   onCancel: () => void
 }
@@ -108,8 +111,8 @@ export function PagoMcmForm({
 
   const categoriaSugerida = categorias.find((c) => c.id === categoriaSugeridaId)
 
-  const handleRequestCreateCategory = () => {
-    onRequestCreateCategory?.((newId) => setCategoriaSugeridaId(newId))
+  const handleRequestCreateCategory = (parent?: Categoria) => {
+    onRequestCreateCategory?.((newId) => setCategoriaSugeridaId(newId), parent)
   }
 
   const handleSubmit = async (targetEstado: "borrador" | "pendiente") => {

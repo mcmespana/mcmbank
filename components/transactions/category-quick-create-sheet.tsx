@@ -14,6 +14,7 @@ interface CategoryQuickCreateSheetProps {
   delegacionId?: string | null
   canManageGlobal: boolean
   categories: Categoria[]
+  parentCategory?: Categoria | null
   onCreated: (category: Categoria) => void | Promise<void>
 }
 
@@ -24,6 +25,7 @@ export function CategoryQuickCreateSheet({
   delegacionId,
   canManageGlobal,
   categories,
+  parentCategory,
   onCreated,
 }: CategoryQuickCreateSheetProps) {
   const draftCategory = useMemo<Categoria>(
@@ -33,15 +35,15 @@ export function CategoryQuickCreateSheet({
       delegacion_id: delegacionId || null,
       nombre: "",
       tipo: "mixto",
-      emoji: "📁",
-      color: "#4ECDC4",
+      emoji: parentCategory?.emoji || "📁",
+      color: parentCategory?.color || "#4ECDC4",
       orden: 0,
-      categoria_padre_id: null,
+      categoria_padre_id: parentCategory?.id ?? null,
       creado_en: "",
       es_global: false,
       esta_activa: true,
     }),
-    [organizacionId, delegacionId],
+    [organizacionId, delegacionId, parentCategory],
   )
 
   const handleSave = async (patch: Partial<Categoria>) => {
@@ -62,8 +64,12 @@ export function CategoryQuickCreateSheet({
       return
     }
 
-    const siblings = categories.filter(
-      (category) => !category.categoria_padre_id && category.es_global === targetIsGlobal,
+    // Una subcategoría se ordena entre sus hermanas, no entre las raíces: con
+    // el orden de las raíces acababa siempre la última del grupo o empatada.
+    const siblings = categories.filter((category) =>
+      parentCategory
+        ? category.categoria_padre_id === parentCategory.id
+        : !category.categoria_padre_id && category.es_global === targetIsGlobal,
     )
     const maxOrder = siblings.length > 0 ? Math.max(...siblings.map((category) => category.orden)) : 0
 
@@ -74,9 +80,9 @@ export function CategoryQuickCreateSheet({
         nombre: patch.nombre!,
         tipo: "mixto",
         emoji: patch.emoji || "📁",
-        color: patch.color || "#4ECDC4",
+        color: patch.color || parentCategory?.color || "#4ECDC4",
         orden: maxOrder + 1,
-        categoria_padre_id: null,
+        categoria_padre_id: patch.categoria_padre_id ?? parentCategory?.id ?? null,
         es_global: targetIsGlobal,
         esta_activa: true,
       })
@@ -92,10 +98,13 @@ export function CategoryQuickCreateSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:w-[400px] sm:max-w-[540px] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Crear categoría</SheetTitle>
+          <SheetTitle>
+            {parentCategory ? `Nueva subcategoría en ${parentCategory.nombre}` : "Crear categoría"}
+          </SheetTitle>
         </SheetHeader>
         <CategoryEditForm
           category={draftCategory}
+          parentCategory={parentCategory || undefined}
           onSave={handleSave}
           onCancel={() => onOpenChange(false)}
           canManageGlobal={canManageGlobal}

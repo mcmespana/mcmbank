@@ -20,7 +20,7 @@ interface CategoryMegaSelectorProps {
   onClose: () => void
   movement?: Movimiento | null
   account?: Cuenta | null
-  onCreateCategory?: () => void
+  onCreateCategory?: (parent?: Categoria) => void
   bulkSelectionLabel?: string
   allowMultiple?: boolean
   title?: string
@@ -324,6 +324,7 @@ export function CategoryMegaSelector({
                       group={group}
                       isSelected={isSelected}
                       onSelect={handleSelect}
+                      onCreateSubcategory={onCreateCategory}
                     />
                   ))}
 
@@ -335,13 +336,15 @@ export function CategoryMegaSelector({
                       {groups
                         .filter((g) => g.children.length === 0)
                         .map((g) => (
-                          <CategoryPill
-                            key={g.parent.id}
-                            category={g.parent}
-                            size="md"
-                            isSelected={isSelected(g.parent.id)}
-                            onClick={() => handleSelect(g.parent.id)}
-                          />
+                          <div key={g.parent.id} className="group inline-flex items-center gap-1">
+                            <CategoryPill
+                              category={g.parent}
+                              size="md"
+                              isSelected={isSelected(g.parent.id)}
+                              onClick={() => handleSelect(g.parent.id)}
+                            />
+                            {onCreateCategory && <AddSubcategoryButton parent={g.parent} onClick={onCreateCategory} />}
+                          </div>
                         ))}
                       {orphans.map((category) => (
                         <CategoryPill
@@ -436,13 +439,14 @@ interface CategoryGroupSectionProps {
   group: CategoryGroup
   isSelected: (categoryId: string) => boolean
   onSelect: (categoryId: string) => void
+  onCreateSubcategory?: (parent: Categoria) => void
 }
 
-function CategoryGroupSection({ group, isSelected, onSelect }: CategoryGroupSectionProps) {
+function CategoryGroupSection({ group, isSelected, onSelect, onCreateSubcategory }: CategoryGroupSectionProps) {
   const { parent, children } = group
 
   return (
-    <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2.5 transition-colors hover:border-border">
+    <div className="group rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2.5 transition-colors hover:border-border">
       <div className="flex items-center gap-3">
         <CategoryPill
           category={parent}
@@ -453,6 +457,9 @@ function CategoryGroupSection({ group, isSelected, onSelect }: CategoryGroupSect
         <span className="text-xs text-muted-foreground">
           {children.length} subcategoría{children.length !== 1 ? "s" : ""}
         </span>
+        {onCreateSubcategory && (
+          <AddSubcategoryButton parent={parent} onClick={onCreateSubcategory} className="ml-auto" />
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
         {children.map((child) => (
@@ -466,6 +473,38 @@ function CategoryGroupSection({ group, isSelected, onSelect }: CategoryGroupSect
         ))}
       </div>
     </div>
+  )
+}
+
+// Crear una subcategoría es lo habitual cuando llega una actividad nueva, pero
+// no es la acción principal del selector: va discreto, dentro del grupo al que
+// pertenecerá, y en escritorio solo aparece al pasar por encima (en móvil no
+// hay hover, así que ahí se queda a media tinta pero visible).
+interface AddSubcategoryButtonProps {
+  parent: Categoria
+  onClick: (parent: Categoria) => void
+  className?: string
+}
+
+function AddSubcategoryButton({ parent, onClick, className }: AddSubcategoryButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick(parent)
+      }}
+      title={`Nueva subcategoría en ${parent.nombre}`}
+      aria-label={`Nueva subcategoría en ${parent.nombre}`}
+      className={cn(
+        "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground transition",
+        "opacity-70 hover:border-primary/40 hover:bg-primary/5 hover:text-primary hover:opacity-100",
+        "sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
+        className,
+      )}
+    >
+      <Plus className="h-3.5 w-3.5" />
+    </button>
   )
 }
 

@@ -101,6 +101,7 @@ export function PagosMcmManager() {
   const [copyMenuOpen, setCopyMenuOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [categoryCreateOpen, setCategoryCreateOpen] = useState(false)
+  const [categoryCreateParent, setCategoryCreateParent] = useState<Categoria | null>(null)
   const pendingCategoryAssignRef = useRef<((categoryId: string) => void | Promise<void>) | null>(null)
 
   const { copy } = useClipboard()
@@ -224,8 +225,12 @@ export function PagosMcmManager() {
     setTransferOpen(true)
   }
 
-  const requestCreateCategory = (assign: (categoryId: string) => void | Promise<void>) => {
+  const requestCreateCategory = (
+    assign: (categoryId: string) => void | Promise<void>,
+    parent?: Categoria,
+  ) => {
     pendingCategoryAssignRef.current = assign
+    setCategoryCreateParent(parent ?? null)
     setCategoryCreateOpen(true)
   }
 
@@ -233,6 +238,7 @@ export function PagosMcmManager() {
     const assign = pendingCategoryAssignRef.current
     pendingCategoryAssignRef.current = null
     setCategoryCreateOpen(false)
+    setCategoryCreateParent(null)
     if (assign) await assign(newCategory.id)
     toast.success(`Categoría "${newCategory.nombre}" creada y asignada`)
   }
@@ -460,12 +466,16 @@ export function PagosMcmManager() {
         open={categoryCreateOpen}
         onOpenChange={(open) => {
           setCategoryCreateOpen(open)
-          if (!open) pendingCategoryAssignRef.current = null
+          if (!open) {
+            pendingCategoryAssignRef.current = null
+            setCategoryCreateParent(null)
+          }
         }}
         organizacionId={getCurrentDelegation()?.organizacion_id}
         delegacionId={selectedDelegation}
         canManageGlobal={isAdmin}
         categories={categorias}
+        parentCategory={categoryCreateParent}
         onCreated={handleCategoryCreated}
       />
 

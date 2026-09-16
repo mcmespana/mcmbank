@@ -112,7 +112,10 @@ interface TransactionListProps {
   onOpenFiles?: (movement: MovimientoConRelaciones) => void
   selectedMovementIds: string[]
   onMovementSelectionChange: (movementId: string, selected: boolean, rangeFromAnchor?: boolean) => void
-  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
+  onRequestCreateCategory?: (
+    assign: (categoryId: string) => void | Promise<void>,
+    parent?: Categoria,
+  ) => void
 }
 
 export function TransactionList({
@@ -189,8 +192,8 @@ export function TransactionList({
   // props pero no llegaba a la fila, así que el botón "+" del mega selector no
   // hacía nada en la lista (en el detalle sí, que era lo que despistaba).
   const handleRowRequestCreateCategory = useCallback(
-    (assign: (categoryId: string) => void | Promise<void>) =>
-      handlersRef.current.onRequestCreateCategory?.(assign),
+    (assign: (categoryId: string) => void | Promise<void>, parent?: Categoria) =>
+      handlersRef.current.onRequestCreateCategory?.(assign, parent),
     [],
   )
 

@@ -28,7 +28,10 @@ interface TransactionListRowProps {
   selectionActive: boolean
   onSelectionChange: (movementId: string, selected: boolean, rangeFromAnchor?: boolean) => void
   /** Abre el panel de crear categoría y asigna la recién creada a esta fila. */
-  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
+  onRequestCreateCategory?: (
+    assign: (categoryId: string) => void | Promise<void>,
+    parent?: Categoria,
+  ) => void
 }
 
 export const TransactionListRow = memo(function TransactionListRow({
@@ -288,7 +291,11 @@ export const TransactionListRow = memo(function TransactionListRow({
                       onCategoryChange={(categoryId) => handleCategoryChange(categoryId)}
                       onCreateCategory={
                         onRequestCreateCategory
-                          ? () => onRequestCreateCategory((categoryId) => handleCategoryChange(categoryId))
+                          ? (parent) =>
+                              onRequestCreateCategory(
+                                (categoryId) => handleCategoryChange(categoryId),
+                                parent,
+                              )
                           : undefined
                       }
                     />

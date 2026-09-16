@@ -1056,7 +1056,7 @@ export async function GET(request: Request) {
               type: "string",
               enum: ["bandeja", "sin_pagar", "pagada_parcial", "pagada", "pagada_fuera"],
             },
-            origen: { type: "string", enum: ["subida", "movimiento", "email"] },
+            origen: { type: "string", enum: ["subida", "movimiento", "email", "pago_mcm"] },
             notas: { type: ["string", "null"] },
             email_remitente: { type: ["string", "null"] },
             delegacion: { anyOf: [{ $ref: "#/components/schemas/Delegacion" }, { type: "null" }] },

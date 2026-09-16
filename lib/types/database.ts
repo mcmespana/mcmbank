@@ -152,7 +152,7 @@ export type FacturaInsert = Database["public"]["Tables"]["factura"]["Insert"]
 export type FacturaUpdate = Database["public"]["Tables"]["factura"]["Update"]
 // factura.estado y factura.origen son text en la BD; la app los restringe aquí.
 export type FacturaEstado = "bandeja" | "sin_pagar" | "pagada_parcial" | "pagada" | "pagada_fuera"
-export type FacturaOrigen = "subida" | "movimiento" | "email"
+export type FacturaOrigen = "subida" | "movimiento" | "email" | "pago_mcm"
 
 export const FACTURA_ESTADOS: readonly FacturaEstado[] = [
   "bandeja",
@@ -161,6 +161,13 @@ export const FACTURA_ESTADOS: readonly FacturaEstado[] = [
   "pagada",
   "pagada_fuera",
 ] as const
+
+export type PagoMcmDeFactura = Pick<
+  Database["public"]["Tables"]["pago_mcm"]["Row"],
+  "id" | "concepto" | "importe" | "estado" | "movimiento_id"
+> & {
+  contacto?: Pick<Contacto, "id" | "nombre" | "emoji" | "color" | "logo_url"> | null
+}
 
 export type FacturaMovimientoVinculado = Pick<
   Database["public"]["Tables"]["movimiento"]["Row"],
@@ -176,6 +183,13 @@ export type FacturaConRelaciones = Omit<Factura, "estado" | "origen"> & {
   origen: FacturaOrigen
   contacto?: Pick<Contacto, "id" | "nombre" | "tipo" | "emoji" | "color" | "logo_url" | "email" | "identificador_fiscal"> | null
   movimientos?: FacturaMovimientoVinculado[]
+  /**
+   * El pago MCM que reembolsa esta factura, cuando alguien adelantó el dinero.
+   * `contacto` de aquí es la persona a la que se le debe (Aniceto); el de la
+   * factura sigue siendo el proveedor (Consum). Es poco habitual, así que la
+   * pantalla de facturas lo enseña en una línea y no como un bloque.
+   */
+  pago_mcm?: PagoMcmDeFactura | null
   archivos?: Pick<
     ArchivoAdjunto,
     "id" | "nombre_original" | "tipo_mime" | "url_publica" | "path_storage" | "bucket" | "tamano_bytes" | "subido_en"

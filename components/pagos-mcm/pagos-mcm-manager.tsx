@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle2, Copy, Plus, Search, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { describirError } from "@/lib/utils/describir-error"
@@ -19,6 +20,7 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useClipboard } from "@/hooks/use-clipboard"
 import { useContactos } from "@/hooks/use-contactos"
+import { DatabaseService } from "@/lib/services/database"
 import { useDebouncedState } from "@/hooks/use-debounced-state"
 import { useDelegationRole } from "@/hooks/use-delegation-role"
 import useIsAdmin from "@/hooks/use-is-admin"
@@ -113,6 +115,31 @@ export function PagosMcmManager() {
 
   const { copy } = useClipboard()
 
+  // `/pagos-mcm?pago=<id>` abre ese pago directamente: es a donde apunta la
+  // línea "lo adelantó X" de una factura. Puede no estar en la página cargada,
+  // así que si no aparece en la lista se pide suelto. El parámetro se limpia en
+  // cuanto se usa; si no, cerrar la hoja la volvería a abrir en cada render.
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const pagoEnUrl = searchParams.get("pago")
+  useEffect(() => {
+    if (!pagoEnUrl) return
+    const enLista = pagos.find((p) => p.id === pagoEnUrl)
+    if (enLista) {
+      setDetailPago(enLista)
+    } else {
+      DatabaseService.getPagoMcmById(pagoEnUrl)
+        .then((p) => {
+          if (p) setDetailPago(p)
+        })
+        .catch(() => undefined)
+    }
+    setDetailOpen(true)
+    router.replace(pathname, { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagoEnUrl])
+
   const selectionActive = selectedIds.size > 0
   const pagosSeleccionados = useMemo(() => pagos.filter((p) => selectedIds.has(p.id)), [pagos, selectedIds])
   const borradoresSeleccionados = useMemo(
@@ -151,12 +178,17 @@ export function PagosMcmManager() {
     if (editing?.id) {
       if (!payload.update) return
       await updatePago(editing.id, payload.update)
-    } else {
-      if (!payload.insert) return
-      await createPago({ ...payload.insert, creado_por: user?.id ?? null })
+      setFormOpen(false)
+      setEditing(null)
+      return
     }
+    if (!payload.insert) return
+    // Se devuelve el pago creado: el formulario lo necesita para enganchar los
+    // tickets que se subieron cuando el pago aún no tenía id.
+    const creado = await createPago({ ...payload.insert, creado_por: user?.id ?? null })
     setFormOpen(false)
     setEditing(null)
+    return creado
   }
 
   const openCreate = () => {

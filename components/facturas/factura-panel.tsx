@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { ArrowLeft, BadgeCheck, Check, Eye, Loader2, Trash2, Unlink, X } from "lucide-react"
+import { ArrowLeft, BadgeCheck, Check, Eye, Loader2, Trash2, Unlink, Wallet, X } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -465,6 +465,24 @@ export function FacturaPanel({
                 />
               </div>
             </>
+          )}
+
+          {/* Reembolso a quien la adelantó. Una línea, no un bloque: pasa pocas
+              veces y el proveedor de la factura sigue siendo el protagonista. */}
+          {factura?.pago_mcm && (
+            <Link
+              href={`/pagos-mcm?pago=${factura.pago_mcm.id}`}
+              className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            >
+              <Wallet className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="min-w-0 truncate">
+                Lo adelantó{" "}
+                <span className="font-medium text-foreground">
+                  {factura.pago_mcm.contacto?.nombre ?? "alguien del equipo"}
+                </span>{" "}
+                · pago MCM de {formatCurrency(Math.abs(Number(factura.pago_mcm.importe)))}
+              </span>
+            </Link>
           )}
 
           {movimientosVinculados.length > 0 && (

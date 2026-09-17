@@ -1154,6 +1154,10 @@ export class DatabaseService {
       (err) => console.warn("No se pudieron replicar adjuntos del pago al movimiento:", err),
     )
 
+    await this.conciliarFacturasDePagoConMovimiento(pagoId, created.id, options.creadoPor).catch((err) =>
+      console.warn("No se pudo conciliar la factura del pago con el movimiento:", err),
+    )
+
     return { movimientoId: created.id }
   }
 
@@ -1187,6 +1191,10 @@ export class DatabaseService {
         console.warn("No se pudieron replicar adjuntos del pago al movimiento:", err),
       )
     }
+
+    await this.conciliarFacturasDePagoConMovimiento(pagoId, movimientoId, userId).catch((err) =>
+      console.warn("No se pudo conciliar la factura del pago con el movimiento:", err),
+    )
   }
 
   /**
@@ -1250,6 +1258,10 @@ export class DatabaseService {
       .update({ pago_mcm_id: null })
       .eq("id", movimientoId)
     if (e2) throw e2
+
+    await this.desconciliarFacturasDePago(pagoId, movimientoId).catch((err) =>
+      console.warn("No se pudo desvincular la factura del pago:", err),
+    )
   }
 
   /**
@@ -1382,6 +1394,20 @@ export class DatabaseService {
       concepto,
       importe,
       cuenta_id
+    ),
+    pago_mcm:pago_mcm_id (
+      id,
+      concepto,
+      importe,
+      estado,
+      movimiento_id,
+      contacto:contacto_id (
+        id,
+        nombre,
+        emoji,
+        color,
+        logo_url
+      )
     )
   `
 
@@ -1478,6 +1504,66 @@ export class DatabaseService {
     if (movErr) throw movErr
     if (!movimiento?.factura_id) return null
     return this.getFacturaById(movimiento.factura_id)
+  }
+
+  /** Las facturas (tickets) que reembolsa un pago MCM, la más reciente arriba. */
+  static async getFacturasDePago(pagoId: string, signal?: AbortSignal): Promise<FacturaConRelaciones[]> {
+    const supabase = this.getClient() as any
+    let query = supabase
+      .from("factura")
+      .select(this.FACTURA_SELECT)
+      .eq("pago_mcm_id", pagoId)
+      .order("creado_en", { ascending: false })
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    return this.attachArchivosToFacturas((data ?? []) as FacturaConRelaciones[], signal)
+  }
+
+  /**
+   * Cuando el pago a quien adelantó el dinero se salda con un movimiento del
+   * banco, ese movimiento es también el pago del ticket: la factura se concilia
+   * con él y deja de estar pendiente.
+   *
+   * Solo se hace con UN ticket, a propósito: `movimiento.factura_id` admite una
+   * factura por movimiento, así que con cinco tickets no hay forma de engancharlos
+   * todos y enganchar uno al azar sería peor que no tocar nada. Best-effort: si
+   * falla, el pago y el movimiento siguen vinculados igual.
+   */
+  private static async conciliarFacturasDePagoConMovimiento(
+    pagoId: string,
+    movimientoId: string,
+    creadoPor?: string,
+  ): Promise<void> {
+    const supabase = this.getClient() as any
+    const { data: facturas, error } = await supabase
+      .from("factura")
+      .select("id")
+      .eq("pago_mcm_id", pagoId)
+    if (error) throw error
+    if (!Array.isArray(facturas) || facturas.length !== 1) return
+
+    const { data: movimiento } = await supabase
+      .from("movimiento")
+      .select("factura_id")
+      .eq("id", movimientoId)
+      .maybeSingle()
+    if (movimiento?.factura_id) return
+
+    await this.linkFacturaToMovimiento(facturas[0].id, movimientoId, creadoPor)
+  }
+
+  /** El reverso: al soltar el pago de su movimiento, sus tickets se sueltan también. */
+  private static async desconciliarFacturasDePago(pagoId: string, movimientoId: string): Promise<void> {
+    const supabase = this.getClient() as any
+    const { data: facturas, error } = await supabase
+      .from("factura")
+      .select("id")
+      .eq("pago_mcm_id", pagoId)
+    if (error) throw error
+    for (const factura of (facturas ?? []) as { id: string }[]) {
+      await this.unlinkFacturaFromMovimiento(factura.id, movimientoId).catch(() => undefined)
+    }
   }
 
   static async createFactura(

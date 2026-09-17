@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,11 @@ import { Separator } from "@/components/ui/separator"
 import { CategoryChip } from "@/components/transactions/category-chip"
 import { cn } from "@/lib/utils"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
+import type { ContactoForm } from "@/components/contactos/contacto-form"
+import { useCreateContactoInline } from "@/hooks/use-create-contacto-inline"
 import { PagoMcmArchivos } from "./pago-mcm-archivos"
+import { PagoMcmTickets } from "./pago-mcm-tickets"
+import { usePagoMcmFacturas } from "@/hooks/use-pago-mcm-facturas"
 import {
   PAGO_MCM_GASOLINA_PRESETS,
   PAGO_MCM_GASOLINA_PRESETS_ORDER,
@@ -25,6 +29,7 @@ import {
 import { formatCurrency } from "@/lib/utils/format"
 import type {
   Categoria,
+  Contacto,
   ContactoConCategoriaPredeterminada,
   PagoMcm,
   PagoMcmConRelaciones,
@@ -45,7 +50,18 @@ interface PagoMcmFormProps {
   pago?: PagoMcmConRelaciones | null
   contactos: ContactoConCategoriaPredeterminada[]
   categorias: Categoria[]
-  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
+  /** Solo decide si las personas y destinatarios pueden hacerse globales: dar
+      de alta un contacto local (o un proveedor compartido) puede cualquiera de
+      la delegación, igual que en la pantalla de Contactos. */
+  canManageGlobalContact?: boolean
+  onCreateContacto?: (
+    payload: Parameters<NonNullable<React.ComponentProps<typeof ContactoForm>["onSubmit"]>>[0],
+  ) => Promise<Contacto | void>
+  onContactosChanged?: () => void
+  onRequestCreateCategory?: (
+    assign: (categoryId: string) => void | Promise<void>,
+    parent?: Categoria,
+  ) => void
   onSubmit: (payload: PagoMcmFormSubmit) => Promise<PagoMcm | void>
   onCancel: () => void
 }
@@ -57,6 +73,9 @@ export function PagoMcmForm({
   pago,
   contactos,
   categorias,
+  canManageGlobalContact,
+  onCreateContacto,
+  onContactosChanged,
   onRequestCreateCategory,
   onSubmit,
   onCancel,
@@ -71,6 +90,23 @@ export function PagoMcmForm({
   const [categoriaSugeridaId, setCategoriaSugeridaId] = useState<string | null>(pago?.categoria_id_sugerida ?? null)
   const [notas, setNotas] = useState(pago?.notas ?? "")
   const [detallesOpen, setDetallesOpen] = useState(false)
+
+  // Los tickets son facturas de verdad: viven en la bandeja, con su proveedor y
+  // su lectura con IA. El pago solo dice a quién se le debe el dinero.
+  const tickets = usePagoMcmFacturas(pago?.id ?? null, delegacionId)
+
+  // Dar de alta al vuelo a quien hay que pagar: aquí es donde más falta hace,
+  // porque un pago MCM suele ser la primera vez que aparece esa persona.
+  const { onCreateNew: onCreateContactoNew, dialog: createContactoDialog } = useCreateContactoInline({
+    delegacionId,
+    categorias,
+    canManageGlobal: canManageGlobalContact,
+    onCreateContacto,
+    onContactoCreated: (nuevoContactoId) => {
+      setContactoId(nuevoContactoId)
+      onContactosChanged?.()
+    },
+  })
 
   // Datos gasolina por km
   const [km, setKm] = useState<string>(
@@ -96,6 +132,20 @@ export function PagoMcmForm({
     }
   }, [preset])
 
+  // El importe de un reembolso de tickets es la suma de los tickets, así que en
+  // cuanto la IA los lee se escribe solo — pero solo si el campo está vacío y
+  // solo cuando la suma cambia: si alguien ha tecleado una cifra (o la ha
+  // borrado a conciencia), manda la persona.
+  const totalTicketsRef = useRef(0)
+  useEffect(() => {
+    if (tipoCalculo !== "gasolina_tickets") return
+    const total = tickets.total
+    if (total === totalTicketsRef.current) return
+    totalTicketsRef.current = total
+    if (total <= 0) return
+    setImporteDisplay((prev) => (prev.trim() === "" ? formatMoney(total) : prev))
+  }, [tickets.total, tipoCalculo])
+
   // Auto-cálculo de importe para gasolina_km
   const importeCalculadoKm = useMemo(() => {
     if (tipoCalculo !== "gasolina_km") return null
@@ -108,8 +158,8 @@ export function PagoMcmForm({
 
   const categoriaSugerida = categorias.find((c) => c.id === categoriaSugeridaId)
 
-  const handleRequestCreateCategory = () => {
-    onRequestCreateCategory?.((newId) => setCategoriaSugeridaId(newId))
+  const handleRequestCreateCategory = (parent?: Categoria) => {
+    onRequestCreateCategory?.((newId) => setCategoriaSugeridaId(newId), parent)
   }
 
   const handleSubmit = async (targetEstado: "borrador" | "pendiente") => {
@@ -174,7 +224,11 @@ export function PagoMcmForm({
           notas: notas.trim() || null,
           ...gasolinaData,
         }
-        await onSubmit({ insert })
+        const creado = await onSubmit({ insert })
+        // Los tickets se subieron antes de que el pago existiera: ahora que
+        // tiene id, se enganchan. Si esto falla, la factura sigue en la bandeja
+        // (que es donde tiene que estar), solo que suelta.
+        if (creado?.id) await tickets.asignarAPago(creado.id)
       }
       toast.success(isEdit ? "Pago actualizado" : "Pago creado")
     } catch (err) {
@@ -197,6 +251,8 @@ export function PagoMcmForm({
             contactos={contactos}
             value={contactoId}
             onChange={setContactoId}
+            onCreateNew={onCreateContactoNew}
+            onAdopted={onContactosChanged}
             placeholder="¿A quién hay que pagar?"
           />
         </div>
@@ -305,8 +361,18 @@ export function PagoMcmForm({
         )}
 
         {tipoCalculo === "gasolina_tickets" && (
-          <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
-            Sube los tickets en justificantes e introduce el importe total a mano.
+          <div className="space-y-1.5">
+            <Label>Tickets</Label>
+            <PagoMcmTickets
+              facturas={tickets.facturas}
+              total={tickets.total}
+              uploading={tickets.uploading}
+              leyendo={tickets.leyendo}
+              progreso={tickets.progreso}
+              listo={tickets.listo}
+              onFiles={tickets.subir}
+              onEliminar={tickets.eliminar}
+            />
           </div>
         )}
 
@@ -406,6 +472,8 @@ export function PagoMcmForm({
           {loading === "pendiente" ? "Guardando…" : "Guardar como pendiente"}
         </Button>
       </div>
+
+      {createContactoDialog}
     </form>
   )
 }

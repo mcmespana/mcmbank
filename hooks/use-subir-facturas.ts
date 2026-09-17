@@ -4,18 +4,9 @@ import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 import { useDelegationContext } from "@/contexts/delegation-context"
-import { DatabaseService } from "@/lib/services/database"
 import { FileService } from "@/lib/services/file-service"
+import { crearFacturaDesdeArchivo } from "@/lib/services/factura-upload"
 import { leerFacturaConIa } from "@/lib/services/factura-ia-client"
-
-/** Limpia el nombre de archivo para usarlo como concepto provisional. */
-function conceptoDesdeNombre(nombre: string): string {
-  return nombre
-    .replace(/\.[^.]+$/, "")
-    .replace(/[_-]+/g, " ")
-    .trim()
-    .slice(0, 120)
-}
 
 export interface EstadoSubidaFacturas {
   uploading: boolean
@@ -56,42 +47,20 @@ export function useSubirFacturas(delegacionId: string | null, onCreated: () => v
       const nuevas: string[] = []
       try {
         for (const file of accepted) {
+          // Un archivo que no vale se salta y se sigue con el resto; lo que sí
+          // aborta el lote es un fallo de subida (ahí algo va mal de verdad).
           const validation = FileService.validateFile(file, "facturas")
           if (!validation.valid) {
             toast.error(`${file.name}: ${validation.error}`)
             continue
           }
 
-          const factura = await DatabaseService.createFactura({
-            delegacion_id: delegacionId,
-            concepto: conceptoDesdeNombre(file.name) || null,
-            estado: "bandeja",
-            origen: "subida",
-            creado_por: user.id,
+          const factura = await crearFacturaDesdeArchivo({
+            file,
+            delegacionId,
+            delegacionCodigo,
+            usuarioId: user.id,
           })
-
-          try {
-            const upload = await FileService.uploadFileForEntity(
-              file,
-              { scope: "factura", id: factura.id },
-              "facturas",
-              delegacionCodigo,
-            )
-            await DatabaseService.registrarArchivoFactura(factura.id, delegacionId, {
-              nombre_original: file.name,
-              nombre_archivo: upload.path.split("/").pop() || file.name,
-              tipo_mime: file.type,
-              tamanoBytes: file.size,
-              bucket: upload.bucket,
-              path_storage: upload.path,
-              url_publica: upload.url,
-              subido_por: user.id,
-            })
-          } catch (err) {
-            // Si falla la subida del archivo, no dejamos la factura vacía colgando.
-            await DatabaseService.deleteFactura(factura.id).catch(() => undefined)
-            throw err
-          }
 
           creadas += 1
           nuevas.push(factura.id)

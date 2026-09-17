@@ -17,6 +17,8 @@ import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { formatearIban } from "@/lib/utils/iban"
 import { PAGO_MCM_ESTADO_INFO, PAGO_MCM_TIPO_CALCULO_INFO, calcularImporteGasolinaKm } from "@/lib/utils/pago-mcm"
 import { PagoMcmArchivos } from "./pago-mcm-archivos"
+import { PagoMcmTickets } from "./pago-mcm-tickets"
+import { usePagoMcmFacturas } from "@/hooks/use-pago-mcm-facturas"
 import type { PagoMcmConRelaciones } from "@/lib/types/database"
 
 interface PagoMcmDetailSheetProps {
@@ -50,6 +52,9 @@ export function PagoMcmDetailSheet({
   onDelete,
 }: PagoMcmDetailSheetProps) {
   const { copy } = useClipboard()
+  // Hook antes del early return: `pago` puede ser null mientras la hoja está
+  // cerrada y el orden de los hooks no puede depender de eso.
+  const tickets = usePagoMcmFacturas(pago?.id ?? null, delegacionId)
 
   if (!pago) return null
 
@@ -179,6 +184,30 @@ export function PagoMcmDetailSheet({
             </div>
 
             <Separator />
+
+            {/* Tickets: cada uno es una factura de su proveedor, con su propio
+                sitio en la bandeja. Aquí solo se miran. */}
+            {tickets.facturas.length > 0 && (
+              <>
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Tickets ({tickets.facturas.length})
+                  </h3>
+                  <PagoMcmTickets
+                    facturas={tickets.facturas}
+                    total={tickets.total}
+                    uploading={false}
+                    leyendo={false}
+                    progreso={null}
+                    listo={false}
+                    onFiles={() => undefined}
+                    onEliminar={async () => undefined}
+                    readOnly
+                  />
+                </div>
+                <Separator />
+              </>
+            )}
 
             {/* Justificantes */}
             {delegacionId && (

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle2, Copy, Plus, Search, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { describirError } from "@/lib/utils/describir-error"
@@ -19,6 +20,7 @@ import { useDelegationContext } from "@/contexts/delegation-context"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useClipboard } from "@/hooks/use-clipboard"
 import { useContactos } from "@/hooks/use-contactos"
+import { DatabaseService } from "@/lib/services/database"
 import { useDebouncedState } from "@/hooks/use-debounced-state"
 import { useDelegationRole } from "@/hooks/use-delegation-role"
 import useIsAdmin from "@/hooks/use-is-admin"
@@ -87,7 +89,14 @@ export function PagosMcmManager() {
   const { pagos: pendientesRaw } = usePagosMcm(selectedDelegation, { estados: ["pendiente"] })
   const pendientesConIban = useMemo(() => getPagosTransferibles(pendientesRaw), [pendientesRaw])
 
-  const { contactos } = useContactos(selectedDelegation, { incluirGlobales: true })
+  // Con catálogo: dar de alta un contacto desde aquí es el momento en el que se
+  // crean los duplicados, así que el selector tiene que ofrecer antes el que ya
+  // existe en MCM (mismo criterio que en Movimientos).
+  const {
+    contactos,
+    createContacto: createContactoFn,
+    refetch: refetchContactos,
+  } = useContactos(selectedDelegation, { incluirGlobales: true, incluirCatalogo: true })
   const { categorias } = useCategorias(selectedDelegation, { includeGlobal: true, includeInactive: false })
 
   const [formOpen, setFormOpen] = useState(false)
@@ -101,9 +110,35 @@ export function PagosMcmManager() {
   const [copyMenuOpen, setCopyMenuOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [categoryCreateOpen, setCategoryCreateOpen] = useState(false)
+  const [categoryCreateParent, setCategoryCreateParent] = useState<Categoria | null>(null)
   const pendingCategoryAssignRef = useRef<((categoryId: string) => void | Promise<void>) | null>(null)
 
   const { copy } = useClipboard()
+
+  // `/pagos-mcm?pago=<id>` abre ese pago directamente: es a donde apunta la
+  // línea "lo adelantó X" de una factura. Puede no estar en la página cargada,
+  // así que si no aparece en la lista se pide suelto. El parámetro se limpia en
+  // cuanto se usa; si no, cerrar la hoja la volvería a abrir en cada render.
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const pagoEnUrl = searchParams.get("pago")
+  useEffect(() => {
+    if (!pagoEnUrl) return
+    const enLista = pagos.find((p) => p.id === pagoEnUrl)
+    if (enLista) {
+      setDetailPago(enLista)
+    } else {
+      DatabaseService.getPagoMcmById(pagoEnUrl)
+        .then((p) => {
+          if (p) setDetailPago(p)
+        })
+        .catch(() => undefined)
+    }
+    setDetailOpen(true)
+    router.replace(pathname, { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagoEnUrl])
 
   const selectionActive = selectedIds.size > 0
   const pagosSeleccionados = useMemo(() => pagos.filter((p) => selectedIds.has(p.id)), [pagos, selectedIds])
@@ -143,12 +178,17 @@ export function PagosMcmManager() {
     if (editing?.id) {
       if (!payload.update) return
       await updatePago(editing.id, payload.update)
-    } else {
-      if (!payload.insert) return
-      await createPago({ ...payload.insert, creado_por: user?.id ?? null })
+      setFormOpen(false)
+      setEditing(null)
+      return
     }
+    if (!payload.insert) return
+    // Se devuelve el pago creado: el formulario lo necesita para enganchar los
+    // tickets que se subieron cuando el pago aún no tenía id.
+    const creado = await createPago({ ...payload.insert, creado_por: user?.id ?? null })
     setFormOpen(false)
     setEditing(null)
+    return creado
   }
 
   const openCreate = () => {
@@ -224,8 +264,12 @@ export function PagosMcmManager() {
     setTransferOpen(true)
   }
 
-  const requestCreateCategory = (assign: (categoryId: string) => void | Promise<void>) => {
+  const requestCreateCategory = (
+    assign: (categoryId: string) => void | Promise<void>,
+    parent?: Categoria,
+  ) => {
     pendingCategoryAssignRef.current = assign
+    setCategoryCreateParent(parent ?? null)
     setCategoryCreateOpen(true)
   }
 
@@ -233,6 +277,7 @@ export function PagosMcmManager() {
     const assign = pendingCategoryAssignRef.current
     pendingCategoryAssignRef.current = null
     setCategoryCreateOpen(false)
+    setCategoryCreateParent(null)
     if (assign) await assign(newCategory.id)
     toast.success(`Categoría "${newCategory.nombre}" creada y asignada`)
   }
@@ -449,6 +494,12 @@ export function PagosMcmManager() {
             pago={editing}
             contactos={contactos}
             categorias={categorias}
+            canManageGlobalContact={isAdmin}
+            onCreateContacto={async (payload) => {
+              if (!payload.insert) return
+              return await createContactoFn({ ...payload.insert, creado_por: user?.id ?? null })
+            }}
+            onContactosChanged={refetchContactos}
             onRequestCreateCategory={requestCreateCategory}
             onSubmit={handleSubmitForm}
             onCancel={() => { setFormOpen(false); setEditing(null) }}
@@ -460,12 +511,16 @@ export function PagosMcmManager() {
         open={categoryCreateOpen}
         onOpenChange={(open) => {
           setCategoryCreateOpen(open)
-          if (!open) pendingCategoryAssignRef.current = null
+          if (!open) {
+            pendingCategoryAssignRef.current = null
+            setCategoryCreateParent(null)
+          }
         }}
         organizacionId={getCurrentDelegation()?.organizacion_id}
         delegacionId={selectedDelegation}
         canManageGlobal={isAdmin}
         categories={categorias}
+        parentCategory={categoryCreateParent}
         onCreated={handleCategoryCreated}
       />
 

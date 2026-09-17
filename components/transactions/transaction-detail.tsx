@@ -48,7 +48,10 @@ interface TransactionDetailProps {
   onUpdate: (movementId: string, patch: Partial<Movimiento>) => Promise<void>
   onBack?: () => void
   initialTab?: "datos" | "archivos"
-  onRequestCreateCategory?: (assign: (categoryId: string) => void | Promise<void>) => void
+  onRequestCreateCategory?: (
+    assign: (categoryId: string) => void | Promise<void>,
+    parent?: Categoria,
+  ) => void
 }
 
 type HistoryChange = "date" | "amount"
@@ -448,9 +451,11 @@ export function TransactionDetail({
                       }
                       onCreateCategory={
                         onRequestCreateCategory
-                          ? () =>
-                              onRequestCreateCategory((categoryId) =>
-                                setFormData((prev) => ({ ...prev, categoria_id: categoryId })),
+                          ? (parent) =>
+                              onRequestCreateCategory(
+                                (categoryId) =>
+                                  setFormData((prev) => ({ ...prev, categoria_id: categoryId })),
+                                parent,
                               )
                           : undefined
                       }

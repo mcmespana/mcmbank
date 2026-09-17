@@ -268,6 +268,41 @@ Los patrones se comparan por palabras completas (`dia` no se cuela dentro de
 mismo que impide que existan dos Mercadonas. Añadir una cadena es una línea;
 añadir una que no aparezca literalmente en los extractos sí haría daño, porque
 convierte el silencio en un descarte.
+### Pagos MCM y facturas: el ticket que alguien adelantó
+
+Aniceto paga un ticket del Consum de su bolsillo. Son **dos hechos distintos** y
+la app guarda los dos por separado (`scripts/070`):
+
+- el papel es una **factura del Consum** — su `contacto_id` es el proveedor, se
+  lee con IA, cuenta para el saldo de Consum y se concilia como cualquier otra;
+- el dinero **se le debe a Aniceto** — eso es el `pago_mcm`, con su contacto.
+
+El puente es `factura.pago_mcm_id` (N facturas → 1 pago: un reembolso trae
+varios tickets), `ON DELETE SET NULL` porque borrar el reembolso no puede
+llevarse el documento. Meter a Aniceto como contacto de la factura rompería el
+saldo por proveedor y el emparejamiento por nombre — no se hace.
+
+- **La puerta es el tipo de cálculo "Tickets"**: ahí el formulario del pago
+  enseña una zona de arrastre grande (`pago-mcm-tickets.tsx`), igual que la
+  bandeja. En los demás tipos sigue estando la subida pequeña de
+  "Justificantes", que es un adjunto suelto y no crea factura.
+- Los tickets se suben **antes de que el pago exista**: nacen sin `pago_mcm_id`
+  y `asignarAPago()` los engancha al guardar. Si se cancela a medias el
+  documento se queda en la bandeja, que es donde tiene que estar.
+- **El importe del pago se rellena con la suma de los tickets solo si está
+  vacío**, y solo cuando la suma cambia: quien teclea una cifra manda.
+- **Al saldar el pago con un movimiento del banco, su factura se concilia con
+  ese mismo movimiento** (`conciliarFacturasDePagoConMovimiento`), y se suelta
+  al desvincular. Solo con **un** ticket: `movimiento.factura_id` admite una
+  factura por movimiento, y elegir una de cinco al azar sería peor que no tocar
+  nada.
+- En el panel de facturas esto es **una línea**, no un bloque ("Lo adelantó
+  Aniceto · pago MCM de 24,30 €", con enlace a `/pagos-mcm?pago=<id>`): pasa
+  pocas veces y el protagonista sigue siendo el proveedor.
+- La regla de la casa, para saber por dónde entrar: **a Facturas si es un papel
+  ya pagado que hay que conciliar con el banco; a Pagos MCM si es dinero que hay
+  que devolverle a alguien de dentro.**
+
 ### Proveedores (interdelegacionales) y sus logos
 
 Los **proveedores** (`contacto.tipo = 'proveedor'`) son fichas de toda la

@@ -21,7 +21,7 @@ interface CategoryChipProps {
   onCategoryChange: (categoryId: string | null) => void
   movement?: Movimiento | null
   account?: Cuenta | null
-  onCreateCategory?: () => void
+  onCreateCategory?: (parent?: Categoria) => void
 }
 
 export function CategoryChip({
@@ -104,9 +104,9 @@ export function CategoryChip({
               account={account}
               onCreateCategory={
                 onCreateCategory
-                  ? () => {
+                  ? (parent) => {
                       closeDialog()
-                      onCreateCategory()
+                      onCreateCategory(parent)
                     }
                   : undefined
               }
@@ -147,9 +147,9 @@ export function CategoryChip({
             account={account}
             onCreateCategory={
               onCreateCategory
-                ? () => {
+                ? (parent) => {
                     closeDialog()
-                    onCreateCategory()
+                    onCreateCategory(parent)
                   }
                 : undefined
             }

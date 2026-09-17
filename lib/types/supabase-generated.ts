@@ -870,6 +870,7 @@ export type Database = {
           notas: string | null
           numero: string | null
           origen: string
+          pago_mcm_id: string | null
         }
         Insert: {
           actualizado_en?: string
@@ -889,6 +890,7 @@ export type Database = {
           notas?: string | null
           numero?: string | null
           origen?: string
+          pago_mcm_id?: string | null
         }
         Update: {
           actualizado_en?: string
@@ -908,6 +910,7 @@ export type Database = {
           notas?: string | null
           numero?: string | null
           origen?: string
+          pago_mcm_id?: string | null
         }
         Relationships: [
           {
@@ -929,6 +932,13 @@ export type Database = {
             columns: ["delegacion_id"]
             isOneToOne: false
             referencedRelation: "delegacion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factura_pago_mcm_id_fkey"
+            columns: ["pago_mcm_id"]
+            isOneToOne: false
+            referencedRelation: "pago_mcm"
             referencedColumns: ["id"]
           },
         ]

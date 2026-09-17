@@ -157,6 +157,9 @@ export function TransactionManager() {
 
   const { categorias: categories, fetchCategorias } = useCategorias(selectedDelegation)
   const [categoryCreateOpen, setCategoryCreateOpen] = useState(false)
+  // El padre sí es estado (y no un ref): la hoja lo pinta en el título y en el
+  // color heredado, así que tiene que provocar render al abrirse.
+  const [categoryCreateParent, setCategoryCreateParent] = useState<Categoria | null>(null)
   const pendingCategoryAssignRef = useRef<((categoryId: string) => void | Promise<void>) | null>(null)
   const { cuentas: accounts } = useCuentas(selectedDelegation)
   // Con catálogo: asignar un proveedor a un movimiento es el momento en el que
@@ -370,16 +373,21 @@ export function TransactionManager() {
     }
   }
 
-  const requestCreateCategory = useCallback((assign: (categoryId: string) => void | Promise<void>) => {
-    pendingCategoryAssignRef.current = assign
-    setCategoryCreateOpen(true)
-  }, [])
+  const requestCreateCategory = useCallback(
+    (assign: (categoryId: string) => void | Promise<void>, parent?: Categoria) => {
+      pendingCategoryAssignRef.current = assign
+      setCategoryCreateParent(parent ?? null)
+      setCategoryCreateOpen(true)
+    },
+    [],
+  )
 
   const handleCategoryCreated = async (newCategory: Categoria) => {
     await fetchCategorias()
     const assign = pendingCategoryAssignRef.current
     pendingCategoryAssignRef.current = null
     setCategoryCreateOpen(false)
+    setCategoryCreateParent(null)
     if (assign) {
       await assign(newCategory.id)
     }
@@ -1156,9 +1164,9 @@ export function TransactionManager() {
             onSelect={handleBulkCategorySelect}
             onClose={() => setBulkCategoryOpen(false)}
             bulkSelectionLabel={`${selectionCount} transacciones seleccionadas`}
-            onCreateCategory={() => {
+            onCreateCategory={(parent) => {
               setBulkCategoryOpen(false)
-              requestCreateCategory(handleBulkCategorySelect)
+              requestCreateCategory(handleBulkCategorySelect, parent)
             }}
           />
         </DialogContent>
@@ -1170,12 +1178,14 @@ export function TransactionManager() {
           setCategoryCreateOpen(open)
           if (!open) {
             pendingCategoryAssignRef.current = null
+            setCategoryCreateParent(null)
           }
         }}
         organizacionId={getCurrentDelegation()?.organizacion_id}
         delegacionId={selectedDelegation}
         canManageGlobal={isAdmin}
         categories={categories as unknown as Categoria[]}
+        parentCategory={categoryCreateParent}
         onCreated={handleCategoryCreated}
       />
 

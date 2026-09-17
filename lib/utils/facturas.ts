@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { BadgeCheck, CheckCircle2, Clock, ExternalLink, Inbox, Mail, PieChart, Upload } from "lucide-react"
+import { BadgeCheck, CheckCircle2, Clock, ExternalLink, Inbox, Mail, PieChart, Receipt, Upload } from "lucide-react"
 import type { FacturaEstado, FacturaOrigen } from "@/lib/types/database"
 
 // La lógica pura de conciliación vive en `facturas-matching.ts` para que el
@@ -105,4 +105,5 @@ export const FACTURA_ORIGEN_INFO: Record<FacturaOrigen, FacturaOrigenInfo> = {
   subida: { value: "subida", label: "Subida a mano", icon: Upload },
   movimiento: { value: "movimiento", label: "Creada desde un movimiento", icon: ExternalLink },
   email: { value: "email", label: "Recibida por email", icon: Mail },
+  pago_mcm: { value: "pago_mcm", label: "Ticket de un pago MCM", icon: Receipt },
 }

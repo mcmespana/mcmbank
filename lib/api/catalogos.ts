@@ -1,6 +1,8 @@
 import type { createAdminClient } from "@/lib/supabase/admin"
-import { unwrap } from "@/lib/api/errors"
-import { resolveAmbitoDelegaciones, type DelegacionPublica } from "@/lib/api/delegaciones"
+import { badRequest, conflict, unwrap } from "@/lib/api/errors"
+import { resolveAmbitoDelegaciones, resolveDelegacion, type DelegacionPublica } from "@/lib/api/delegaciones"
+import { normalizarClaveProveedor } from "@/lib/utils/proveedor-logo"
+import { CONTACTO_TIPOS, type ContactoTipo } from "@/lib/types/database"
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -259,4 +261,136 @@ export async function resolveCuentas(
   }
 
   return encontradas
+}
+
+// ---------------------------------------------------------------------------
+// Escritura
+// ---------------------------------------------------------------------------
+
+export interface CrearContactoParams {
+  tipo: string
+  nombre: string
+  /**
+   * Obligatoria para 'persona_mcm' y 'destinatario_mcm' (son de una única
+   * delegación). Para 'proveedor' es opcional: si se indica, el proveedor
+   * global recién creado se adopta en esa delegación (aparece en su agenda).
+   */
+  delegacion?: string | null
+  email?: string | null
+  telefono?: string | null
+  iban?: string | null
+  identificador_fiscal?: string | null
+  direccion?: string | null
+  ciudad?: string | null
+  codigo_postal?: string | null
+  /** Nota interna. Para un proveedor es de la delegación indicada, no de la ficha compartida. */
+  notas?: string | null
+  /** Categoría que se propone al usar este contacto. Mismo matiz que 'notas' para un proveedor. */
+  categoria_id_predeterminada?: string | null
+}
+
+/**
+ * Da de alta un contacto.
+ *
+ * Los proveedores son de toda la organización (`scripts/061`): se crean
+ * como ficha global y, si se indica delegación, se adoptan en ella (fila en
+ * `contacto_delegacion`) para que aparezcan en su agenda; sus notas y
+ * categoría predeterminada, al ser propias de cada delegación, van también
+ * ahí y no en la ficha compartida. Antes de crear uno se comprueba que no
+ * exista ya por nombre normalizado (el mismo criterio que el índice único de
+ * la base de datos), para no sembrar el directorio de Mercadonas duplicados.
+ *
+ * Personas MCM y destinatarios MCM son datos personales: quedan siempre
+ * dentro de una delegación, así que 'delegacion' es obligatoria para ellos.
+ */
+export async function crearContacto(
+  admin: AdminClient,
+  params: CrearContactoParams,
+  actorId: string | null,
+): Promise<ContactoPublico> {
+  const tipo = params.tipo as ContactoTipo
+  if (!CONTACTO_TIPOS.includes(tipo)) {
+    throw badRequest(`Tipo de contacto '${params.tipo}' no válido.`, { tipos_validos: CONTACTO_TIPOS })
+  }
+
+  const nombre = params.nombre?.trim()
+  if (!nombre) throw badRequest("Falta el nombre del contacto.")
+
+  const esProveedor = tipo === "proveedor"
+  const delegacion = params.delegacion ? await resolveDelegacion(admin, params.delegacion) : null
+  if (!esProveedor && !delegacion) {
+    throw badRequest(
+      `Los contactos de tipo '${tipo}' pertenecen a una delegación: indica 'delegacion'.`,
+    )
+  }
+
+  const datosBase = {
+    tipo,
+    nombre,
+    email: params.email?.trim() || null,
+    telefono: params.telefono?.trim() || null,
+    iban: params.iban?.trim() || null,
+    identificador_fiscal: params.identificador_fiscal?.trim() || null,
+    direccion: params.direccion?.trim() || null,
+    ciudad: params.ciudad?.trim() || null,
+    codigo_postal: params.codigo_postal?.trim() || null,
+    creado_por: actorId,
+  }
+
+  if (esProveedor) {
+    const clave = normalizarClaveProveedor(nombre)
+    if (clave) {
+      const { contactos } = await cargarCatalogos(admin)
+      const existente = [...contactos.values()].find(
+        (c) => c.tipo === "proveedor" && c.es_global && normalizarClaveProveedor(c.nombre) === clave,
+      )
+      if (existente) {
+        throw conflict(
+          `Ya existe un proveedor con ese nombre: "${existente.nombre}". Los proveedores son compartidos por toda la organización: usa su id (${existente.id}) en vez de crear uno nuevo.`,
+          { contacto_id: existente.id, nombre: existente.nombre },
+        )
+      }
+    }
+
+    const creado = unwrap(
+      await (admin as any)
+        .from("contacto")
+        .insert({ ...datosBase, es_global: true, delegacion_id: null })
+        .select(CONTACTO_COLS)
+        .single(),
+    ) as ContactoPublico
+
+    if (delegacion) {
+      const { error } = await (admin as any).from("contacto_delegacion").upsert(
+        {
+          contacto_id: creado.id,
+          delegacion_id: delegacion.id,
+          notas: params.notas?.trim() || null,
+          categoria_id_predeterminada: params.categoria_id_predeterminada || null,
+        },
+        { onConflict: "contacto_id,delegacion_id" },
+      )
+      if (error) console.warn("No se pudo adoptar el proveedor recién creado:", error.message)
+    }
+
+    cache = null
+    return creado
+  }
+
+  const creado = unwrap(
+    await (admin as any)
+      .from("contacto")
+      .insert({
+        ...datosBase,
+        es_global: false,
+        delegacion_id: delegacion!.id,
+        notas: params.notas?.trim() || null,
+        categoria_id_predeterminada: params.categoria_id_predeterminada || null,
+      })
+      .select(CONTACTO_COLS)
+      .single(),
+  ) as ContactoPublico
+
+  cache = null
+  return creado
 }

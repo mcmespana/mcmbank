@@ -170,6 +170,43 @@ export async function GET(request: Request) {
             contactos: { type: "array", items: { type: "object" } },
           }),
         },
+        post: {
+          tags: ["Referencia"],
+          summary: "Dar de alta un proveedor, una persona MCM o un destinatario MCM",
+          description:
+            "Los proveedores son globales: si ya existe uno con ese nombre, devuelve 409 con su id en `detalles.contacto_id` en vez de duplicarlo. " +
+            "Personas y destinatarios MCM son de una delegación, así que `delegacion` es obligatoria para ellos; para un proveedor es opcional y, si se indica, lo adopta en esa delegación.",
+          operationId: "crearContacto",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    tipo: { type: "string", enum: ["proveedor", "persona_mcm", "destinatario_mcm"] },
+                    nombre: { type: "string" },
+                    delegacion: { type: "string", description: "Obligatoria salvo para 'proveedor'." },
+                    email: { type: ["string", "null"] },
+                    telefono: { type: ["string", "null"] },
+                    iban: { type: ["string", "null"] },
+                    identificador_fiscal: { type: ["string", "null"] },
+                    direccion: { type: ["string", "null"] },
+                    ciudad: { type: ["string", "null"] },
+                    codigo_postal: { type: ["string", "null"] },
+                    notas: { type: ["string", "null"] },
+                    categoria_id_predeterminada: { type: ["string", "null"], format: "uuid" },
+                    usuario_email: { type: "string" },
+                  },
+                  required: ["tipo", "nombre"],
+                },
+              },
+            },
+          },
+          responses: respuestaOk("Contacto creado.", {
+            contacto: { type: "object" },
+          }),
+        },
       },
 
       // ----------------------------------------------------------- Movimientos
@@ -875,7 +912,6 @@ export async function GET(request: Request) {
         get: {
           tags: ["Informes"],
           summary: "Listar pagos MCM (reembolsos a personas)",
-          description: "Solo lectura: el alta se hace desde la aplicación.",
           operationId: "listarPagosMcm",
           parameters: [
             PARAM_DELEGACIONES,
@@ -887,6 +923,75 @@ export async function GET(request: Request) {
             total: { type: "integer" },
             pagos: { type: "array", items: { type: "object" } },
           }),
+        },
+        post: {
+          tags: ["Informes"],
+          summary: "Anotar un pago manual pendiente ('hay que pagarle esto a fulano')",
+          description:
+            "Siempre `tipo_calculo: 'manual'`: el alta por gasolina (tickets o kilometraje) sigue siendo cosa de la aplicación. El contacto debe existir ya (créalo antes con `POST /contactos` si hace falta).",
+          operationId: "crearPagoMcm",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    delegacion: { type: "string" },
+                    contacto_id: { type: "string", format: "uuid" },
+                    concepto: { type: "string" },
+                    importe: { type: "number", description: "En positivo." },
+                    descripcion: { type: ["string", "null"] },
+                    estado: { type: "string", enum: ["pendiente", "borrador"], description: "Por defecto 'pendiente'." },
+                    categoria_id_sugerida: { type: ["string", "null"], format: "uuid" },
+                    notas: { type: ["string", "null"] },
+                    usuario_email: { type: "string" },
+                  },
+                  required: ["delegacion", "contacto_id", "concepto", "importe"],
+                },
+              },
+            },
+          },
+          responses: respuestaOk("Pago creado.", {
+            pago: { type: "object" },
+          }),
+        },
+      },
+      "/api/v1/pagos-mcm/{id}": {
+        get: {
+          tags: ["Informes"],
+          summary: "Obtener un pago MCM por su id",
+          operationId: "getPagoMcm",
+          parameters: [PARAM_ID("del pago MCM")],
+          responses: respuestaOk("Pago MCM.", { pago: { type: "object" } }),
+        },
+        patch: {
+          tags: ["Informes"],
+          summary: "Corregir o cancelar un pago MCM manual",
+          description:
+            "Solo pagos `tipo_calculo: 'manual'` y no vinculados a un movimiento; no permite marcarlo 'pagado' a mano.",
+          operationId: "actualizarPagoMcm",
+          parameters: [PARAM_ID("del pago MCM")],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    contacto_id: { type: "string", format: "uuid" },
+                    concepto: { type: "string" },
+                    descripcion: { type: ["string", "null"] },
+                    importe: { type: "number" },
+                    estado: { type: "string", enum: ["pendiente", "borrador", "cancelado"] },
+                    categoria_id_sugerida: { type: ["string", "null"], format: "uuid" },
+                    notas: { type: ["string", "null"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: respuestaOk("Pago actualizado.", { pago: { type: "object" } }),
         },
       },
     },

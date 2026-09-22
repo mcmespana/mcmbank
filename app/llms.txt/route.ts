@@ -56,13 +56,13 @@ el servidor responde 401 con \`WWW-Authenticate\` y el cliente arranca el flujo 
 
 Herramientas disponibles: buscar_movimientos, obtener_movimiento,
 actualizar_movimiento, resumen_economico, listar_delegaciones, listar_cuentas,
-listar_categorias, listar_contactos, buscar_facturas, obtener_factura,
+listar_categorias, listar_contactos, crear_contacto, buscar_facturas, obtener_factura,
 crear_factura, actualizar_factura, eliminar_factura, vincular_factura,
 desvincular_factura, buscar_movimiento_de_factura, buscar_factura_de_movimiento,
 conciliar_facturas, leer_factura_con_ia, aceptar_categoria_factura,
 subir_archivo, obtener_url_archivo, eliminar_archivo,
 listar_avisos, crear_aviso, actualizar_aviso, eliminar_aviso, notificar_aviso,
-listar_pagos_mcm.
+listar_pagos_mcm, crear_pago_mcm, actualizar_pago_mcm.
 
 ## Endpoints REST principales
 
@@ -109,8 +109,19 @@ POST admite \`notificar: true\` para enviarlo además por correo.
 ### GET ${origin}/api/v1/resumen
 Ingresos, gastos, neto y saldo por delegación, con desglose por categoría.
 
-### GET ${origin}/api/v1/delegaciones · /cuentas · /categorias · /contactos · /pagos-mcm
+### GET ${origin}/api/v1/delegaciones · /cuentas · /categorias
 Catálogos de referencia.
+
+### GET / POST ${origin}/api/v1/contactos
+Proveedores (globales) y personas/destinatarios MCM (de una delegación). POST
+da de alta uno nuevo; si ya existe un proveedor con ese nombre, devuelve 409
+con su id en vez de duplicarlo.
+
+### GET / POST ${origin}/api/v1/pagos-mcm · GET / PATCH .../{id}
+Reembolsos a personas del movimiento. POST anota un pago manual pendiente
+("hay que pagarle esto a fulano"); PATCH lo corrige o lo cancela. El cálculo
+por gasolina (tickets o kilometraje) sigue siendo cosa de la aplicación, igual
+que marcarlo pagado, que solo ocurre al vincularlo con un movimiento.
 
 ### GET ${origin}/api/v1/archivos/{id}/descargar
 Redirige a una URL firmada del fichero.

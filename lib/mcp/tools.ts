@@ -7,6 +7,7 @@ import {
   resolveAmbitoDelegaciones,
 } from "@/lib/api/delegaciones"
 import {
+  crearContacto,
   listCategorias,
   listContactos,
   listCuentas,
@@ -42,7 +43,7 @@ import {
   obtenerAviso,
 } from "@/lib/api/avisos"
 import { aceptarCategoriaSugerida, extraerDatosFactura } from "@/lib/api/factura-ia"
-import { listarPagosMcm } from "@/lib/api/pagos"
+import { actualizarPagoMcm, crearPagoMcm, listarPagosMcm } from "@/lib/api/pagos"
 import { resumenGeneral } from "@/lib/api/resumen"
 import {
   eliminarArchivo,
@@ -222,7 +223,7 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
     name: "listar_contactos",
     title: "Listar contactos",
     description:
-      "Proveedores y personas dados de alta en MCM Bank. Solo lectura: dar de alta contactos se hace desde la aplicación.",
+      "Proveedores y personas dados de alta en MCM Bank. Consúltala antes de crear_contacto o crear_pago_mcm para no duplicar una ficha que ya existe.",
     inputSchema: objetoSchema({
       delegaciones: CAMPO_DELEGACIONES,
       texto: { type: "string", description: "Filtra por nombre." },
@@ -243,6 +244,62 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
         incluirArchivados: booleano(args, "incluir_archivados"),
       })
       return { total: contactos.length, contactos }
+    },
+  },
+  {
+    name: "crear_contacto",
+    title: "Dar de alta un contacto",
+    description:
+      "Da de alta un proveedor, una persona MCM o un destinatario MCM. Los proveedores son de toda la organización: si ya existe uno con ese nombre, la herramienta lo rechaza y te da su id para que lo uses en vez de duplicarlo. " +
+      "Personas y destinatarios MCM son de una delegación (son datos personales), así que 'delegacion' es obligatoria para ellos; para un proveedor es opcional y, si se indica, lo adopta en esa delegación. " +
+      "Es el paso previo típico a crear_pago_mcm cuando la persona a la que hay que pagar todavía no está en listar_contactos.",
+    inputSchema: objetoSchema(
+      {
+        tipo: { type: "string", enum: ["proveedor", "persona_mcm", "destinatario_mcm"] },
+        nombre: { type: "string" },
+        delegacion: {
+          type: "string",
+          description:
+            "Nombre, código o id de la delegación. Obligatoria salvo para 'proveedor'.",
+        },
+        email: { type: "string" },
+        telefono: { type: "string" },
+        iban: { type: "string" },
+        identificador_fiscal: { type: "string", description: "NIF/CIF." },
+        direccion: { type: "string" },
+        ciudad: { type: "string" },
+        codigo_postal: { type: "string" },
+        notas: { type: "string" },
+        categoria_id_predeterminada: {
+          type: "string",
+          description: "Categoría que se propondrá al usar este contacto (ver listar_categorias).",
+        },
+        usuario_email: CAMPO_USUARIO_EMAIL,
+      },
+      ["tipo", "nombre"],
+    ),
+    scope: "write",
+    handler: async (args, ctx) => {
+      const actor = await actorDe(args, ctx)
+      const contacto = await crearContacto(
+        ctx.admin,
+        {
+          tipo: textoObligatorio(args, "tipo"),
+          nombre: textoObligatorio(args, "nombre"),
+          delegacion: texto(args, "delegacion"),
+          email: texto(args, "email"),
+          telefono: texto(args, "telefono"),
+          iban: texto(args, "iban"),
+          identificador_fiscal: texto(args, "identificador_fiscal"),
+          direccion: texto(args, "direccion"),
+          ciudad: texto(args, "ciudad"),
+          codigo_postal: texto(args, "codigo_postal"),
+          notas: texto(args, "notas"),
+          categoria_id_predeterminada: texto(args, "categoria_id_predeterminada"),
+        },
+        actor.id,
+      )
+      return { contacto, firmado_por: nombreActor(actor) }
     },
   },
 
@@ -1116,7 +1173,7 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
     name: "listar_pagos_mcm",
     title: "Ver pagos MCM",
     description:
-      "Reembolsos a personas del movimiento (kilometraje, gastos adelantados). Solo lectura: darlos de alta se hace desde la aplicación.",
+      "Reembolsos a personas del movimiento (kilometraje, gastos adelantados, tickets pagados de su bolsillo).",
     inputSchema: objetoSchema({
       delegaciones: CAMPO_DELEGACIONES,
       estados: { type: "array", items: { type: "string" } },
@@ -1132,6 +1189,89 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
         limite: numero(args, "limite"),
         offset: numero(args, "offset"),
       }),
+  },
+  {
+    name: "crear_pago_mcm",
+    title: "Anotar un pago pendiente a alguien",
+    description:
+      "Anota que hay que pagarle un importe a una persona ('oye, anota que hay que pagar esto a fulano'): nace 'pendiente' (o 'borrador' si aún no es definitivo). " +
+      "Es siempre un pago manual — sin cálculo de gasolina, que sigue siendo cosa de la aplicación —, y el contacto debe existir ya (usa listar_contactos o, si no está, crear_contacto primero). " +
+      "No marca el pago como pagado ni lo vincula a ningún movimiento: eso se hace desde la aplicación, cuando el banco lo pague de verdad.",
+    inputSchema: objetoSchema(
+      {
+        delegacion: { type: "string", description: "Nombre, código o id de la delegación." },
+        contacto_id: { type: "string", description: "Id de a quién hay que pagarle (ver listar_contactos)." },
+        concepto: { type: "string", description: "Para qué es el pago." },
+        importe: { type: "number", description: "Importe a pagar, en positivo." },
+        descripcion: { type: "string" },
+        estado: {
+          type: "string",
+          enum: ["pendiente", "borrador"],
+          description: "Por defecto 'pendiente'.",
+        },
+        categoria_id_sugerida: {
+          type: "string",
+          description: "Categoría que se propondrá al conciliarlo (ver listar_categorias).",
+        },
+        notas: { type: "string" },
+        usuario_email: CAMPO_USUARIO_EMAIL,
+      },
+      ["delegacion", "contacto_id", "concepto", "importe"],
+    ),
+    scope: "write",
+    handler: async (args, ctx) => {
+      const actor = await actorDe(args, ctx)
+      const importe = numero(args, "importe")
+      if (importe === undefined) throw badRequest("Falta 'importe'.")
+      const pago = await crearPagoMcm(
+        ctx.admin,
+        {
+          delegacion: textoObligatorio(args, "delegacion"),
+          contacto_id: textoObligatorio(args, "contacto_id"),
+          concepto: textoObligatorio(args, "concepto"),
+          importe,
+          descripcion: texto(args, "descripcion"),
+          estado: opcion(args, "estado", ["pendiente", "borrador"] as const),
+          categoria_id_sugerida: texto(args, "categoria_id_sugerida"),
+          notas: texto(args, "notas"),
+        },
+        actor.id,
+      )
+      return { pago, firmado_por: nombreActor(actor) }
+    },
+  },
+  {
+    name: "actualizar_pago_mcm",
+    title: "Corregir o cancelar un pago MCM",
+    description:
+      "Corrige un pago manual ya anotado (contacto, concepto, importe, categoría sugerida, notas) o lo cancela con estado 'cancelado'. " +
+      "Solo funciona con pagos manuales: los calculados por gasolina se editan desde la aplicación. No permite marcarlo 'pagado' a mano ni tocarlo si ya está vinculado a un movimiento: eso se gestiona desde la aplicación.",
+    inputSchema: objetoSchema(
+      {
+        id: { type: "string" },
+        contacto_id: { type: "string" },
+        concepto: { type: "string" },
+        descripcion: { type: "string" },
+        importe: { type: "number" },
+        estado: { type: "string", enum: ["pendiente", "borrador", "cancelado"] },
+        categoria_id_sugerida: { type: "string" },
+        notas: { type: "string" },
+      },
+      ["id"],
+    ),
+    scope: "write",
+    handler: async (args, ctx) => {
+      const pago = await actualizarPagoMcm(ctx.admin, textoObligatorio(args, "id"), {
+        contacto_id: texto(args, "contacto_id"),
+        concepto: texto(args, "concepto"),
+        descripcion: texto(args, "descripcion"),
+        importe: numero(args, "importe"),
+        estado: opcion(args, "estado", ["pendiente", "borrador", "cancelado"] as const),
+        categoria_id_sugerida: texto(args, "categoria_id_sugerida"),
+        notas: texto(args, "notas"),
+      })
+      return { pago }
+    },
   },
 ]
 

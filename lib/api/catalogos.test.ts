@@ -34,9 +34,12 @@ const CONTACTOS = [
 function tablas(extra: Partial<Tablas> = {}): Tablas {
   return {
     delegacion: [SEV, MAD],
-    cuenta: CUENTAS,
-    categoria: CATEGORIAS,
-    contacto: CONTACTOS,
+    cuenta: [...CUENTAS],
+    categoria: [...CATEGORIAS],
+    // Clonados: a diferencia de las demás, `crearContacto` escribe en estas
+    // tablas, y las constantes del módulo son compartidas entre tests.
+    contacto: [...CONTACTOS],
+    contacto_delegacion: [],
     categoria_orden_delegacion: [],
     ...extra,
   }
@@ -240,6 +243,71 @@ describe("resolveCuentas", () => {
   it("sin entrada, null", async () => {
     const { mod, admin } = await cargar()
     expect(await mod.resolveCuentas(admin, undefined)).toBeNull()
+  })
+})
+
+describe("crearContacto", () => {
+  it("un proveedor nace global, sin delegación propia", async () => {
+    const { mod, admin } = await cargar()
+    const creado = await mod.crearContacto(admin, { tipo: "proveedor", nombre: "Leroy Merlín" }, "user-1")
+    expect(creado.es_global).toBe(true)
+    expect(creado.delegacion_id).toBeNull()
+    expect(creado.tipo).toBe("proveedor")
+  })
+
+  it("un proveedor con delegación se adopta (fila en contacto_delegacion)", async () => {
+    const { mod, admin } = await cargar()
+    const creado = await mod.crearContacto(
+      admin,
+      { tipo: "proveedor", nombre: "Leroy Merlín", delegacion: "Sevilla" },
+      "user-1",
+    )
+    const adopcion = admin.tablas.contacto_delegacion?.find(
+      (f: any) => f.contacto_id === creado.id && f.delegacion_id === SEV.id,
+    )
+    expect(adopcion).toBeDefined()
+  })
+
+  it("rechaza un proveedor duplicado por nombre normalizado", async () => {
+    const { mod, admin } = await cargar()
+    await expect(
+      mod.crearContacto(admin, { tipo: "proveedor", nombre: "MERCADONA, S.A." }, "user-1"),
+    ).rejects.toMatchObject({
+      status: 409,
+      detalles: { contacto_id: "con-global" },
+    })
+  })
+
+  it("persona_mcm y destinatario_mcm exigen delegación", async () => {
+    const { mod, admin } = await cargar()
+    await expect(
+      mod.crearContacto(admin, { tipo: "persona_mcm", nombre: "Pepe" }, "user-1"),
+    ).rejects.toThrow("delegación")
+  })
+
+  it("una persona_mcm queda dentro de su delegación, no global", async () => {
+    const { mod, admin } = await cargar()
+    const creado = await mod.crearContacto(
+      admin,
+      { tipo: "persona_mcm", nombre: "Pepe", delegacion: "Sevilla" },
+      "user-1",
+    )
+    expect(creado.es_global).toBe(false)
+    expect(creado.delegacion_id).toBe(SEV.id)
+  })
+
+  it("rechaza un tipo desconocido", async () => {
+    const { mod, admin } = await cargar()
+    await expect(
+      mod.crearContacto(admin, { tipo: "empleado", nombre: "Pepe", delegacion: "Sevilla" }, "user-1"),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it("exige nombre", async () => {
+    const { mod, admin } = await cargar()
+    await expect(
+      mod.crearContacto(admin, { tipo: "persona_mcm", nombre: "  ", delegacion: "Sevilla" }, "user-1"),
+    ).rejects.toThrow("nombre")
   })
 })
 

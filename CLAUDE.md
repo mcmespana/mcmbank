@@ -470,13 +470,14 @@ scoped explicitly in the query instead: `resolveAmbitoDelegaciones()` returns
 | `lib/api/external-auth.ts` | API-key check with two scopes: `MCM_API_KEY` (read+write), `MCM_API_KEY_READONLY` and `CRON_SECRET` (read only) |
 | `lib/api/actor.ts` | Resolves the real user that signs each write (`usuario_email` → `x-mcm-usuario-email` → `MCM_API_USER_EMAIL`). Never picks an arbitrary user |
 | `lib/api/delegaciones.ts` | Natural-language delegation lookup ("Sevilla", "MCM-SEV", UUID); ambiguity returns the candidates |
-| `lib/api/catalogos.ts` | Cached cuenta/categoria/contacto maps, joined in memory instead of embedded in every query |
+| `lib/api/catalogos.ts` | Cached cuenta/categoria/contacto maps, joined in memory instead of embedded in every query; also creates contacts (global for proveedores, delegation-scoped for personas/destinatarios) |
 | `lib/api/movimientos-public.ts` | Movement search (multi-delegation, with whole-set totals), fetch and update |
 | `lib/api/facturas.ts` | Invoice CRUD, linking, and the scoring used to reconcile invoices against movements |
 | `lib/api/factura-ia.ts` | Reads an invoice document with Gemini, validates every field, fills only the empty ones |
 | `lib/api/facturas-email.ts` | Per-delegation invoice mailbox: svix signature check, address→delegation, attachments → invoices |
 | `lib/api/gemini.ts` | Minimal Gemini client (one REST call, structured output, no SDK) |
 | `lib/api/avisos.ts` | Notices and tasks, including the email notification |
+| `lib/api/pagos.ts` | MCM payments (reimbursements): read, and create/update for the `manual` calculation type only — gasoline calculations stay app-only |
 | `lib/api/archivos.ts` | Base64 upload to Storage + registration, signed URLs, deletion |
 | `lib/api/resumen.ts` | Per-delegation financial rollup |
 | `lib/api/errors.ts` | `ApiError` with HTTP status; unexpected errors are logged in full and truncated to one line in the response |

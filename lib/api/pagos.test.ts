@@ -152,3 +152,104 @@ describe("listarPagosMcm · filtros", () => {
     expect(res.pagos.map((p: any) => p.id).sort()).toEqual(["p-mad", "p-sev"])
   })
 })
+
+const CREAR_BASE = {
+  delegacion: "Sevilla",
+  contacto_id: CONTACTO.id,
+  concepto: "Kilometraje octubre",
+  importe: 25.5,
+}
+
+describe("crearPagoMcm", () => {
+  it("crea un pago manual pendiente por defecto", async () => {
+    const { mod, admin } = await api(tablas([]))
+    const pago = await mod.crearPagoMcm(admin, CREAR_BASE, "user-1")
+    expect(pago.estado).toBe("pendiente")
+    expect(pago.tipo_calculo).toBe("manual")
+    expect(pago.delegacion).toEqual(SEV)
+    expect(pago.contacto?.id).toBe(CONTACTO.id)
+  })
+
+  it("admite nacer en borrador", async () => {
+    const { mod, admin } = await api(tablas([]))
+    const pago = await mod.crearPagoMcm(admin, { ...CREAR_BASE, estado: "borrador" }, "user-1")
+    expect(pago.estado).toBe("borrador")
+  })
+
+  it("rechaza un estado que no sea de alta (pagado/cancelado)", async () => {
+    const { mod, admin } = await api(tablas([]))
+    await expect(
+      mod.crearPagoMcm(admin, { ...CREAR_BASE, estado: "pagado" as any }, "user-1"),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it("exige un contacto que exista", async () => {
+    const { mod, admin } = await api(tablas([]))
+    await expect(
+      mod.crearPagoMcm(admin, { ...CREAR_BASE, contacto_id: "con-fantasma" }, "user-1"),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it("exige importe positivo", async () => {
+    const { mod, admin } = await api(tablas([]))
+    await expect(mod.crearPagoMcm(admin, { ...CREAR_BASE, importe: 0 }, "user-1")).rejects.toThrow(
+      "positivo",
+    )
+    await expect(mod.crearPagoMcm(admin, { ...CREAR_BASE, importe: -5 }, "user-1")).rejects.toThrow(
+      "positivo",
+    )
+  })
+
+  it("exige concepto", async () => {
+    const { mod, admin } = await api(tablas([]))
+    await expect(
+      mod.crearPagoMcm(admin, { ...CREAR_BASE, concepto: "  " }, "user-1"),
+    ).rejects.toThrow("concepto")
+  })
+})
+
+describe("actualizarPagoMcm", () => {
+  it("corrige concepto, importe y notas de un pago manual", async () => {
+    const { mod, admin } = await api(tablas([pagoMcm({ id: "p-1", tipo_calculo: "manual" })]))
+    const pago = await mod.actualizarPagoMcm(admin, "p-1", { concepto: "Corregido", importe: 30, notas: "ojo" })
+    expect(pago.concepto).toBe("Corregido")
+    expect(pago.importe).toBe(30)
+    expect(pago.notas).toBe("ojo")
+  })
+
+  it("puede cancelarlo", async () => {
+    const { mod, admin } = await api(
+      tablas([pagoMcm({ id: "p-1", tipo_calculo: "manual", estado: "pendiente" })]),
+    )
+    const pago = await mod.actualizarPagoMcm(admin, "p-1", { estado: "cancelado" })
+    expect(pago.estado).toBe("cancelado")
+  })
+
+  it("no deja tocar un pago calculado por gasolina", async () => {
+    const { mod, admin } = await api(
+      tablas([pagoMcm({ id: "p-1", tipo_calculo: "gasolina_km" })]),
+    )
+    await expect(mod.actualizarPagoMcm(admin, "p-1", { concepto: "x" })).rejects.toThrow("gasolina")
+  })
+
+  it("no deja cambiar el estado de un pago ya vinculado a un movimiento", async () => {
+    const { mod, admin } = await api(
+      tablas([pagoMcm({ id: "p-1", tipo_calculo: "manual", estado: "pagado", movimiento_id: "mov-1" })]),
+    )
+    await expect(mod.actualizarPagoMcm(admin, "p-1", { estado: "cancelado" })).rejects.toThrow(
+      "vinculado",
+    )
+  })
+
+  it("404 si el pago no existe", async () => {
+    const { mod, admin } = await api(tablas([]))
+    await expect(mod.actualizarPagoMcm(admin, "p-x", { concepto: "x" })).rejects.toMatchObject({
+      status: 404,
+    })
+  })
+
+  it("sin cambios, 400", async () => {
+    const { mod, admin } = await api(tablas([pagoMcm({ id: "p-1", tipo_calculo: "manual" })]))
+    await expect(mod.actualizarPagoMcm(admin, "p-1", {})).rejects.toThrow("ningún cambio")
+  })
+})

@@ -254,6 +254,7 @@ export function PagoMcmForm({
             onCreateNew={onCreateContactoNew}
             onAdopted={onContactosChanged}
             placeholder="¿A quién hay que pagar?"
+            tipoInicial="persona_mcm"
           />
         </div>
         <div className="space-y-1.5">

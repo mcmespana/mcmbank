@@ -557,6 +557,11 @@ Docs: `docs/manual/21.-api-externa-solo-pros.md`,
 - Color system for accounts and categories using Tailwind color names (`lib/utils/category-colors.ts`)
 - Icon library: `lucide-react`
 - Toast notifications via `sonner`
+- **Un `Popover` con una lista que se desplaza lleva `modal`** si puede abrirse dentro de un
+  `Dialog` o `Sheet` (`ContactoSelector`, `CategorySelector`). El bloqueo de scroll del
+  diálogo cancela la rueda y el dedo en todo lo que se portalea fuera de él, y la lista se
+  queda quieta. Mover `scrollTop` a mano desde `onWheel` no sirve: React escucha la rueda
+  en pasivo y antes de que el bloqueo actúe, así que nunca llega a ver el evento cancelado
 - No hidden or truncated navigation labels on mobile (no `hidden sm:inline`, no `.slice(0, 3)` tab
   abbreviations): use `FilterTabs` (`components/ui/filter-tabs.tsx`), which scrolls horizontally
   instead of truncating

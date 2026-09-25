@@ -76,6 +76,7 @@ export function FacturaDatosFields({
           onCreateNew={onCreateContacto}
           onAdopted={onContactoAdoptado}
           placeholder="¿Quién emite la factura?"
+          tipoInicial="proveedor"
         />
         <p className="text-[11px] text-muted-foreground">Si no existe puedes crearlo aquí.</p>
       </div>

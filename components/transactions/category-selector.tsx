@@ -213,7 +213,10 @@ export function CategorySelector({
 
   return (
     <div className="space-y-3">
-      <Popover open={open} onOpenChange={setOpenState}>
+      {/* Modal por lo mismo que ContactoSelector: dentro de un panel lateral
+          (el alta de un movimiento) el bloqueo de scroll del panel se comía
+          la rueda y la lista no se movía. */}
+      <Popover open={open} onOpenChange={setOpenState} modal>
         <PopoverTrigger asChild>
           <Button
             variant="outline"

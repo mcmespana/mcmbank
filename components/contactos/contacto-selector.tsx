@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -22,14 +21,35 @@ import { CONTACTO_TIPO_DEFAULT_EMOJIS, CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER }
 import type { ContactoConCategoriaPredeterminada, ContactoTipo } from "@/lib/types/database"
 import { archivadoEfectivoContacto, nombreEfectivoContacto } from "@/lib/types/database"
 
+type FiltroTipo = ContactoTipo | "todos"
+
+const normalizar = (texto: string) =>
+  texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+
+/** Todas las palabras de la búsqueda, en cualquier orden y sin tildes. */
+function coincide(c: ContactoConCategoriaPredeterminada, palabras: string[]) {
+  if (palabras.length === 0) return true
+  const texto = normalizar(
+    [nombreEfectivoContacto(c), c.nombre, c.email, c.identificador_fiscal, c.iban].filter(Boolean).join(" "),
+  )
+  return palabras.every((p) => texto.includes(p))
+}
+
 interface ContactoSelectorProps {
   contactos: ContactoConCategoriaPredeterminada[]
   value?: string | null
   onChange: (contactoId: string | null) => void
-  onCreateNew?: (initialNombre: string) => void
+  /** Recibe también el tipo que se estaba mirando, para que el alta nazca de ese tipo. */
+  onCreateNew?: (initialNombre: string, tipo?: ContactoTipo) => void
   /** Aviso de que se ha adoptado un proveedor del catálogo, para releer la lista. */
   onAdopted?: () => void
   placeholder?: string
+  /**
+   * Tipo con el que se abre la lista. En un pago MCM casi siempre se busca a
+   * una persona y en una factura a un proveedor: sin esto había que pasar por
+   * todos los proveedores para llegar a la gente. Sigue habiendo "Todos".
+   */
+  tipoInicial?: ContactoTipo
   disabled?: boolean
   loading?: boolean
   className?: string
@@ -42,6 +62,7 @@ export function ContactoSelector({
   onCreateNew,
   onAdopted,
   placeholder = "Sin contacto",
+  tipoInicial,
   disabled,
   loading,
   className,
@@ -49,6 +70,7 @@ export function ContactoSelector({
   const { selectedDelegation } = useDelegationContext()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
+  const [tipoFiltro, setTipoFiltro] = useState<FiltroTipo>("todos")
   // Los que se acaban de adoptar aquí, para no seguir enseñándolos en el
   // catálogo mientras el padre no haya vuelto a leer la lista.
   const [adoptadosAhora, setAdoptadosAhora] = useState<string[]>([])
@@ -58,18 +80,63 @@ export function ContactoSelector({
     [value, contactos],
   )
 
+  // Los catálogos cuentan como proveedores: el chip tiene que estar para llegar a ellos.
+  const tiposPresentes = useMemo(
+    () => new Set(contactos.filter((c) => !archivadoEfectivoContacto(c)).map((c) => c.tipo)),
+    [contactos],
+  )
+
+  // Cada vez que se abre empieza limpio y en el tipo que toca. Si ya hay un
+  // contacto de otro tipo elegido se abre en "Todos", para que se vea marcado.
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      const usarTipoInicial =
+        tipoInicial &&
+        tiposPresentes.size > 1 &&
+        tiposPresentes.has(tipoInicial) &&
+        (!selected || selected.tipo === tipoInicial)
+      setSearch("")
+      setTipoFiltro(usarTipoInicial ? tipoInicial : "todos")
+    }
+    setOpen(next)
+  }
+
+  const palabras = useMemo(() => normalizar(search).split(/\s+/).filter(Boolean), [search])
+
+  const coincidentes = useMemo(
+    () =>
+      contactos.filter(
+        (c) =>
+          !(c.en_catalogo && !adoptadosAhora.includes(c.id)) &&
+          !archivadoEfectivoContacto(c) &&
+          coincide(c, palabras),
+      ),
+    [contactos, adoptadosAhora, palabras],
+  )
+
+  const conteoPorTipo = useMemo(() => {
+    const result: Record<ContactoTipo, number> = { proveedor: 0, persona_mcm: 0, destinatario_mcm: 0 }
+    for (const c of coincidentes) result[c.tipo]++
+    return result
+  }, [coincidentes])
+
   const grouped = useMemo(() => {
     const result: Record<ContactoTipo, ContactoConCategoriaPredeterminada[]> = {
       proveedor: [],
       persona_mcm: [],
       destinatario_mcm: [],
     }
-    for (const c of contactos) {
-      if ((c.en_catalogo && !adoptadosAhora.includes(c.id)) || archivadoEfectivoContacto(c)) continue
-      result[c.tipo].push(c)
+    for (const c of coincidentes) {
+      if (tipoFiltro === "todos" || c.tipo === tipoFiltro) result[c.tipo].push(c)
     }
     return result
-  }, [contactos, adoptadosAhora])
+  }, [coincidentes, tipoFiltro])
+
+  // Con "Todos", el tipo que se busca aquí va primero.
+  const ordenTipos = useMemo(
+    () => (tipoInicial ? [tipoInicial, ...CONTACTO_TIPO_ORDER.filter((t) => t !== tipoInicial)] : CONTACTO_TIPO_ORDER),
+    [tipoInicial],
+  )
 
   /**
    * Proveedores que ya existen en MCM pero que esta delegación no usa. Es la
@@ -77,9 +144,21 @@ export function ContactoSelector({
    * en el que ibas a crear el tuyo.
    */
   const catalogo = useMemo(
-    () => contactos.filter((c) => c.en_catalogo && !adoptadosAhora.includes(c.id)),
-    [contactos, adoptadosAhora],
+    () =>
+      tipoFiltro === "todos" || tipoFiltro === "proveedor"
+        ? contactos.filter((c) => c.en_catalogo && !adoptadosAhora.includes(c.id) && coincide(c, palabras))
+        : [],
+    [contactos, adoptadosAhora, palabras, tipoFiltro],
   )
+
+  const hayResultados = CONTACTO_TIPO_ORDER.some((t) => grouped[t].length > 0) || catalogo.length > 0
+  // Un vacío por culpa del filtro dice dónde sí está lo que se busca.
+  const otrosTiposConResultados =
+    tipoFiltro === "todos"
+      ? []
+      : CONTACTO_TIPO_ORDER.filter((t) => t !== tipoFiltro && conteoPorTipo[t] > 0).sort(
+          (a, b) => conteoPorTipo[b] - conteoPorTipo[a],
+        )
 
   /**
    * Elegir un proveedor del catálogo es empezar a usarlo, así que se adopta en el
@@ -110,7 +189,12 @@ export function ContactoSelector({
   )
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    // Modal a propósito. Este selector se abre casi siempre dentro de un diálogo
+    // o un panel lateral, y el bloqueo de scroll de ese diálogo se come la rueda
+    // y el dedo en todo lo que se portalea fuera de él: la lista no se movía.
+    // Siendo modal, el popover pasa a ser la capa de arriba y trae su propio
+    // bloqueo, que sí deja desplazar su contenido.
+    <Popover open={open} onOpenChange={handleOpenChange} modal>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -165,26 +249,63 @@ export function ContactoSelector({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[80]" align="start">
-        <Command>
+        <Command shouldFilter={false}>
           <CommandInput
             placeholder="Buscar contacto…"
             value={search}
             onValueChange={setSearch}
           />
-          <CommandList
-            // Este desplegable se abre casi siempre desde un panel lateral, y
-            // Radix bloquea la rueda del ratón en todo lo que se portalea fuera
-            // del panel: la lista se quedaba quieta y había que arrastrar la
-            // barra. Cuando ese bloqueo ha cancelado el scroll nativo
-            // (defaultPrevented), se mueve la lista a mano; si no lo ha
-            // cancelado, no se toca nada y desplaza el navegador como siempre.
-            onWheel={(event) => {
-              if (event.defaultPrevented) {
-                event.currentTarget.scrollTop += event.deltaY
-              }
-            }}
-          >
-            <CommandEmpty>Sin resultados.</CommandEmpty>
+          {tiposPresentes.size > 1 && (
+            <div
+              role="group"
+              aria-label="Filtrar por tipo de contacto"
+              className="flex gap-1.5 overflow-x-auto border-b px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {(["todos", ...CONTACTO_TIPO_ORDER.filter((t) => tiposPresentes.has(t))] as FiltroTipo[]).map((t) => {
+                const activo = tipoFiltro === t
+                const count = t === "todos" ? coincidentes.length : conteoPorTipo[t]
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => setTipoFiltro(t)}
+                    className={cn(
+                      "toque inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      activo
+                        ? "border-primary/50 bg-primary/15 text-foreground"
+                        : "border-border/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    )}
+                  >
+                    {t !== "todos" && (
+                      <span className={cn("h-1.5 w-1.5 rounded-full", CONTACTO_TIPO_INFO[t].dotClass)} aria-hidden />
+                    )}
+                    {t === "todos" ? "Todos" : CONTACTO_TIPO_INFO[t].label}
+                    <span className="tabular-nums text-muted-foreground">{count}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          <CommandList>
+            {!hayResultados && (
+              <div className="px-3 py-5 text-center text-sm text-muted-foreground">
+                {tipoFiltro === "todos"
+                  ? "Sin resultados."
+                  : `Ningún contacto de tipo ${CONTACTO_TIPO_INFO[tipoFiltro].label}${trimmedSearch ? ` con “${trimmedSearch}”` : ""}.`}
+              </div>
+            )}
+            {!hayResultados && otrosTiposConResultados.length > 0 && (
+              <CommandGroup>
+                {otrosTiposConResultados.map((t) => (
+                  <CommandItem key={t} value={`__ver__${t}`} onSelect={() => setTipoFiltro(t)}>
+                    <span className={cn("mx-1.5 h-1.5 w-1.5 rounded-full", CONTACTO_TIPO_INFO[t].dotClass)} aria-hidden />
+                    Ver {conteoPorTipo[t]} en {CONTACTO_TIPO_INFO[t].label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
 
             {value && (
               <CommandGroup>
@@ -201,7 +322,7 @@ export function ContactoSelector({
               </CommandGroup>
             )}
 
-            {CONTACTO_TIPO_ORDER.map((tipo) => {
+            {ordenTipos.map((tipo) => {
               const items = grouped[tipo]
               if (items.length === 0) return null
               const info = CONTACTO_TIPO_INFO[tipo]
@@ -209,11 +330,10 @@ export function ContactoSelector({
                 <CommandGroup key={tipo} heading={info.label}>
                   {items.map((c) => {
                     const isSelected = c.id === value
-                    const searchValue = `${c.nombre} ${c.email ?? ""} ${c.identificador_fiscal ?? ""} ${c.iban ?? ""}`
                     return (
                       <CommandItem
                         key={c.id}
-                        value={`${c.id}__${searchValue}`}
+                        value={c.id}
                         onSelect={() => {
                           onChange(c.id)
                           setOpen(false)
@@ -259,7 +379,7 @@ export function ContactoSelector({
                   {catalogo.map((c) => (
                     <CommandItem
                       key={c.id}
-                      value={`${c.id}__${c.nombre} ${c.identificador_fiscal ?? ""}`}
+                      value={`__catalogo__${c.id}`}
                       onSelect={() => void adoptarYSeleccionar(c)}
                     >
                       <EntityAvatar
@@ -294,7 +414,7 @@ export function ContactoSelector({
                   <CommandItem
                     value={`__crear__${trimmedSearch}`}
                     onSelect={() => {
-                      onCreateNew(trimmedSearch)
+                      onCreateNew(trimmedSearch, tipoFiltro === "todos" ? tipoInicial : tipoFiltro)
                       setOpen(false)
                     }}
                   >

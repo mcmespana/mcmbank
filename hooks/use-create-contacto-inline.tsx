@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ContactoForm } from "@/components/contactos/contacto-form"
-import type { Contacto, Categoria } from "@/lib/types/database"
+import type { Contacto, Categoria, ContactoTipo } from "@/lib/types/database"
 
 type ContactoFormSubmitPayload = Parameters<NonNullable<React.ComponentProps<typeof ContactoForm>["onSubmit"]>>[0]
 
@@ -26,17 +26,22 @@ export function useCreateContactoInline({
   canManageGlobal,
   onCreateContacto,
   onContactoCreated,
-}: UseCreateContactoInlineParams): { onCreateNew?: (initialNombre: string) => void; dialog: ReactNode } {
+}: UseCreateContactoInlineParams): {
+  onCreateNew?: (initialNombre: string, tipo?: ContactoTipo) => void
+  dialog: ReactNode
+} {
   const [open, setOpen] = useState(false)
   const [initialNombre, setInitialNombre] = useState("")
+  const [initialTipo, setInitialTipo] = useState<ContactoTipo | undefined>(undefined)
 
   if (!onCreateContacto) {
     return { onCreateNew: undefined, dialog: null }
   }
 
   return {
-    onCreateNew: (nombre: string) => {
+    onCreateNew: (nombre: string, tipo?: ContactoTipo) => {
       setInitialNombre(nombre)
+      setInitialTipo(tipo)
       setOpen(true)
     },
     dialog: (
@@ -53,6 +58,7 @@ export function useCreateContactoInline({
             contacto={null}
             categorias={categorias as any}
             canManageGlobal={Boolean(canManageGlobal)}
+            defaultTipo={initialTipo}
             defaultNombre={initialNombre}
             onSubmit={async (payload) => {
               const created = (await onCreateContacto(payload)) as Contacto | void

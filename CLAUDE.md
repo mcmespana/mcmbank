@@ -403,6 +403,9 @@ usado en cuál, y cuánto de cada uno**.
   abajo: `FINANCIADOR_AMBITOS`) y `orden` el puesto dentro del grupo.
 - **Estados**: los diez del Excel, en su orden (`SUBVENCION_ESTADO_INFO.paso`),
   con los colores de su desplegable. `ejercicio = NULL` es "Para estudiar".
+  **La lista va siempre por años** (una pestaña por ejercicio, sin "Todas"):
+  mezclar años hace que los totales no signifiquen nada. Buscar algo que está
+  en otro año ofrece saltar a él.
   `justificacion_completa` ("J") va aparte del estado a propósito. No se bloquea
   nada por estado.
 - **Lo menor se pliega** ("Más detalles"): nombre oficial de la convocatoria,

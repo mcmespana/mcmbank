@@ -27,16 +27,28 @@ import { describirError } from "@/lib/utils/describir-error"
 import { cn } from "@/lib/utils"
 import type { SubvencionConResumen } from "@/lib/types/database"
 
-/** Una pestaña por ejercicio, más "Para estudiar" (sin ejercicio) y "Todas". */
+/**
+ * Una pestaña por ejercicio, y "Para estudiar" (sin ejercicio) solo si hay
+ * alguna. Nunca todos los años juntos: se trabaja año a año, como en el Excel,
+ * y mezclarlos haría que los totales no significaran nada.
+ */
 const PARA_ESTUDIAR = "estudiar"
-const TODAS = "todas"
 
 function enPestana(s: SubvencionConResumen, p: string) {
-  return p === TODAS ? true : p === PARA_ESTUDIAR ? s.ejercicio == null : String(s.ejercicio) === p
+  return p === PARA_ESTUDIAR ? s.ejercicio == null : String(s.ejercicio) === p
 }
 
 function normalizar(t: string) {
   return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+}
+
+function coincide(s: SubvencionConResumen, q: string) {
+  if (!q) return true
+  return normalizar(
+    [s.codigo, s.nombre, s.financiador?.nombre, s.solicitante, s.convocatoria, s.expediente, s.notas]
+      .filter(Boolean)
+      .join(" "),
+  ).includes(q)
 }
 
 export function SubvencionesManager() {
@@ -54,21 +66,30 @@ export function SubvencionesManager() {
   )
   const hayParaEstudiar = subvenciones.some((s) => s.ejercicio == null)
   const anioActual = new Date().getFullYear()
-  const pestanaPorDefecto = ejercicios.includes(anioActual) ? String(anioActual) : ejercicios[0] ? String(ejercicios[0]) : TODAS
+  const pestanaPorDefecto = ejercicios.includes(anioActual)
+    ? String(anioActual)
+    : ejercicios[0]
+      ? String(ejercicios[0])
+      : hayParaEstudiar
+        ? PARA_ESTUDIAR
+        : String(anioActual)
   const pestana = pestanaElegida ?? pestanaPorDefecto
 
-  const visibles = useMemo(() => {
-    const q = normalizar(busqueda.trim())
-    return subvenciones.filter((s) => {
-      if (!enPestana(s, pestana)) return false
-      if (!q) return true
-      return normalizar(
-        [s.codigo, s.nombre, s.financiador?.nombre, s.solicitante, s.convocatoria, s.expediente, s.notas]
-          .filter(Boolean)
-          .join(" "),
-      ).includes(q)
-    })
-  }, [subvenciones, pestana, busqueda])
+  const q = normalizar(busqueda.trim())
+  const visibles = useMemo(
+    () => subvenciones.filter((s) => enPestana(s, pestana) && coincide(s, q)),
+    [subvenciones, pestana, q],
+  )
+  // Si se busca algo que está en otro año, se dice dónde, sin mezclar años.
+  const enOtrosAnios = useMemo(() => {
+    if (!q) return []
+    const cuenta = new Map<string, number>()
+    for (const s of subvenciones) {
+      const p = s.ejercicio == null ? PARA_ESTUDIAR : String(s.ejercicio)
+      if (p !== pestana && coincide(s, q)) cuenta.set(p, (cuenta.get(p) ?? 0) + 1)
+    }
+    return [...cuenta.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+  }, [subvenciones, pestana, q])
 
   const grupos = useMemo(() => agruparPorAmbito(visibles), [visibles])
   const totales = useMemo(() => totalesEjercicio(visibles), [visibles])
@@ -94,7 +115,6 @@ export function SubvencionesManager() {
     ...(hayParaEstudiar
       ? [{ value: PARA_ESTUDIAR, label: "Para estudiar", count: subvenciones.filter((s) => s.ejercicio == null).length }]
       : []),
-    { value: TODAS, label: "Todas", count: subvenciones.length },
   ]
   const etiquetaPestana = tabs.find((t) => t.value === pestana)?.label ?? ""
   const esAnio = /^\d{4}$/.test(pestana)
@@ -165,11 +185,11 @@ export function SubvencionesManager() {
                     Quitar la búsqueda
                   </Button>
                 )}
-                {pestana !== TODAS && (
-                  <Button variant="outline" onClick={() => setPestana(TODAS)}>
-                    Ver todas ({subvenciones.length})
+                {enOtrosAnios.map(([p, n]) => (
+                  <Button key={p} variant="outline" onClick={() => setPestana(p)}>
+                    {n} en {p === PARA_ESTUDIAR ? "Para estudiar" : p}
                   </Button>
-                )}
+                ))}
               </div>
             </EmptyState>
           ) : (
@@ -188,7 +208,6 @@ export function SubvencionesManager() {
                       key={s.id}
                       subvencion={s}
                       hoy={hoy}
-                      mostrarEjercicio={pestana === TODAS}
                       onOpen={() => router.push(`/subvenciones/${s.id}`)}
                     />
                   ))}
@@ -224,12 +243,10 @@ function Total({ label, valor, ayuda, destacado }: { label: string; valor: numbe
 function SubvencionRow({
   subvencion: s,
   hoy,
-  mostrarEjercicio,
   onOpen,
 }: {
   subvencion: SubvencionConResumen
   hoy: string
-  mostrarEjercicio: boolean
   onOpen: () => void
 }) {
   const info = SUBVENCION_ESTADO_INFO[s.estado]
@@ -237,9 +254,7 @@ function SubvencionRow({
   const fecha = proximaFecha(s, hoy)
   const cobrado = importeCobrado(s)
   const principal = s.importe_concedido ?? s.importe_solicitado
-  const detalle = [s.financiador?.nombre, s.solicitante, mostrarEjercicio ? (s.ejercicio ?? "Para estudiar") : null]
-    .filter(Boolean)
-    .join(" · ")
+  const detalle = [s.financiador?.nombre, s.solicitante].filter(Boolean).join(" · ")
 
   return (
     <ListRow onClick={onOpen} className={cn(descartada && "opacity-70")}>

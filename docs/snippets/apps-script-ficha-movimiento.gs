@@ -19,19 +19,21 @@
  * La columna AC (29) ya no lleva el ID de Holded sino el ID del MOVIMIENTO, que
  * se copia del detalle del movimiento en MCM Bank.
  *
- * Preparación (una vez): Extensiones → Apps Script → Configuración del proyecto →
- * Propiedades de la secuencia de comandos:
- *   MCM_BASE_URL              https://TU-DOMINIO            (sin barra final)
- *   MCM_API_KEY               clave de SOLO LECTURA (MCM_API_KEY_READONLY basta)
- *   MCM_CARPETA_ID            carpeta raíz de facturas en Drive
- *   MCM_BBDD_PROVEEDORES_ID   (opcional) id del Sheet "BBDD Proveedores y CIF"
- * Ninguna clave ni id va en el código: quien pueda ver el script lo vería.
+ * Preparación (una vez): rellena las cuatro líneas marcadas con ✏️ en CONFIG_MCM.
+ * La clave puede (y conviene que sea) la de SOLO LECTURA: MCM_API_KEY_READONLY.
+ * OJO: la clave queda escrita en el script; quien pueda editar este Sheet la ve.
  */
 
 // ============================================
 // CONFIG_MCM
 // ============================================
 const CONFIG_MCM = {
+  // ✏️ Rellena estas cuatro
+  BASE_URL: 'https://banco.movimientoconsolacion.com', // sin barra final; confirma que es tu dominio
+  API_KEY: 'PEGA_AQUI_LA_CLAVE_DE_MCM_BANK',           // MCM_API_KEY_READONLY
+  CARPETA_DRIVE_ID: 'PEGA_AQUI_EL_ID_DE_LA_CARPETA',   // carpeta raíz de facturas en Drive
+  BBDD_PROVEEDORES_ID: '',                             // opcional: id del Sheet "BBDD Proveedores y CIF"
+
   FILA_INICIO: 2, // Primera fila con datos (después del encabezado)
 
   // Índices de columnas (A = 1)
@@ -57,10 +59,6 @@ const CONFIG_MCM = {
   PDFLIB_URL: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   PDFLIB_SHA256: '0f9a5cad07941f0826586c94e089d89b918c46e5c17cf2d5a3c6f666e3bc694f',
 };
-
-function propMcm_(nombre) {
-  return PropertiesService.getScriptProperties().getProperty(nombre);
-}
 
 // ============================================
 // 1) TRAER DATOS
@@ -160,7 +158,7 @@ async function descargarArchivosPorCodigoMcm() {
 
       const idMovimiento = String(hoja.getRange(fila, C.ID_MOVIMIENTO).getValue()).trim();
       const esGastoEstructural = nombreActividad.includes('Gastos Estructurales');
-      const carpetaRaiz = DriveApp.getFolderById(propMcm_('MCM_CARPETA_ID'));
+      const carpetaRaiz = DriveApp.getFolderById(CONFIG_MCM.CARPETA_DRIVE_ID);
 
       let codigoFactura;
       let carpetaDestino;
@@ -216,9 +214,11 @@ async function descargarArchivosPorCodigoMcm() {
 // LLAMADA API: ficha del movimiento
 // ============================================
 function pedirFicha_(idMovimiento) {
-  const base = propMcm_('MCM_BASE_URL');
-  const clave = propMcm_('MCM_API_KEY');
-  if (!base || !clave) throw new Error('Faltan MCM_BASE_URL / MCM_API_KEY en las propiedades del script');
+  const base = CONFIG_MCM.BASE_URL;
+  const clave = CONFIG_MCM.API_KEY;
+  if (!base || !clave || clave.indexOf('PEGA_AQUI') === 0) {
+    throw new Error('Falta rellenar BASE_URL / API_KEY en CONFIG_MCM');
+  }
 
   const respuesta = UrlFetchApp.fetch(
     `${base}/api/v1/movimientos/${encodeURIComponent(idMovimiento)}/ficha`,
@@ -353,7 +353,7 @@ function calcularSiguienteCorrelativoMcm(hoja, numeroActividad) {
 // BBDD DE PROVEEDORES (igual que en Holded)
 // ============================================
 function actualizarBBDDProveedoresMcm(cif, nombreProveedor) {
-  const id = propMcm_('MCM_BBDD_PROVEEDORES_ID');
+  const id = CONFIG_MCM.BBDD_PROVEEDORES_ID;
   if (!id) return; // opcional
   try {
     const hojaBBDD = SpreadsheetApp.openById(id).getSheetByName(CONFIG_MCM.BBDD_PROVEEDORES_HOJA);

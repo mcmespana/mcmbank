@@ -472,6 +472,7 @@ scoped explicitly in the query instead: `resolveAmbitoDelegaciones()` returns
 | `lib/api/delegaciones.ts` | Natural-language delegation lookup ("Sevilla", "MCM-SEV", UUID); ambiguity returns the candidates |
 | `lib/api/catalogos.ts` | Cached cuenta/categoria/contacto maps, joined in memory instead of embedded in every query; also creates contacts (global for proveedores, delegation-scoped for personas/destinatarios) |
 | `lib/api/movimientos-public.ts` | Movement search (multi-delegation, with whole-set totals), fetch and update |
+| `lib/api/ficha-movimiento.ts` | One-call movement dossier (`/movimientos/{id}/ficha`): movement + linked invoice + compared amounts + files with signed URLs. Built for Apps Script / Sheets → Drive (`docs/snippets/apps-script-ficha-movimiento.gs`) |
 | `lib/api/facturas.ts` | Invoice CRUD, linking, and the scoring used to reconcile invoices against movements |
 | `lib/api/factura-ia.ts` | Reads an invoice document with Gemini, validates every field, fills only the empty ones |
 | `lib/api/facturas-email.ts` | Per-delegation invoice mailbox: svix signature check, address→delegation, attachments → invoices |
@@ -482,7 +483,7 @@ scoped explicitly in the query instead: `resolveAmbitoDelegaciones()` returns
 | `lib/api/resumen.ts` | Per-delegation financial rollup |
 | `lib/api/errors.ts` | `ApiError` with HTTP status; unexpected errors are logged in full and truncated to one line in the response |
 | `lib/api/route-helpers.ts` | `conApi()` wrapper: auth + query parsing + `{ ok: true, ... }` shape |
-| `lib/mcp/tools.ts` | The 30 MCP tools, each a thin wrapper over `lib/api/` |
+| `lib/mcp/tools.ts` | The 31 MCP tools, each a thin wrapper over `lib/api/` |
 | `lib/mcp/auth.ts` | Accepts either an API key or an OAuth access token; OAuth pins the acting user |
 | `lib/oauth/` | OAuth 2.1 authorization server: config, PKCE, DB-backed store, authorize-request validation |
 

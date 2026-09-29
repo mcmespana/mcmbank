@@ -46,6 +46,8 @@ import {
 import { aceptarCategoriaSugerida, extraerDatosFactura } from "@/lib/api/factura-ia"
 import { actualizarPagoMcm, crearPagoMcm, listarPagosMcm } from "@/lib/api/pagos"
 import { resumenGeneral } from "@/lib/api/resumen"
+import { listarSubvenciones, obtenerSubvencion } from "@/lib/api/subvenciones"
+import { SUBVENCION_ESTADOS } from "@/lib/types/database"
 import {
   eliminarArchivo,
   localizarArchivo,
@@ -1298,6 +1300,50 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
       })
       return { pago }
     },
+  },
+  // -------------------------------------------------------------- Subvenciones
+  {
+    name: "listar_subvenciones",
+    title: "Ver subvenciones",
+    description:
+      "Subvenciones de la organización (no son de una delegación: se justifican con gastos de varias), con cuántos movimientos tienen imputados y cuánto suman. " +
+      "Un movimiento solo puede estar imputado a una subvención.",
+    inputSchema: objetoSchema({
+      estados: { type: "array", items: { type: "string", enum: [...SUBVENCION_ESTADOS] } },
+      ejercicio: { type: "number", description: "Año de la convocatoria, p. ej. 2026." },
+      texto: { type: "string", description: "Busca en nombre, financiador, convocatoria y expediente." },
+    }),
+    scope: "read",
+    annotations: { readOnlyHint: true },
+    handler: async (args, ctx) =>
+      listarSubvenciones(ctx.admin, {
+        estados: lista(args, "estados"),
+        ejercicio: numero(args, "ejercicio"),
+        texto: texto(args, "texto"),
+      }),
+  },
+  {
+    name: "obtener_subvencion",
+    title: "Ver una subvención y sus movimientos",
+    description:
+      "Devuelve la ficha de una subvención, los ids de los movimientos imputados y, salvo incluir_movimientos: false, esos movimientos completos (de cualquier delegación) con sus archivos y facturas. " +
+      "Es lo que hace falta para montar el Excel de justificación.",
+    inputSchema: objetoSchema(
+      {
+        id: { type: "string", description: "Id de la subvención (ver listar_subvenciones)." },
+        incluir_movimientos: { type: "boolean", description: "Por defecto true. Con false solo vienen los ids." },
+        incluir_archivos: { type: "boolean", description: "Por defecto true." },
+      },
+      ["id"],
+    ),
+    scope: "read",
+    annotations: { readOnlyHint: true },
+    handler: async (args, ctx) =>
+      obtenerSubvencion(ctx.admin, textoObligatorio(args, "id"), {
+        incluirMovimientos: booleano(args, "incluir_movimientos") ?? true,
+        incluirArchivos: booleano(args, "incluir_archivos") ?? true,
+        baseUrl: ctx.baseUrl,
+      }),
   },
 ]
 

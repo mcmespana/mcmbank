@@ -102,6 +102,7 @@ export async function GET(request: Request) {
       { name: "Avisos", description: "Notas y tareas entre la oficina técnica y las delegaciones" },
       { name: "Archivos", description: "Descarga y borrado de adjuntos" },
       { name: "Informes", description: "Resumen económico" },
+      { name: "Subvenciones", description: "Subvenciones de la organización y los movimientos imputados a cada una" },
     ],
     security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
     paths: {
@@ -1022,6 +1023,49 @@ export async function GET(request: Request) {
             },
           },
           responses: respuestaOk("Pago actualizado.", { pago: { type: "object" } }),
+        },
+      },
+      // ---------------------------------------------------------- Subvenciones
+      "/api/v1/subvenciones": {
+        get: {
+          tags: ["Subvenciones"],
+          summary: "Listar subvenciones con su resumen",
+          description:
+            "Una subvención es de la organización, no de una delegación: se justifica con movimientos de varias. Un movimiento solo puede estar imputado a una.",
+          operationId: "listarSubvenciones",
+          parameters: [
+            {
+              name: "estados",
+              in: "query",
+              schema: { type: "string" },
+              description: "Separados por comas: en_preparacion, solicitada, concedida, denegada, justificada, cerrada.",
+            },
+            { name: "ejercicio", in: "query", schema: { type: "integer" } },
+            { name: "texto", in: "query", schema: { type: "string" } },
+          ],
+          responses: respuestaOk("Subvenciones.", {
+            total: { type: "integer" },
+            subvenciones: { type: "array", items: { type: "object" } },
+          }),
+        },
+      },
+      "/api/v1/subvenciones/{id}": {
+        get: {
+          tags: ["Subvenciones"],
+          summary: "Obtener una subvención con sus movimientos imputados",
+          description:
+            "Devuelve la ficha, `movimiento_ids` y, salvo `movimientos=false`, los movimientos completos con sus archivos (`url_descarga`).",
+          operationId: "getSubvencion",
+          parameters: [
+            PARAM_ID("de la subvención"),
+            { name: "movimientos", in: "query", schema: { type: "boolean" }, description: "Por defecto true." },
+            { name: "archivos", in: "query", schema: { type: "boolean" }, description: "Por defecto true." },
+          ],
+          responses: respuestaOk("Subvención.", {
+            subvencion: { type: "object" },
+            movimiento_ids: { type: "array", items: { type: "string", format: "uuid" } },
+            movimientos: { type: "array", items: { type: "object" } },
+          }),
         },
       },
     },

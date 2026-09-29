@@ -575,6 +575,58 @@ async function agregarResumen(
   }
 }
 
+/**
+ * Varios movimientos por id, en el mismo formato que `buscarMovimientos`, en el
+ * orden en que se piden. Los ids que no existen se omiten. Trocea los `in (...)`
+ * porque PostgREST los lleva en la URL.
+ */
+export async function obtenerMovimientosPorIds(
+  admin: AdminClient,
+  ids: string[],
+  options: { incluirArchivos?: boolean; baseUrl?: string } = {},
+): Promise<MovimientoPublico[]> {
+  const unicos = [...new Set(ids)]
+  if (unicos.length === 0) return []
+
+  const TROZO = 150
+  const filas: any[] = []
+  for (let i = 0; i < unicos.length; i += TROZO) {
+    const data = unwrap(
+      await (admin as any)
+        .from("movimiento")
+        .select(MOVIMIENTO_LISTA_SELECT)
+        .in("id", unicos.slice(i, i + TROZO)),
+    ) as any[] | null
+    filas.push(...(data ?? []))
+  }
+
+  const [catalogos, delegaciones] = await Promise.all([cargarCatalogos(admin), mapaDelegaciones(admin)])
+  const archivosPorMovimiento = new Map<string, any[]>()
+  if (options.incluirArchivos !== false) {
+    for (let i = 0; i < filas.length; i += TROZO) {
+      const parcial = await getArchivosDeMovimientos(admin, filas.slice(i, i + TROZO).map((f) => f.id))
+      for (const [id, lista] of parcial) archivosPorMovimiento.set(id, lista)
+    }
+  }
+
+  const porId = new Map(filas.map((f) => [f.id, f]))
+  return unicos
+    .map((id) => porId.get(id))
+    .filter(Boolean)
+    .map((fila: any) =>
+      serializeMovimiento(
+        {
+          ...fila,
+          cuenta: fila.cuenta_id ? catalogos.cuentas.get(fila.cuenta_id) ?? null : null,
+          categoria: fila.categoria_id ? catalogos.categorias.get(fila.categoria_id) ?? null : null,
+          contacto: fila.contacto_id ? catalogos.contactos.get(fila.contacto_id) ?? null : null,
+          delegacion: fila.delegacion_id ? delegaciones.get(fila.delegacion_id) ?? null : null,
+        },
+        (archivosPorMovimiento.get(fila.id) ?? []).map((a) => serializeArchivo(a, { baseUrl: options.baseUrl })),
+      ),
+    )
+}
+
 /** Movimiento completo (con archivos) o `null`. */
 export async function obtenerMovimiento(
   admin: AdminClient,

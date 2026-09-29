@@ -22,6 +22,7 @@ import {
   Moon,
   Sun,
   Monitor,
+  Landmark,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -187,6 +188,20 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       attention: false,
       enabled: true,
     },
+    // Subvenciones son de la organización entera y solo las gestiona la
+    // oficina técnica (scripts/071): a un tesorero le saldría la pantalla vacía.
+    ...(isAdmin
+      ? [
+        {
+          name: "Subvenciones",
+          href: "/subvenciones",
+          icon: Landmark,
+          count: null,
+          attention: false,
+          enabled: true,
+        },
+      ]
+      : []),
     {
       name: "Contactos",
       href: "/contactos",
@@ -243,7 +258,7 @@ function SidebarContent({ className, collapsed = false, counts, countsLoading, a
       {/* Navigation */}
       <nav className={cn("flex-1 min-h-0 space-y-1 overflow-y-auto overscroll-contain", collapsed ? "px-2 py-4" : "p-4")}>
         {navigation.map((item) => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
           const isDisabled = !item.enabled
           // Facturas en bandeja o sin pagar piden que alguien las mire, así
           // que su número lleva un color de aviso en vez del neutro de un

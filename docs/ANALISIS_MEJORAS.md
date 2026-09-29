@@ -13,6 +13,15 @@
 
 ## Siguiente
 
+- **Subvenciones: lo que sigue a la primera piedra** (`scripts/071`,
+  `/subvenciones`). Hoy solo hay ficha e imputación de movimientos. Pendiente de
+  decidir con la oficina técnica: los campos definitivos de la ficha (el Excel
+  actual tiene más); si un gasto puede repartirse entre dos subvenciones
+  (`importe_imputado` + trigger en vez del UNIQUE); presupuesto por partidas y
+  qué se imputa a cada una; financiador como tabla propia; bloquear la edición
+  de importe/fecha de un movimiento ya justificado; imputar desde la API/MCP
+  (hoy es solo lectura) y un filtro «sin subvención» en Movimientos.
+
 - **Informe PDF por periodo** — *priorizado.* Portada, resumen, desglose mensual
   y por categorías, exportable desde el dashboard. Hoy solo hay Excel, y un
   Excel no se manda a una junta.

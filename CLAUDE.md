@@ -46,6 +46,8 @@ The app uses Supabase with a hierarchical structure:
 - **propuesta_mejora_voto**: Votes/reactions on proposals
 - **aviso**: Notices and tasks per delegation (technical office ↔ treasurers)
 - **aviso_lectura**: Read receipts for notices (one row per aviso/user)
+- **subvencion**: Grants of the whole organization (not of a delegation); gestor_central only
+- **subvencion_movimiento**: Movements imputed to a grant — one grant per movement (see Subvenciones below)
 
 Type definitions for all tables are in `lib/types/database.ts` (Row/Insert/Update types for each table).
 
@@ -106,6 +108,7 @@ Also includes: `ThemeStateWatcher`, `ConnectionMonitor`, `Toaster` (Sonner).
 | `use-perfil.ts` | User profile |
 | `use-improvement-proposals.ts` | Proposals CRUD, voting, commenting |
 | `use-avisos.ts` | Notices/tasks per delegation, unread + pending counters |
+| `use-subvenciones.ts` | Grants with their summary, and one grant with its imputed movements |
 | `use-saldo-contactos.ts` | Per-provider balance for a period, filtered by activity (category) |
 | `use-movimiento-archivos.ts` | Transaction file attachments |
 | `use-delegation-counts.ts` | Counts of items per delegation |
@@ -369,6 +372,41 @@ categorias[])` + `components/contactos/proveedores-saldos.tsx` (conmutador
 agregación llama a `assert_delegacion_member`, así que **no sirve desde la API
 externa ni el MCP**: ahí hay que agregar en JS, como `lib/api/resumen.ts`.
 
+### Subvenciones (solo gestores centrales)
+
+Sustituye, poco a poco, un Excel grande de la oficina técnica. La primera piedra
+(`scripts/071`) responde a una sola pregunta: **¿este gasto ya lo he usado en otra
+subvención?**
+
+- **Una subvención no es de una delegación**: no tiene `delegacion_id`. Se
+  justifica con movimientos de varias, y la delegación de cada gasto sale de su
+  movimiento. Por eso `useSubvenciones()` no depende de la delegación
+  seleccionada.
+- **Un movimiento, una subvención**: `UNIQUE (movimiento_id)` en
+  `subvencion_movimiento`, en la base de datos porque la API y el MCP también
+  leen/escriben. Si un día hay que repartir un gasto entre dos, se añade
+  `importe_imputado` y se cambia el UNIQUE por un trigger que no deje pasar del
+  100 % — la tabla ya tiene la forma de una fila por par.
+- **Imputar** se hace desde la barra de selección de Movimientos (botón
+  «Subvención», solo `isAdmin`), delegación a delegación. Los que ya están en
+  otra subvención **se enseñan y no se mueven** (`repartirAsignacion()`): sacar
+  un gasto de una justificación es un gesto propio, desde esa subvención. Es un
+  `insert`, no un `upsert`, para que una carrera con otro gestor salte en vez de
+  pisarle.
+- **Borrar un movimiento imputado se rechaza** (trigger
+  `movimiento_en_subvencion_no_se_borra`, FK `RESTRICT`) con el nombre de la
+  subvención en el mensaje. Con cascada desaparecería de la justificación en
+  silencio, y quien borra —un tesorero— ni siquiera ve la subvención.
+- **RLS: solo `is_gestor_central()`** en las dos tablas. La vista
+  `subvencion_resumen` es `security_invoker = on`, así que hereda esa RLS.
+- El periodo de gastos (`periodo_desde`/`hasta`) **avisa, no rechaza**.
+- La ficha (`/subvenciones/[id]`) copia los ids (líneas, comas o JSON) y
+  descarga un Excel con el id en la primera columna; la API lo sirve entero en
+  `GET /api/v1/subvenciones/{id}` (y `obtener_subvencion` en el MCP), con los
+  archivos de cada movimiento. La API es **solo lectura** de momento.
+- Lógica pura en `lib/utils/subvenciones.ts`; cliente en
+  `lib/services/subvenciones.ts`; núcleo de API en `lib/api/subvenciones.ts`.
+
 ### File Uploads
 - Files uploaded to Supabase Storage buckets
 - Metadata tracked in `movimiento_archivo` table
@@ -440,6 +478,7 @@ docs/                       # End-user documentation in Spanish
 | `/auth/login` | Login page |
 | `/auth/sign-up` | Registration page |
 | `/auth/callback` | OAuth callback |
+| `/subvenciones`, `/subvenciones/[id]` | Grants and their imputed movements (gestor_central only) |
 | `/api/avisos/notificar` | Sends a notice/task by email via Resend |
 | `/api/facturas/entrantes` | Resend inbound webhook: the per-delegation invoice mailbox |
 | `/api/facturas/ia` | Reads an invoice with AI / accepts its category suggestion (session-authenticated) |
@@ -481,9 +520,10 @@ scoped explicitly in the query instead: `resolveAmbitoDelegaciones()` returns
 | `lib/api/pagos.ts` | MCM payments (reimbursements): read, and create/update for the `manual` calculation type only — gasoline calculations stay app-only |
 | `lib/api/archivos.ts` | Base64 upload to Storage + registration, signed URLs, deletion |
 | `lib/api/resumen.ts` | Per-delegation financial rollup |
+| `lib/api/subvenciones.ts` | Grants and their imputed movements (read only) |
 | `lib/api/errors.ts` | `ApiError` with HTTP status; unexpected errors are logged in full and truncated to one line in the response |
 | `lib/api/route-helpers.ts` | `conApi()` wrapper: auth + query parsing + `{ ok: true, ... }` shape |
-| `lib/mcp/tools.ts` | The 31 MCP tools, each a thin wrapper over `lib/api/` |
+| `lib/mcp/tools.ts` | The 36 MCP tools, each a thin wrapper over `lib/api/` |
 | `lib/mcp/auth.ts` | Accepts either an API key or an OAuth access token; OAuth pins the acting user |
 | `lib/oauth/` | OAuth 2.1 authorization server: config, PKCE, DB-backed store, authorize-request validation |
 

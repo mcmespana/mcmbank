@@ -1,17 +1,20 @@
 /**
  * MCM Bank → Google Sheets + Drive.
  *
- * Adaptación de los dos scripts de Holded (`procesarDocumentos` y
- * `descargarArchivosPorCodigo`): misma hoja, mismas columnas, mismo flujo. Lo
+ * Adaptación de los dos scripts de Holded (`procesarDocumentosMcm` y
+ * `descargarArchivosPorCodigoMcm`): misma hoja, mismas columnas, mismo flujo. Lo
  * único que cambia es de dónde salen los datos: en vez de Holded, la ficha de
  * un movimiento de MCM Bank (`GET /api/v1/movimientos/{id}/ficha`).
  *
- *   1. procesarDocumentos()          rellena total, CIF, fechas y descripción y
+ *   1. procesarDocumentosMcm()          rellena total, CIF, fechas y descripción y
  *                                    deja "Pendiente" en la columna de archivo.
- *   2. descargarArchivosPorCodigo()  para las filas en "Pendiente", guarda el
+ *   2. descargarArchivosPorCodigoMcm()  para las filas en "Pendiente", guarda el
  *                                    documento en Drive con el código A.X.Y. Si el
  *                                    movimiento tiene varios archivos, los une
  *                                    en un solo PDF.
+ *
+ * Convive con los de Holded en el mismo proyecto: todo lo de aquí lleva sufijo
+ * `Mcm` (y CONFIG_MCM) para no pisar sus funciones ni su CONFIG.
  *
  * La columna AC (29) ya no lleva el ID de Holded sino el ID del MOVIMIENTO, que
  * se copia del detalle del movimiento en MCM Bank.
@@ -26,9 +29,9 @@
  */
 
 // ============================================
-// CONFIG
+// CONFIG_MCM
 // ============================================
-const CONFIG = {
+const CONFIG_MCM = {
   FILA_INICIO: 2, // Primera fila con datos (después del encabezado)
 
   // Índices de columnas (A = 1)
@@ -55,19 +58,19 @@ const CONFIG = {
   PDFLIB_SHA256: '0f9a5cad07941f0826586c94e089d89b918c46e5c17cf2d5a3c6f666e3bc694f',
 };
 
-function prop_(nombre) {
+function propMcm_(nombre) {
   return PropertiesService.getScriptProperties().getProperty(nombre);
 }
 
 // ============================================
 // 1) TRAER DATOS
 // ============================================
-function procesarDocumentos() {
+function procesarDocumentosMcm() {
   const hoja = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const ultimaFila = hoja.getLastRow();
-  const C = CONFIG.COLUMNAS;
+  const C = CONFIG_MCM.COLUMNAS;
 
-  if (ultimaFila < CONFIG.FILA_INICIO) {
+  if (ultimaFila < CONFIG_MCM.FILA_INICIO) {
     SpreadsheetApp.getUi().alert('No hay documentos para procesar');
     return;
   }
@@ -76,8 +79,8 @@ function procesarDocumentos() {
   let procesados = 0;
   let errores = 0;
 
-  for (let fila = CONFIG.FILA_INICIO; fila <= ultimaFila; fila++) {
-    if (Date.now() - inicio > CONFIG.MAX_MS) break;
+  for (let fila = CONFIG_MCM.FILA_INICIO; fila <= ultimaFila; fila++) {
+    if (Date.now() - inicio > CONFIG_MCM.MAX_MS) break;
 
     const idMovimiento = String(hoja.getRange(fila, C.ID_MOVIMIENTO).getValue()).trim();
     const totalActual = hoja.getRange(fila, C.TOTAL).getValue(); // F
@@ -92,7 +95,7 @@ function procesarDocumentos() {
 
         const contacto = factura.contacto || {};
         const cif = contacto.identificador_fiscal || '';
-        if (cif) actualizarBBDDProveedores(cif, contacto.nombre || '');
+        if (cif) actualizarBBDDProveedoresMcm(cif, contacto.nombre || '');
 
         // Total: el de la factura; si no tiene importe, lo que salió del banco.
         const total = ficha.importes.factura != null ? ficha.importes.factura : ficha.importes.movimiento_abs;
@@ -129,12 +132,12 @@ function procesarDocumentos() {
 // 2) DESCARGAR EL ARCHIVO A DRIVE POR CÓDIGO
 // ============================================
 // async: unir PDFs con pdf-lib devuelve promesas.
-async function descargarArchivosPorCodigo() {
+async function descargarArchivosPorCodigoMcm() {
   const hoja = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const ultimaFila = hoja.getLastRow();
-  const C = CONFIG.COLUMNAS;
+  const C = CONFIG_MCM.COLUMNAS;
 
-  if (ultimaFila < CONFIG.FILA_INICIO) {
+  if (ultimaFila < CONFIG_MCM.FILA_INICIO) {
     SpreadsheetApp.getUi().alert('No hay datos para procesar');
     return;
   }
@@ -143,8 +146,8 @@ async function descargarArchivosPorCodigo() {
   let procesados = 0;
   let errores = 0;
 
-  for (let fila = CONFIG.FILA_INICIO; fila <= ultimaFila; fila++) {
-    if (Date.now() - inicio > CONFIG.MAX_MS) break;
+  for (let fila = CONFIG_MCM.FILA_INICIO; fila <= ultimaFila; fila++) {
+    if (Date.now() - inicio > CONFIG_MCM.MAX_MS) break;
 
     // Solo procesar si pone "Pendiente"
     if (hoja.getRange(fila, C.ARCHIVO).getValue() !== 'Pendiente') continue;
@@ -157,7 +160,7 @@ async function descargarArchivosPorCodigo() {
 
       const idMovimiento = String(hoja.getRange(fila, C.ID_MOVIMIENTO).getValue()).trim();
       const esGastoEstructural = nombreActividad.includes('Gastos Estructurales');
-      const carpetaRaiz = DriveApp.getFolderById(prop_('MCM_CARPETA_ID'));
+      const carpetaRaiz = DriveApp.getFolderById(propMcm_('MCM_CARPETA_ID'));
 
       let codigoFactura;
       let carpetaDestino;
@@ -168,13 +171,13 @@ async function descargarArchivosPorCodigo() {
         if (!codigoFactura) {
           throw new Error('❌ Para Gastos Estructurales debes indicar el nombre del archivo en la columna D');
         }
-        carpetaDestino = buscarCarpetaEstructurales(carpetaRaiz);
+        carpetaDestino = buscarCarpetaEstructuralesMcm(carpetaRaiz);
       } else {
         // Actividad normal: A.X.Y con X = primer carácter de C e Y correlativo.
-        const numeroActividad = extraerNumeroActividad(nombreActividad);
-        const numeroCorrelativo = calcularSiguienteCorrelativo(hoja, numeroActividad);
+        const numeroActividad = extraerNumeroActividadMcm(nombreActividad);
+        const numeroCorrelativo = calcularSiguienteCorrelativoMcm(hoja, numeroActividad);
         codigoFactura = `A.${numeroActividad}.${numeroCorrelativo}`;
-        carpetaDestino = obtenerOCrearCarpetaActividad(carpetaRaiz, nombreActividad);
+        carpetaDestino = obtenerOCrearCarpetaActividadMcm(carpetaRaiz, nombreActividad);
       }
 
       // Ficha nueva: las URL firmadas caducan y esta fila pudo prepararse hace días.
@@ -213,8 +216,8 @@ async function descargarArchivosPorCodigo() {
 // LLAMADA API: ficha del movimiento
 // ============================================
 function pedirFicha_(idMovimiento) {
-  const base = prop_('MCM_BASE_URL');
-  const clave = prop_('MCM_API_KEY');
+  const base = propMcm_('MCM_BASE_URL');
+  const clave = propMcm_('MCM_API_KEY');
   if (!base || !clave) throw new Error('Faltan MCM_BASE_URL / MCM_API_KEY en las propiedades del script');
 
   const respuesta = UrlFetchApp.fetch(
@@ -287,11 +290,11 @@ async function unirPdfs_(blobs) {
 function cargarPdfLib_() {
   if (typeof PDFLib !== 'undefined') return PDFLib;
 
-  const codigo = UrlFetchApp.fetch(CONFIG.PDFLIB_URL).getContentText();
+  const codigo = UrlFetchApp.fetch(CONFIG_MCM.PDFLIB_URL).getContentText();
   const huella = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, codigo, Utilities.Charset.UTF_8)
     .map((b) => ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'))
     .join('');
-  if (huella !== CONFIG.PDFLIB_SHA256) {
+  if (huella !== CONFIG_MCM.PDFLIB_SHA256) {
     throw new Error('La huella de pdf-lib no coincide con la esperada: no se ejecuta');
   }
 
@@ -311,7 +314,7 @@ function guardarPdfEnCarpeta_(pdfBlob, nombreArchivo, carpeta) {
 // ============================================
 // CARPETAS Y CÓDIGOS (igual que en Holded)
 // ============================================
-function buscarCarpetaEstructurales(carpetaPadre) {
+function buscarCarpetaEstructuralesMcm(carpetaPadre) {
   const carpetas = carpetaPadre.getFolders();
   while (carpetas.hasNext()) {
     const carpeta = carpetas.next();
@@ -320,12 +323,12 @@ function buscarCarpetaEstructurales(carpetaPadre) {
   throw new Error('❌ No se encontró ninguna carpeta con "Estructurales" en el nombre');
 }
 
-function obtenerOCrearCarpetaActividad(carpetaPadre, nombreActividad) {
+function obtenerOCrearCarpetaActividadMcm(carpetaPadre, nombreActividad) {
   const carpetas = carpetaPadre.getFoldersByName(nombreActividad); // nombre EXACTO
   return carpetas.hasNext() ? carpetas.next() : carpetaPadre.createFolder(nombreActividad);
 }
 
-function extraerNumeroActividad(nombreActividad) {
+function extraerNumeroActividadMcm(nombreActividad) {
   const primerCaracter = nombreActividad.toString().trim().charAt(0);
   if (!/^\d$/.test(primerCaracter)) {
     throw new Error(`El primer carácter de la actividad debe ser un número, encontrado: "${primerCaracter}"`);
@@ -333,9 +336,9 @@ function extraerNumeroActividad(nombreActividad) {
   return primerCaracter;
 }
 
-function calcularSiguienteCorrelativo(hoja, numeroActividad) {
-  const filas = hoja.getLastRow() - CONFIG.FILA_INICIO + 1;
-  const columnaD = hoja.getRange(CONFIG.FILA_INICIO, CONFIG.COLUMNAS.CODIGO_FACTURA, filas, 1).getValues();
+function calcularSiguienteCorrelativoMcm(hoja, numeroActividad) {
+  const filas = hoja.getLastRow() - CONFIG_MCM.FILA_INICIO + 1;
+  const columnaD = hoja.getRange(CONFIG_MCM.FILA_INICIO, CONFIG_MCM.COLUMNAS.CODIGO_FACTURA, filas, 1).getValues();
   const patron = new RegExp(`^A\\.${numeroActividad}\\.(\\d+)$`);
 
   let maxCorrelativo = 0;
@@ -349,13 +352,13 @@ function calcularSiguienteCorrelativo(hoja, numeroActividad) {
 // ============================================
 // BBDD DE PROVEEDORES (igual que en Holded)
 // ============================================
-function actualizarBBDDProveedores(cif, nombreProveedor) {
-  const id = prop_('MCM_BBDD_PROVEEDORES_ID');
+function actualizarBBDDProveedoresMcm(cif, nombreProveedor) {
+  const id = propMcm_('MCM_BBDD_PROVEEDORES_ID');
   if (!id) return; // opcional
   try {
-    const hojaBBDD = SpreadsheetApp.openById(id).getSheetByName(CONFIG.BBDD_PROVEEDORES_HOJA);
+    const hojaBBDD = SpreadsheetApp.openById(id).getSheetByName(CONFIG_MCM.BBDD_PROVEEDORES_HOJA);
     if (!hojaBBDD) {
-      Logger.log(`⚠️ No se encuentra la hoja "${CONFIG.BBDD_PROVEEDORES_HOJA}" en la BBDD`);
+      Logger.log(`⚠️ No se encuentra la hoja "${CONFIG_MCM.BBDD_PROVEEDORES_HOJA}" en la BBDD`);
       return;
     }
     const ultimaFila = hojaBBDD.getLastRow();

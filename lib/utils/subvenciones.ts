@@ -48,8 +48,6 @@ export interface SubvencionEstadoInfo {
   bgClass: string
   textClass: string
   borderClass: string
-  /** Banda izquierda de la fila (`ListRow accentClass`). */
-  accentClass: string
 }
 
 // Los colores siguen los del desplegable del Excel (gris → amarillo → naranja →
@@ -67,7 +65,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-muted/60",
     textClass: "text-muted-foreground",
     borderClass: "border-border",
-    accentClass: "border-l-slate-300 dark:border-l-slate-600",
   },
   por_solicitar: {
     value: "por_solicitar",
@@ -80,7 +77,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-yellow-50 dark:bg-yellow-950/30",
     textClass: "text-yellow-800 dark:text-yellow-200",
     borderClass: "border-yellow-300/70 dark:border-yellow-900/60",
-    accentClass: "border-l-yellow-400 dark:border-l-yellow-500",
   },
   solicitada: {
     value: "solicitada",
@@ -93,7 +89,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-orange-50 dark:bg-orange-950/30",
     textClass: "text-orange-800 dark:text-orange-200",
     borderClass: "border-orange-200/70 dark:border-orange-900/60",
-    accentClass: "border-l-orange-400 dark:border-l-orange-500",
   },
   concedida: {
     value: "concedida",
@@ -106,7 +101,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-lime-50 dark:bg-lime-950/30",
     textClass: "text-lime-800 dark:text-lime-200",
     borderClass: "border-lime-200/70 dark:border-lime-900/60",
-    accentClass: "border-l-lime-500",
   },
   por_justificar: {
     value: "por_justificar",
@@ -119,7 +113,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-blue-50 dark:bg-blue-950/30",
     textClass: "text-blue-800 dark:text-blue-200",
     borderClass: "border-blue-200/70 dark:border-blue-900/60",
-    accentClass: "border-l-blue-600 dark:border-l-blue-500",
   },
   justificada: {
     value: "justificada",
@@ -132,7 +125,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-emerald-50 dark:bg-emerald-950/30",
     textClass: "text-emerald-800 dark:text-emerald-200",
     borderClass: "border-emerald-200/70 dark:border-emerald-900/60",
-    accentClass: "border-l-emerald-600 dark:border-l-emerald-500",
   },
   cobrada: {
     value: "cobrada",
@@ -145,7 +137,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-teal-50 dark:bg-teal-950/30",
     textClass: "text-teal-800 dark:text-teal-200",
     borderClass: "border-teal-300/70 dark:border-teal-900/60",
-    accentClass: "border-l-teal-700 dark:border-l-teal-500",
   },
   cobrada_parcial: {
     value: "cobrada_parcial",
@@ -158,7 +149,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-cyan-50 dark:bg-cyan-950/30",
     textClass: "text-cyan-800 dark:text-cyan-200",
     borderClass: "border-cyan-200/70 dark:border-cyan-900/60",
-    accentClass: "border-l-cyan-400",
   },
   rechazada: {
     value: "rechazada",
@@ -171,7 +161,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-red-50 dark:bg-red-950/30",
     textClass: "text-red-700 dark:text-red-300",
     borderClass: "border-red-200/70 dark:border-red-900/60",
-    accentClass: "border-l-red-600 dark:border-l-red-500",
   },
   renuncia: {
     value: "renuncia",
@@ -184,7 +173,6 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-muted/60",
     textClass: "text-muted-foreground",
     borderClass: "border-border",
-    accentClass: "border-l-slate-300 dark:border-l-slate-600",
   },
 }
 
@@ -544,10 +532,4 @@ export function formatearIds(ids: string[], formato: FormatoIds): string {
     default:
       return ids.join("\n")
   }
-}
-
-/** Porcentaje (0–100, sin acotar por arriba) de lo concedido que ya está imputado. */
-export function porcentajeImputado(totalGastos: number, concedido: number | null | undefined): number | null {
-  if (!concedido || concedido <= 0) return null
-  return Math.round((totalGastos / concedido) * 1000) / 10
 }

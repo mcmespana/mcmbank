@@ -32,7 +32,6 @@ import {
   SUBVENCION_ESTADO_INFO,
   cuandoEs,
   importeCobrado,
-  porcentajeImputado,
   proximaFecha,
 } from "@/lib/utils/subvenciones"
 import { formatCurrency, formatDate, toLocalDateString } from "@/lib/utils/format"
@@ -296,7 +295,6 @@ function Dinero({
   const cobrado = importeCobrado(s)
   const tope = Math.max(s.importe_solicitado ?? 0, s.importe_concedido ?? 0, cobrado, 1)
   const pct = (n: number) => `${Math.min((n / tope) * 100, 100)}%`
-  const pctImp = porcentajeImputado(s.resumen.total_gastos, s.importe_concedido)
   const concedida = SUBVENCION_ESTADO_INFO.concedida
   const cobradaInfo = SUBVENCION_ESTADO_INFO.cobrada
   const cobradoDeducido = s.importe_cobrado == null && cobrado > 0
@@ -358,11 +356,10 @@ function Dinero({
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-sm">
         <div className="min-w-0">
-          <span className="text-muted-foreground">Gastos imputados </span>
+          {/* Sin "% de lo concedido": buena parte se justifica fuera de la app, así que
+              lo imputado aquí casi nunca llega al 100 % y el porcentaje asustaría sin motivo. */}
+          <span className="text-muted-foreground">Imputado en MCM Bank </span>
           <span className="font-semibold tabular-nums">{formatCurrency(s.resumen.total_gastos)}</span>
-          {pctImp != null && (
-            <span className="text-muted-foreground tabular-nums"> · {pctImp.toLocaleString("es-ES")} % de lo concedido</span>
-          )}
           {s.resumen.movimientos > 0 && (
             <span className="text-muted-foreground">
               {" "}
@@ -379,14 +376,6 @@ function Dinero({
           </Button>
         )}
       </div>
-      {pctImp != null && s.resumen.total_gastos > 0 && (
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-          <div
-            className={cn("h-full rounded-full", pctImp > 100 ? "bg-amber-500" : "bg-primary")}
-            style={{ width: `${Math.min(pctImp, 100)}%` }}
-          />
-        </div>
-      )}
     </div>
   )
 }

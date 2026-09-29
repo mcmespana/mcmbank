@@ -336,7 +336,7 @@ y esta semántica.
 |---|---|---|
 | **PageHeader** | Cabecera de una vista: título y acciones | Un `h1` por pantalla. Sin párrafo descriptivo: eso va al manual |
 | **FilterTabs** | Pestañas de filtro con contadores | **Scroll horizontal en móvil, nunca truncar ni abreviar la etiqueta**. Un icono *o* un punto de color, no los dos |
-| **ListRow** / **ListHeaderRow** | Fila densa de lista, con cabecera de columnas | Radio `lg`, borde de 1 px, banda de estado como `border-l-4`. Sin sombra en reposo, sin `hover:scale` |
+| **ListRow** / **ListHeaderRow** | Fila densa de lista, con cabecera de columnas | Radio `lg`, borde de 1 px. Sin sombra en reposo, sin `hover:scale`. Su `accentClass` (banda `border-l-4`) no se usa en pantallas nuevas (§5.15) |
 | **StatusPill** | Estado de una entidad | Punto de color o icono + texto. **Siempre texto**, nunca solo color. Sin emoji |
 | **EntityAvatar** | Círculo de una entidad (cuenta, proveedor, persona) | Logo si lo hay, si no iniciales sobre color derivado del nombre. Nunca un hueco gris |
 | **AmountDisplay** | Importe con signo | `tabular-nums`. Verde/rojo **por signo**. Un importe que no tiene signo (una factura por pagar) usa el componente de estado, no éste |
@@ -384,6 +384,12 @@ Esta lista está escrita contra cosas que ya están en nuestro código y nos han
     está mal. (Excepción tolerada y ya fichada: el modo Visión+ de Votaciones, §8.)
 14. **Nada de dos sistemas de tokens vivos en el mismo repo.** Si migras, migra; una migración
     a medias es peor que cualquiera de los dos estados.
+15. **Nada de tarjeta redondeada con una banda de color en el borde izquierdo** (ni arriba):
+    el `border-l-4 border-l-*` sobre un `rounded-*` es la firma de la interfaz hecha por
+    plantilla. El estado va en su pastilla (color + icono + texto). Si una lista necesita
+    más estructura, que sea una tabla: un contenedor por grupo, filas separadas por una
+    línea (`divide-y`) y una franja de cabecera. Lo que aún lo usa (`ListRow accentClass`
+    en Facturas, Pagos MCM e Informes) es deuda, no modelo.
 
 ---
 

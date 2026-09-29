@@ -421,14 +421,22 @@ usado en cuál, y cuánto de cada uno**.
   La página `/subvenciones/[id]` es la misma ficha a la izquierda y los
   movimientos a la derecha, que en una hoja no caben. El año y la ficha abierta
   van en la URL (`?anio=2026&s=<id>`, con `history.replaceState`).
+- **La lista es una tabla por grupo**, no tarjetas: un contenedor por ámbito
+  con su franja de cabecera (y subtotales bajo cada columna) y filas separadas
+  por `divide-y`. **Sin banda de color a la izquierda** (design.md §5.15): el
+  color del estado va en su pastilla.
 - **La fila entera abre la hoja y a la vez lleva controles**: el nombre es un
   botón cuyo `::after` cubre la fila, y el estado y los importes van encima con
   `relative z-10`. Nada de `ListRow onClick` aquí: meterían botones dentro de
   un `role="button"`.
-- **Los colores de estado viven en `SUBVENCION_ESTADO_INFO`** (banda
-  `accentClass`, punto, pastilla). Se generan porque `tailwind.config.ts`
-  escanea `lib/`, `hooks/` y `contexts/`; antes no lo hacía y una clase que
-  solo salía en `lib/utils` desaparecía sin avisar.
+- **Lo imputado no se compara con lo concedido.** Buena parte de la
+  justificación se hace fuera de la app, así que un "% de lo concedido" casi
+  nunca llegaría al 100 % y asustaría sin motivo. Se enseña "Imputado en MCM
+  Bank" en euros y movimientos, y nada más.
+- **Los colores de estado viven en `SUBVENCION_ESTADO_INFO`** (punto,
+  pastilla). Se generan porque `tailwind.config.ts` escanea `lib/`, `hooks/` y
+  `contexts/`; antes no lo hacía y una clase que solo salía en `lib/utils`
+  desaparecía sin avisar.
 - **Borrar un movimiento imputado se rechaza** (trigger
   `movimiento_en_subvencion_no_se_borra`, FK `RESTRICT`) con el nombre de la
   subvención en el mensaje.

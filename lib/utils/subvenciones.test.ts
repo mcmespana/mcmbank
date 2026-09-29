@@ -14,7 +14,6 @@ import {
   importeDesdePorcentaje,
   importeLibre,
   porcentajeDe,
-  porcentajeImputado,
   proximaFecha,
   repartirAsignacion,
   totalesEjercicio,
@@ -146,10 +145,6 @@ describe("varios", () => {
     expect(formatearIds(["a", "b"], "comas")).toBe("a,b")
     expect(formatearIds(["a", "b"], "json")).toBe('["a","b"]')
   })
-  it("porcentajeImputado", () => {
-    expect(porcentajeImputado(100, null)).toBeNull()
-    expect(porcentajeImputado(1, 3)).toBe(33.3)
-  })
   it("todos los estados tienen etiqueta y paso", () => {
     for (const e of SUBVENCION_ESTADOS) {
       expect(SUBVENCION_ESTADO_INFO[e].label).toBeTruthy()
@@ -192,6 +187,5 @@ describe("recuentoPorEstado y camino", () => {
     const pasos = SUBVENCION_CAMINO.map((e) => SUBVENCION_ESTADO_INFO[e].paso)
     expect(pasos).toEqual([...pasos].sort((a, b) => a - b))
     expect(SUBVENCION_CAMINO).not.toContain("rechazada")
-    for (const e of SUBVENCION_ESTADOS) expect(SUBVENCION_ESTADO_INFO[e].accentClass).toMatch(/^border-l-/)
   })
 })

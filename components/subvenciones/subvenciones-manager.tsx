@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
 import { FilterTabs } from "@/components/ui/filter-tabs"
-import { ListHeaderRow, ListRow } from "@/components/ui/list-row"
+import { ListHeaderRow } from "@/components/ui/list-row"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorMessage } from "@/components/ui/error-message"
 import { useIsAdminState } from "@/hooks/use-is-admin"
@@ -26,7 +26,6 @@ import {
   cuandoEs,
   diasHasta,
   importeCobrado,
-  porcentajeImputado,
   proximaFecha,
   recuentoPorEstado,
   totalesEjercicio,
@@ -300,7 +299,7 @@ export function SubvencionesManager() {
                 </div>
               )}
 
-              <ListHeaderRow className={cn("gap-x-3 border-x border-l-4 border-transparent", COLUMNAS)}>
+              <ListHeaderRow className={cn("gap-x-3 border-x border-transparent", COLUMNAS)}>
                 <span>Subvención</span>
                 <span>Estado</span>
                 <span className="pr-[1.125rem] text-right">Solicitado</span>
@@ -311,7 +310,11 @@ export function SubvencionesManager() {
 
               <div className="space-y-4">
                 {grupos.map((g) => (
-                  <section key={g.ambito} aria-labelledby={`grupo-${g.ambito}`} className="space-y-1.5">
+                  <section
+                    key={g.ambito}
+                    aria-labelledby={`grupo-${g.ambito}`}
+                    className="overflow-hidden rounded-lg border bg-card"
+                  >
                     <CabeceraGrupo
                       id={`grupo-${g.ambito}`}
                       ambito={g.ambito}
@@ -319,15 +322,17 @@ export function SubvencionesManager() {
                       subvenciones={g.subvenciones}
                       conDinero={esAnio}
                     />
-                    {g.subvenciones.map((s) => (
-                      <SubvencionRow
-                        key={s.id}
-                        subvencion={s}
-                        hoy={hoy}
-                        abierta={s.id === abierta?.id}
-                        onAbrir={() => abrir(s.id)}
-                      />
-                    ))}
+                    <div className="divide-y">
+                      {g.subvenciones.map((s) => (
+                        <SubvencionRow
+                          key={s.id}
+                          subvencion={s}
+                          hoy={hoy}
+                          abierta={s.id === abierta?.id}
+                          onAbrir={() => abrir(s.id)}
+                        />
+                      ))}
+                    </div>
                   </section>
                 ))}
               </div>
@@ -493,9 +498,9 @@ function Cifra({ punto, label, valor, ayuda }: { punto: string; label: string; v
 // ---------------------------------------------------------------------------
 
 /**
- * El nombre del grupo y, en escritorio, sus subtotales debajo de cada columna
- * de importes, como las filas de total del Excel. Con una sola subvención no
- * se ponen: repetirían la fila de debajo.
+ * La franja de arriba de cada grupo: su nombre y, en escritorio, los
+ * subtotales debajo de cada columna de importes, como las filas de total del
+ * Excel. Con una sola subvención no se ponen: repetirían la fila de debajo.
  */
 function CabeceraGrupo({
   id,
@@ -522,7 +527,7 @@ function CabeceraGrupo({
   return (
     <div
       className={cn(
-        "grid grid-cols-[minmax(0,1fr)] items-end gap-x-3 border-x border-l-4 border-transparent px-3 pt-2 text-xs text-muted-foreground",
+        "grid grid-cols-[minmax(0,1fr)] items-center gap-x-3 border-b bg-muted/40 px-3 py-2 text-xs text-muted-foreground",
         COLUMNAS,
       )}
     >
@@ -548,11 +553,15 @@ function CabeceraGrupo({
 // ---------------------------------------------------------------------------
 
 /**
- * La fila se abre pulsando en cualquier sitio (el nombre es un botón cuyo
- * `::after` cubre la fila entera), y el estado y los importes se cambian ahí
- * mismo, sin abrir nada: van por encima de esa capa con `relative z-10`. Así
- * no hay botones metidos dentro de otro botón, que el lector de pantalla no
- * sabría anunciar.
+ * Una fila de la tabla del grupo, separada de la siguiente por una línea: sin
+ * tarjeta propia ni banda de color a la izquierda (un cliché que no queremos,
+ * design.md §5). El color del estado va en su pastilla, con icono y texto.
+ *
+ * Se abre pulsando en cualquier sitio (el nombre es un botón cuyo `::after`
+ * cubre la fila entera), y el estado y los importes se cambian ahí mismo, sin
+ * abrir nada: van por encima de esa capa con `relative z-10`. Así no hay
+ * botones metidos dentro de otro botón, que el lector de pantalla no sabría
+ * anunciar.
  */
 function SubvencionRow({
   subvencion: s,
@@ -571,7 +580,6 @@ function SubvencionRow({
   const fecha = proximaFecha(s, hoy)
   const cerca = fecha ? diasHasta(fecha.fecha, hoy) <= PLAZO_CERCA_DIAS : false
   const cobrado = importeCobrado(s)
-  const pctImp = porcentajeImputado(s.resumen.total_gastos, s.importe_concedido)
   const nombreCorto = s.codigo || s.nombre
   const g = (cambios: SubvencionUpdate, aviso: string) => guardar(s, cambios, { aviso })
 
@@ -594,14 +602,11 @@ function SubvencionRow({
   )
 
   return (
-    <ListRow
-      accentClass={info.accentClass}
-      selected={abierta}
+    <div
       className={cn(
-        "relative py-2.5",
-        // Sin `hover:border-border`: repintaría también la banda del estado.
-        !abierta && "hover:bg-muted/40 hover:shadow-md",
-        descartada && !abierta && "bg-muted/30",
+        "relative px-3 py-2.5 transition-colors duration-150",
+        abierta ? "bg-primary/[0.06]" : "hover:bg-muted/40",
+        descartada && !abierta && "bg-muted/20",
       )}
     >
       <div className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2.5 lg:items-center", COLUMNAS)}>
@@ -618,7 +623,7 @@ function SubvencionRow({
               aria-haspopup="dialog"
               className={cn(
                 // En móvil el nombre baja de línea en vez de cortarse: al lado está el estado y no queda sitio.
-                "min-w-0 break-words text-left font-medium text-foreground after:absolute lg:truncate after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring",
+                "min-w-0 break-words text-left font-medium text-foreground after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring lg:truncate",
                 descartada && "text-muted-foreground",
               )}
             >
@@ -668,9 +673,7 @@ function SubvencionRow({
             {s.resumen.movimientos > 0 ? (
               <>
                 <div className="text-sm font-medium">{formatCurrency(s.resumen.total_gastos)}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  {s.resumen.movimientos} mov.{pctImp != null ? ` · ${pctImp.toLocaleString("es-ES")} %` : ""}
-                </div>
+                <div className="text-[11px] text-muted-foreground">{s.resumen.movimientos} mov.</div>
               </>
             ) : (
               <span className="text-sm text-muted-foreground">—</span>
@@ -678,7 +681,7 @@ function SubvencionRow({
           </div>
         </div>
       </div>
-    </ListRow>
+    </div>
   )
 }
 

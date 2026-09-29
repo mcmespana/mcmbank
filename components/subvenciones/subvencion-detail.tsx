@@ -42,7 +42,6 @@ import {
 } from "@/lib/services/subvenciones"
 import {
   FORMATOS_IDS,
-  SUBVENCION_ESTADO_INFO,
   formatearIds,
   fueraDePeriodo,
   importeLibre,
@@ -128,7 +127,6 @@ export function SubvencionDetail({ id }: { id: string }) {
     )
   }
 
-  const info = SUBVENCION_ESTADO_INFO[subvencion.estado]
 
   const toggle = (movId: string) =>
     setSeleccion((prev) => {
@@ -231,10 +229,9 @@ export function SubvencionDetail({ id }: { id: string }) {
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)]">
         <aside
           aria-label="Ficha de la subvención"
-          className="relative rounded-xl border bg-card p-5 pt-6 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain"
+          className="rounded-xl border bg-card p-5 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain"
         >
           {/* Franja con el color del estado: se reconoce de un vistazo en qué punto está. */}
-          <div className={cn("absolute inset-x-0 top-0 h-1 rounded-t-xl", info.dotClass)} aria-hidden />
           <SubvencionFicha
             subvencion={subvencion}
             mostrarEnlaceMovimientos={false}

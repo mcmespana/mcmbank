@@ -14,6 +14,7 @@ import {
   resolveCategorias,
   resolveCuentas,
 } from "@/lib/api/catalogos"
+import { obtenerFichaMovimiento } from "@/lib/api/ficha-movimiento"
 import {
   actualizarMovimiento,
   buscarMovimientos,
@@ -407,6 +408,31 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
       if (!movimiento) throw badRequest(`No existe ningún movimiento con el id ${args.id}.`)
       return { movimiento }
     },
+  },
+  {
+    name: "obtener_ficha_movimiento",
+    title: "Ficha completa de un movimiento",
+    description:
+      "Todo de un movimiento en una llamada: sus datos, la factura vinculada (proveedor, NIF, número, fechas, lectura de la IA), " +
+      "los importes ya comparados (movimiento / factura / pagado / pendiente) y sus ficheros con URL firmada de descarga.",
+    inputSchema: objetoSchema(
+      {
+        id: { type: "string", description: "Id (UUID) del movimiento." },
+        segundos_url: {
+          type: "number",
+          description: "Cuánto duran las URL firmadas de los ficheros (60-3600, por defecto 900).",
+        },
+      },
+      ["id"],
+    ),
+    scope: "read",
+    annotations: { readOnlyHint: true },
+    handler: async (args, ctx) => ({
+      ficha: await obtenerFichaMovimiento(ctx.admin, textoObligatorio(args, "id"), {
+        baseUrl: ctx.baseUrl,
+        segundosUrl: numero(args, "segundos_url"),
+      }),
+    }),
   },
   {
     name: "actualizar_movimiento",

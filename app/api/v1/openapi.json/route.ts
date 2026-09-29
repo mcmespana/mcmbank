@@ -342,6 +342,36 @@ export async function GET(request: Request) {
           }),
         },
       },
+      "/api/v1/movimientos/{id}/ficha": {
+        get: {
+          tags: ["Movimientos"],
+          summary: "Ficha completa de un movimiento (datos + factura + importes + ficheros con URL firmada)",
+          description:
+            "Una sola llamada en vez de encadenar movimiento → factura → archivos. Los ficheros llevan `url_firmada`, descargable sin clave de API hasta que caduca. Pensado para volcar a una hoja de cálculo y copiar los ficheros a Drive.",
+          operationId: "getFichaMovimiento",
+          parameters: [
+            PARAM_ID("del movimiento"),
+            {
+              name: "segundos_url",
+              in: "query",
+              required: false,
+              description: "Duración de las URL firmadas, entre 60 y 3600 (por defecto 900).",
+              schema: { type: "integer", minimum: 60, maximum: 3600, default: 900 },
+            },
+          ],
+          responses: respuestaOk("Ficha del movimiento.", {
+            ficha: {
+              type: "object",
+              properties: {
+                movimiento: { $ref: "#/components/schemas/Movimiento" },
+                factura: { type: ["object", "null"], description: "Factura vinculada (sin sus archivos: van en `archivos`)." },
+                importes: { type: "object" },
+                archivos: { type: "array", items: { $ref: "#/components/schemas/Archivo" } },
+              },
+            },
+          }),
+        },
+      },
       "/api/v1/movimientos/{id}/archivos": {
         get: {
           tags: ["Movimientos"],

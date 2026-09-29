@@ -39,6 +39,8 @@ interface SubvencionFormDialogProps {
   /** Al crear: valores de partida (p. ej. la del año pasado, para repetirla). */
   plantilla?: Partial<Subvencion> | null
   onSaved: (subvencion: Subvencion) => void
+  /** Se abre desde la hoja lateral (z-[60]): tiene que ir por encima. */
+  enCapa?: boolean
 }
 
 interface Borrador {
@@ -149,7 +151,7 @@ const texto = (v: string) => (v.trim() ? v.trim() : null)
  * oficial de la convocatoria, el expediente, las fechas secundarias y los
  * enlaces sueltos.
  */
-export function SubvencionFormDialog({ open, onOpenChange, subvencion, plantilla, onSaved }: SubvencionFormDialogProps) {
+export function SubvencionFormDialog({ open, onOpenChange, subvencion, plantilla, onSaved, enCapa = false }: SubvencionFormDialogProps) {
   const { user } = useAuth()
   const { delegations } = useDelegationContext()
   const [borrador, setBorrador] = useState<Borrador>(() => borradorDe(subvencion ?? plantilla))
@@ -229,7 +231,7 @@ export function SubvencionFormDialog({ open, onOpenChange, subvencion, plantilla
 
   return (
     <Dialog open={open} onOpenChange={(o) => !enviando && onOpenChange(o)}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className={cn("max-h-[90dvh] overflow-y-auto sm:max-w-2xl", enCapa && "z-[70]")}>
         <DialogHeader>
           <DialogTitle>{subvencion ? "Editar subvención" : "Nueva subvención"}</DialogTitle>
           <DialogDescription>Solo el nombre y el financiador son obligatorios.</DialogDescription>

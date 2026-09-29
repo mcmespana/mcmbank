@@ -410,6 +410,25 @@ usado en cuál, y cuánto de cada uno**.
   nada por estado.
 - **Lo menor se pliega** ("Más detalles"): nombre oficial de la convocatoria,
   expediente, fechas secundarias y enlaces. En el Excel iban agrupados con "+".
+- **Se edita en el sitio, no en un formulario**: el estado y los tres importes
+  en la fila de la lista, y todo en la ficha (`campos-inline.tsx`: Enter o
+  salir guarda, Esc deja lo que había). Guarda `useGuardarSubvencion()`:
+  optimista en la caché de la lista **y** en la de la ficha, vuelve atrás si
+  falla, y el estado y los importes sacan un aviso con "Deshacer". El
+  formulario queda para crear y para "Repetir en N+1".
+- **La ficha se abre en una hoja lateral amplia** (`subvencion-sheet.tsx`), no
+  en un diálogo: se cambia algo y se pasa a la siguiente sin perder el sitio.
+  La página `/subvenciones/[id]` es la misma ficha a la izquierda y los
+  movimientos a la derecha, que en una hoja no caben. El año y la ficha abierta
+  van en la URL (`?anio=2026&s=<id>`, con `history.replaceState`).
+- **La fila entera abre la hoja y a la vez lleva controles**: el nombre es un
+  botón cuyo `::after` cubre la fila, y el estado y los importes van encima con
+  `relative z-10`. Nada de `ListRow onClick` aquí: meterían botones dentro de
+  un `role="button"`.
+- **Los colores de estado viven en `SUBVENCION_ESTADO_INFO`** (banda
+  `accentClass`, punto, pastilla). Se generan porque `tailwind.config.ts`
+  escanea `lib/`, `hooks/` y `contexts/`; antes no lo hacía y una clase que
+  solo salía en `lib/utils` desaparecía sin avisar.
 - **Borrar un movimiento imputado se rechaza** (trigger
   `movimiento_en_subvencion_no_se_borra`, FK `RESTRICT`) con el nombre de la
   subvención en el mensaje.

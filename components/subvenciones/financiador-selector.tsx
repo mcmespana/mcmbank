@@ -19,6 +19,8 @@ interface FinanciadorSelectorProps {
   id?: string
   value: string | null
   onChange: (financiador: Financiador | null) => void
+  /** Aspecto de texto pulsable, para la edición inline de la ficha. */
+  compacto?: boolean
 }
 
 /**
@@ -26,7 +28,7 @@ interface FinanciadorSelectorProps {
  * repite todos los años, así que lo normal es elegirlo; crear uno nuevo pide
  * además su ámbito, que es lo que decide en qué grupo de la lista aparece.
  */
-export function FinanciadorSelector({ id, value, onChange }: FinanciadorSelectorProps) {
+export function FinanciadorSelector({ id, value, onChange, compacto = false }: FinanciadorSelectorProps) {
   const { financiadores, loading } = useFinanciadores()
   const [open, setOpen] = useState(false)
   const [busqueda, setBusqueda] = useState("")
@@ -92,19 +94,33 @@ export function FinanciadorSelector({ id, value, onChange }: FinanciadorSelector
   return (
     <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between font-normal"
-        >
-          <span className={cn("truncate", !actual && "text-muted-foreground")}>
-            {actual ? actual.nombre : loading ? "Cargando…" : "Elige quién convoca"}
-          </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        {compacto ? (
+          <button
+            id={id}
+            type="button"
+            aria-label={`Financiador: ${actual?.nombre ?? "sin elegir"}. Cambiar`}
+            className="inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 -mx-1.5 text-left text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className={cn("truncate", !actual && "text-muted-foreground")}>
+              {actual ? actual.nombre : loading ? "Cargando…" : "Elige quién convoca"}
+            </span>
+            <ChevronsUpDown className="h-3 w-3 shrink-0 opacity-50" />
+          </button>
+        ) : (
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+          >
+            <span className={cn("truncate", !actual && "text-muted-foreground")}>
+              {actual ? actual.nombre : loading ? "Cargando…" : "Elige quién convoca"}
+            </span>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent className="z-[80] w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
         <Command>

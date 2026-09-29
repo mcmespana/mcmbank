@@ -15,23 +15,15 @@ import {
   FileText,
   Landmark,
   Paperclip,
-  ExternalLink,
-  FolderOpen,
-  Pencil,
-  Repeat,
   Search,
-  Trash2,
   X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { PageHeader } from "@/components/ui/page-header"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
-import { StatusPill } from "@/components/ui/status-pill"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorMessage } from "@/components/ui/error-message"
-import { ActionMenu } from "@/components/ui/action-menu"
 import { EntityAvatar } from "@/components/ui/entity-avatar"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -39,14 +31,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIsAdminState } from "@/hooks/use-is-admin"
 import { useSubvencion } from "@/hooks/use-subvenciones"
 import { useClipboard } from "@/hooks/use-clipboard"
-import { SubvencionFormDialog } from "./subvencion-form-dialog"
+import { SubvencionFicha } from "./subvencion-ficha"
+import { AccionesSubvencion } from "./subvencion-sheet"
 import { ImputacionEditor } from "./imputacion-editor"
 import {
   actualizarImputacion,
-  eliminarSubvencion,
   quitarMovimientos,
   restaurarImputaciones,
-  restaurarSubvencion,
   type MovimientoDeSubvencion,
 } from "@/lib/services/subvenciones"
 import {
@@ -54,15 +45,12 @@ import {
   SUBVENCION_ESTADO_INFO,
   formatearIds,
   fueraDePeriodo,
-  importeCobrado,
   importeLibre,
-  porcentajeImputado,
   type FormatoIds,
 } from "@/lib/utils/subvenciones"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { describirError } from "@/lib/utils/describir-error"
 import { cn } from "@/lib/utils"
-import type { Subvencion, SubvencionConResumen } from "@/lib/types/database"
 
 function normalizar(t: string) {
   return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
@@ -76,8 +64,6 @@ export function SubvencionDetail({ id }: { id: string }) {
   const { subvencion, movimientos, loading, movimientosLoading, movimientosFetching, error, invalidar } =
     useSubvencion(id, { enabled: isAdmin })
 
-  const [editarOpen, setEditarOpen] = useState(false)
-  const [repetirOpen, setRepetirOpen] = useState(false)
   const [delegacion, setDelegacion] = useState<string>(TODAS)
   const [busqueda, setBusqueda] = useState("")
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
@@ -199,39 +185,6 @@ export function SubvencionDetail({ id }: { id: string }) {
     }
   }
 
-  const handleEliminar = async () => {
-    try {
-      const borrada = await eliminarSubvencion(subvencion.id)
-      // Primero se sale: invalidar con la ficha aún montada la recargaría y
-      // enseñaría "esta subvención no existe" durante un instante.
-      router.push("/subvenciones")
-      invalidar()
-      const n = borrada.imputaciones.length
-      toast.success(
-        n
-          ? `Subvención borrada. Sus ${n} movimientos quedan libres para otra.`
-          : "Subvención borrada",
-        {
-          duration: 12000,
-          action: {
-            label: "Deshacer",
-            onClick: () => {
-              restaurarSubvencion(borrada)
-                .then(() => {
-                  invalidar()
-                  toast.success("Subvención recuperada")
-                  router.push(`/subvenciones/${borrada.ficha.id}`)
-                })
-                .catch((err) => toast.error(describirError(err, "No se ha podido recuperar la subvención")))
-            },
-          },
-        },
-      )
-    } catch (err) {
-      toast.error(describirError(err, "No se ha podido borrar la subvención"))
-    }
-  }
-
   const handleGuardarParte = async (m: MovimientoDeSubvencion, importe: number) => {
     try {
       const anterior = await actualizarImputacion(subvencion.id, m.id, importe)
@@ -263,390 +216,175 @@ export function SubvencionDetail({ id }: { id: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
-          <Link href="/subvenciones">
-            <ArrowLeft className="h-4 w-4" />
-            Subvenciones{subvencion.ejercicio ? ` ${subvencion.ejercicio}` : ""}
-          </Link>
-        </Button>
-      </div>
+    <div className="space-y-4">
+      <h1 className="sr-only">{subvencion.codigo ? `${subvencion.codigo} · ${subvencion.nombre}` : subvencion.nombre}</h1>
+      <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
+        <Link href={`/subvenciones${subvencion.ejercicio ? `?anio=${subvencion.ejercicio}` : ""}`}>
+          <ArrowLeft className="h-4 w-4" />
+          Subvenciones{subvencion.ejercicio ? ` ${subvencion.ejercicio}` : ""}
+        </Link>
+      </Button>
 
-      <PageHeader
-        title={subvencion.codigo ? `${subvencion.codigo} · ${subvencion.nombre}` : subvencion.nombre}
-        description={
-          <span className="inline-flex flex-wrap items-center gap-2">
-            <StatusPill
-              label={info.label}
-              icon={info.icon}
-              size="md"
-              bgClass={info.bgClass}
-              textClass={info.textClass}
-              borderClass={info.borderClass}
-            />
-            <span>
-              {[subvencion.financiador?.nombre, subvencion.solicitante, subvencion.ejercicio ?? "Para estudiar"]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
-            {subvencion.recurrente && (
-              <span className="inline-flex items-center gap-1 text-xs">
-                <Repeat className="h-3.5 w-3.5" /> Sale cada año
-              </span>
-            )}
-          </span>
-        }
-        actions={
-          <>
-            {subvencion.url_carpeta && (
-              <Button variant="outline" asChild>
-                <a href={subvencion.url_carpeta} target="_blank" rel="noopener noreferrer">
-                  <FolderOpen className="h-4 w-4" />
-                  Carpeta
-                </a>
+      {/* Dos paneles, como Facturas: la ficha a la izquierda (se edita en el
+          sitio y se queda quieta al bajar) y los movimientos, que son una
+          tabla ancha, a la derecha. En móvil, uno debajo del otro. */}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)]">
+        <aside
+          aria-label="Ficha de la subvención"
+          className="relative rounded-xl border bg-card p-5 pt-6 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain"
+        >
+          {/* Franja con el color del estado: se reconoce de un vistazo en qué punto está. */}
+          <div className={cn("absolute inset-x-0 top-0 h-1 rounded-t-xl", info.dotClass)} aria-hidden />
+          <SubvencionFicha
+            subvencion={subvencion}
+            mostrarEnlaceMovimientos={false}
+            acciones={<AccionesSubvencion subvencion={subvencion} onBorrada={() => router.push("/subvenciones")} />}
+          />
+          {fueraCount > 0 && (
+            <p className="mt-4 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+              <CalendarRange className="h-3.5 w-3.5 shrink-0" />
+              {fueraCount} {fueraCount === 1 ? "movimiento cae" : "movimientos caen"} fuera del periodo de gastos.
+            </p>
+          )}
+        </aside>
+
+        <section className="min-w-0 space-y-3" aria-labelledby="sv-movimientos">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <h2 id="sv-movimientos" className="shrink-0 text-lg font-semibold">
+              Movimientos imputados
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/transacciones">
+                  <ArrowLeftRight className="h-4 w-4" />
+                  Añadir desde Movimientos
+                </Link>
               </Button>
-            )}
-            <Button variant="outline" onClick={() => setEditarOpen(true)}>
-              <Pencil className="h-4 w-4" />
-              Editar datos
-            </Button>
-            <ActionMenu
-              ariaLabel="Más acciones de la subvención"
-              items={[
-                {
-                  label: `Repetir en ${(subvencion.ejercicio ?? new Date().getFullYear()) + 1}`,
-                  icon: Repeat,
-                  onSelect: () => setRepetirOpen(true),
-                },
-                {
-                  label: "Borrar subvención",
-                  icon: Trash2,
-                  destructive: true,
-                  onSelect: handleEliminar,
-                },
-              ]}
-            />
-          </>
-        }
-      />
-
-      <Resumen subvencion={subvencion} fueraCount={fueraCount} />
-
-      <section className="space-y-3" aria-labelledby="sv-movimientos">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <h2 id="sv-movimientos" className="text-lg font-semibold">
-            Movimientos imputados
-          </h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/transacciones">
-                <ArrowLeftRight className="h-4 w-4" />
-                Añadir desde Movimientos
-              </Link>
-            </Button>
-            <CopiarIdsButton
-              cuantos={idsObjetivo.length}
-              deSeleccion={seleccionVisible.length > 0}
-              copiado={copied !== null}
-              onCopiar={copiarIds}
-            />
-            <Button variant="outline" size="sm" onClick={handleExcel} disabled={!visibles.length}>
-              <Download className="h-4 w-4" />
-              Descargar Excel
-            </Button>
-          </div>
-        </div>
-
-        {movimientos.length > 0 && (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {delegaciones.length > 1 && (
-              <Select value={delegacion} onValueChange={setDelegacion}>
-                <SelectTrigger className="sm:w-64" aria-label="Filtrar por delegación">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODAS}>Todas las delegaciones ({movimientos.length})</SelectItem>
-                  {delegaciones.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.nombre} ({d.n})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <div className="relative sm:w-80">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar concepto, proveedor, id…"
-                className="pl-8"
-                aria-label="Buscar en los movimientos de la subvención"
+              <CopiarIdsButton
+                cuantos={idsObjetivo.length}
+                deSeleccion={seleccionVisible.length > 0}
+                copiado={copied !== null}
+                onCopiar={copiarIds}
               />
-            </div>
-          </div>
-        )}
-
-        {seleccionVisible.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
-            <span className="font-medium" aria-live="polite">
-              {seleccionVisible.length} {seleccionVisible.length === 1 ? "seleccionado" : "seleccionados"} ·{" "}
-              {formatCurrency(seleccionVisible.reduce((acc, m) => acc + m.importe_imputado, 0))}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="destructiveGhost"
-                size="sm"
-                onClick={handleQuitar}
-                disabled={quitando}
-                aria-busy={quitando}
-              >
-                {quitando ? <LoadingSpinner size="sm" /> : <X className="h-4 w-4" />}
-                Quitar de la subvención
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSeleccion(new Set())}>
-                Limpiar selección
+              <Button variant="outline" size="sm" onClick={handleExcel} disabled={!visibles.length}>
+                <Download className="h-4 w-4" />
+                Descargar Excel
               </Button>
             </div>
           </div>
-        )}
 
-        {movimientosLoading ? (
-          <PageSkeleton rows={5} tabs={0} />
-        ) : movimientos.length === 0 ? (
-          <EmptyState
-            icon={<ArrowLeftRight className="h-5 w-5" />}
-            title="Todavía no tiene movimientos"
-            description="Ve a Movimientos, elige una delegación, selecciona los gastos que justifica y pulsa «Subvención». Puedes repetirlo con cada delegación."
-          >
-            <Button asChild>
-              <Link href="/transacciones">Ir a Movimientos</Link>
-            </Button>
-          </EmptyState>
-        ) : visibles.length === 0 ? (
-          <EmptyState title="Ningún movimiento coincide" description="Prueba con otra búsqueda o con todas las delegaciones.">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setBusqueda("")
-                setDelegacion(TODAS)
-              }}
+          {movimientos.length > 0 && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {delegaciones.length > 1 && (
+                <Select value={delegacion} onValueChange={setDelegacion}>
+                  <SelectTrigger className="sm:w-64" aria-label="Filtrar por delegación">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TODAS}>Todas las delegaciones ({movimientos.length})</SelectItem>
+                    {delegaciones.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.nombre} ({d.n})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <div className="relative sm:w-80">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Buscar concepto, proveedor, id…"
+                  className="pl-8"
+                  aria-label="Buscar en los movimientos de la subvención"
+                />
+              </div>
+            </div>
+          )}
+
+          {seleccionVisible.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
+              <span className="font-medium" aria-live="polite">
+                {seleccionVisible.length} {seleccionVisible.length === 1 ? "seleccionado" : "seleccionados"} ·{" "}
+                {formatCurrency(seleccionVisible.reduce((acc, m) => acc + m.importe_imputado, 0))}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="destructiveGhost"
+                  size="sm"
+                  onClick={handleQuitar}
+                  disabled={quitando}
+                  aria-busy={quitando}
+                >
+                  {quitando ? <LoadingSpinner size="sm" /> : <X className="h-4 w-4" />}
+                  Quitar de la subvención
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSeleccion(new Set())}>
+                  Limpiar selección
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {movimientosLoading ? (
+            <PageSkeleton rows={5} tabs={0} />
+          ) : movimientos.length === 0 ? (
+            <EmptyState
+              icon={<ArrowLeftRight className="h-5 w-5" />}
+              title="Todavía no tiene movimientos"
+              description="Ve a Movimientos, elige una delegación, selecciona los gastos que justifica y pulsa «Subvención». Puedes repetirlo con cada delegación."
             >
-              Quitar los filtros
-            </Button>
-          </EmptyState>
-        ) : (
-          <div className={cn("space-y-1.5 transition-opacity", movimientosFetching && "opacity-60")}>
-            <div className="flex items-center gap-3 px-3 text-xs text-muted-foreground">
-              <Checkbox
-                checked={todoVisibleMarcado ? true : seleccionVisible.length ? "indeterminate" : false}
-                onCheckedChange={() =>
-                  setSeleccion(todoVisibleMarcado ? new Set() : new Set(visibles.map((m) => m.id)))
-                }
-                aria-label="Seleccionar todos los movimientos visibles"
-              />
-              <span>
-                {visibles.length} de {movimientos.length} · {formatCurrency(visibles.reduce((a, m) => a + m.importe_imputado, 0))} imputados
-              </span>
+              <Button asChild>
+                <Link href="/transacciones">Ir a Movimientos</Link>
+              </Button>
+            </EmptyState>
+          ) : visibles.length === 0 ? (
+            <EmptyState title="Ningún movimiento coincide" description="Prueba con otra búsqueda o con todas las delegaciones.">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBusqueda("")
+                  setDelegacion(TODAS)
+                }}
+              >
+                Quitar los filtros
+              </Button>
+            </EmptyState>
+          ) : (
+            <div className={cn("space-y-1.5 transition-opacity", movimientosFetching && "opacity-60")}>
+              <div className="flex items-center gap-3 px-3 text-xs text-muted-foreground">
+                <Checkbox
+                  checked={todoVisibleMarcado ? true : seleccionVisible.length ? "indeterminate" : false}
+                  onCheckedChange={() =>
+                    setSeleccion(todoVisibleMarcado ? new Set() : new Set(visibles.map((m) => m.id)))
+                  }
+                  aria-label="Seleccionar todos los movimientos visibles"
+                />
+                <span>
+                  {visibles.length} de {movimientos.length} · {formatCurrency(visibles.reduce((a, m) => a + m.importe_imputado, 0))} imputados
+                </span>
+              </div>
+              {visibles.map((m) => (
+                <MovimientoFila
+                  key={m.id}
+                  movimiento={m}
+                  seleccionado={seleccion.has(m.id)}
+                  onToggle={() => toggle(m.id)}
+                  fuera={fueraDePeriodo(m.fecha, subvencion)}
+                  subvencionId={subvencion.id}
+                  onGuardarParte={(importe) => handleGuardarParte(m, importe)}
+                />
+              ))}
             </div>
-            {visibles.map((m) => (
-              <MovimientoFila
-                key={m.id}
-                movimiento={m}
-                seleccionado={seleccion.has(m.id)}
-                onToggle={() => toggle(m.id)}
-                fuera={fueraDePeriodo(m.fecha, subvencion)}
-                subvencionId={subvencion.id}
-                onGuardarParte={(importe) => handleGuardarParte(m, importe)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <SubvencionFormDialog
-        open={editarOpen}
-        onOpenChange={setEditarOpen}
-        subvencion={subvencion}
-        onSaved={() => invalidar()}
-      />
-      <SubvencionFormDialog
-        open={repetirOpen}
-        onOpenChange={setRepetirOpen}
-        plantilla={plantillaSiguiente(subvencion)}
-        onSaved={(nueva) => {
-          invalidar()
-          router.push(`/subvenciones/${nueva.id}`)
-        }}
-      />
+          )}
+        </section>
+      </div>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-
-/**
- * La del año que viene, a partir de esta: lo que no cambia de un año a otro
- * (quién, qué, quién la pide, enlaces) y nada de lo que sí (fechas, importes,
- * expediente). Casi todas salen cada año, y en el Excel se copiaba la fila.
- */
-function plantillaSiguiente(s: Subvencion): Partial<Subvencion> {
-  return {
-    id: `repetir-${s.id}`,
-    codigo: s.codigo,
-    nombre: s.nombre,
-    financiador_id: s.financiador_id,
-    solicitante: s.solicitante,
-    delegacion_id: s.delegacion_id,
-    convocatoria: s.convocatoria,
-    recurrente: s.recurrente,
-    enlaces: s.enlaces,
-    ejercicio: (s.ejercicio ?? new Date().getFullYear()) + 1,
-    estado: "no_convocada",
-    notas: s.notas,
-  }
-}
-
-function Dato({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="truncate text-sm font-medium tabular-nums">{children}</dd>
-    </div>
-  )
-}
-
-function Resumen({ subvencion: s, fueraCount }: { subvencion: SubvencionConResumen; fueraCount: number }) {
-  const pct = porcentajeImputado(s.resumen.total_gastos, s.importe_concedido)
-  const pendiente = s.importe_concedido != null ? s.importe_concedido - s.resumen.total_gastos : null
-  const cobrado = importeCobrado(s)
-  const fecha = (f: string | null) => (f ? formatDate(f) : "—")
-  const [verMas, setVerMas] = useState(false)
-  const hayMas = Boolean(s.convocatoria || s.expediente || s.fecha_convocatoria || s.fecha_solicitud || s.enlaces.length)
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-      <div className="rounded-lg border bg-card p-4">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Dato label="Solicitado">{s.importe_solicitado != null ? formatCurrency(s.importe_solicitado) : "—"}</Dato>
-          <Dato label="Concedido">{s.importe_concedido != null ? formatCurrency(s.importe_concedido) : "—"}</Dato>
-          <Dato label="Cobrado">{cobrado ? formatCurrency(cobrado) : "—"}</Dato>
-          <Dato label="Imputado (gastos)">{formatCurrency(s.resumen.total_gastos)}</Dato>
-          <Dato label={pendiente != null && pendiente < 0 ? "Imputado de más" : "Falta por imputar"}>
-            {pendiente != null ? formatCurrency(Math.abs(pendiente)) : "—"}
-          </Dato>
-          <Dato label="Movimientos">
-            {s.resumen.movimientos}
-            {s.resumen.delegaciones > 0 && (
-              <span className="font-normal text-muted-foreground">
-                {" "}
-                · {s.resumen.delegaciones} {s.resumen.delegaciones === 1 ? "deleg." : "delegs."}
-              </span>
-            )}
-          </Dato>
-        </div>
-        {pct != null && (
-          <div className="mt-4 space-y-1">
-            <div
-              className="h-1.5 overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-valuenow={Math.min(pct, 100)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Parte de lo concedido que ya está imputada"
-            >
-              <div
-                className={cn("h-full rounded-full", pct > 100 ? "bg-amber-500" : "bg-primary")}
-                style={{ width: `${Math.min(pct, 100)}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground tabular-nums">{pct.toLocaleString("es-ES")} % de lo concedido</p>
-          </div>
-        )}
-        {s.resumen.movimientos_parciales > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {s.resumen.movimientos_parciales}{" "}
-            {s.resumen.movimientos_parciales === 1 ? "movimiento está imputado" : "movimientos están imputados"} solo en parte.
-          </p>
-        )}
-        {s.resumen.total_ingresos > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            También hay {formatCurrency(s.resumen.total_ingresos)} en ingresos imputados (no cuentan como gasto).
-          </p>
-        )}
-      </div>
-
-      <dl className="grid grid-cols-2 content-start gap-4 rounded-lg border bg-card p-4 sm:grid-cols-3">
-        <Dato label="Límite para solicitar">{fecha(s.fecha_limite_solicitud)}</Dato>
-        <Dato label="Concesión">{fecha(s.fecha_concesion)}</Dato>
-        <Dato label="Justificación">
-          {fecha(s.fecha_justificacion_1)}
-          {s.fecha_justificacion_2 && <span className="font-normal text-muted-foreground"> · 2ª {fecha(s.fecha_justificacion_2)}</span>}
-        </Dato>
-        <Dato label="Periodo de gastos">
-          {s.periodo_desde || s.periodo_hasta ? `${fecha(s.periodo_desde)} – ${fecha(s.periodo_hasta)}` : "—"}
-        </Dato>
-        <Dato label="Justificación completa">{s.justificacion_completa ? "Sí" : "No"}</Dato>
-        {fueraCount > 0 && (
-          <div className="col-span-2 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 sm:col-span-3">
-            <CalendarRange className="h-3.5 w-3.5 shrink-0" />
-            {fueraCount} {fueraCount === 1 ? "movimiento cae" : "movimientos caen"} fuera del periodo de gastos.
-          </div>
-        )}
-        {s.notas && (
-          <div className="col-span-2 sm:col-span-3">
-            <dt className="text-xs text-muted-foreground">Notas</dt>
-            <dd className="whitespace-pre-wrap text-sm">{s.notas}</dd>
-          </div>
-        )}
-        {/* Lo que en el Excel iba agrupado con el "+": se consulta poco. */}
-        {hayMas && (
-          <div className="col-span-2 sm:col-span-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="-ml-2 h-7 text-xs text-muted-foreground"
-              onClick={() => setVerMas((v) => !v)}
-              aria-expanded={verMas}
-            >
-              {verMas ? "Menos detalles" : "Más detalles"}
-            </Button>
-            {verMas && (
-              <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {s.expediente && <Dato label="Expediente">{s.expediente}</Dato>}
-                {s.fecha_convocatoria && <Dato label="Sale la convocatoria">{fecha(s.fecha_convocatoria)}</Dato>}
-                {s.fecha_solicitud && <Dato label="Presentada el">{fecha(s.fecha_solicitud)}</Dato>}
-                {s.convocatoria && (
-                  <div className="col-span-2 sm:col-span-3">
-                    <dt className="text-xs text-muted-foreground">Convocatoria oficial</dt>
-                    <dd className="text-sm">{s.convocatoria}</dd>
-                  </div>
-                )}
-                {s.enlaces.length > 0 && (
-                  <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-3">
-                    {s.enlaces.map((e, i) => (
-                      <a
-                        key={i}
-                        href={e.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-muted"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        {e.nombre || "Enlace"}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </dl>
-    </div>
-  )
-}
 
 function CopiarIdsButton({
   cuantos,

@@ -1,6 +1,13 @@
 import {
   Ban,
   BadgeCheck,
+  Building2,
+  Flag,
+  Globe2,
+  HandHeart,
+  Home,
+  Landmark,
+  Shapes,
   CheckCircle2,
   CircleDashed,
   ClipboardList,
@@ -41,6 +48,8 @@ export interface SubvencionEstadoInfo {
   bgClass: string
   textClass: string
   borderClass: string
+  /** Banda izquierda de la fila (`ListRow accentClass`). */
+  accentClass: string
 }
 
 // Los colores siguen los del desplegable del Excel (gris → amarillo → naranja →
@@ -58,6 +67,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-muted/60",
     textClass: "text-muted-foreground",
     borderClass: "border-border",
+    accentClass: "border-l-slate-300 dark:border-l-slate-600",
   },
   por_solicitar: {
     value: "por_solicitar",
@@ -70,6 +80,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-yellow-50 dark:bg-yellow-950/30",
     textClass: "text-yellow-800 dark:text-yellow-200",
     borderClass: "border-yellow-300/70 dark:border-yellow-900/60",
+    accentClass: "border-l-yellow-400 dark:border-l-yellow-500",
   },
   solicitada: {
     value: "solicitada",
@@ -82,6 +93,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-orange-50 dark:bg-orange-950/30",
     textClass: "text-orange-800 dark:text-orange-200",
     borderClass: "border-orange-200/70 dark:border-orange-900/60",
+    accentClass: "border-l-orange-400 dark:border-l-orange-500",
   },
   concedida: {
     value: "concedida",
@@ -94,6 +106,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-lime-50 dark:bg-lime-950/30",
     textClass: "text-lime-800 dark:text-lime-200",
     borderClass: "border-lime-200/70 dark:border-lime-900/60",
+    accentClass: "border-l-lime-500",
   },
   por_justificar: {
     value: "por_justificar",
@@ -106,6 +119,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-blue-50 dark:bg-blue-950/30",
     textClass: "text-blue-800 dark:text-blue-200",
     borderClass: "border-blue-200/70 dark:border-blue-900/60",
+    accentClass: "border-l-blue-600 dark:border-l-blue-500",
   },
   justificada: {
     value: "justificada",
@@ -118,6 +132,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-emerald-50 dark:bg-emerald-950/30",
     textClass: "text-emerald-800 dark:text-emerald-200",
     borderClass: "border-emerald-200/70 dark:border-emerald-900/60",
+    accentClass: "border-l-emerald-600 dark:border-l-emerald-500",
   },
   cobrada: {
     value: "cobrada",
@@ -130,6 +145,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-teal-50 dark:bg-teal-950/30",
     textClass: "text-teal-800 dark:text-teal-200",
     borderClass: "border-teal-300/70 dark:border-teal-900/60",
+    accentClass: "border-l-teal-700 dark:border-l-teal-500",
   },
   cobrada_parcial: {
     value: "cobrada_parcial",
@@ -142,6 +158,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-cyan-50 dark:bg-cyan-950/30",
     textClass: "text-cyan-800 dark:text-cyan-200",
     borderClass: "border-cyan-200/70 dark:border-cyan-900/60",
+    accentClass: "border-l-cyan-400",
   },
   rechazada: {
     value: "rechazada",
@@ -154,6 +171,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-red-50 dark:bg-red-950/30",
     textClass: "text-red-700 dark:text-red-300",
     borderClass: "border-red-200/70 dark:border-red-900/60",
+    accentClass: "border-l-red-600 dark:border-l-red-500",
   },
   renuncia: {
     value: "renuncia",
@@ -166,8 +184,24 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     bgClass: "bg-muted/60",
     textClass: "text-muted-foreground",
     borderClass: "border-border",
+    accentClass: "border-l-slate-300 dark:border-l-slate-600",
   },
 }
+
+/**
+ * El camino normal de una subvención, en orden: lo que se pinta como barra de
+ * pasos en la ficha. Los desenlaces que se salen del camino (rechazada,
+ * renunciamos, cobrada en parte) se eligen desde el desplegable del estado.
+ */
+export const SUBVENCION_CAMINO: SubvencionEstado[] = [
+  "no_convocada",
+  "por_solicitar",
+  "solicitada",
+  "concedida",
+  "por_justificar",
+  "justificada",
+  "cobrada",
+]
 
 /** Estados con dinero comprometido: cuentan como "confirmado". */
 export function cuentaComoConfirmada(estado: SubvencionEstado): boolean {
@@ -183,14 +217,14 @@ export function admiteGastos(estado: SubvencionEstado): boolean {
 // Financiadores: grupos y orden de la lista
 // ---------------------------------------------------------------------------
 
-export const FINANCIADOR_AMBITO_INFO: Record<FinanciadorAmbito, { label: string; ejemplo: string }> = {
-  autonomico: { label: "Generalitat", ejemplo: "GVA IVAJ, GVA Inclusión" },
-  provincial: { label: "Diputaciones", ejemplo: "Diputación CS" },
-  local: { label: "Ayuntamientos", ejemplo: "Ayto CS, Ayto Onda" },
-  estatal: { label: "Estatales", ejemplo: "Red.es, IRPF estatal" },
-  europeo: { label: "Europeas", ejemplo: "Cuerpo Europeo de Solidaridad" },
-  privado: { label: "Fundaciones y privadas", ejemplo: "Didania" },
-  otro: { label: "Otras", ejemplo: "" },
+export const FINANCIADOR_AMBITO_INFO: Record<FinanciadorAmbito, { label: string; ejemplo: string; icon: LucideIcon }> = {
+  autonomico: { label: "Generalitat", ejemplo: "GVA IVAJ, GVA Inclusión", icon: Landmark },
+  provincial: { label: "Diputaciones", ejemplo: "Diputación CS", icon: Building2 },
+  local: { label: "Ayuntamientos", ejemplo: "Ayto CS, Ayto Onda", icon: Home },
+  estatal: { label: "Estatales", ejemplo: "Red.es, IRPF estatal", icon: Flag },
+  europeo: { label: "Europeas", ejemplo: "Cuerpo Europeo de Solidaridad", icon: Globe2 },
+  privado: { label: "Fundaciones y privadas", ejemplo: "Didania", icon: HandHeart },
+  otro: { label: "Otras", ejemplo: "", icon: Shapes },
 }
 
 export interface GrupoSubvenciones {
@@ -300,6 +334,68 @@ export function proximaFecha(
     if (s.fecha_justificacion_2) candidatas.push({ etiqueta: "2ª justificación", fecha: s.fecha_justificacion_2 })
   }
   return candidatas.filter((c) => c.fecha >= hoy).sort((a, b) => a.fecha.localeCompare(b.fecha))[0] ?? null
+}
+
+// ---------------------------------------------------------------------------
+// Línea de tiempo de la ficha
+// ---------------------------------------------------------------------------
+
+export type CampoFecha =
+  | "fecha_convocatoria"
+  | "fecha_limite_solicitud"
+  | "fecha_solicitud"
+  | "fecha_concesion"
+  | "fecha_justificacion_1"
+  | "fecha_justificacion_2"
+
+/** Las fechas de una subvención en el orden en que ocurren. */
+export const HITOS: { campo: CampoFecha; label: string }[] = [
+  { campo: "fecha_convocatoria", label: "Sale la convocatoria" },
+  { campo: "fecha_limite_solicitud", label: "Límite para solicitar" },
+  { campo: "fecha_solicitud", label: "Presentada" },
+  { campo: "fecha_concesion", label: "Concesión" },
+  { campo: "fecha_justificacion_1", label: "Justificación" },
+  { campo: "fecha_justificacion_2", label: "2ª justificación" },
+]
+
+/** Días naturales de `hoy` a `fecha` (negativo si ya pasó). Sin horas ni husos. */
+export function diasHasta(fecha: string, hoy: string): number {
+  const a = Date.UTC(+hoy.slice(0, 4), +hoy.slice(5, 7) - 1, +hoy.slice(8, 10))
+  const b = Date.UTC(+fecha.slice(0, 4), +fecha.slice(5, 7) - 1, +fecha.slice(8, 10))
+  return Math.round((b - a) / 86_400_000)
+}
+
+/**
+ * Un plazo a dos semanas o menos se pinta en ámbar (el `warn` de design.md),
+ * siempre con icono y texto al lado: el color solo no dice nada.
+ */
+export const PLAZO_CERCA_DIAS = 14
+export const PLAZO_CERCA_CLASS = "text-amber-700 dark:text-amber-400"
+
+/**
+ * "hoy", "mañana", "en 12 días", "hace 3 meses"… Para leer de un vistazo cuánto
+ * falta, junto a la fecha exacta (que se sigue enseñando). Días naturales.
+ */
+export function cuandoEs(fecha: string, hoy: string): string {
+  const dias = diasHasta(fecha, hoy)
+  if (dias === 0) return "hoy"
+  if (dias === 1) return "mañana"
+  if (dias === -1) return "ayer"
+  const abs = Math.abs(dias)
+  const texto =
+    abs < 45 ? `${abs} días` : abs < 365 ? `${Math.round(abs / 30)} meses` : `${Math.round(abs / 365)} ${Math.round(abs / 365) === 1 ? "año" : "años"}`
+  return dias > 0 ? `en ${texto}` : `hace ${texto}`
+}
+
+/** Cuántas subvenciones hay en cada estado, en el orden del camino. Solo los que tienen alguna. */
+export function recuentoPorEstado(
+  subvenciones: Pick<Subvencion, "estado">[],
+): { estado: SubvencionEstado; n: number }[] {
+  const n = new Map<SubvencionEstado, number>()
+  for (const s of subvenciones) n.set(s.estado, (n.get(s.estado) ?? 0) + 1)
+  return (Object.keys(SUBVENCION_ESTADO_INFO) as SubvencionEstado[])
+    .filter((e) => n.get(e))
+    .map((e) => ({ estado: e, n: n.get(e)! }))
 }
 
 // ---------------------------------------------------------------------------

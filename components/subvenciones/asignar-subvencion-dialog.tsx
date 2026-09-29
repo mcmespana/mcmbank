@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { CalendarRange, Landmark, Plus } from "lucide-react"
+import { CalendarRange, Landmark, Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { StatusPill } from "@/components/ui/status-pill"
 import {
@@ -20,7 +21,15 @@ import { useSubvenciones } from "@/hooks/use-subvenciones"
 import { useSubmitGuard } from "@/hooks/use-submit-guard"
 import { SubvencionFormDialog } from "./subvencion-form-dialog"
 import { imputacionesDeMovimientos, imputarMovimientos, quitarMovimientos } from "@/lib/services/subvenciones"
-import { SUBVENCION_ESTADO_INFO, fueraDePeriodo, repartirAsignacion } from "@/lib/utils/subvenciones"
+import {
+  SUBVENCION_ESTADO_INFO,
+  admiteGastos,
+  fueraDePeriodo,
+  importeDesdePorcentaje,
+  redondear2,
+  repartirAsignacion,
+  type Imputacion,
+} from "@/lib/utils/subvenciones"
 import { describirError } from "@/lib/utils/describir-error"
 import { formatCurrency } from "@/lib/utils/format"
 import { cn } from "@/lib/utils"
@@ -33,37 +42,38 @@ interface AsignarSubvencionDialogProps {
   onDone?: () => void
 }
 
+type Cuanto = "libre" | "porcentaje"
+
 /**
  * Imputa la selección de Movimientos a una subvención.
  *
- * Un movimiento solo puede estar en una subvención (scripts/071). Los que ya
- * están en otra se enseñan y **no se mueven**: sacar un gasto de una
- * justificación tiene que ser un gesto propio, desde esa subvención.
+ * Un movimiento puede repartirse entre varias subvenciones (scripts/072), así
+ * que cada uno entra por **lo que le queda libre**, o por un porcentaje de su
+ * importe ("el 60 % de cada factura del campamento, al IVAJ") sin pasar de lo
+ * libre. Lo que ya está entero en otra se enseña y no se toca: quitarle un
+ * gasto a una justificación es un gesto propio, desde esa subvención.
  */
-export function AsignarSubvencionDialog({
-  open,
-  onOpenChange,
-  movimientos,
-  onDone,
-}: AsignarSubvencionDialogProps) {
+export function AsignarSubvencionDialog({ open, onOpenChange, movimientos, onDone }: AsignarSubvencionDialogProps) {
   const { user } = useAuth()
   const { subvenciones, loading, invalidar } = useSubvenciones({ enabled: open })
   const [destinoId, setDestinoId] = useState<string | null>(null)
-  const [existentes, setExistentes] = useState<{ movimiento_id: string; subvencion_id: string }[] | null>(null)
+  const [existentes, setExistentes] = useState<Imputacion[] | null>(null)
   const [errorCarga, setErrorCarga] = useState<string | null>(null)
   const [crearOpen, setCrearOpen] = useState(false)
+  const [filtro, setFiltro] = useState("")
+  const [cuanto, setCuanto] = useState<Cuanto>("libre")
+  const [pct, setPct] = useState("100")
   const { enviando, guard } = useSubmitGuard()
 
-  const ids = useMemo(() => movimientos.map((m) => m.id), [movimientos])
-  const idsKey = ids.join(",")
+  const idsKey = movimientos.map((m) => m.id).join(",")
 
-  // Al abrir: dónde está ya cada movimiento seleccionado.
+  // Al abrir: dónde está ya cada movimiento seleccionado, y con cuánto.
   useEffect(() => {
     if (!open) return
     let vivo = true
     setExistentes(null)
     setErrorCarga(null)
-    imputacionesDeMovimientos(ids)
+    imputacionesDeMovimientos(movimientos.map((m) => m.id))
       .then((filas) => vivo && setExistentes(filas))
       .catch((err) => vivo && setErrorCarga(describirError(err, "No se ha podido comprobar la selección")))
     return () => {
@@ -72,41 +82,77 @@ export function AsignarSubvencionDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, idsKey])
 
-  // Solo se ofrecen las que admiten gastos: denegadas y cerradas no.
-  const elegibles = useMemo(
-    () => subvenciones.filter((s) => s.estado !== "denegada" && s.estado !== "cerrada"),
+  // Las rechazadas y renunciadas no justifican nada. Primero las del año más
+  // reciente, que es donde casi siempre se imputa.
+  const elegibles = useMemo(() => {
+    const q = filtro.trim().toLowerCase()
+    return subvenciones
+      .filter((s) => admiteGastos(s.estado))
+      .filter(
+        (s) =>
+          !q ||
+          [s.codigo, s.nombre, s.financiador?.nombre, s.ejercicio].filter(Boolean).join(" ").toLowerCase().includes(q),
+      )
+      .sort((a, b) => (b.ejercicio ?? 0) - (a.ejercicio ?? 0) || (a.financiador?.orden ?? 999) - (b.financiador?.orden ?? 999))
+  }, [subvenciones, filtro])
+  const nombrePorId = useMemo(
+    () => new Map(subvenciones.map((s) => [s.id, s.codigo ? `${s.codigo} · ${s.nombre}` : s.nombre])),
     [subvenciones],
   )
-  const nombrePorId = useMemo(() => new Map(subvenciones.map((s) => [s.id, s.nombre])), [subvenciones])
-  const destino = elegibles.find((s) => s.id === destinoId) ?? null
+  const destino = subvenciones.find((s) => s.id === destinoId) ?? null
 
   const reparto = useMemo(
-    () => (existentes && destinoId ? repartirAsignacion(ids, existentes, destinoId) : null),
-    [existentes, destinoId, ids],
+    () => (existentes && destinoId ? repartirAsignacion(movimientos, existentes, destinoId) : null),
+    [existentes, destinoId, movimientos],
   )
-  const libres = existentes ? repartirAsignacion(ids, existentes, "").nuevos.length : null
-  const nuevos = reparto?.nuevos ?? []
-  const nuevosSet = new Set(nuevos)
-  const importeNuevos = movimientos.filter((m) => nuevosSet.has(m.id)).reduce((a, m) => a + m.importe, 0)
-  const fuera = destino ? movimientos.filter((m) => nuevosSet.has(m.id) && fueraDePeriodo(m.fecha, destino)).length : 0
+
+  // Con porcentaje, cada uno se lleva ese % de su importe, sin pasar de lo libre.
+  const pctNum = Number(pct.replace(",", "."))
+  const pctValido = cuanto === "libre" || (Number.isFinite(pctNum) && pctNum > 0 && pctNum <= 100)
+  const items = useMemo(() => {
+    if (!reparto) return []
+    const totalPorId = new Map(movimientos.map((m) => [m.id, m.importe]))
+    return reparto.aImputar
+      .map((a) => ({
+        id: a.id,
+        importe:
+          cuanto === "libre"
+            ? a.importe
+            : redondear2(Math.min(a.importe, importeDesdePorcentaje(pctNum, totalPorId.get(a.id) ?? 0))),
+      }))
+      .filter((a) => a.importe > 0)
+  }, [reparto, cuanto, pctNum, movimientos])
+  const recortados =
+    cuanto === "porcentaje" && reparto
+      ? reparto.aImputar.filter((a) => {
+          const total = Math.abs(movimientos.find((m) => m.id === a.id)?.importe ?? 0)
+          return importeDesdePorcentaje(pctNum, total) > a.importe + 0.005
+        }).length
+      : 0
+  const importeTotal = items.reduce((acc, i) => acc + i.importe, 0)
+  const idsItems = new Set(items.map((i) => i.id))
+  const fuera = destino ? movimientos.filter((m) => idsItems.has(m.id) && fueraDePeriodo(m.fecha, destino)).length : 0
 
   const handleAsignar = guard(async () => {
-    if (!destino || !nuevos.length) return
+    if (!destino || !items.length || !pctValido) return
     try {
-      await imputarMovimientos(destino.id, nuevos, user?.id ?? null)
+      await imputarMovimientos(destino.id, items, user?.id ?? null)
       await invalidar()
       onOpenChange(false)
       onDone?.()
-      const saltados = ids.length - nuevos.length
+      const saltados = movimientos.length - items.length
       toast.success(
-        `${nuevos.length} ${nuevos.length === 1 ? "movimiento imputado" : "movimientos imputados"} a ${destino.nombre}` +
+        `${items.length} ${items.length === 1 ? "movimiento imputado" : "movimientos imputados"} a ${destino.nombre} · ${formatCurrency(importeTotal)}` +
           (saltados ? ` · ${saltados} no se han tocado` : ""),
         {
           duration: 12000,
           action: {
             label: "Deshacer",
             onClick: () => {
-              quitarMovimientos(destino.id, nuevos)
+              quitarMovimientos(
+                destino.id,
+                items.map((i) => i.id),
+              )
                 .then(() => {
                   invalidar()
                   toast.success("Imputación deshecha")
@@ -128,9 +174,8 @@ export function AsignarSubvencionDialog({
           <DialogHeader>
             <DialogTitle>Imputar a una subvención</DialogTitle>
             <DialogDescription>
-              {ids.length} {ids.length === 1 ? "movimiento seleccionado" : "movimientos seleccionados"}
-              {libres != null && libres < ids.length && ` · ${libres} libres`}. Cada movimiento solo puede estar en una
-              subvención.
+              {movimientos.length} {movimientos.length === 1 ? "movimiento seleccionado" : "movimientos seleccionados"}.
+              Un gasto puede repartirse entre varias subvenciones sin pasar de su importe.
             </DialogDescription>
           </DialogHeader>
 
@@ -142,10 +187,10 @@ export function AsignarSubvencionDialog({
             <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
               <LoadingSpinner size="sm" /> Comprobando la selección…
             </div>
-          ) : elegibles.length === 0 ? (
+          ) : subvenciones.filter((s) => admiteGastos(s.estado)).length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-6 text-center text-sm text-muted-foreground">
               <Landmark className="h-6 w-6" />
-              No hay ninguna subvención abierta a la que imputar gastos.
+              No hay ninguna subvención a la que imputar gastos.
               <Button size="sm" onClick={() => setCrearOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Nueva subvención
@@ -153,7 +198,17 @@ export function AsignarSubvencionDialog({
             </div>
           ) : (
             <div className="space-y-3">
-              <div role="radiogroup" aria-label="Subvención" className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={filtro}
+                  onChange={(e) => setFiltro(e.target.value)}
+                  placeholder="Buscar subvención…"
+                  className="pl-8"
+                  aria-label="Buscar subvención"
+                />
+              </div>
+              <div role="radiogroup" aria-label="Subvención" className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
                 {elegibles.map((s) => {
                   const info = SUBVENCION_ESTADO_INFO[s.estado]
                   const activa = s.id === destinoId
@@ -170,9 +225,13 @@ export function AsignarSubvencionDialog({
                       )}
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">{s.nombre}</span>
+                        <span className="block truncate text-sm font-medium">
+                          {s.codigo && <span className="mr-1.5 font-mono text-xs text-muted-foreground">{s.codigo}</span>}
+                          {s.nombre}
+                        </span>
                         <span className="block truncate text-xs text-muted-foreground">
-                          {[s.financiador, s.ejercicio].filter(Boolean).join(" · ")} · {s.resumen.movimientos} mov.
+                          {[s.financiador?.nombre, s.ejercicio ?? "Para estudiar"].filter(Boolean).join(" · ")} ·{" "}
+                          {s.resumen.movimientos} mov.
                         </span>
                       </span>
                       <StatusPill
@@ -185,31 +244,87 @@ export function AsignarSubvencionDialog({
                     </button>
                   )
                 })}
+                {elegibles.length === 0 && (
+                  <p className="py-4 text-center text-sm text-muted-foreground">Ninguna coincide con «{filtro}».</p>
+                )}
               </div>
               <Button variant="ghost" size="sm" onClick={() => setCrearOpen(true)} className="text-muted-foreground">
                 <Plus className="h-4 w-4" />
                 Nueva subvención
               </Button>
 
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">¿Cuánto de cada movimiento?</legend>
+                <div role="radiogroup" className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
+                  {(["libre", "porcentaje"] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      role="radio"
+                      aria-checked={cuanto === c}
+                      onClick={() => setCuanto(c)}
+                      className={cn(
+                        "rounded px-2 py-1.5 text-xs font-medium transition-colors",
+                        cuanto === c ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {c === "libre" ? "Todo lo que quede libre" : "Un porcentaje"}
+                    </button>
+                  ))}
+                </div>
+                {cuanto === "porcentaje" && (
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-28">
+                      <Input
+                        inputMode="decimal"
+                        value={pct}
+                        onChange={(e) => setPct(e.target.value.replace(/[^\d.,]/g, ""))}
+                        className="pr-7 text-right tabular-nums"
+                        aria-label="Porcentaje de cada movimiento"
+                        aria-invalid={!pctValido}
+                      />
+                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                        %
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {pctValido ? "de cada uno, sin pasar de lo que le quede libre." : "Entre 0 y 100."}
+                    </span>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">Luego puedes ajustar cada uno desde la subvención.</p>
+              </fieldset>
+
               {reparto && (
                 <div className="space-y-1.5 rounded-lg border bg-muted/30 p-3 text-sm" aria-live="polite">
                   <p>
-                    <span className="font-medium">{nuevos.length}</span>{" "}
-                    {nuevos.length === 1 ? "se imputará" : "se imputarán"}
-                    {nuevos.length > 0 && <> · {formatCurrency(importeNuevos)}</>}
+                    <span className="font-medium">{items.length}</span> {items.length === 1 ? "se imputará" : "se imputarán"}
+                    {items.length > 0 && <> · {formatCurrency(importeTotal)}</>}
                   </p>
-                  {reparto.yaEnEsta.length > 0 && (
+                  {reparto.parciales > 0 && (
                     <p className="text-muted-foreground">
-                      {reparto.yaEnEsta.length} ya {reparto.yaEnEsta.length === 1 ? "estaba" : "estaban"} en esta.
+                      {reparto.parciales} {reparto.parciales === 1 ? "ya está" : "ya están"} en parte en otra subvención: entra
+                      {reparto.parciales === 1 ? "" : "n"} solo por lo que queda libre.
                     </p>
                   )}
-                  {[...reparto.enOtra.entries()].map(([otraId, lista]) => (
+                  {recortados > 0 && (
+                    <p className="text-muted-foreground">
+                      {recortados} no {recortados === 1 ? "llega" : "llegan"} al {pct} % porque el resto está en otra.
+                    </p>
+                  )}
+                  {reparto.yaEnEsta.length > 0 && (
+                    <p className="text-muted-foreground">
+                      {reparto.yaEnEsta.length} ya {reparto.yaEnEsta.length === 1 ? "estaba" : "estaban"} en esta. Su parte
+                      se cambia desde la subvención.
+                    </p>
+                  )}
+                  {[...reparto.sinHueco.entries()].map(([otraId, lista]) => (
                     <p key={otraId} className="text-amber-700 dark:text-amber-300">
-                      {lista.length} {lista.length === 1 ? "está" : "están"} en{" "}
+                      {lista.length} {lista.length === 1 ? "está entero" : "están enteros"} en{" "}
                       <Link href={`/subvenciones/${otraId}`} className="font-medium underline underline-offset-2">
                         {nombrePorId.get(otraId) ?? "otra subvención"}
                       </Link>{" "}
-                      y no se {lista.length === 1 ? "toca" : "tocan"}. Para cambiarlos, quítalos antes de allí.
+                      y no {lista.length === 1 ? "cabe" : "caben"}. Para repartirlos, baja antes su parte allí.
                     </p>
                   ))}
                   {fuera > 0 && (
@@ -227,10 +342,14 @@ export function AsignarSubvencionDialog({
             <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={enviando}>
               Cancelar
             </Button>
-            <Button onClick={handleAsignar} disabled={!destino || !nuevos.length || enviando} aria-busy={enviando}>
+            <Button
+              onClick={handleAsignar}
+              disabled={!destino || !items.length || !pctValido || enviando}
+              aria-busy={enviando}
+            >
               {enviando && <LoadingSpinner size="sm" />}
-              {nuevos.length
-                ? `Imputar ${nuevos.length} ${nuevos.length === 1 ? "movimiento" : "movimientos"}`
+              {items.length
+                ? `Imputar ${items.length} ${items.length === 1 ? "movimiento" : "movimientos"}`
                 : "Imputar movimientos"}
             </Button>
           </DialogFooter>

@@ -63,7 +63,8 @@ conciliar_facturas, leer_factura_con_ia, aceptar_categoria_factura,
 subir_archivo, obtener_url_archivo, eliminar_archivo,
 listar_avisos, crear_aviso, actualizar_aviso, eliminar_aviso, notificar_aviso,
 listar_pagos_mcm, crear_pago_mcm, actualizar_pago_mcm,
-listar_subvenciones, obtener_subvencion.
+listar_subvenciones, obtener_subvencion, imputar_movimientos_subvencion,
+quitar_movimientos_subvencion.
 
 ## Endpoints REST principales
 
@@ -124,12 +125,14 @@ Reembolsos a personas del movimiento. POST anota un pago manual pendiente
 por gasolina (tickets o kilometraje) sigue siendo cosa de la aplicación, igual
 que marcarlo pagado, que solo ocurre al vincularlo con un movimiento.
 
-### GET ${origin}/api/v1/subvenciones · GET .../{id}
+### GET ${origin}/api/v1/subvenciones · GET .../{id} · POST / DELETE .../{id}/movimientos
 Subvenciones de la organización (no de una delegación) y los movimientos
-imputados a cada una, de cualquier delegación. Un movimiento solo puede estar
-en una subvención. El detalle trae \`movimiento_ids\` y los movimientos
-completos con sus archivos (\`?movimientos=false\` para solo los ids). Imputar
-se hace desde la aplicación.
+imputados a cada una, de cualquier delegación. Un movimiento puede repartirse
+entre varias subvenciones, cada una con su \`importe_imputado\`, sin pasar de su
+importe. El detalle trae \`movimiento_ids\`, \`imputaciones\` y los movimientos
+completos con sus archivos (\`?movimientos=false\` para solo los ids). POST
+imputa (\`{ "movimientos": [{ "id", "importe"? | "porcentaje"? }] }\`, sin nada =
+todo lo libre) y DELETE quita (\`{ "movimiento_ids": [...] }\`).
 
 ### GET ${origin}/api/v1/archivos/{id}/descargar
 Redirige a una URL firmada del fichero.

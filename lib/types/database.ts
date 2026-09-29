@@ -214,39 +214,74 @@ export type InformeConArchivos = Informe & {
 }
 export type GoogleCredencial = Database["public"]["Tables"]["google_credencial"]["Row"]
 
-// Subvenciones (scripts/071): de la organización, no de una delegación. Solo
-// gestores centrales. Un movimiento solo puede estar en una subvención.
-export type Subvencion = Omit<Database["public"]["Tables"]["subvencion"]["Row"], "estado"> & {
+// Subvenciones (scripts/071, 072): de la organización, no de una delegación.
+// Solo gestores centrales. Un movimiento puede repartirse entre varias
+// subvenciones, cada una con su parte (`importe_imputado`), sin pasar del 100 %.
+type SubvencionRow = Database["public"]["Tables"]["subvencion"]["Row"]
+export type SubvencionEnlace = { nombre: string; url: string }
+export type Subvencion = Omit<SubvencionRow, "estado" | "enlaces"> & {
   estado: SubvencionEstado
+  enlaces: SubvencionEnlace[]
 }
-export type SubvencionInsert = Omit<Database["public"]["Tables"]["subvencion"]["Insert"], "estado"> & {
+export type SubvencionInsert = Omit<Database["public"]["Tables"]["subvencion"]["Insert"], "estado" | "enlaces"> & {
   estado?: SubvencionEstado
+  enlaces?: SubvencionEnlace[]
 }
-export type SubvencionUpdate = Omit<Database["public"]["Tables"]["subvencion"]["Update"], "estado"> & {
+export type SubvencionUpdate = Omit<Database["public"]["Tables"]["subvencion"]["Update"], "estado" | "enlaces"> & {
   estado?: SubvencionEstado
+  enlaces?: SubvencionEnlace[]
 }
+/**
+ * Los estados del Excel de la oficina técnica, en su orden (el número que
+ * llevaban delante). Los cuatro últimos son finales.
+ */
 export const SUBVENCION_ESTADOS = [
-  "en_preparacion",
+  "no_convocada",
+  "por_solicitar",
   "solicitada",
   "concedida",
-  "denegada",
+  "por_justificar",
   "justificada",
-  "cerrada",
+  "cobrada",
+  "cobrada_parcial",
+  "rechazada",
+  "renuncia",
 ] as const
 export type SubvencionEstado = (typeof SUBVENCION_ESTADOS)[number]
 export function esSubvencionEstado(valor: unknown): valor is SubvencionEstado {
   return typeof valor === "string" && (SUBVENCION_ESTADOS as readonly string[]).includes(valor)
 }
+
+/** Grupos de la lista, en el orden en que se pintan: arriba la Generalitat, abajo lo raro. */
+export const FINANCIADOR_AMBITOS = [
+  "autonomico",
+  "provincial",
+  "local",
+  "estatal",
+  "europeo",
+  "privado",
+  "otro",
+] as const
+export type FinanciadorAmbito = (typeof FINANCIADOR_AMBITOS)[number]
+export type Financiador = Omit<Database["public"]["Tables"]["financiador"]["Row"], "ambito"> & {
+  ambito: FinanciadorAmbito
+}
+
 export type SubvencionMovimiento = Database["public"]["Tables"]["subvencion_movimiento"]["Row"]
-/** Fila de la vista `subvencion_resumen`. `total_gastos` va en positivo. */
+/** Fila de la vista `subvencion_resumen`. Los totales son de lo imputado, en positivo. */
 export type SubvencionResumen = {
   subvencion_id: string
   movimientos: number
   delegaciones: number
   total_gastos: number
   total_ingresos: number
+  /** Movimientos imputados solo en parte. */
+  movimientos_parciales: number
 }
-export type SubvencionConResumen = Subvencion & { resumen: SubvencionResumen }
+export type SubvencionConResumen = Subvencion & {
+  resumen: SubvencionResumen
+  financiador: Pick<Financiador, "id" | "nombre" | "ambito" | "orden"> | null
+}
 
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {

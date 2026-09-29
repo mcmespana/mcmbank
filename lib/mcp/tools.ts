@@ -46,7 +46,12 @@ import {
 import { aceptarCategoriaSugerida, extraerDatosFactura } from "@/lib/api/factura-ia"
 import { actualizarPagoMcm, crearPagoMcm, listarPagosMcm } from "@/lib/api/pagos"
 import { resumenGeneral } from "@/lib/api/resumen"
-import { listarSubvenciones, obtenerSubvencion } from "@/lib/api/subvenciones"
+import {
+  imputarMovimientosSubvencion,
+  listarSubvenciones,
+  obtenerSubvencion,
+  quitarMovimientosSubvencion,
+} from "@/lib/api/subvenciones"
 import { SUBVENCION_ESTADOS } from "@/lib/types/database"
 import {
   eliminarArchivo,
@@ -1306,8 +1311,8 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
     name: "listar_subvenciones",
     title: "Ver subvenciones",
     description:
-      "Subvenciones de la organización (no son de una delegación: se justifican con gastos de varias), con cuántos movimientos tienen imputados y cuánto suman. " +
-      "Un movimiento solo puede estar imputado a una subvención.",
+      "Subvenciones de la organización (no son de una delegación: se justifican con gastos de varias), con su financiador, estado, importes y cuánto llevan imputado. " +
+      "Un movimiento puede repartirse entre varias subvenciones, cada una con su parte, sin pasar de su importe.",
     inputSchema: objetoSchema({
       estados: { type: "array", items: { type: "string", enum: [...SUBVENCION_ESTADOS] } },
       ejercicio: { type: "number", description: "Año de la convocatoria, p. ej. 2026." },
@@ -1326,7 +1331,7 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
     name: "obtener_subvencion",
     title: "Ver una subvención y sus movimientos",
     description:
-      "Devuelve la ficha de una subvención, los ids de los movimientos imputados y, salvo incluir_movimientos: false, esos movimientos completos (de cualquier delegación) con sus archivos y facturas. " +
+      "Devuelve la ficha de una subvención, los ids de los movimientos imputados con la parte de cada uno (importe_imputado) y, salvo incluir_movimientos: false, esos movimientos completos (de cualquier delegación) con sus archivos y facturas. " +
       "Es lo que hace falta para montar el Excel de justificación.",
     inputSchema: objetoSchema(
       {
@@ -1344,6 +1349,61 @@ export const HERRAMIENTAS: HerramientaMcp[] = [
         incluirArchivos: booleano(args, "incluir_archivos") ?? true,
         baseUrl: ctx.baseUrl,
       }),
+  },
+  {
+    name: "imputar_movimientos_subvencion",
+    title: "Imputar movimientos a una subvención",
+    description:
+      "Imputa movimientos (de cualquier delegación) a una subvención. Cada uno por 'importe' (euros), por 'porcentaje' de su importe, o sin nada: por todo lo que le quede libre. " +
+      "Un movimiento puede estar en varias subvenciones pero entre todas no pueden pasar de su importe: si alguno no cabe, el resto entra igual y 'errores' dice cuál y por qué. " +
+      "Si ya estaba en esta subvención y llega importe o porcentaje, se cambia su parte.",
+    inputSchema: objetoSchema(
+      {
+        subvencion_id: { type: "string", description: "Id de la subvención (ver listar_subvenciones)." },
+        movimientos: {
+          type: "array",
+          description: "Hasta 200 por llamada.",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string", description: "Id del movimiento." },
+              importe: { type: "number", description: "Euros a imputar, en positivo." },
+              porcentaje: { type: "number", description: "Porcentaje del importe del movimiento (0–100)." },
+            },
+            required: ["id"],
+          },
+        },
+        usuario_email: CAMPO_USUARIO_EMAIL,
+      },
+      ["subvencion_id", "movimientos"],
+    ),
+    scope: "write",
+    handler: async (args, ctx) => {
+      const actor = await actorDe(args, ctx)
+      const items = (listaDeObjetos(args, "movimientos") ?? []).map((m) => ({
+        id: textoObligatorio(m, "id"),
+        importe: numero(m, "importe"),
+        porcentaje: numero(m, "porcentaje"),
+      }))
+      return imputarMovimientosSubvencion(ctx.admin, textoObligatorio(args, "subvencion_id"), items, actor.id)
+    },
+  },
+  {
+    name: "quitar_movimientos_subvencion",
+    title: "Quitar movimientos de una subvención",
+    description:
+      "Saca movimientos de una subvención. No borra los movimientos ni toca su parte en otras subvenciones.",
+    inputSchema: objetoSchema(
+      {
+        subvencion_id: { type: "string" },
+        movimiento_ids: { type: "array", items: { type: "string" } },
+      },
+      ["subvencion_id", "movimiento_ids"],
+    ),
+    scope: "write",
+    annotations: { destructiveHint: true },
+    handler: async (args, ctx) =>
+      quitarMovimientosSubvencion(ctx.admin, textoObligatorio(args, "subvencion_id"), lista(args, "movimiento_ids") ?? []),
   },
 ]
 

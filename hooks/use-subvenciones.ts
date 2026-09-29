@@ -3,16 +3,18 @@
 import { useCallback } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  listarFinanciadores,
   listarMovimientosDeSubvencion,
   listarSubvenciones,
   obtenerSubvencion,
   type MovimientoDeSubvencion,
 } from "@/lib/services/subvenciones"
-import type { SubvencionConResumen } from "@/lib/types/database"
+import type { Financiador, SubvencionConResumen } from "@/lib/types/database"
 
 // Referencias estables para "sin datos" (ver hooks/use-cuentas.ts).
 const SIN_SUBVENCIONES: SubvencionConResumen[] = []
 const SIN_MOVIMIENTOS: MovimientoDeSubvencion[] = []
+const SIN_FINANCIADORES: Financiador[] = []
 
 export const subvencionesKey = ["subvenciones"] as const
 
@@ -74,4 +76,15 @@ export function useSubvencion(id: string | null, options: { enabled?: boolean } 
     error: ficha.error ?? movimientos.error,
     invalidar,
   }
+}
+
+/** Financiadores, para el selector del formulario. Van bajo la misma clave para invalidarse juntos. */
+export function useFinanciadores(options: { enabled?: boolean } = {}) {
+  const query = useQuery({
+    queryKey: [...subvencionesKey, "financiadores"],
+    queryFn: listarFinanciadores,
+    enabled: options.enabled ?? true,
+    staleTime: 60_000,
+  })
+  return { financiadores: query.data ?? SIN_FINANCIADORES, loading: query.isPending && query.fetchStatus !== "idle" }
 }

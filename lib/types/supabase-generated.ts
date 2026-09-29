@@ -1002,6 +1002,39 @@ export type Database = {
           },
         ]
       }
+      financiador: {
+        Row: {
+          actualizado_en: string
+          ambito: string
+          creado_en: string
+          id: string
+          nombre: string
+          notas: string | null
+          orden: number
+          url: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          ambito?: string
+          creado_en?: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          orden?: number
+          url?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          ambito?: string
+          creado_en?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          orden?: number
+          url?: string | null
+        }
+        Relationships: []
+      }
       google_credencial: {
         Row: {
           actualizado_en: string
@@ -1686,70 +1719,119 @@ export type Database = {
       subvencion: {
         Row: {
           actualizado_en: string
+          codigo: string | null
           convocatoria: string | null
           creado_en: string
           creado_por: string | null
+          delegacion_id: string | null
           ejercicio: number | null
+          enlaces: Json
           estado: string
           expediente: string | null
           fecha_concesion: string | null
-          fecha_limite_justificacion: string | null
+          fecha_convocatoria: string | null
+          fecha_justificacion_1: string | null
+          fecha_justificacion_2: string | null
+          fecha_limite_solicitud: string | null
           fecha_solicitud: string | null
-          financiador: string
+          financiador_id: string | null
           id: string
+          importe_cobrado: number | null
           importe_concedido: number | null
           importe_solicitado: number | null
+          justificacion_completa: boolean
           nombre: string
           notas: string | null
           periodo_desde: string | null
           periodo_hasta: string | null
+          recurrente: boolean
+          solicitante: string | null
+          url_carpeta: string | null
         }
         Insert: {
           actualizado_en?: string
+          codigo?: string | null
           convocatoria?: string | null
           creado_en?: string
           creado_por?: string | null
+          delegacion_id?: string | null
           ejercicio?: number | null
+          enlaces?: Json
           estado?: string
           expediente?: string | null
           fecha_concesion?: string | null
-          fecha_limite_justificacion?: string | null
+          fecha_convocatoria?: string | null
+          fecha_justificacion_1?: string | null
+          fecha_justificacion_2?: string | null
+          fecha_limite_solicitud?: string | null
           fecha_solicitud?: string | null
-          financiador: string
+          financiador_id?: string | null
           id?: string
+          importe_cobrado?: number | null
           importe_concedido?: number | null
           importe_solicitado?: number | null
+          justificacion_completa?: boolean
           nombre: string
           notas?: string | null
           periodo_desde?: string | null
           periodo_hasta?: string | null
+          recurrente?: boolean
+          solicitante?: string | null
+          url_carpeta?: string | null
         }
         Update: {
           actualizado_en?: string
+          codigo?: string | null
           convocatoria?: string | null
           creado_en?: string
           creado_por?: string | null
+          delegacion_id?: string | null
           ejercicio?: number | null
+          enlaces?: Json
           estado?: string
           expediente?: string | null
           fecha_concesion?: string | null
-          fecha_limite_justificacion?: string | null
+          fecha_convocatoria?: string | null
+          fecha_justificacion_1?: string | null
+          fecha_justificacion_2?: string | null
+          fecha_limite_solicitud?: string | null
           fecha_solicitud?: string | null
-          financiador?: string
+          financiador_id?: string | null
           id?: string
+          importe_cobrado?: number | null
           importe_concedido?: number | null
           importe_solicitado?: number | null
+          justificacion_completa?: boolean
           nombre?: string
           notas?: string | null
           periodo_desde?: string | null
           periodo_hasta?: string | null
+          recurrente?: boolean
+          solicitante?: string | null
+          url_carpeta?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subvencion_financiador_id_fkey"
+            columns: ["financiador_id"]
+            isOneToOne: false
+            referencedRelation: "financiador"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subvencion_delegacion_id_fkey"
+            columns: ["delegacion_id"]
+            isOneToOne: false
+            referencedRelation: "delegacion"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subvencion_movimiento: {
         Row: {
           asignado_en: string
           asignado_por: string | null
+          importe_imputado: number
           movimiento_id: string
           notas: string | null
           subvencion_id: string
@@ -1757,6 +1839,7 @@ export type Database = {
         Insert: {
           asignado_en?: string
           asignado_por?: string | null
+          importe_imputado?: number
           movimiento_id: string
           notas?: string | null
           subvencion_id: string
@@ -1764,6 +1847,7 @@ export type Database = {
         Update: {
           asignado_en?: string
           asignado_por?: string | null
+          importe_imputado?: number
           movimiento_id?: string
           notas?: string | null
           subvencion_id?: string
@@ -1772,7 +1856,7 @@ export type Database = {
           {
             foreignKeyName: "subvencion_movimiento_movimiento_id_fkey"
             columns: ["movimiento_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "movimiento"
             referencedColumns: ["id"]
           },

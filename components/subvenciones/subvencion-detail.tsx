@@ -15,7 +15,10 @@ import {
   FileText,
   Landmark,
   Paperclip,
+  ExternalLink,
+  FolderOpen,
   Pencil,
+  Repeat,
   Search,
   Trash2,
   X,
@@ -37,7 +40,9 @@ import { useIsAdminState } from "@/hooks/use-is-admin"
 import { useSubvencion } from "@/hooks/use-subvenciones"
 import { useClipboard } from "@/hooks/use-clipboard"
 import { SubvencionFormDialog } from "./subvencion-form-dialog"
+import { ImputacionEditor } from "./imputacion-editor"
 import {
+  actualizarImputacion,
   eliminarSubvencion,
   quitarMovimientos,
   restaurarImputaciones,
@@ -49,13 +54,15 @@ import {
   SUBVENCION_ESTADO_INFO,
   formatearIds,
   fueraDePeriodo,
+  importeCobrado,
+  importeLibre,
   porcentajeImputado,
   type FormatoIds,
 } from "@/lib/utils/subvenciones"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { describirError } from "@/lib/utils/describir-error"
 import { cn } from "@/lib/utils"
-import type { SubvencionConResumen } from "@/lib/types/database"
+import type { Subvencion, SubvencionConResumen } from "@/lib/types/database"
 
 function normalizar(t: string) {
   return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
@@ -70,6 +77,7 @@ export function SubvencionDetail({ id }: { id: string }) {
     useSubvencion(id, { enabled: isAdmin })
 
   const [editarOpen, setEditarOpen] = useState(false)
+  const [repetirOpen, setRepetirOpen] = useState(false)
   const [delegacion, setDelegacion] = useState<string>(TODAS)
   const [busqueda, setBusqueda] = useState("")
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
@@ -92,7 +100,9 @@ export function SubvencionDetail({ id }: { id: string }) {
       if (delegacion !== TODAS && m.delegacion_id !== delegacion) return false
       if (!q) return true
       return normalizar(
-        [m.concepto, m.descripcion, m.contacto?.nombre, m.categoria?.nombre, m.id].filter(Boolean).join(" "),
+        [m.concepto, m.descripcion, m.contacto?.nombre, m.categoria?.nombre, m.id, ...m.otras.map((o) => o.nombre)]
+          .filter(Boolean)
+          .join(" "),
       ).includes(q)
     })
   }, [movimientos, delegacion, busqueda])
@@ -222,6 +232,27 @@ export function SubvencionDetail({ id }: { id: string }) {
     }
   }
 
+  const handleGuardarParte = async (m: MovimientoDeSubvencion, importe: number) => {
+    try {
+      const anterior = await actualizarImputacion(subvencion.id, m.id, importe)
+      await invalidar()
+      toast.success(`Parte de «${m.concepto}»: ${formatCurrency(importe)}`, {
+        duration: 8000,
+        action: {
+          label: "Deshacer",
+          onClick: () => {
+            actualizarImputacion(subvencion.id, m.id, anterior)
+              .then(() => invalidar())
+              .catch((err) => toast.error(describirError(err, "No se ha podido deshacer")))
+          },
+        },
+      })
+    } catch (err) {
+      toast.error(describirError(err, "No se ha podido cambiar la parte imputada"))
+      throw err
+    }
+  }
+
   const handleExcel = async () => {
     try {
       const { exportarMovimientosSubvencion } = await import("@/lib/utils/subvenciones-excel")
@@ -233,17 +264,17 @@ export function SubvencionDetail({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
           <Link href="/subvenciones">
             <ArrowLeft className="h-4 w-4" />
-            Subvenciones
+            Subvenciones{subvencion.ejercicio ? ` ${subvencion.ejercicio}` : ""}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title={subvencion.nombre}
+        title={subvencion.codigo ? `${subvencion.codigo} · ${subvencion.nombre}` : subvencion.nombre}
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
             <StatusPill
@@ -254,11 +285,28 @@ export function SubvencionDetail({ id }: { id: string }) {
               textClass={info.textClass}
               borderClass={info.borderClass}
             />
-            <span>{[subvencion.financiador, subvencion.ejercicio].filter(Boolean).join(" · ")}</span>
+            <span>
+              {[subvencion.financiador?.nombre, subvencion.solicitante, subvencion.ejercicio ?? "Para estudiar"]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+            {subvencion.recurrente && (
+              <span className="inline-flex items-center gap-1 text-xs">
+                <Repeat className="h-3.5 w-3.5" /> Sale cada año
+              </span>
+            )}
           </span>
         }
         actions={
           <>
+            {subvencion.url_carpeta && (
+              <Button variant="outline" asChild>
+                <a href={subvencion.url_carpeta} target="_blank" rel="noopener noreferrer">
+                  <FolderOpen className="h-4 w-4" />
+                  Carpeta
+                </a>
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setEditarOpen(true)}>
               <Pencil className="h-4 w-4" />
               Editar datos
@@ -266,6 +314,11 @@ export function SubvencionDetail({ id }: { id: string }) {
             <ActionMenu
               ariaLabel="Más acciones de la subvención"
               items={[
+                {
+                  label: `Repetir en ${(subvencion.ejercicio ?? new Date().getFullYear()) + 1}`,
+                  icon: Repeat,
+                  onSelect: () => setRepetirOpen(true),
+                },
                 {
                   label: "Borrar subvención",
                   icon: Trash2,
@@ -339,7 +392,7 @@ export function SubvencionDetail({ id }: { id: string }) {
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
             <span className="font-medium" aria-live="polite">
               {seleccionVisible.length} {seleccionVisible.length === 1 ? "seleccionado" : "seleccionados"} ·{" "}
-              {formatCurrency(seleccionVisible.reduce((acc, m) => acc + m.importe, 0))}
+              {formatCurrency(seleccionVisible.reduce((acc, m) => acc + m.importe_imputado, 0))}
             </span>
             <div className="flex items-center gap-2">
               <Button
@@ -394,7 +447,7 @@ export function SubvencionDetail({ id }: { id: string }) {
                 aria-label="Seleccionar todos los movimientos visibles"
               />
               <span>
-                {visibles.length} de {movimientos.length} · {formatCurrency(visibles.reduce((a, m) => a + m.importe, 0))}
+                {visibles.length} de {movimientos.length} · {formatCurrency(visibles.reduce((a, m) => a + m.importe_imputado, 0))} imputados
               </span>
             </div>
             {visibles.map((m) => (
@@ -404,6 +457,8 @@ export function SubvencionDetail({ id }: { id: string }) {
                 seleccionado={seleccion.has(m.id)}
                 onToggle={() => toggle(m.id)}
                 fuera={fueraDePeriodo(m.fecha, subvencion)}
+                subvencionId={subvencion.id}
+                onGuardarParte={(importe) => handleGuardarParte(m, importe)}
               />
             ))}
           </div>
@@ -416,11 +471,42 @@ export function SubvencionDetail({ id }: { id: string }) {
         subvencion={subvencion}
         onSaved={() => invalidar()}
       />
+      <SubvencionFormDialog
+        open={repetirOpen}
+        onOpenChange={setRepetirOpen}
+        plantilla={plantillaSiguiente(subvencion)}
+        onSaved={(nueva) => {
+          invalidar()
+          router.push(`/subvenciones/${nueva.id}`)
+        }}
+      />
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * La del año que viene, a partir de esta: lo que no cambia de un año a otro
+ * (quién, qué, quién la pide, enlaces) y nada de lo que sí (fechas, importes,
+ * expediente). Casi todas salen cada año, y en el Excel se copiaba la fila.
+ */
+function plantillaSiguiente(s: Subvencion): Partial<Subvencion> {
+  return {
+    id: `repetir-${s.id}`,
+    codigo: s.codigo,
+    nombre: s.nombre,
+    financiador_id: s.financiador_id,
+    solicitante: s.solicitante,
+    delegacion_id: s.delegacion_id,
+    convocatoria: s.convocatoria,
+    recurrente: s.recurrente,
+    enlaces: s.enlaces,
+    ejercicio: (s.ejercicio ?? new Date().getFullYear()) + 1,
+    estado: "no_convocada",
+    notas: s.notas,
+  }
+}
 
 function Dato({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -434,13 +520,18 @@ function Dato({ label, children }: { label: string; children: React.ReactNode })
 function Resumen({ subvencion: s, fueraCount }: { subvencion: SubvencionConResumen; fueraCount: number }) {
   const pct = porcentajeImputado(s.resumen.total_gastos, s.importe_concedido)
   const pendiente = s.importe_concedido != null ? s.importe_concedido - s.resumen.total_gastos : null
+  const cobrado = importeCobrado(s)
   const fecha = (f: string | null) => (f ? formatDate(f) : "—")
+  const [verMas, setVerMas] = useState(false)
+  const hayMas = Boolean(s.convocatoria || s.expediente || s.fecha_convocatoria || s.fecha_solicitud || s.enlaces.length)
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
       <div className="rounded-lg border bg-card p-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <Dato label="Solicitado">{s.importe_solicitado != null ? formatCurrency(s.importe_solicitado) : "—"}</Dato>
           <Dato label="Concedido">{s.importe_concedido != null ? formatCurrency(s.importe_concedido) : "—"}</Dato>
+          <Dato label="Cobrado">{cobrado ? formatCurrency(cobrado) : "—"}</Dato>
           <Dato label="Imputado (gastos)">{formatCurrency(s.resumen.total_gastos)}</Dato>
           <Dato label={pendiente != null && pendiente < 0 ? "Imputado de más" : "Falta por imputar"}>
             {pendiente != null ? formatCurrency(Math.abs(pendiente)) : "—"}
@@ -450,7 +541,7 @@ function Resumen({ subvencion: s, fueraCount }: { subvencion: SubvencionConResum
             {s.resumen.delegaciones > 0 && (
               <span className="font-normal text-muted-foreground">
                 {" "}
-                · {s.resumen.delegaciones} {s.resumen.delegaciones === 1 ? "delegación" : "delegaciones"}
+                · {s.resumen.delegaciones} {s.resumen.delegaciones === 1 ? "deleg." : "delegs."}
               </span>
             )}
           </Dato>
@@ -473,25 +564,30 @@ function Resumen({ subvencion: s, fueraCount }: { subvencion: SubvencionConResum
             <p className="text-xs text-muted-foreground tabular-nums">{pct.toLocaleString("es-ES")} % de lo concedido</p>
           </div>
         )}
-        {s.resumen.total_ingresos > 0 && (
+        {s.resumen.movimientos_parciales > 0 && (
           <p className="mt-3 text-xs text-muted-foreground">
+            {s.resumen.movimientos_parciales}{" "}
+            {s.resumen.movimientos_parciales === 1 ? "movimiento está imputado" : "movimientos están imputados"} solo en parte.
+          </p>
+        )}
+        {s.resumen.total_ingresos > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground">
             También hay {formatCurrency(s.resumen.total_ingresos)} en ingresos imputados (no cuentan como gasto).
           </p>
         )}
       </div>
 
-      <dl className="grid grid-cols-2 gap-4 rounded-lg border bg-card p-4 sm:grid-cols-3">
-        <Dato label="Convocatoria">{s.convocatoria || "—"}</Dato>
-        <Dato label="Expediente">{s.expediente || "—"}</Dato>
-        <Dato label="Solicitado">
-          {s.importe_solicitado != null ? formatCurrency(s.importe_solicitado) : "—"}
-          <span className="font-normal text-muted-foreground"> · {fecha(s.fecha_solicitud)}</span>
+      <dl className="grid grid-cols-2 content-start gap-4 rounded-lg border bg-card p-4 sm:grid-cols-3">
+        <Dato label="Límite para solicitar">{fecha(s.fecha_limite_solicitud)}</Dato>
+        <Dato label="Concesión">{fecha(s.fecha_concesion)}</Dato>
+        <Dato label="Justificación">
+          {fecha(s.fecha_justificacion_1)}
+          {s.fecha_justificacion_2 && <span className="font-normal text-muted-foreground"> · 2ª {fecha(s.fecha_justificacion_2)}</span>}
         </Dato>
-        <Dato label="Fecha de concesión">{fecha(s.fecha_concesion)}</Dato>
         <Dato label="Periodo de gastos">
           {s.periodo_desde || s.periodo_hasta ? `${fecha(s.periodo_desde)} – ${fecha(s.periodo_hasta)}` : "—"}
         </Dato>
-        <Dato label="Límite para justificar">{fecha(s.fecha_limite_justificacion)}</Dato>
+        <Dato label="Justificación completa">{s.justificacion_completa ? "Sí" : "No"}</Dato>
         {fueraCount > 0 && (
           <div className="col-span-2 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 sm:col-span-3">
             <CalendarRange className="h-3.5 w-3.5 shrink-0" />
@@ -502,6 +598,49 @@ function Resumen({ subvencion: s, fueraCount }: { subvencion: SubvencionConResum
           <div className="col-span-2 sm:col-span-3">
             <dt className="text-xs text-muted-foreground">Notas</dt>
             <dd className="whitespace-pre-wrap text-sm">{s.notas}</dd>
+          </div>
+        )}
+        {/* Lo que en el Excel iba agrupado con el "+": se consulta poco. */}
+        {hayMas && (
+          <div className="col-span-2 sm:col-span-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-2 h-7 text-xs text-muted-foreground"
+              onClick={() => setVerMas((v) => !v)}
+              aria-expanded={verMas}
+            >
+              {verMas ? "Menos detalles" : "Más detalles"}
+            </Button>
+            {verMas && (
+              <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {s.expediente && <Dato label="Expediente">{s.expediente}</Dato>}
+                {s.fecha_convocatoria && <Dato label="Sale la convocatoria">{fecha(s.fecha_convocatoria)}</Dato>}
+                {s.fecha_solicitud && <Dato label="Presentada el">{fecha(s.fecha_solicitud)}</Dato>}
+                {s.convocatoria && (
+                  <div className="col-span-2 sm:col-span-3">
+                    <dt className="text-xs text-muted-foreground">Convocatoria oficial</dt>
+                    <dd className="text-sm">{s.convocatoria}</dd>
+                  </div>
+                )}
+                {s.enlaces.length > 0 && (
+                  <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-3">
+                    {s.enlaces.map((e, i) => (
+                      <a
+                        key={i}
+                        href={e.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {e.nombre || "Enlace"}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </dl>
@@ -555,12 +694,23 @@ function MovimientoFila({
   seleccionado,
   onToggle,
   fuera,
+  subvencionId,
+  onGuardarParte,
 }: {
   movimiento: MovimientoDeSubvencion
   seleccionado: boolean
   onToggle: () => void
   fuera: boolean
+  subvencionId: string
+  onGuardarParte: (importe: number) => Promise<void>
 }) {
+  const total = Math.abs(m.importe)
+  const libre = importeLibre(
+    m.importe,
+    m.otras.map((o) => ({ movimiento_id: m.id, subvencion_id: o.subvencion_id, importe_imputado: o.importe_imputado })),
+    subvencionId,
+  )
+  const repartido = m.otras.length > 0
   return (
     <div
       className={cn(
@@ -605,6 +755,27 @@ function MovimientoFila({
             </>
           )}
         </div>
+        {repartido && (
+          <div className="mt-1 flex min-w-0 items-center gap-2">
+            {/* Cómo se reparte el movimiento: esta subvención, las demás y lo libre. */}
+            <div className="flex h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-muted" aria-hidden>
+              <div className="bg-primary" style={{ width: `${(m.importe_imputado / total) * 100}%` }} />
+              <div className="bg-muted-foreground/40" style={{ width: `${((total - libre) / total) * 100}%` }} />
+            </div>
+            <span className="truncate text-[11px] text-muted-foreground">
+              También en{" "}
+              {m.otras.map((o, i) => (
+                <span key={o.subvencion_id}>
+                  {i > 0 && ", "}
+                  <Link href={`/subvenciones/${o.subvencion_id}`} className="underline-offset-2 hover:underline">
+                    {o.nombre}
+                  </Link>{" "}
+                  <span className="tabular-nums">({formatCurrency(o.importe_imputado)})</span>
+                </span>
+              ))}
+            </span>
+          </div>
+        )}
       </div>
       <div className="hidden shrink-0 items-center gap-2 text-xs text-muted-foreground sm:flex">
         {m.factura_id ? (
@@ -625,14 +796,15 @@ function MovimientoFila({
           </span>
         )}
       </div>
-      <span
-        className={cn(
-          "shrink-0 text-right font-semibold tabular-nums",
-          m.importe < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400",
-        )}
-      >
-        {formatCurrency(m.importe)}
-      </span>
+      <div className="shrink-0">
+        <ImputacionEditor
+          importeMovimiento={m.importe}
+          imputado={m.importe_imputado}
+          libre={libre}
+          concepto={m.concepto}
+          onGuardar={onGuardarParte}
+        />
+      </div>
     </div>
   )
 }

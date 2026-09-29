@@ -214,6 +214,40 @@ export type InformeConArchivos = Informe & {
 }
 export type GoogleCredencial = Database["public"]["Tables"]["google_credencial"]["Row"]
 
+// Subvenciones (scripts/071): de la organización, no de una delegación. Solo
+// gestores centrales. Un movimiento solo puede estar en una subvención.
+export type Subvencion = Omit<Database["public"]["Tables"]["subvencion"]["Row"], "estado"> & {
+  estado: SubvencionEstado
+}
+export type SubvencionInsert = Omit<Database["public"]["Tables"]["subvencion"]["Insert"], "estado"> & {
+  estado?: SubvencionEstado
+}
+export type SubvencionUpdate = Omit<Database["public"]["Tables"]["subvencion"]["Update"], "estado"> & {
+  estado?: SubvencionEstado
+}
+export const SUBVENCION_ESTADOS = [
+  "en_preparacion",
+  "solicitada",
+  "concedida",
+  "denegada",
+  "justificada",
+  "cerrada",
+] as const
+export type SubvencionEstado = (typeof SUBVENCION_ESTADOS)[number]
+export function esSubvencionEstado(valor: unknown): valor is SubvencionEstado {
+  return typeof valor === "string" && (SUBVENCION_ESTADOS as readonly string[]).includes(valor)
+}
+export type SubvencionMovimiento = Database["public"]["Tables"]["subvencion_movimiento"]["Row"]
+/** Fila de la vista `subvencion_resumen`. `total_gastos` va en positivo. */
+export type SubvencionResumen = {
+  subvencion_id: string
+  movimientos: number
+  delegaciones: number
+  total_gastos: number
+  total_ingresos: number
+}
+export type SubvencionConResumen = Subvencion & { resumen: SubvencionResumen }
+
 // Extended types with relations
 export type MovimientoConRelaciones = Movimiento & {
   cuenta: Cuenta

@@ -10,6 +10,7 @@ import { DateRangeFilter } from "./date-range-filter"
 import { CategoryMegaSelector } from "./category-mega-selector"
 import { CategoryQuickCreateSheet } from "./category-quick-create-sheet"
 import { SelectionSummary } from "./selection-summary"
+import { AsignarSubvencionDialog } from "@/components/subvenciones/asignar-subvencion-dialog"
 import { supabase } from "@/lib/supabase/client"
 import { useDelegationContext } from "@/contexts/delegation-context"
 import { useIsMobile } from "@/hooks/use-is-mobile"
@@ -37,6 +38,7 @@ import {
   AlertTriangle,
   X,
   Search,
+  Landmark,
 } from "lucide-react"
 import { toast } from "sonner"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -108,6 +110,7 @@ export function TransactionManager() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkConceptOpen, setBulkConceptOpen] = useState(false)
   const [bulkDescriptionOpen, setBulkDescriptionOpen] = useState(false)
+  const [bulkSubvencionOpen, setBulkSubvencionOpen] = useState(false)
   const [bulkConceptValue, setBulkConceptValue] = useState("")
   const [bulkDescriptionValue, setBulkDescriptionValue] = useState("")
   const [bulkCategoryLoading, setBulkCategoryLoading] = useState(false)
@@ -980,6 +983,20 @@ export function TransactionManager() {
                       {todoMarcadoFaltaFactura ? "Quitar falta factura" : "Falta factura"}
                     </span>
                   </Button>
+                  {/* Subvenciones: solo la oficina técnica. Se imputa por
+                      delegación, cambiando de delegación entre tanda y tanda. */}
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBulkSubvencionOpen(true)}
+                      className="flex items-center gap-1"
+                      title="Imputar a una subvención"
+                    >
+                      <Landmark className="h-4 w-4" />
+                      <span className="sr-only sm:not-sr-only">Subvención</span>
+                    </Button>
+                  )}
                   <Button
                     variant="destructiveGhost"
                     size="sm"
@@ -1094,6 +1111,7 @@ export function TransactionManager() {
         contactos={contactos}
         delegacionId={selectedDelegation}
         canManageGlobalContact={isAdmin}
+        showSubvencion={isAdmin}
         onCreateContacto={async (payload) => {
           if (!payload.insert) return
           return await createContactoFn({ ...payload.insert, creado_por: currentUser?.id ?? null })
@@ -1188,6 +1206,15 @@ export function TransactionManager() {
         parentCategory={categoryCreateParent}
         onCreated={handleCategoryCreated}
       />
+
+      {isAdmin && (
+        <AsignarSubvencionDialog
+          open={bulkSubvencionOpen}
+          onOpenChange={setBulkSubvencionOpen}
+          movimientos={selectedMovements}
+          onDone={clearSelection}
+        />
+      )}
 
       <Dialog
         open={bulkConceptOpen}

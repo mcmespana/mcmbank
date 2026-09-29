@@ -17,7 +17,7 @@ export const isSupabaseConfigured =
 const protectedRoutes = [
   "/transacciones", "/categorias", "/cuentas", "/delegaciones",
   "/movimientos", "/contactos", "/pagos-mcm", "/facturas",
-  "/configuracion", "/propuestas", "/informes",
+  "/configuracion", "/propuestas", "/informes", "/subvenciones",
 ]
 
 // El dashboard va aparte porque con `startsWith` un "/" en la lista de arriba

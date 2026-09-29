@@ -1683,6 +1683,108 @@ export type Database = {
           },
         ]
       }
+      subvencion: {
+        Row: {
+          actualizado_en: string
+          convocatoria: string | null
+          creado_en: string
+          creado_por: string | null
+          ejercicio: number | null
+          estado: string
+          expediente: string | null
+          fecha_concesion: string | null
+          fecha_limite_justificacion: string | null
+          fecha_solicitud: string | null
+          financiador: string
+          id: string
+          importe_concedido: number | null
+          importe_solicitado: number | null
+          nombre: string
+          notas: string | null
+          periodo_desde: string | null
+          periodo_hasta: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          convocatoria?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          ejercicio?: number | null
+          estado?: string
+          expediente?: string | null
+          fecha_concesion?: string | null
+          fecha_limite_justificacion?: string | null
+          fecha_solicitud?: string | null
+          financiador: string
+          id?: string
+          importe_concedido?: number | null
+          importe_solicitado?: number | null
+          nombre: string
+          notas?: string | null
+          periodo_desde?: string | null
+          periodo_hasta?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          convocatoria?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          ejercicio?: number | null
+          estado?: string
+          expediente?: string | null
+          fecha_concesion?: string | null
+          fecha_limite_justificacion?: string | null
+          fecha_solicitud?: string | null
+          financiador?: string
+          id?: string
+          importe_concedido?: number | null
+          importe_solicitado?: number | null
+          nombre?: string
+          notas?: string | null
+          periodo_desde?: string | null
+          periodo_hasta?: string | null
+        }
+        Relationships: []
+      }
+      subvencion_movimiento: {
+        Row: {
+          asignado_en: string
+          asignado_por: string | null
+          movimiento_id: string
+          notas: string | null
+          subvencion_id: string
+        }
+        Insert: {
+          asignado_en?: string
+          asignado_por?: string | null
+          movimiento_id: string
+          notas?: string | null
+          subvencion_id: string
+        }
+        Update: {
+          asignado_en?: string
+          asignado_por?: string | null
+          movimiento_id?: string
+          notas?: string | null
+          subvencion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subvencion_movimiento_movimiento_id_fkey"
+            columns: ["movimiento_id"]
+            isOneToOne: true
+            referencedRelation: "movimiento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subvencion_movimiento_subvencion_id_fkey"
+            columns: ["subvencion_id"]
+            isOneToOne: false
+            referencedRelation: "subvencion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       z_nopausasupabase: {
         Row: {
           created_at: string

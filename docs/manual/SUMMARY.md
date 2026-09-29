@@ -22,6 +22,7 @@
 
 * [10. Informes anuales](10.-informes-anuales.md)
 * [11. Avisos y tareas](11.-avisos-y-tareas.md)
+* [12. Subvenciones (oficina técnica)](12.-subvenciones.md)
 
 ## Administración y equipo técnico
 

@@ -33,6 +33,7 @@ import { ContactoSelector } from "@/components/contactos/contacto-selector"
 import { ContactoForm } from "@/components/contactos/contacto-form"
 import { useCreateContactoInline } from "@/hooks/use-create-contacto-inline"
 import { useFacturaVinculada } from "@/hooks/use-factura-vinculada"
+import { SubvencionDeMovimiento } from "@/components/subvenciones/subvencion-de-movimiento"
 import { CONTACTO_TIPO_INFO } from "@/lib/utils/contacto-tipos"
 
 interface TransactionDetailProps {
@@ -42,6 +43,8 @@ interface TransactionDetailProps {
   contactos?: ContactoConCategoriaPredeterminada[]
   delegacionId?: string | null
   canManageGlobalContact?: boolean
+  /** Gestores centrales: enseña en qué subvención está imputado. */
+  showSubvencion?: boolean
   onCreateContacto?: (payload: Parameters<NonNullable<React.ComponentProps<typeof ContactoForm>["onSubmit"]>>[0]) => Promise<Contacto | void>
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -63,6 +66,7 @@ export function TransactionDetail({
   contactos = [],
   delegacionId,
   canManageGlobalContact,
+  showSubvencion = false,
   onCreateContacto,
   open,
   onOpenChange,
@@ -592,6 +596,7 @@ export function TransactionDetail({
                         <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-700/70 dark:text-emerald-300/70" />
                       </Link>
                     )}
+                    {showSubvencion && <SubvencionDeMovimiento movimientoId={movement?.id} />}
                   </div>
 
                   {/* Si ya hay una factura vinculada, preguntar "¿falta la factura?"

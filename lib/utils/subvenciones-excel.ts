@@ -22,7 +22,10 @@ export async function exportarMovimientosSubvencion(
     Concepto: m.concepto,
     Contacto: m.contacto?.nombre ?? "",
     Categoría: m.categoria?.nombre ?? "",
-    Importe: m.importe,
+    "Importe movimiento": m.importe,
+    Imputado: m.importe_imputado,
+    "% imputado": Math.abs(m.importe) ? Math.round((m.importe_imputado / Math.abs(m.importe)) * 1000) / 10 : 0,
+    "También en": m.otras.map((o) => `${o.nombre} (${o.importe_imputado})`).join("; "),
     Factura: m.factura_id ? "Sí" : m.factura_pendiente ? "Falta" : "",
     Archivos: m.archivos,
   }))
@@ -37,6 +40,9 @@ export async function exportarMovimientosSubvencion(
     { wch: 24 },
     { wch: 20 },
     { wch: 12 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 30 },
     { wch: 8 },
     { wch: 8 },
   ]

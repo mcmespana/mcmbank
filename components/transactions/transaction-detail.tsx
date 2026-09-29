@@ -596,7 +596,7 @@ export function TransactionDetail({
                         <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-700/70 dark:text-emerald-300/70" />
                       </Link>
                     )}
-                    {showSubvencion && <SubvencionDeMovimiento movimientoId={movement?.id} />}
+                    {showSubvencion && <SubvencionDeMovimiento movimientoId={movement?.id} importe={movement?.importe} />}
                   </div>
 
                   {/* Si ya hay una factura vinculada, preguntar "¿falta la factura?"

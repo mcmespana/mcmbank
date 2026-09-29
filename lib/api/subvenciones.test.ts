@@ -10,10 +10,14 @@ import { crearFakeAdmin, type Tablas } from "@/lib/test-utils/fake-admin"
 const SEV = { id: "aaaaaaaa-0000-0000-0000-000000000001", codigo: "SEV", nombre: "Sevilla" }
 const MAD = { id: "bbbbbbbb-0000-0000-0000-000000000002", codigo: "MAD", nombre: "Madrid" }
 
+const F_IVAJ = { id: "fin-1", nombre: "GVA IVAJ", ambito: "autonomico", orden: 1 }
+
 const SUB = {
-  id: "sub-1",
+  id: "11111111-0000-0000-0000-000000000001",
   nombre: "IVAJ 2026",
-  financiador: "IVAJ",
+  financiador_id: "fin-1",
+  financiador: F_IVAJ,
+  codigo: "IVAJ",
   convocatoria: null,
   expediente: "EXP-1",
   ejercicio: 2026,
@@ -52,18 +56,18 @@ function tablas(extra: Partial<Tablas> = {}): Tablas {
     categoria: [],
     contacto: [],
     movimiento_archivo: [],
-    subvencion: [SUB, { ...SUB, id: "sub-2", nombre: "Ayuntamiento", estado: "solicitada", ejercicio: 2025 }],
+    subvencion: [SUB, { ...SUB, id: "11111111-0000-0000-0000-000000000002", nombre: "Ayuntamiento", codigo: "AYTO", estado: "solicitada", ejercicio: 2025 }],
     subvencion_resumen: [
-      { subvencion_id: "sub-1", movimientos: 2, delegaciones: 2, total_gastos: "80.00", total_ingresos: "0" },
+      { subvencion_id: "11111111-0000-0000-0000-000000000001", movimientos: 2, delegaciones: 2, total_gastos: "80.00", total_ingresos: "0", movimientos_parciales: 0 },
     ],
     subvencion_movimiento: [
-      { subvencion_id: "sub-1", movimiento_id: "m-2" },
-      { subvencion_id: "sub-1", movimiento_id: "m-1" },
+      { subvencion_id: "11111111-0000-0000-0000-000000000001", movimiento_id: "22222222-0000-0000-0000-000000000002", importe_imputado: "30.00" },
+      { subvencion_id: "11111111-0000-0000-0000-000000000001", movimiento_id: "22222222-0000-0000-0000-000000000001", importe_imputado: "20.00" },
     ],
     movimiento: [
-      movimiento("m-1", SEV.id, "2026-06-02", -50),
-      movimiento("m-2", MAD.id, "2026-06-01", -30),
-      movimiento("m-3", SEV.id, "2026-06-03", -10),
+      movimiento("22222222-0000-0000-0000-000000000001", SEV.id, "2026-06-02", -50),
+      movimiento("22222222-0000-0000-0000-000000000002", MAD.id, "2026-06-01", -30),
+      movimiento("22222222-0000-0000-0000-000000000003", SEV.id, "2026-06-03", -10),
     ],
     ...extra,
   }
@@ -82,17 +86,18 @@ describe("listarSubvenciones", () => {
   it("engancha el resumen y pone ceros a la que no tiene movimientos", async () => {
     const { mod, admin } = await api(tablas())
     const r = await mod.listarSubvenciones(admin)
-    const ivaj = r.subvenciones.find((s) => s.id === "sub-1")!
+    const ivaj = r.subvenciones.find((s) => s.id === "11111111-0000-0000-0000-000000000001")!
     expect(ivaj.importe_concedido).toBe(1000)
-    expect(ivaj.resumen).toEqual({ movimientos: 2, delegaciones: 2, total_gastos: 80, total_ingresos: 0 })
-    expect(r.subvenciones.find((s) => s.id === "sub-2")!.resumen.movimientos).toBe(0)
+    expect(ivaj.resumen).toEqual({ movimientos: 2, delegaciones: 2, total_gastos: 80, total_ingresos: 0, movimientos_parciales: 0 })
+    expect(ivaj.financiador?.nombre).toBe("GVA IVAJ")
+    expect(r.subvenciones.find((s) => s.id === "11111111-0000-0000-0000-000000000002")!.resumen.movimientos).toBe(0)
   })
 
   it("filtra por estado, ejercicio y texto", async () => {
     const { mod, admin } = await api(tablas())
-    expect((await mod.listarSubvenciones(admin, { estados: ["solicitada"] })).subvenciones.map((s) => s.id)).toEqual(["sub-2"])
-    expect((await mod.listarSubvenciones(admin, { ejercicio: 2026 })).subvenciones.map((s) => s.id)).toEqual(["sub-1"])
-    expect((await mod.listarSubvenciones(admin, { texto: "ayunta" })).subvenciones.map((s) => s.id)).toEqual(["sub-2"])
+    expect((await mod.listarSubvenciones(admin, { estados: ["solicitada"] })).subvenciones.map((s) => s.id)).toEqual(["11111111-0000-0000-0000-000000000002"])
+    expect((await mod.listarSubvenciones(admin, { ejercicio: 2026 })).subvenciones.map((s) => s.id)).toEqual(["11111111-0000-0000-0000-000000000001"])
+    expect((await mod.listarSubvenciones(admin, { texto: "ayunta" })).subvenciones.map((s) => s.id)).toEqual(["11111111-0000-0000-0000-000000000002"])
   })
 
   it("un estado desconocido dice cuáles valen", async () => {
@@ -105,25 +110,68 @@ describe("listarSubvenciones", () => {
 })
 
 describe("obtenerSubvencion", () => {
-  it("trae los movimientos de varias delegaciones, por fecha, y no los de fuera", async () => {
+  it("trae los movimientos de varias delegaciones, por fecha, con su parte, y no los de fuera", async () => {
     const { mod, admin } = await api(tablas())
-    const r = await mod.obtenerSubvencion(admin, "sub-1", { incluirArchivos: false })
-    expect(r.movimiento_ids).toEqual(["m-2", "m-1"])
+    const r = await mod.obtenerSubvencion(admin, "11111111-0000-0000-0000-000000000001", { incluirArchivos: false })
+    expect(r.movimientos!.map((m) => m.importe_imputado)).toEqual([30, 20])
+    expect(r.movimiento_ids).toEqual(["22222222-0000-0000-0000-000000000002", "22222222-0000-0000-0000-000000000001"])
     expect(r.movimientos!.map((m) => [m.id, m.delegacion?.codigo])).toEqual([
-      ["m-2", "MAD"],
-      ["m-1", "SEV"],
+      ["22222222-0000-0000-0000-000000000002", "MAD"],
+      ["22222222-0000-0000-0000-000000000001", "SEV"],
     ])
   })
 
   it("con incluirMovimientos: false solo vienen los ids", async () => {
     const { mod, admin } = await api(tablas())
-    const r = await mod.obtenerSubvencion(admin, "sub-1", { incluirMovimientos: false })
+    const r = await mod.obtenerSubvencion(admin, "11111111-0000-0000-0000-000000000001", { incluirMovimientos: false })
     expect(r.movimientos).toBeUndefined()
-    expect([...r.movimiento_ids].sort()).toEqual(["m-1", "m-2"])
+    expect([...r.movimiento_ids].sort()).toEqual(["22222222-0000-0000-0000-000000000001", "22222222-0000-0000-0000-000000000002"])
   })
 
-  it("404 si no existe", async () => {
+  it("404 si no existe, 400 si el id no es un uuid", async () => {
     const { mod, admin } = await api(tablas())
-    await expect(mod.obtenerSubvencion(admin, "nope")).rejects.toMatchObject({ status: 404 })
+    await expect(mod.obtenerSubvencion(admin, "11111111-0000-0000-0000-00000000dead")).rejects.toMatchObject({ status: 404 })
+    await expect(mod.obtenerSubvencion(admin, "IVAJ")).rejects.toMatchObject({ status: 400 })
+  })
+})
+
+describe("imputarMovimientosSubvencion", () => {
+  it("crea por importe o porcentaje, actualiza lo que ya estaba y dice qué no existe", async () => {
+    const t = tablas()
+    const { mod, admin } = await api(t)
+    const r = await mod.imputarMovimientosSubvencion(
+      admin,
+      "11111111-0000-0000-0000-000000000002",
+      [
+        { id: "22222222-0000-0000-0000-000000000001", porcentaje: 50 },
+        { id: "22222222-0000-0000-0000-000000000003", importe: -4 },
+        { id: "22222222-0000-0000-0000-00000000beef" },
+      ],
+      "user-1",
+    )
+    expect(r.imputados).toEqual([
+      { movimiento_id: "22222222-0000-0000-0000-000000000001", importe_imputado: 25, accion: "creado" },
+      { movimiento_id: "22222222-0000-0000-0000-000000000003", importe_imputado: 4, accion: "creado" },
+    ])
+    expect(r.errores).toEqual([{ movimiento_id: "22222222-0000-0000-0000-00000000beef", error: "No existe ningún movimiento con este id." }])
+
+    const r2 = await mod.imputarMovimientosSubvencion(admin, "11111111-0000-0000-0000-000000000001", [{ id: "22222222-0000-0000-0000-000000000001", importe: 15 }, { id: "22222222-0000-0000-0000-000000000002" }], "user-1")
+    expect(r2.imputados).toEqual([{ movimiento_id: "22222222-0000-0000-0000-000000000001", importe_imputado: 15, accion: "actualizado" }])
+    expect(r2.errores[0].movimiento_id).toBe("22222222-0000-0000-0000-000000000002")
+  })
+
+  it("rechaza un porcentaje fuera de rango sin tocar nada", async () => {
+    const { mod, admin } = await api(tablas())
+    const r = await mod.imputarMovimientosSubvencion(admin, "11111111-0000-0000-0000-000000000002", [{ id: "22222222-0000-0000-0000-000000000001", porcentaje: 120 }], "u")
+    expect(r.imputados).toEqual([])
+    expect(r.errores[0].error).toMatch(/entre 0 y 100/)
+  })
+
+  it("quitar solo quita de esa subvención", async () => {
+    const t = tablas()
+    const { mod, admin } = await api(t)
+    const r = await mod.quitarMovimientosSubvencion(admin, "11111111-0000-0000-0000-000000000001", ["22222222-0000-0000-0000-000000000001"])
+    expect(r.quitados).toEqual(["22222222-0000-0000-0000-000000000001"])
+    expect(t.subvencion_movimiento.map((f) => f.movimiento_id)).toEqual(["22222222-0000-0000-0000-000000000002"])
   })
 })

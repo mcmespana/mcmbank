@@ -1031,14 +1031,15 @@ export async function GET(request: Request) {
           tags: ["Subvenciones"],
           summary: "Listar subvenciones con su resumen",
           description:
-            "Una subvención es de la organización, no de una delegación: se justifica con movimientos de varias. Un movimiento solo puede estar imputado a una.",
+            "Una subvención es de la organización, no de una delegación: se justifica con movimientos de varias. Un movimiento puede repartirse entre varias sin pasar de su importe.",
           operationId: "listarSubvenciones",
           parameters: [
             {
               name: "estados",
               in: "query",
               schema: { type: "string" },
-              description: "Separados por comas: en_preparacion, solicitada, concedida, denegada, justificada, cerrada.",
+              description:
+                "Separados por comas: no_convocada, por_solicitar, solicitada, concedida, por_justificar, justificada, cobrada, cobrada_parcial, rechazada, renuncia.",
             },
             { name: "ejercicio", in: "query", schema: { type: "integer" } },
             { name: "texto", in: "query", schema: { type: "string" } },
@@ -1064,8 +1065,75 @@ export async function GET(request: Request) {
           responses: respuestaOk("Subvención.", {
             subvencion: { type: "object" },
             movimiento_ids: { type: "array", items: { type: "string", format: "uuid" } },
+            imputaciones: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { movimiento_id: { type: "string" }, importe_imputado: { type: "number" } },
+              },
+            },
             movimientos: { type: "array", items: { type: "object" } },
           }),
+        },
+      },
+      "/api/v1/subvenciones/{id}/movimientos": {
+        post: {
+          tags: ["Subvenciones"],
+          summary: "Imputar movimientos a una subvención (por importe, porcentaje o todo lo libre)",
+          description:
+            "Un movimiento puede repartirse entre varias subvenciones sin pasar de su importe. Uno que no cabe va a `errores` y el resto entra igual. Si ya estaba y llega importe o porcentaje, se cambia su parte.",
+          operationId: "imputarMovimientosSubvencion",
+          parameters: [PARAM_ID("de la subvención")],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    movimientos: {
+                      type: "array",
+                      maxItems: 200,
+                      items: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string", format: "uuid" },
+                          importe: { type: "number", description: "Euros, en positivo." },
+                          porcentaje: { type: "number", description: "0–100 del importe del movimiento." },
+                        },
+                        required: ["id"],
+                      },
+                    },
+                    usuario_email: { type: "string" },
+                  },
+                  required: ["movimientos"],
+                },
+              },
+            },
+          },
+          responses: respuestaOk("Resultado por movimiento.", {
+            imputados: { type: "array", items: { type: "object" } },
+            errores: { type: "array", items: { type: "object" } },
+          }),
+        },
+        delete: {
+          tags: ["Subvenciones"],
+          summary: "Quitar movimientos de una subvención",
+          operationId: "quitarMovimientosSubvencion",
+          parameters: [PARAM_ID("de la subvención")],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { movimiento_ids: { type: "array", items: { type: "string", format: "uuid" } } },
+                  required: ["movimiento_ids"],
+                },
+              },
+            },
+          },
+          responses: respuestaOk("Quitados.", { quitados: { type: "array", items: { type: "string" } } }),
         },
       },
     },

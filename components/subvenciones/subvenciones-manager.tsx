@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Landmark, Plus, Search } from "lucide-react"
+import { CalendarClock, Check, Landmark, Plus, Repeat, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
@@ -15,52 +15,85 @@ import { ErrorMessage } from "@/components/ui/error-message"
 import { useIsAdminState } from "@/hooks/use-is-admin"
 import { useSubvenciones } from "@/hooks/use-subvenciones"
 import { SubvencionFormDialog } from "./subvencion-form-dialog"
-import { SUBVENCION_ESTADO_INFO, porcentajeImputado } from "@/lib/utils/subvenciones"
-import { formatCurrency } from "@/lib/utils/format"
+import {
+  SUBVENCION_ESTADO_INFO,
+  agruparPorAmbito,
+  importeCobrado,
+  proximaFecha,
+  totalesEjercicio,
+} from "@/lib/utils/subvenciones"
+import { formatCurrency, formatDate, toLocalDateString } from "@/lib/utils/format"
 import { describirError } from "@/lib/utils/describir-error"
-import type { SubvencionConResumen, SubvencionEstado } from "@/lib/types/database"
+import { cn } from "@/lib/utils"
+import type { SubvencionConResumen } from "@/lib/types/database"
 
-type Pestana = "en_curso" | "terminadas" | "denegadas" | "todas"
+/**
+ * Una pestaña por ejercicio, y "Para estudiar" (sin ejercicio) solo si hay
+ * alguna. Nunca todos los años juntos: se trabaja año a año, como en el Excel,
+ * y mezclarlos haría que los totales no significaran nada.
+ */
+const PARA_ESTUDIAR = "estudiar"
 
-const PESTANAS: Record<Pestana, { label: string; estados: SubvencionEstado[] | null }> = {
-  en_curso: { label: "En curso", estados: ["en_preparacion", "solicitada", "concedida"] },
-  terminadas: { label: "Justificadas y cerradas", estados: ["justificada", "cerrada"] },
-  denegadas: { label: "Denegadas", estados: ["denegada"] },
-  todas: { label: "Todas", estados: null },
+function enPestana(s: SubvencionConResumen, p: string) {
+  return p === PARA_ESTUDIAR ? s.ejercicio == null : String(s.ejercicio) === p
 }
 
 function normalizar(t: string) {
   return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
 }
 
+function coincide(s: SubvencionConResumen, q: string) {
+  if (!q) return true
+  return normalizar(
+    [s.codigo, s.nombre, s.financiador?.nombre, s.solicitante, s.convocatoria, s.expediente, s.notas]
+      .filter(Boolean)
+      .join(" "),
+  ).includes(q)
+}
+
 export function SubvencionesManager() {
   const router = useRouter()
   const { isAdmin, loading: adminLoading } = useIsAdminState()
   const { subvenciones, loading, error, invalidar } = useSubvenciones({ enabled: isAdmin })
-  const [pestana, setPestana] = useState<Pestana>("en_curso")
+  const [pestanaElegida, setPestana] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState("")
   const [crearOpen, setCrearOpen] = useState(false)
 
-  const cuentas = useMemo(() => {
-    const out = {} as Record<Pestana, number>
-    for (const p of Object.keys(PESTANAS) as Pestana[]) {
-      const estados = PESTANAS[p].estados
-      out[p] = estados ? subvenciones.filter((s) => estados.includes(s.estado)).length : subvenciones.length
-    }
-    return out
-  }, [subvenciones])
+  // Como el Excel: un bloque por año, el más reciente primero.
+  const ejercicios = useMemo(
+    () => [...new Set(subvenciones.map((s) => s.ejercicio).filter((e): e is number => e != null))].sort((a, b) => b - a),
+    [subvenciones],
+  )
+  const hayParaEstudiar = subvenciones.some((s) => s.ejercicio == null)
+  const anioActual = new Date().getFullYear()
+  const pestanaPorDefecto = ejercicios.includes(anioActual)
+    ? String(anioActual)
+    : ejercicios[0]
+      ? String(ejercicios[0])
+      : hayParaEstudiar
+        ? PARA_ESTUDIAR
+        : String(anioActual)
+  const pestana = pestanaElegida ?? pestanaPorDefecto
 
-  const visibles = useMemo(() => {
-    const estados = PESTANAS[pestana].estados
-    const q = normalizar(busqueda.trim())
-    return subvenciones.filter((s) => {
-      if (estados && !estados.includes(s.estado)) return false
-      if (!q) return true
-      return normalizar(
-        [s.nombre, s.financiador, s.convocatoria, s.expediente, s.ejercicio].filter(Boolean).join(" "),
-      ).includes(q)
-    })
-  }, [subvenciones, pestana, busqueda])
+  const q = normalizar(busqueda.trim())
+  const visibles = useMemo(
+    () => subvenciones.filter((s) => enPestana(s, pestana) && coincide(s, q)),
+    [subvenciones, pestana, q],
+  )
+  // Si se busca algo que está en otro año, se dice dónde, sin mezclar años.
+  const enOtrosAnios = useMemo(() => {
+    if (!q) return []
+    const cuenta = new Map<string, number>()
+    for (const s of subvenciones) {
+      const p = s.ejercicio == null ? PARA_ESTUDIAR : String(s.ejercicio)
+      if (p !== pestana && coincide(s, q)) cuenta.set(p, (cuenta.get(p) ?? 0) + 1)
+    }
+    return [...cuenta.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+  }, [subvenciones, pestana, q])
+
+  const grupos = useMemo(() => agruparPorAmbito(visibles), [visibles])
+  const totales = useMemo(() => totalesEjercicio(visibles), [visibles])
+  const hoy = toLocalDateString(new Date())
 
   if (adminLoading) return <PageSkeleton />
   if (!isAdmin) {
@@ -72,6 +105,19 @@ export function SubvencionesManager() {
       />
     )
   }
+
+  const tabs = [
+    ...ejercicios.map((e) => ({
+      value: String(e),
+      label: String(e),
+      count: subvenciones.filter((s) => s.ejercicio === e).length,
+    })),
+    ...(hayParaEstudiar
+      ? [{ value: PARA_ESTUDIAR, label: "Para estudiar", count: subvenciones.filter((s) => s.ejercicio == null).length }]
+      : []),
+  ]
+  const etiquetaPestana = tabs.find((t) => t.value === pestana)?.label ?? ""
+  const esAnio = /^\d{4}$/.test(pestana)
 
   return (
     <div className="space-y-6">
@@ -86,21 +132,13 @@ export function SubvencionesManager() {
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <FilterTabs
-          value={pestana}
-          onValueChange={(v) => setPestana(v as Pestana)}
-          items={(Object.keys(PESTANAS) as Pestana[]).map((p) => ({
-            value: p,
-            label: PESTANAS[p].label,
-            count: cuentas[p],
-          }))}
-        />
+        <FilterTabs value={pestana} onValueChange={setPestana} items={tabs} />
         <div className="relative sm:w-72">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre, financiador, expediente…"
+            placeholder="Buscar código, financiador, nombre…"
             className="pl-8"
             aria-label="Buscar subvenciones"
           />
@@ -115,42 +153,75 @@ export function SubvencionesManager() {
         <EmptyState
           icon={<Landmark className="h-5 w-5" />}
           title="Aún no hay subvenciones"
-          description="Crea la primera y después, desde Movimientos, selecciona los gastos de cualquier delegación y asígnalos a ella."
+          description="Crea la primera y después, desde Movimientos, selecciona los gastos de cualquier delegación e imputáselos."
         >
           <Button onClick={() => setCrearOpen(true)}>
             <Plus className="h-4 w-4" />
             Nueva subvención
           </Button>
         </EmptyState>
-      ) : visibles.length === 0 ? (
-        <EmptyState
-          title="Ninguna subvención coincide"
-          description={busqueda ? `Nada con «${busqueda}» en «${PESTANAS[pestana].label}».` : `No hay ninguna en «${PESTANAS[pestana].label}».`}
-        >
-          <div className="flex flex-wrap justify-center gap-2">
-            {busqueda && (
-              <Button variant="outline" onClick={() => setBusqueda("")}>
-                Quitar la búsqueda
-              </Button>
-            )}
-            {pestana !== "todas" && (
-              <Button variant="outline" onClick={() => setPestana("todas")}>
-                Ver todas ({cuentas.todas})
-              </Button>
-            )}
-          </div>
-        </EmptyState>
       ) : (
-        <div className="space-y-2" aria-live="polite">
-          {visibles.map((s) => (
-            <SubvencionRow key={s.id} subvencion={s} onOpen={() => router.push(`/subvenciones/${s.id}`)} />
-          ))}
-        </div>
+        <>
+          {pestana !== PARA_ESTUDIAR && visibles.length > 0 && (
+            <dl
+              className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4"
+              aria-label={`Totales de ${etiquetaPestana}`}
+            >
+              <Total label="Máximo posible" valor={totales.solicitado} ayuda="Lo solicitado en lo que sigue vivo" />
+              <Total label={esAnio ? `Confirmado ${pestana}` : "Confirmado"} valor={totales.confirmado} destacado />
+              <Total label="Cobrado" valor={totales.cobrado} />
+              <Total label="Por cobrar" valor={totales.porCobrar} />
+            </dl>
+          )}
+
+          {visibles.length === 0 ? (
+            <EmptyState
+              title="Ninguna subvención coincide"
+              description={busqueda ? `Nada con «${busqueda}» en «${etiquetaPestana}».` : `No hay ninguna en «${etiquetaPestana}».`}
+            >
+              <div className="flex flex-wrap justify-center gap-2">
+                {busqueda && (
+                  <Button variant="outline" onClick={() => setBusqueda("")}>
+                    Quitar la búsqueda
+                  </Button>
+                )}
+                {enOtrosAnios.map(([p, n]) => (
+                  <Button key={p} variant="outline" onClick={() => setPestana(p)}>
+                    {n} en {p === PARA_ESTUDIAR ? "Para estudiar" : p}
+                  </Button>
+                ))}
+              </div>
+            </EmptyState>
+          ) : (
+            <div className="space-y-6" aria-live="polite">
+              {grupos.map((g) => (
+                <section key={g.ambito} aria-labelledby={`grupo-${g.ambito}`} className="space-y-2">
+                  <h2
+                    id={`grupo-${g.ambito}`}
+                    className="flex items-baseline gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  >
+                    {g.label}
+                    <span className="font-normal normal-case tracking-normal">{g.subvenciones.length}</span>
+                  </h2>
+                  {g.subvenciones.map((s) => (
+                    <SubvencionRow
+                      key={s.id}
+                      subvencion={s}
+                      hoy={hoy}
+                      onOpen={() => router.push(`/subvenciones/${s.id}`)}
+                    />
+                  ))}
+                </section>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <SubvencionFormDialog
         open={crearOpen}
         onOpenChange={setCrearOpen}
+        plantilla={esAnio ? { ejercicio: Number(pestana) } : pestana === PARA_ESTUDIAR ? { ejercicio: null } : null}
         onSaved={(s) => {
           invalidar()
           router.push(`/subvenciones/${s.id}`)
@@ -160,17 +231,49 @@ export function SubvencionesManager() {
   )
 }
 
-function SubvencionRow({ subvencion: s, onOpen }: { subvencion: SubvencionConResumen; onOpen: () => void }) {
+function Total({ label, valor, ayuda, destacado }: { label: string; valor: number; ayuda?: string; destacado?: boolean }) {
+  return (
+    <div className="bg-card px-4 py-3" title={ayuda}>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={cn("text-base font-semibold tabular-nums", destacado && "text-primary")}>{formatCurrency(valor)}</dd>
+    </div>
+  )
+}
+
+function SubvencionRow({
+  subvencion: s,
+  hoy,
+  onOpen,
+}: {
+  subvencion: SubvencionConResumen
+  hoy: string
+  onOpen: () => void
+}) {
   const info = SUBVENCION_ESTADO_INFO[s.estado]
-  const pct = porcentajeImputado(s.resumen.total_gastos, s.importe_concedido)
-  const detalle = [s.financiador, s.ejercicio, s.expediente].filter(Boolean).join(" · ")
+  const descartada = info.fase === "descartada"
+  const fecha = proximaFecha(s, hoy)
+  const cobrado = importeCobrado(s)
+  const principal = s.importe_concedido ?? s.importe_solicitado
+  const detalle = [s.financiador?.nombre, s.solicitante].filter(Boolean).join(" · ")
 
   return (
-    <ListRow onClick={onOpen}>
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="min-w-0 space-y-1">
+    <ListRow onClick={onOpen} className={cn(descartada && "opacity-70")}>
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="min-w-0 flex-1 space-y-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="truncate font-medium text-foreground">{s.nombre}</span>
+            {s.codigo && (
+              <span className="shrink-0 rounded border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px] font-medium text-foreground/80">
+                {s.codigo}
+              </span>
+            )}
+            <span className="min-w-0 truncate font-medium text-foreground">{s.nombre}</span>
+            {s.recurrente && <Repeat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label="Sale cada año" />}
+          </div>
+          <p className="truncate text-xs text-muted-foreground">{detalle}</p>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 sm:flex-nowrap sm:justify-end">
+          <div className="flex items-center gap-1.5">
             <StatusPill
               label={info.label}
               icon={info.icon}
@@ -178,29 +281,41 @@ function SubvencionRow({ subvencion: s, onOpen }: { subvencion: SubvencionConRes
               textClass={info.textClass}
               borderClass={info.borderClass}
             />
+            {s.justificacion_completa && (
+              <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-label="Justificación completa" />
+            )}
           </div>
-          <p className="truncate text-xs text-muted-foreground">{detalle}</p>
-        </div>
 
-        <div className="flex shrink-0 items-center gap-6 text-right text-sm tabular-nums">
-          <div>
-            <div className="text-xs text-muted-foreground">Concedido</div>
-            <div className="font-medium">{s.importe_concedido != null ? formatCurrency(s.importe_concedido) : "—"}</div>
+          <div className="w-32 text-xs text-muted-foreground">
+            {fecha ? (
+              <span className="inline-flex items-center gap-1" title={fecha.etiqueta}>
+                <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {fecha.etiqueta.split(" ")[0]} {formatDate(fecha.fecha)}
+                </span>
+              </span>
+            ) : null}
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Imputado</div>
-            <div className="font-medium">
-              {formatCurrency(s.resumen.total_gastos)}
-              {pct != null && <span className="ml-1 text-xs text-muted-foreground">({pct.toLocaleString("es-ES")} %)</span>}
+
+          <div className="w-28 text-right tabular-nums">
+            <div className="text-[11px] text-muted-foreground">
+              {s.importe_concedido != null ? "Concedido" : s.importe_solicitado != null ? "Solicitado" : " "}
+            </div>
+            <div className={cn("text-sm font-medium", s.importe_concedido == null && "text-muted-foreground")}>
+              {principal != null ? formatCurrency(principal) : "—"}
             </div>
           </div>
-          <div className="min-w-[5.5rem]">
-            <div className="text-xs text-muted-foreground">Movimientos</div>
-            <div className="font-medium">
-              {s.resumen.movimientos}
-              {s.resumen.delegaciones > 1 && (
-                <span className="ml-1 text-xs font-normal text-muted-foreground">en {s.resumen.delegaciones} deleg.</span>
-              )}
+
+          <div className="w-28 text-right tabular-nums">
+            <div className="text-[11px] text-muted-foreground">
+              {s.resumen.movimientos > 0 ? `Imputado · ${s.resumen.movimientos} mov.` : cobrado > 0 ? "Cobrado" : " "}
+            </div>
+            <div className="text-sm font-medium">
+              {s.resumen.movimientos > 0
+                ? formatCurrency(s.resumen.total_gastos)
+                : cobrado > 0
+                  ? formatCurrency(cobrado)
+                  : ""}
             </div>
           </div>
         </div>

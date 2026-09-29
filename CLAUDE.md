@@ -47,7 +47,8 @@ The app uses Supabase with a hierarchical structure:
 - **aviso**: Notices and tasks per delegation (technical office ↔ treasurers)
 - **aviso_lectura**: Read receipts for notices (one row per aviso/user)
 - **subvencion**: Grants of the whole organization (not of a delegation); gestor_central only
-- **subvencion_movimiento**: Movements imputed to a grant — one grant per movement (see Subvenciones below)
+- **subvencion_movimiento**: Movements imputed to a grant, each with its share (`importe_imputado`); a movement can be split across grants up to 100 % (see Subvenciones below)
+- **financiador**: Who funds a grant (GVA IVAJ, Ayto CS…); repeats every year, groups and orders the list
 
 Type definitions for all tables are in `lib/types/database.ts` (Row/Insert/Update types for each table).
 
@@ -374,36 +375,53 @@ externa ni el MCP**: ahí hay que agregar en JS, como `lib/api/resumen.ts`.
 
 ### Subvenciones (solo gestores centrales)
 
-Sustituye, poco a poco, un Excel grande de la oficina técnica. La primera piedra
-(`scripts/071`) responde a una sola pregunta: **¿este gasto ya lo he usado en otra
-subvención?**
+Sustituye el Excel "Plan Subvenciones" de la oficina técnica (`scripts/071`,
+`072`; la importación de ese Excel es `scripts/073`). Responde a dos preguntas:
+**qué subvenciones hay cada año y en qué punto están**, y **qué gastos se han
+usado en cuál, y cuánto de cada uno**.
 
-- **Una subvención no es de una delegación**: no tiene `delegacion_id`. Se
-  justifica con movimientos de varias, y la delegación de cada gasto sale de su
-  movimiento. Por eso `useSubvenciones()` no depende de la delegación
-  seleccionada.
-- **Un movimiento, una subvención**: `UNIQUE (movimiento_id)` en
-  `subvencion_movimiento`, en la base de datos porque la API y el MCP también
-  leen/escriben. Si un día hay que repartir un gasto entre dos, se añade
-  `importe_imputado` y se cambia el UNIQUE por un trigger que no deje pasar del
-  100 % — la tabla ya tiene la forma de una fila por par.
-- **Imputar** se hace desde la barra de selección de Movimientos (botón
-  «Subvención», solo `isAdmin`), delegación a delegación. Los que ya están en
-  otra subvención **se enseñan y no se mueven** (`repartirAsignacion()`): sacar
-  un gasto de una justificación es un gesto propio, desde esa subvención. Es un
-  `insert`, no un `upsert`, para que una carrera con otro gestor salte en vez de
-  pisarle.
+- **Una subvención no es de una delegación**: no tiene `delegacion_id` propio
+  de pertenencia. `solicitante` es quién la pide ("AJ", "Castellón", "ECE"…) y
+  `delegacion_id` solo se rellena cuando el solicitante es una delegación. Los
+  gastos vienen de cualquier delegación. `useSubvenciones()` no depende de la
+  delegación seleccionada.
+- **Un gasto se puede repartir entre subvenciones**, cada una con su
+  `importe_imputado` (en positivo). La suma no puede pasar de
+  `abs(movimiento.importe)`: lo impide el trigger
+  `mcm_subvencion_movimiento_reparto` (072), que bloquea el movimiento con
+  `FOR UPDATE` para que dos imputaciones a la vez no se pasen, y que sin
+  importe imputa **todo lo que quede libre**. Es la regla de la casa y está en
+  la base de datos porque web, API y MCP imputan.
+- **Imputar desde Movimientos** (barra de selección, botón «Subvención», solo
+  `isAdmin`): cada movimiento entra por lo que le queda libre o por un % de su
+  importe, sin pasar de lo libre (`repartirAsignacion()`). Lo que ya está
+  entero en otra **no se mueve**: bajarle la parte a otra subvención es un
+  gesto propio. Después, cada parte se ajusta en la ficha con
+  `ImputacionEditor` (€ o %).
+- **Financiador** es tabla propia (`financiador`), porque se repite cada año.
+  `ambito` da el grupo de la lista (Generalitat arriba, lo local y lo raro
+  abajo: `FINANCIADOR_AMBITOS`) y `orden` el puesto dentro del grupo.
+- **Estados**: los diez del Excel, en su orden (`SUBVENCION_ESTADO_INFO.paso`),
+  con los colores de su desplegable. `ejercicio = NULL` es "Para estudiar".
+  **La lista va siempre por años** (una pestaña por ejercicio, sin "Todas"):
+  mezclar años hace que los totales no signifiquen nada. Buscar algo que está
+  en otro año ofrece saltar a él.
+  `justificacion_completa` ("J") va aparte del estado a propósito. No se bloquea
+  nada por estado.
+- **Lo menor se pliega** ("Más detalles"): nombre oficial de la convocatoria,
+  expediente, fechas secundarias y enlaces. En el Excel iban agrupados con "+".
 - **Borrar un movimiento imputado se rechaza** (trigger
   `movimiento_en_subvencion_no_se_borra`, FK `RESTRICT`) con el nombre de la
-  subvención en el mensaje. Con cascada desaparecería de la justificación en
-  silencio, y quien borra —un tesorero— ni siquiera ve la subvención.
-- **RLS: solo `is_gestor_central()`** en las dos tablas. La vista
-  `subvencion_resumen` es `security_invoker = on`, así que hereda esa RLS.
-- El periodo de gastos (`periodo_desde`/`hasta`) **avisa, no rechaza**.
-- La ficha (`/subvenciones/[id]`) copia los ids (líneas, comas o JSON) y
-  descarga un Excel con el id en la primera columna; la API lo sirve entero en
-  `GET /api/v1/subvenciones/{id}` (y `obtener_subvencion` en el MCP), con los
-  archivos de cada movimiento. La API es **solo lectura** de momento.
+  subvención en el mensaje.
+- **RLS: solo `is_gestor_central()`** en las tres tablas. La vista
+  `subvencion_resumen` es `security_invoker = on` y suma **lo imputado**, no el
+  importe entero de los movimientos.
+- La ficha copia ids (líneas, comas o JSON) y descarga un Excel con id, importe
+  e imputado. API: `GET /api/v1/subvenciones[/{id}]`, `POST`/`DELETE
+  /api/v1/subvenciones/{id}/movimientos`; MCP: `listar_subvenciones`,
+  `obtener_subvencion`, `imputar_movimientos_subvencion`,
+  `quitar_movimientos_subvencion`. Imputar por API va de uno en uno para que el
+  que no cabe vaya a `errores` y el resto entre.
 - Lógica pura en `lib/utils/subvenciones.ts`; cliente en
   `lib/services/subvenciones.ts`; núcleo de API en `lib/api/subvenciones.ts`.
 
@@ -520,10 +538,10 @@ scoped explicitly in the query instead: `resolveAmbitoDelegaciones()` returns
 | `lib/api/pagos.ts` | MCM payments (reimbursements): read, and create/update for the `manual` calculation type only — gasoline calculations stay app-only |
 | `lib/api/archivos.ts` | Base64 upload to Storage + registration, signed URLs, deletion |
 | `lib/api/resumen.ts` | Per-delegation financial rollup |
-| `lib/api/subvenciones.ts` | Grants and their imputed movements (read only) |
+| `lib/api/subvenciones.ts` | Grants, their imputed movements, and imputing/removing movements |
 | `lib/api/errors.ts` | `ApiError` with HTTP status; unexpected errors are logged in full and truncated to one line in the response |
 | `lib/api/route-helpers.ts` | `conApi()` wrapper: auth + query parsing + `{ ok: true, ... }` shape |
-| `lib/mcp/tools.ts` | The 36 MCP tools, each a thin wrapper over `lib/api/` |
+| `lib/mcp/tools.ts` | The 38 MCP tools, each a thin wrapper over `lib/api/` |
 | `lib/mcp/auth.ts` | Accepts either an API key or an OAuth access token; OAuth pins the acting user |
 | `lib/oauth/` | OAuth 2.1 authorization server: config, PKCE, DB-backed store, authorize-request validation |
 

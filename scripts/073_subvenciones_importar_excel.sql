@@ -21,6 +21,11 @@
 --   códigos que faltaban en 2023 se toman de la misma línea en 2024; fuera los
 --   enlaces al propio Excel y los repetidos; un límite o una concesión
 --   anteriores a la convocatoria (copiados de otro año) pasan a notas.
+--   Al aplicarlo en producción (29/09/2026) se retocó además: en GVA VAL, GVA
+--   ODS y GVA IRPF 2024 la "carpeta" era la web de la convocatoria (pasa a
+--   enlaces); la 2ª justificación de GVA VOL 2024 repetía la 1ª (fuera); fuera
+--   el enlace de Cultura 2023 que repetía su carpeta, y la nota duplicada de
+--   Onda 2025. Esos retoques están en la base de datos, no en este archivo.
 --   Bloque "CONVOCATORIAS PARA ESTUDIAR" y el catálogo del final (solo las que
 --   nunca se han pedido) NO se importan: se decidió dejarlas fuera por ahora.
 

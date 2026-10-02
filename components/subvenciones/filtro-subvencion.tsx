@@ -1,5 +1,6 @@
 "use client"
 
+import { CodigoSubvencion } from "@/components/subvenciones/codigo-subvencion"
 import { useMemo, useState } from "react"
 import { Check, ChevronsUpDown, TrendingDown } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -89,7 +90,7 @@ export function FiltroSubvencion({
                     <Check className={cn("h-4 w-4 shrink-0", value === s.id ? "opacity-100" : "opacity-0")} />
                     <span className={cn("h-2 w-2 shrink-0 rounded-full", SUBVENCION_ESTADO_INFO[s.estado].dotClass)} aria-hidden />
                     <span className="min-w-0 flex-1 truncate">
-                      {s.codigo && <span className="mr-1 font-mono text-xs text-muted-foreground">{s.codigo}</span>}
+                      {s.codigo && <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} className="mr-1.5 align-[1px]" />}
                       {s.nombre}
                     </span>
                     <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{s.ejercicio ?? "—"}</span>

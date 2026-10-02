@@ -1,5 +1,6 @@
 "use client"
 
+import { CodigoSubvencion } from "@/components/subvenciones/codigo-subvencion"
 import { useCallback, useMemo, useState, type ReactNode } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { AlarmClock, CalendarClock, Check, Landmark, Plus, Repeat, Search, X } from "lucide-react"
@@ -613,9 +614,7 @@ function SubvencionRow({
         <div className="min-w-0 space-y-0.5">
           <div className="flex min-w-0 items-center gap-2">
             {s.codigo && (
-              <span className="shrink-0 rounded border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px] font-medium text-foreground/80">
-                {s.codigo}
-              </span>
+              <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} className="py-1" />
             )}
             <button
               type="button"

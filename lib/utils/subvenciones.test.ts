@@ -9,6 +9,7 @@ import {
   recuentoPorEstado,
   paraImputar,
   tablaParaHoja,
+  colorCodigo,
   esSubvencionEstado,
   formatearIds,
   fueraDePeriodo,
@@ -208,5 +209,18 @@ describe("paraImputar y tablaParaHoja", () => {
     expect(
       tablaParaHoja([{ id: "m1", fecha: "2026-03-01T00:00:00", concepto: "Bus\tcampa\nmento", importe: -1234.5, imputado: 1234.5 }]),
     ).toBe("ID\tFecha\tConcepto\tImporte\tImputado\nm1\t2026-03-01\tBus campa mento\t-1234,50\t1234,50")
+  })
+})
+
+describe("colorCodigo", () => {
+  it("cada financiador con su color, y el Ayto CS según la línea", () => {
+    expect(colorCodigo("IVAJ")).toContain("font-bold")
+    expect(colorCodigo("GVA VOL")).toContain("bg-red-100")
+    expect(colorCodigo("DIP CS")).toContain("bg-rose-50")
+    expect(colorCodigo("Ayto CS", "Entidades Juveniles")).toContain("emerald")
+    expect(colorCodigo("Ayto CS Cul", "Cultura")).toContain("lime")
+    expect(colorCodigo("Ayto Vila")).toContain("yellow")
+    expect(colorCodigo("DIDANIA")).toContain("orange")
+    expect(colorCodigo("GVAX")).toBe(colorCodigo(null))
   })
 })

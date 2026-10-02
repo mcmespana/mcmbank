@@ -79,6 +79,9 @@ export interface TransactionFilters {
   amountTo?: number
   uncategorized?: boolean
   facturaPendiente?: boolean
+  /** Solo gestores centrales: "con", "sin" o el id de una subvención. */
+  subvencion?: string
+  soloGastos?: boolean
 }
 
 export function TransactionManager() {
@@ -123,6 +126,7 @@ export function TransactionManager() {
   // saber si iba, ni por dónde.
   const [bulkProgress, setBulkProgress] = useState<{ hechos: number; total: number; etiqueta: string } | null>(null)
   const searchParams = useSearchParams()
+  const isAdmin = useIsAdminHook()
 
   const {
     movimientos: movements,
@@ -149,6 +153,8 @@ export function TransactionManager() {
     amountTo: filters.amountTo,
     uncategorized: filters.uncategorized,
     facturaPendiente: filters.facturaPendiente,
+    subvencion: isAdmin ? filters.subvencion : undefined,
+    soloGastos: filters.soloGastos,
   })
 
   // Notify on fetch error
@@ -171,7 +177,6 @@ export function TransactionManager() {
   const { contactos, createContacto: createContactoFn } = useContactos(selectedDelegation, {
     incluirCatalogo: true,
   })
-  const isAdmin = useIsAdminHook()
   const { user: currentUser } = useCurrentUser()
 
   // Al cambiar de filtro (o de delegación) la selección deja de tener sentido:
@@ -791,6 +796,7 @@ export function TransactionManager() {
               contactos={contactos}
               uncategorizedCount={uncategorizedCount}
               facturaPendienteCount={facturaPendienteCount}
+              esGestorCentral={isAdmin}
             />
           </div>
         )}
@@ -1072,6 +1078,7 @@ export function TransactionManager() {
                 contactos={contactos}
                 uncategorizedCount={uncategorizedCount}
                 facturaPendienteCount={facturaPendienteCount}
+              esGestorCentral={isAdmin}
               />
             </Card>
           )}

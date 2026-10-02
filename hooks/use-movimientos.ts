@@ -19,6 +19,10 @@ interface MovimientosFilters {
   amountTo?: number
   uncategorized?: boolean
   facturaPendiente?: boolean
+  /** Solo gestores centrales: "con", "sin" o el id de una subvención. */
+  subvencion?: string
+  /** Solo importes negativos. */
+  soloGastos?: boolean
 }
 
 const DEFAULT_PAGE_SIZE = 100
@@ -26,6 +30,18 @@ const DEFAULT_PAGE_SIZE = 100
 // Reexportado desde lib/db/amount-filter.ts (función pura y testeable).
 // Se mantiene aquí para no romper imports existentes.
 export { applyAbsoluteAmountFilter }
+
+/**
+ * Embebido de `subvencion_movimiento` para filtrar por subvención en la misma
+ * consulta, sin pedir antes los ids (que en "sin subvención" serían miles). Lo
+ * protege la RLS de gestor central: a un tesorero no le llega este filtro.
+ */
+function embedSubvencion(subvencion: string | undefined): string {
+  if (!subvencion) return ""
+  return subvencion === "sin"
+    ? ",\n            subvencion_movimiento!left ( subvencion_id )"
+    : ",\n            subvencion_movimiento!inner ( subvencion_id )"
+}
 
 export function useMovimientos(
   delegacionId: string | null,
@@ -213,7 +229,7 @@ export function useMovimientos(
               color,
               logo_url,
               es_global
-            )
+            )${embedSubvencion(memoizedFilters?.subvencion)}
           `,
             { count: "exact" }
           )
@@ -260,6 +276,16 @@ export function useMovimientos(
           }
           if (memoizedFilters.facturaPendiente) {
             query = query.eq("factura_pendiente", true)
+          }
+          if (memoizedFilters.soloGastos) {
+            query = query.lt("importe", 0)
+          }
+          // El embebido de `embedSubvencion()` hace el filtro: `!inner` deja solo
+          // los imputados (y con un id, los de esa); `!left` + `is null`, los que no.
+          if (memoizedFilters.subvencion === "sin") {
+            query = query.is("subvencion_movimiento", null)
+          } else if (memoizedFilters.subvencion && memoizedFilters.subvencion !== "con") {
+            query = query.eq("subvencion_movimiento.subvencion_id", memoizedFilters.subvencion)
           }
         }
 

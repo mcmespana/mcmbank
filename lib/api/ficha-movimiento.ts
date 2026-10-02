@@ -19,9 +19,14 @@ type AdminClient = ReturnType<typeof createAdminClient>
 export interface ArchivoFicha extends ArchivoPublico {
   /** Dónde está registrado: en el movimiento, en la factura o en los dos. */
   registrado_en: ("movimiento" | "factura")[]
-  /** Descargable sin clave de API hasta que caduque. Ver `caduca_en_segundos`. */
-  url_firmada: string
+  /**
+   * Descargable sin clave de API hasta que caduque. Ver `caduca_en_segundos`.
+   * `null` si el registro existe pero el fichero ya no está en Storage (mira
+   * `error_url`): un fichero roto no tiene que tumbar la ficha entera.
+   */
+  url_firmada: string | null
   caduca_en_segundos: number
+  error_url?: string
 }
 
 export interface ImportesFicha {
@@ -112,12 +117,26 @@ export async function obtenerFichaMovimiento(
   )
   const unidos = unirArchivos(movimiento.archivos, factura?.archivos ?? [])
   const archivos = await Promise.all(
-    unidos.map(async ({ archivo, registrado_en }): Promise<ArchivoFicha> => ({
-      ...archivo,
-      registrado_en,
-      url_firmada: await urlFirmada(admin, archivo.bucket, archivo.path_storage ?? "", segundos),
-      caduca_en_segundos: segundos,
-    })),
+    unidos.map(async ({ archivo, registrado_en }): Promise<ArchivoFicha> => {
+      try {
+        return {
+          ...archivo,
+          registrado_en,
+          url_firmada: await urlFirmada(admin, archivo.bucket, archivo.path_storage ?? "", segundos),
+          caduca_en_segundos: segundos,
+        }
+      } catch (err) {
+        // Un registro sin fichero detrás se señala, no se propaga: antes un solo
+        // huérfano devolvía 502 y la ficha del movimiento no se podía leer.
+        return {
+          ...archivo,
+          registrado_en,
+          url_firmada: null,
+          caduca_en_segundos: segundos,
+          error_url: err instanceof Error ? err.message : "No se pudo generar la URL de descarga.",
+        }
+      }
+    }),
   )
 
   const { archivos: _archivos, ...sinArchivos } = movimiento

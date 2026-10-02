@@ -12,6 +12,7 @@ import {
   archivosDeFacturas,
   listarArchivosFactura,
   replicarArchivoEnMovimiento,
+  rutaEnUsoPorOtros,
   subirArchivoAFactura,
   type ArchivoEntrante,
 } from "@/lib/api/archivos"
@@ -409,12 +410,19 @@ export async function eliminarFactura(admin: AdminClient, id: string): Promise<v
   const adjuntos = (unwrap(
     await (admin as any)
       .from("archivo_adjunto")
-      .select("path_storage, bucket")
+      .select("id, path_storage, bucket")
       .eq("entidad", "factura")
       .eq("entidad_id", id),
-  ) ?? []) as { path_storage: string; bucket: string }[]
+  ) ?? []) as { id: string; path_storage: string; bucket: string }[]
 
+  const idsAdjuntos = adjuntos.map((a) => a.id)
   for (const adjunto of adjuntos) {
+    // La copia del movimiento apunta al mismo fichero: si sigue ahí, se queda.
+    const compartido = await rutaEnUsoPorOtros(admin, adjunto.bucket, adjunto.path_storage, {
+      tabla: "archivo_adjunto",
+      ids: idsAdjuntos,
+    })
+    if (compartido) continue
     const { error } = await admin.storage.from(adjunto.bucket).remove([adjunto.path_storage])
     if (error) console.warn("No se pudo borrar el fichero de Storage:", error.message)
   }

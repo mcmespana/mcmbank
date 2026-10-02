@@ -1611,12 +1611,14 @@ export class DatabaseService {
       .select("path_storage, bucket")
       .eq("entidad", "factura")
       .eq("entidad_id", id)
+    await supabase.from("archivo_adjunto").delete().eq("entidad", "factura").eq("entidad_id", id)
+    // Con las filas ya fuera: si la copia de algún movimiento sigue usando el
+    // fichero, se queda en Storage en vez de dejarla huérfana.
     for (const archivo of (archivos ?? []) as { path_storage: string; bucket: "facturas" | "documentos" }[]) {
-      await FileService.deleteFile(archivo.path_storage, archivo.bucket).catch((err) =>
+      await FileService.deleteFileIfUnreferenced(archivo.path_storage, archivo.bucket).catch((err) =>
         console.warn("No se pudo eliminar el archivo de Storage:", err),
       )
     }
-    await supabase.from("archivo_adjunto").delete().eq("entidad", "factura").eq("entidad_id", id)
 
     const { error } = await supabase.from("factura").delete().eq("id", id)
     if (error) throw error

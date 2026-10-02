@@ -254,6 +254,10 @@ function ordenarArchivos_(archivos) {
  * convierten para que en Drive todo sea PDF.
  */
 function descargarComoPdf_(archivo) {
+  // Registro sin fichero en Storage: la ficha lo señala con url_firmada = null.
+  if (!archivo.url_firmada) {
+    throw new Error(`"${archivo.nombre_original}" está registrado pero su fichero ya no existe (${archivo.error_url || 'sin detalle'})`);
+  }
   const respuesta = UrlFetchApp.fetch(archivo.url_firmada, { muteHttpExceptions: true });
   if (respuesta.getResponseCode() !== 200) {
     throw new Error(`No se pudo bajar "${archivo.nombre_original}" (${respuesta.getResponseCode()})`);

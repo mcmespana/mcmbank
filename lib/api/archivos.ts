@@ -600,22 +600,67 @@ export async function urlFirmada(
 ): Promise<string> {
   const { data, error } = await admin.storage.from(bucket).createSignedUrl(path, segundos)
   if (error || !data?.signedUrl) {
-    throw new ApiError(502, `No se pudo generar la URL de descarga: ${error?.message ?? "error desconocido"}`)
+    const mensaje = error?.message ?? "error desconocido"
+    // Una fila que apunta a un fichero que ya no está en Storage no es un fallo
+    // del servidor: es un registro huérfano. Un 502 hace creer que Storage está
+    // caído y que reintentar sirve de algo.
+    if (/not\s*found|no\s*existe/i.test(mensaje)) {
+      throw new ApiError(
+        404,
+        `El archivo está registrado pero ya no existe en Storage (${bucket}/${path}). Elimina el registro o vuelve a subirlo.`,
+      )
+    }
+    throw new ApiError(502, `No se pudo generar la URL de descarga: ${mensaje}`)
   }
   return data.signedUrl
+}
+
+/**
+ * ¿Hay alguna otra fila que apunte al mismo objeto de Storage? Una factura
+ * vinculada a un movimiento se replica en `movimiento_archivo` y en
+ * `archivo_adjunto` **con el mismo `path_storage`**, así que borrar el fichero
+ * porque se borra una de las dos filas deja la otra apuntando a la nada.
+ */
+export async function rutaEnUsoPorOtros(
+  admin: AdminClient,
+  bucket: string,
+  path: string,
+  excluir: { tabla: "movimiento_archivo" | "archivo_adjunto"; ids: string[] },
+): Promise<boolean> {
+  for (const tabla of ["movimiento_archivo", "archivo_adjunto"] as const) {
+    const { data, error } = await (admin as any)
+      .from(tabla)
+      .select("id")
+      .eq("bucket", bucket)
+      .eq("path_storage", path)
+    if (error) throw wrapSupabaseError(error)
+    const otras = ((data ?? []) as { id: string }[]).filter(
+      (fila) => !(tabla === excluir.tabla && excluir.ids.includes(fila.id)),
+    )
+    if (otras.length > 0) return true
+  }
+  return false
 }
 
 /** Borra un archivo de Storage y su registro. */
 export async function eliminarArchivo(admin: AdminClient, archivoId: string): Promise<void> {
   const { fila, origen } = await localizarArchivo(admin, archivoId)
+  const tabla = origen === "movimiento" ? "movimiento_archivo" : "archivo_adjunto"
 
-  const { error: storageError } = await admin.storage.from(fila.bucket).remove([fila.path_storage])
-  if (storageError) {
-    // El fichero puede haber desaparecido ya de Storage; el registro sí se limpia.
-    console.warn("No se pudo borrar el fichero de Storage:", storageError.message)
+  // Si la copia gemela (movimiento ↔ factura) sigue ahí, el fichero se queda:
+  // solo se suelta este registro.
+  const compartido = await rutaEnUsoPorOtros(admin, fila.bucket, fila.path_storage, {
+    tabla,
+    ids: [archivoId],
+  })
+  if (!compartido) {
+    const { error: storageError } = await admin.storage.from(fila.bucket).remove([fila.path_storage])
+    if (storageError) {
+      // El fichero puede haber desaparecido ya de Storage; el registro sí se limpia.
+      console.warn("No se pudo borrar el fichero de Storage:", storageError.message)
+    }
   }
 
-  const tabla = origen === "movimiento" ? "movimiento_archivo" : "archivo_adjunto"
   const { error } = await (admin as any).from(tabla).delete().eq("id", archivoId)
   if (error) throw wrapSupabaseError(error)
 }

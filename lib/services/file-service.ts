@@ -168,6 +168,32 @@ export class FileService {
     }
   }
 
+  /**
+   * Borra el objeto de Storage solo si ya no lo referencia ninguna fila. Llamar
+   * **después** de borrar la fila propia.
+   *
+   * Una factura vinculada a un movimiento se replica en `movimiento_archivo` y
+   * `archivo_adjunto` con el mismo `path_storage`; borrar el fichero porque se
+   * borra una de las copias deja la otra apuntando a un objeto que no existe, y
+   * la API/MCP responden entonces "Object not found" al pedir su URL. Ante la
+   * duda (si la consulta falla) el fichero se conserva: un objeto suelto es
+   * recuperable, un registro sin fichero no.
+   */
+  static async deleteFileIfUnreferenced(path: string, bucket: 'facturas' | 'documentos'): Promise<void> {
+    for (const tabla of ['movimiento_archivo', 'archivo_adjunto']) {
+      const { count, error } = await (supabase as any)
+        .from(tabla)
+        .select('id', { count: 'exact', head: true })
+        .eq('bucket', bucket)
+        .eq('path_storage', path)
+      if (error || (count ?? 0) > 0) {
+        if (error) console.warn('No se pudo comprobar si el archivo sigue en uso; se conserva en Storage:', error)
+        return
+      }
+    }
+    await this.deleteFile(path, bucket)
+  }
+
   static getFileIcon(fileName: string): string {
     const extension = fileName.split('.').pop()?.toLowerCase()
     

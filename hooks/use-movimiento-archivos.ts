@@ -175,10 +175,11 @@ export function useMovimientoArchivos(movimientoId: string | null, delegacionCod
     setError(null)
 
     try {
-      // Eliminar archivo de Supabase Storage
-      await FileService.deleteFile(archivo.path_storage, archivo.bucket as 'facturas' | 'documentos')
-
       await removeArchivoRow(archivo)
+
+      // El fichero de Storage solo se borra si ninguna otra fila (la copia de la
+      // factura vinculada, p. ej.) sigue apuntando a él.
+      await FileService.deleteFileIfUnreferenced(archivo.path_storage, archivo.bucket as 'facturas' | 'documentos')
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error al eliminar archivo"
       setError(errorMsg)

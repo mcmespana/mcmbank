@@ -384,9 +384,38 @@ describe("localizarArchivo / urlFirmada / eliminarArchivo", () => {
   it("si Storage no puede firmar, se traduce en un 502", async () => {
     const { mod, admin } = await api()
     admin.storage.from = () => ({
-      createSignedUrl: async () => ({ data: null, error: { message: "not found" } }),
+      createSignedUrl: async () => ({ data: null, error: { message: "bucket caído" } }),
     })
-    await expect(mod.urlFirmada(admin, "facturas", "no-existe.pdf")).rejects.toMatchObject({ status: 502 })
+    await expect(mod.urlFirmada(admin, "facturas", "x.pdf")).rejects.toMatchObject({ status: 502 })
+  })
+
+  it("si el objeto ya no existe en Storage es un 404, no un 502", async () => {
+    const { mod, admin } = await api()
+    admin.storage.from = () => ({
+      createSignedUrl: async () => ({ data: null, error: { message: "Object not found" } }),
+    })
+    await expect(mod.urlFirmada(admin, "facturas", "no-existe.pdf")).rejects.toMatchObject({ status: 404 })
+  })
+
+  it("al borrar una copia no se borra el fichero si la gemela lo sigue usando", async () => {
+    const { mod, admin } = await api(
+      tablas({
+        movimiento_archivo: [{ id: "m-1", bucket: "facturas", path_storage: "SEV/f.pdf" }],
+        archivo_adjunto: [{ id: "a-1", bucket: "facturas", path_storage: "SEV/f.pdf" }],
+      }),
+    )
+    await mod.eliminarArchivo(admin, "m-1")
+    expect(admin.tablas.movimiento_archivo).toHaveLength(0)
+    expect(admin.tablas.archivo_adjunto).toHaveLength(1)
+    expect(admin.storage.borrados).toEqual([])
+  })
+
+  it("al borrar la última referencia sí se borra el fichero", async () => {
+    const { mod, admin } = await api(
+      tablas({ movimiento_archivo: [{ id: "m-1", bucket: "facturas", path_storage: "SEV/f.pdf" }] }),
+    )
+    await mod.eliminarArchivo(admin, "m-1")
+    expect(admin.storage.borrados).toEqual([{ bucket: "facturas", path: "SEV/f.pdf" }])
   })
 
   it("borra el registro aunque Storage falle al borrar el fichero", async () => {

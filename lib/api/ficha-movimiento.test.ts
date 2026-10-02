@@ -94,6 +94,22 @@ describe("obtenerFichaMovimiento", () => {
     expect(ficha.factura?.archivos).toEqual([])
   })
 
+  it("un fichero que ya no existe en Storage no tumba la ficha", async () => {
+    obtenerMovimiento.mockResolvedValue(
+      movimiento({ factura_id: null, archivos: [archivo("a", "roto.pdf"), archivo("b", "bien.pdf")] }),
+    )
+    urlFirmada.mockImplementationOnce(async () => {
+      throw new Error("El archivo está registrado pero ya no existe en Storage")
+    })
+    const { obtenerFichaMovimiento } = await import("@/lib/api/ficha-movimiento")
+    const ficha = await obtenerFichaMovimiento({} as any, "mov-1")
+
+    expect(ficha.archivos).toHaveLength(2)
+    expect(ficha.archivos[0].url_firmada).toBeNull()
+    expect(ficha.archivos[0].error_url).toContain("ya no existe")
+    expect(ficha.archivos[1].url_firmada).toContain("bien.pdf")
+  })
+
   it("movimiento sin factura: no la pide", async () => {
     obtenerMovimiento.mockResolvedValue(movimiento({ factura_id: null, archivos: [archivo("a", "p.pdf")] }))
     const { obtenerFichaMovimiento } = await import("@/lib/api/ficha-movimiento")

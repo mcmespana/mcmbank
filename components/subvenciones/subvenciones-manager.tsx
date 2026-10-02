@@ -614,7 +614,7 @@ function SubvencionRow({
         <div className="min-w-0 space-y-0.5">
           <div className="flex min-w-0 items-center gap-2">
             {s.codigo && (
-              <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} className="py-1" />
+              <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} color={s.color} className="py-1" />
             )}
             <button
               type="button"

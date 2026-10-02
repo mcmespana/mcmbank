@@ -91,7 +91,7 @@ export function SubvencionDeMovimiento({
               className="flex items-center gap-2 rounded-md px-1 py-0.5 text-xs hover:bg-muted"
             >
               <span className="min-w-0 flex-1 truncate">
-                {s.codigo && <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} className="mr-1.5 align-[1px]" />}
+                {s.codigo && <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} color={s.color} className="mr-1.5 align-[1px]" />}
                 {s.nombre}
                 {s.financiador && <span className="text-muted-foreground"> · {s.financiador}</span>}
               </span>
@@ -220,7 +220,7 @@ function ImputarRapido({
                         <span className={cn("h-2 w-2 shrink-0 rounded-full", info.dotClass)} aria-hidden />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm">
-                            {s.codigo && <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} className="mr-1.5 align-[1px]" />}
+                            {s.codigo && <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} color={s.color} className="mr-1.5 align-[1px]" />}
                             {s.nombre}
                           </span>
                           <span className="block truncate text-[11px] text-muted-foreground">

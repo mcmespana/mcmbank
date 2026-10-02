@@ -216,11 +216,15 @@ describe("colorCodigo", () => {
   it("cada financiador con su color, y el Ayto CS según la línea", () => {
     expect(colorCodigo("IVAJ")).toContain("font-bold")
     expect(colorCodigo("GVA VOL")).toContain("bg-red-100")
-    expect(colorCodigo("DIP CS")).toContain("bg-rose-50")
+    expect(colorCodigo("DIP CS")).toContain("bg-red-600")
     expect(colorCodigo("Ayto CS", "Entidades Juveniles")).toContain("emerald")
     expect(colorCodigo("Ayto CS Cul", "Cultura")).toContain("lime")
     expect(colorCodigo("Ayto Vila")).toContain("yellow")
     expect(colorCodigo("DIDANIA")).toContain("orange")
     expect(colorCodigo("GVAX")).toBe(colorCodigo(null))
+  })
+  it("el elegido a mano manda; uno que no existe se ignora", () => {
+    expect(colorCodigo("GVA VOL", "", "azul")).toContain("sky")
+    expect(colorCodigo("GVA VOL", "", "fucsia")).toContain("bg-red-100")
   })
 })

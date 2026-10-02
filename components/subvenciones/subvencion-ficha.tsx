@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { FinanciadorSelector } from "./financiador-selector"
+import { ColorSubvencionPicker } from "./color-subvencion-picker"
 import {
   EnlaceInline,
   EstadoInline,
@@ -77,8 +78,15 @@ export function SubvencionFicha({ subvencion: s, enCapa = false, acciones, mostr
             etiqueta="Código"
             vacio="Sin código"
             mono
-            className={cn("rounded border px-1.5 py-0.5 text-[11px] font-medium", colorCodigo(s.codigo, s.nombre))}
+            className={cn("rounded border px-1.5 py-0.5 text-[11px] font-medium", colorCodigo(s.codigo, s.nombre, s.color))}
             inputClassName="h-7 w-32 text-xs"
+          />
+          <ColorSubvencionPicker
+            codigo={s.codigo}
+            nombre={s.nombre}
+            color={s.color}
+            enCapa={enCapa}
+            onGuardar={(c) => g({ color: c })}
           />
           <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium tabular-nums text-primary">
             {s.ejercicio ?? "Para estudiar"}

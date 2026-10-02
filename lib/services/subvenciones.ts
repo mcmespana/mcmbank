@@ -438,6 +438,7 @@ export interface SubvencionDeUnMovimiento {
   id: string
   nombre: string
   codigo: string | null
+  color: string | null
   estado: Subvencion["estado"]
   financiador: string | null
   importe_imputado: number
@@ -447,7 +448,7 @@ export interface SubvencionDeUnMovimiento {
 export async function subvencionesDeMovimiento(movimientoId: string): Promise<SubvencionDeUnMovimiento[]> {
   const { data, error } = await db
     .from("subvencion_movimiento")
-    .select("importe_imputado, subvencion:subvencion_id ( id, nombre, codigo, estado, financiador:financiador_id ( nombre ) )")
+    .select("importe_imputado, subvencion:subvencion_id ( id, nombre, codigo, color, estado, financiador:financiador_id ( nombre ) )")
     .eq("movimiento_id", movimientoId)
   if (error) throw error
   return ((data ?? []) as any[])
@@ -458,6 +459,7 @@ export async function subvencionesDeMovimiento(movimientoId: string): Promise<Su
         id: s.id,
         nombre: s.nombre,
         codigo: s.codigo ?? null,
+        color: s.color ?? null,
         estado: s.estado,
         financiador: uno<any>(s.financiador)?.nombre ?? null,
         importe_imputado: Number(f.importe_imputado),

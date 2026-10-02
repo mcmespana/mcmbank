@@ -595,38 +595,65 @@ export function tablaParaHoja(filas: FilaParaHoja[]): string {
 // Color del código (GVA VOL, IVAJ, DIP CS…)
 // ---------------------------------------------------------------------------
 
+/** La paleta del código. Las claves son las que admite `subvencion.color` (scripts/075). */
+export const COLORES_SUBVENCION = {
+  rojo: { label: "Rojo", muestra: "bg-red-300", clase: "border-red-300 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/60 dark:text-red-200" },
+  rojo_intenso: { label: "Rojo intenso", muestra: "bg-red-600", clase: "border-red-700 bg-red-600 text-white dark:border-red-500 dark:bg-red-700" },
+  rosa: { label: "Rosa", muestra: "bg-rose-300", clase: "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200" },
+  naranja: { label: "Naranja", muestra: "bg-orange-400", clase: "border-orange-300 bg-orange-100 text-orange-800 dark:border-orange-800 dark:bg-orange-950/60 dark:text-orange-200" },
+  ambar: { label: "Ámbar", muestra: "bg-amber-400", clase: "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200" },
+  amarillo: { label: "Amarillo", muestra: "bg-yellow-300", clase: "border-yellow-300 bg-yellow-100 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/60 dark:text-yellow-200" },
+  lima: { label: "Lima", muestra: "bg-lime-400", clase: "border-lime-300 bg-lime-50 text-lime-800 dark:border-lime-800 dark:bg-lime-950/50 dark:text-lime-200" },
+  verde: { label: "Verde", muestra: "bg-emerald-500", clase: "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200" },
+  turquesa: { label: "Turquesa", muestra: "bg-teal-400", clase: "border-teal-300 bg-teal-50 text-teal-800 dark:border-teal-800 dark:bg-teal-950/50 dark:text-teal-200" },
+  azul: { label: "Azul", muestra: "bg-sky-400", clase: "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200" },
+  indigo: { label: "Índigo", muestra: "bg-indigo-500", clase: "border-indigo-300 bg-indigo-50 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200" },
+  violeta: { label: "Violeta", muestra: "bg-violet-400", clase: "border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200" },
+  negro: { label: "Negro", muestra: "bg-foreground", clase: "border-foreground bg-foreground font-bold text-background" },
+  gris: { label: "Gris", muestra: "bg-muted-foreground/40", clase: "border-border bg-muted/50 text-foreground/80" },
+} as const
+
+export type ColorSubvencion = keyof typeof COLORES_SUBVENCION
+
+export function esColorSubvencion(c: unknown): c is ColorSubvencion {
+  return typeof c === "string" && c in COLORES_SUBVENCION
+}
+
 /**
- * Los colores con que la oficina técnica pintaba los códigos en el Excel:
- * se reconocen de un vistazo antes de leerlos. Va por el principio del código
- * (y, en el Ayuntamiento de Castellón, por el nombre: la buena, Entidades
- * Juveniles, en un verde y las demás en otro). La primera regla que encaja
- * manda; cambiar un color o añadir uno es una línea.
+ * Los colores con que la oficina técnica pintaba los códigos en el Excel, para
+ * cuando no se ha elegido uno a mano: se reconocen de un vistazo antes de
+ * leerlos. Van por el principio del código (y, en el Ayuntamiento de
+ * Castellón, por el nombre: la buena, Entidades Juveniles, en un verde y las
+ * demás en otro). La primera regla que encaja manda.
  */
-const COLORES_CODIGO: { si: (codigo: string, nombre: string) => boolean; clase: string }[] = [
+const REGLAS_COLOR: { si: (codigo: string, nombre: string) => boolean; color: ColorSubvencion }[] = [
   // El IVAJ, en negro y en negrita: es el IVAJ.
-  { si: (c) => /^ivaj\b/.test(c), clase: "border-foreground bg-foreground font-bold text-background" },
-  // Conselleria: el rojo de la Generalitat.
-  { si: (c) => /^gva\b/.test(c), clase: "border-red-300 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/60 dark:text-red-200" },
-  // Diputación: otro rojo, más rosado.
-  { si: (c) => /^dip\b/.test(c), clase: "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200" },
-  {
-    si: (c, n) => /^ayto cs\b/.test(c) && /entidades juveniles/.test(n),
-    clase: "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200",
-  },
-  { si: (c) => /^ayto cs\b/.test(c), clase: "border-lime-300 bg-lime-50 text-lime-800 dark:border-lime-800 dark:bg-lime-950/50 dark:text-lime-200" },
-  { si: (c) => /^ayto vila\b/.test(c), clase: "border-yellow-300 bg-yellow-100 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/60 dark:text-yellow-200" },
-  { si: (c) => /^ayto onda\b/.test(c), clase: "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200" },
-  { si: (c) => /^ayto\b/.test(c), clase: "border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200" },
+  { si: (c) => /^ivaj\b/.test(c), color: "negro" },
+  // Conselleria: el rojo de la Generalitat, suave.
+  { si: (c) => /^gva\b/.test(c), color: "rojo" },
+  // Diputación: rojo relleno, para que no se confunda con el de la Generalitat.
+  { si: (c) => /^dip\b/.test(c), color: "rojo_intenso" },
+  { si: (c, n) => /^ayto cs\b/.test(c) && /entidades juveniles/.test(n), color: "verde" },
+  { si: (c) => /^ayto cs\b/.test(c), color: "lima" },
+  { si: (c) => /^ayto vila\b/.test(c), color: "amarillo" },
+  { si: (c) => /^ayto onda\b/.test(c), color: "azul" },
+  { si: (c) => /^ayto\b/.test(c), color: "violeta" },
   // Didania: el naranja de la entidad.
-  { si: (c) => /^didania\b/.test(c), clase: "border-orange-300 bg-orange-100 text-orange-800 dark:border-orange-800 dark:bg-orange-950/60 dark:text-orange-200" },
+  { si: (c) => /^didania\b/.test(c), color: "naranja" },
 ]
 
-const CODIGO_NEUTRO = "border-border bg-muted/50 text-foreground/80"
-
-/** Clases (borde, fondo y texto) de la pastilla del código de una subvención. */
-export function colorCodigo(codigo: string | null | undefined, nombre = ""): string {
-  if (!codigo) return CODIGO_NEUTRO
+/** El color que le tocaría por reglas, sin mirar el elegido a mano. */
+export function colorPorReglas(codigo: string | null | undefined, nombre = ""): ColorSubvencion {
+  if (!codigo) return "gris"
   const c = sinTildes(codigo.trim()).replace(/\s+/g, " ")
   const n = sinTildes(nombre)
-  return COLORES_CODIGO.find((r) => r.si(c, n))?.clase ?? CODIGO_NEUTRO
+  return REGLAS_COLOR.find((r) => r.si(c, n))?.color ?? "gris"
+}
+
+/**
+ * Clases (borde, fondo y texto) de la pastilla del código. Manda el color
+ * elegido a mano (`subvencion.color`); sin él, el de las reglas.
+ */
+export function colorCodigo(codigo: string | null | undefined, nombre = "", color?: string | null): string {
+  return COLORES_SUBVENCION[esColorSubvencion(color) ? color : colorPorReglas(codigo, nombre)].clase
 }

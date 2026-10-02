@@ -294,7 +294,7 @@ export function AsignarSubvencionDialog({ open, onOpenChange, movimientos, onDon
                         )}
                       >
                         <span className="line-clamp-2 pr-5 text-sm font-medium leading-snug">
-                          {s.codigo && <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} className="mr-1.5 align-[1px]" />}
+                          {s.codigo && <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} color={s.color} className="mr-1.5 align-[1px]" />}
                           {s.nombre}
                         </span>
                         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">

@@ -1720,6 +1720,7 @@ export type Database = {
         Row: {
           actualizado_en: string
           codigo: string | null
+          color: string | null
           convocatoria: string | null
           creado_en: string
           creado_por: string | null
@@ -1751,6 +1752,7 @@ export type Database = {
         Insert: {
           actualizado_en?: string
           codigo?: string | null
+          color?: string | null
           convocatoria?: string | null
           creado_en?: string
           creado_por?: string | null
@@ -1782,6 +1784,7 @@ export type Database = {
         Update: {
           actualizado_en?: string
           codigo?: string | null
+          color?: string | null
           convocatoria?: string | null
           creado_en?: string
           creado_por?: string | null

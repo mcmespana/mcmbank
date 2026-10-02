@@ -8,17 +8,20 @@ import { cn } from "@/lib/utils"
 export function CodigoSubvencion({
   codigo,
   nombre,
+  color,
   className,
 }: {
   codigo: string
   nombre?: string
+  /** El elegido a mano (`subvencion.color`); sin él, el de las reglas. */
+  color?: string | null
   className?: string
 }) {
   return (
     <span
       className={cn(
         "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 font-mono text-[11px] font-medium leading-none",
-        colorCodigo(codigo, nombre),
+        colorCodigo(codigo, nombre, color),
         className,
       )}
     >

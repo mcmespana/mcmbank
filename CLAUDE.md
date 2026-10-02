@@ -433,6 +433,11 @@ usado en cuál, y cuánto de cada uno**.
   justificación se hace fuera de la app, así que un "% de lo concedido" casi
   nunca llegaría al 100 % y asustaría sin motivo. Se enseña "Imputado en MCM
   Bank" en euros y movimientos, y nada más.
+- **El código lleva el color del Excel** (`CodigoSubvencion`): por reglas de
+  prefijo en `colorPorReglas()` (GVA rojo, IVAJ negro, DIP rojo relleno, Ayto
+  CS verde…) salvo que se elija a mano en la ficha (paleta), que se guarda en
+  `subvencion.color` (scripts/075) como **clave de la paleta**, no como hex:
+  el modo oscuro lo resuelve `COLORES_SUBVENCION`.
 - **Los colores de estado viven en `SUBVENCION_ESTADO_INFO`** (punto,
   pastilla). Se generan porque `tailwind.config.ts` escanea `lib/`, `hooks/` y
   `contexts/`; antes no lo hacía y una clase que solo salía en `lib/utils`

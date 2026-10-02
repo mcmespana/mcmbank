@@ -1,6 +1,13 @@
 import {
   Ban,
   BadgeCheck,
+  Building2,
+  Flag,
+  Globe2,
+  HandHeart,
+  Home,
+  Landmark,
+  Shapes,
   CheckCircle2,
   CircleDashed,
   ClipboardList,
@@ -169,6 +176,21 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
   },
 }
 
+/**
+ * El camino normal de una subvención, en orden: lo que se pinta como barra de
+ * pasos en la ficha. Los desenlaces que se salen del camino (rechazada,
+ * renunciamos, cobrada en parte) se eligen desde el desplegable del estado.
+ */
+export const SUBVENCION_CAMINO: SubvencionEstado[] = [
+  "no_convocada",
+  "por_solicitar",
+  "solicitada",
+  "concedida",
+  "por_justificar",
+  "justificada",
+  "cobrada",
+]
+
 /** Estados con dinero comprometido: cuentan como "confirmado". */
 export function cuentaComoConfirmada(estado: SubvencionEstado): boolean {
   return ["concedida", "por_justificar", "justificada", "cobrada", "cobrada_parcial"].includes(estado)
@@ -183,14 +205,14 @@ export function admiteGastos(estado: SubvencionEstado): boolean {
 // Financiadores: grupos y orden de la lista
 // ---------------------------------------------------------------------------
 
-export const FINANCIADOR_AMBITO_INFO: Record<FinanciadorAmbito, { label: string; ejemplo: string }> = {
-  autonomico: { label: "Generalitat", ejemplo: "GVA IVAJ, GVA Inclusión" },
-  provincial: { label: "Diputaciones", ejemplo: "Diputación CS" },
-  local: { label: "Ayuntamientos", ejemplo: "Ayto CS, Ayto Onda" },
-  estatal: { label: "Estatales", ejemplo: "Red.es, IRPF estatal" },
-  europeo: { label: "Europeas", ejemplo: "Cuerpo Europeo de Solidaridad" },
-  privado: { label: "Fundaciones y privadas", ejemplo: "Didania" },
-  otro: { label: "Otras", ejemplo: "" },
+export const FINANCIADOR_AMBITO_INFO: Record<FinanciadorAmbito, { label: string; ejemplo: string; icon: LucideIcon }> = {
+  autonomico: { label: "Generalitat", ejemplo: "GVA IVAJ, GVA Inclusión", icon: Landmark },
+  provincial: { label: "Diputaciones", ejemplo: "Diputación CS", icon: Building2 },
+  local: { label: "Ayuntamientos", ejemplo: "Ayto CS, Ayto Onda", icon: Home },
+  estatal: { label: "Estatales", ejemplo: "Red.es, IRPF estatal", icon: Flag },
+  europeo: { label: "Europeas", ejemplo: "Cuerpo Europeo de Solidaridad", icon: Globe2 },
+  privado: { label: "Fundaciones y privadas", ejemplo: "Didania", icon: HandHeart },
+  otro: { label: "Otras", ejemplo: "", icon: Shapes },
 }
 
 export interface GrupoSubvenciones {
@@ -300,6 +322,68 @@ export function proximaFecha(
     if (s.fecha_justificacion_2) candidatas.push({ etiqueta: "2ª justificación", fecha: s.fecha_justificacion_2 })
   }
   return candidatas.filter((c) => c.fecha >= hoy).sort((a, b) => a.fecha.localeCompare(b.fecha))[0] ?? null
+}
+
+// ---------------------------------------------------------------------------
+// Línea de tiempo de la ficha
+// ---------------------------------------------------------------------------
+
+export type CampoFecha =
+  | "fecha_convocatoria"
+  | "fecha_limite_solicitud"
+  | "fecha_solicitud"
+  | "fecha_concesion"
+  | "fecha_justificacion_1"
+  | "fecha_justificacion_2"
+
+/** Las fechas de una subvención en el orden en que ocurren. */
+export const HITOS: { campo: CampoFecha; label: string }[] = [
+  { campo: "fecha_convocatoria", label: "Sale la convocatoria" },
+  { campo: "fecha_limite_solicitud", label: "Límite para solicitar" },
+  { campo: "fecha_solicitud", label: "Presentada" },
+  { campo: "fecha_concesion", label: "Concesión" },
+  { campo: "fecha_justificacion_1", label: "Justificación" },
+  { campo: "fecha_justificacion_2", label: "2ª justificación" },
+]
+
+/** Días naturales de `hoy` a `fecha` (negativo si ya pasó). Sin horas ni husos. */
+export function diasHasta(fecha: string, hoy: string): number {
+  const a = Date.UTC(+hoy.slice(0, 4), +hoy.slice(5, 7) - 1, +hoy.slice(8, 10))
+  const b = Date.UTC(+fecha.slice(0, 4), +fecha.slice(5, 7) - 1, +fecha.slice(8, 10))
+  return Math.round((b - a) / 86_400_000)
+}
+
+/**
+ * Un plazo a dos semanas o menos se pinta en ámbar (el `warn` de design.md),
+ * siempre con icono y texto al lado: el color solo no dice nada.
+ */
+export const PLAZO_CERCA_DIAS = 14
+export const PLAZO_CERCA_CLASS = "text-amber-700 dark:text-amber-400"
+
+/**
+ * "hoy", "mañana", "en 12 días", "hace 3 meses"… Para leer de un vistazo cuánto
+ * falta, junto a la fecha exacta (que se sigue enseñando). Días naturales.
+ */
+export function cuandoEs(fecha: string, hoy: string): string {
+  const dias = diasHasta(fecha, hoy)
+  if (dias === 0) return "hoy"
+  if (dias === 1) return "mañana"
+  if (dias === -1) return "ayer"
+  const abs = Math.abs(dias)
+  const texto =
+    abs < 45 ? `${abs} días` : abs < 365 ? `${Math.round(abs / 30)} meses` : `${Math.round(abs / 365)} ${Math.round(abs / 365) === 1 ? "año" : "años"}`
+  return dias > 0 ? `en ${texto}` : `hace ${texto}`
+}
+
+/** Cuántas subvenciones hay en cada estado, en el orden del camino. Solo los que tienen alguna. */
+export function recuentoPorEstado(
+  subvenciones: Pick<Subvencion, "estado">[],
+): { estado: SubvencionEstado; n: number }[] {
+  const n = new Map<SubvencionEstado, number>()
+  for (const s of subvenciones) n.set(s.estado, (n.get(s.estado) ?? 0) + 1)
+  return (Object.keys(SUBVENCION_ESTADO_INFO) as SubvencionEstado[])
+    .filter((e) => n.get(e))
+    .map((e) => ({ estado: e, n: n.get(e)! }))
 }
 
 // ---------------------------------------------------------------------------
@@ -448,10 +532,4 @@ export function formatearIds(ids: string[], formato: FormatoIds): string {
     default:
       return ids.join("\n")
   }
-}
-
-/** Porcentaje (0–100, sin acotar por arriba) de lo concedido que ya está imputado. */
-export function porcentajeImputado(totalGastos: number, concedido: number | null | undefined): number | null {
-  if (!concedido || concedido <= 0) return null
-  return Math.round((totalGastos / concedido) * 1000) / 10
 }

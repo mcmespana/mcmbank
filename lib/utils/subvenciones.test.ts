@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest"
 import {
   SUBVENCION_ESTADOS,
   SUBVENCION_ESTADO_INFO,
+  SUBVENCION_CAMINO,
   agruparPorAmbito,
+  cuandoEs,
+  diasHasta,
+  recuentoPorEstado,
   esSubvencionEstado,
   formatearIds,
   fueraDePeriodo,
@@ -10,7 +14,6 @@ import {
   importeDesdePorcentaje,
   importeLibre,
   porcentajeDe,
-  porcentajeImputado,
   proximaFecha,
   repartirAsignacion,
   totalesEjercicio,
@@ -142,10 +145,6 @@ describe("varios", () => {
     expect(formatearIds(["a", "b"], "comas")).toBe("a,b")
     expect(formatearIds(["a", "b"], "json")).toBe('["a","b"]')
   })
-  it("porcentajeImputado", () => {
-    expect(porcentajeImputado(100, null)).toBeNull()
-    expect(porcentajeImputado(1, 3)).toBe(33.3)
-  })
   it("todos los estados tienen etiqueta y paso", () => {
     for (const e of SUBVENCION_ESTADOS) {
       expect(SUBVENCION_ESTADO_INFO[e].label).toBeTruthy()
@@ -153,5 +152,40 @@ describe("varios", () => {
       expect(esSubvencionEstado(e)).toBe(true)
     }
     expect(esSubvencionEstado("cerrada")).toBe(false)
+  })
+})
+
+describe("cuandoEs", () => {
+  it("días cerca, meses y años lejos, en los dos sentidos", () => {
+    expect(cuandoEs("2026-09-29", "2026-09-29")).toBe("hoy")
+    expect(cuandoEs("2026-09-30", "2026-09-29")).toBe("mañana")
+    expect(cuandoEs("2026-09-28", "2026-09-29")).toBe("ayer")
+    expect(cuandoEs("2026-10-11", "2026-09-29")).toBe("en 12 días")
+    expect(cuandoEs("2026-06-29", "2026-09-29")).toBe("hace 3 meses")
+    expect(cuandoEs("2024-09-29", "2026-09-29")).toBe("hace 2 años")
+  })
+  it("no se lía con el cambio de hora", () => {
+    expect(cuandoEs("2026-10-26", "2026-10-24")).toBe("en 2 días")
+  })
+  it("diasHasta cuenta días naturales, con signo", () => {
+    expect(diasHasta("2026-10-13", "2026-09-29")).toBe(14)
+    expect(diasHasta("2026-09-29", "2026-09-29")).toBe(0)
+    expect(diasHasta("2026-09-01", "2026-09-29")).toBe(-28)
+    expect(diasHasta("2027-01-01", "2026-12-31")).toBe(1)
+  })
+})
+
+describe("recuentoPorEstado y camino", () => {
+  it("cuenta por estado en el orden de los pasos, sin los vacíos", () => {
+    const r = recuentoPorEstado([{ estado: "cobrada" }, { estado: "solicitada" }, { estado: "cobrada" }])
+    expect(r).toEqual([
+      { estado: "solicitada", n: 1 },
+      { estado: "cobrada", n: 2 },
+    ])
+  })
+  it("el camino va en orden de paso y sin desenlaces fuera de él", () => {
+    const pasos = SUBVENCION_CAMINO.map((e) => SUBVENCION_ESTADO_INFO[e].paso)
+    expect(pasos).toEqual([...pasos].sort((a, b) => a - b))
+    expect(SUBVENCION_CAMINO).not.toContain("rechazada")
   })
 })

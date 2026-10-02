@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { CategorySelector } from "./category-selector"
 import { AmountRangeFilter } from "./amount-range-filter"
 import { ContactoSelector } from "@/components/contactos/contacto-selector"
+import { FiltroSubvencion } from "@/components/subvenciones/filtro-subvencion"
 import { CONTACTO_TIPO_INFO, CONTACTO_TIPO_ORDER } from "@/lib/utils/contacto-tipos"
 import { cn } from "@/lib/utils"
 import type { Categoria, ContactoConCategoriaPredeterminada, ContactoTipo, CuentaConDelegacion } from "@/lib/types/database"
@@ -22,6 +23,8 @@ interface TransactionFiltersProps {
   contactos?: ContactoConCategoriaPredeterminada[]
   uncategorizedCount: number
   facturaPendienteCount?: number
+  /** Enseña el filtro de subvención y "solo gastos" (oficina técnica). */
+  esGestorCentral?: boolean
 }
 
 export function TransactionFiltersComponent({
@@ -33,6 +36,7 @@ export function TransactionFiltersComponent({
   contactos = [],
   uncategorizedCount,
   facturaPendienteCount = 0,
+  esGestorCentral = false,
 }: TransactionFiltersProps) {
   const updateFilter = (key: keyof Filters, value: any) => {
     onFiltersChange({ ...filters, [key]: value })
@@ -128,6 +132,18 @@ export function TransactionFiltersComponent({
           </Badge>
         )}
       </Button>
+
+      {esGestorCentral && (
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-foreground uppercase tracking-wide">Subvención</Label>
+          <FiltroSubvencion
+            value={filters.subvencion}
+            onChange={(v) => updateFilter("subvencion", v)}
+            soloGastos={Boolean(filters.soloGastos)}
+            onSoloGastos={(v) => updateFilter("soloGastos", v || undefined)}
+          />
+        </div>
+      )}
 
       {/* En md+ la búsqueda vive en la barra superior; aquí solo en móvil */}
       <div className="space-y-2 md:hidden">

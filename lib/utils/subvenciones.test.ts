@@ -7,6 +7,8 @@ import {
   cuandoEs,
   diasHasta,
   recuentoPorEstado,
+  paraImputar,
+  tablaParaHoja,
   esSubvencionEstado,
   formatearIds,
   fueraDePeriodo,
@@ -187,5 +189,24 @@ describe("recuentoPorEstado y camino", () => {
     const pasos = SUBVENCION_CAMINO.map((e) => SUBVENCION_ESTADO_INFO[e].paso)
     expect(pasos).toEqual([...pasos].sort((a, b) => a - b))
     expect(SUBVENCION_CAMINO).not.toContain("rechazada")
+  })
+})
+
+describe("paraImputar y tablaParaHoja", () => {
+  const s = (id: string, ejercicio: number | null, estado: any = "concedida", codigo: string | null = id) =>
+    ({ id, ejercicio, estado, codigo, nombre: `Nombre ${id}`, financiador: null, solicitante: null }) as unknown as SubvencionConResumen
+  const todas = [s("A", 2025), s("B", 2026), s("C", 2026, "rechazada"), s("Ñoño", 2024)]
+
+  it("sin buscar, solo el año pedido y sin descartadas", () => {
+    expect(paraImputar(todas, { anio: 2026 }).map((x) => x.id)).toEqual(["B"])
+  })
+  it("buscando, en todos los años, el pedido primero, y sin tildes", () => {
+    expect(paraImputar(todas, { q: "nombre", anio: 2025 }).map((x) => x.id)).toEqual(["A", "B", "Ñoño"])
+    expect(paraImputar(todas, { q: "nono" }).map((x) => x.id)).toEqual(["Ñoño"])
+  })
+  it("la tabla va por tabuladores, con coma decimal y sin saltos en el concepto", () => {
+    expect(
+      tablaParaHoja([{ id: "m1", fecha: "2026-03-01T00:00:00", concepto: "Bus\tcampa\nmento", importe: -1234.5, imputado: 1234.5 }]),
+    ).toBe("ID\tFecha\tConcepto\tImporte\tImputado\nm1\t2026-03-01\tBus campa mento\t-1234,50\t1234,50")
   })
 })

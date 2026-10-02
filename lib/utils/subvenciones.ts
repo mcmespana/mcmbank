@@ -533,3 +533,60 @@ export function formatearIds(ids: string[], formato: FormatoIds): string {
       return ids.join("\n")
   }
 }
+
+// ---------------------------------------------------------------------------
+// Elegir a cuál imputar
+// ---------------------------------------------------------------------------
+
+function sinTildes(t: string) {
+  return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+}
+
+/**
+ * Las subvenciones a las que se puede imputar (sin rechazadas ni renuncias),
+ * en el orden en que se buscan: primero las del año que se pide, luego el resto
+ * del más reciente al más antiguo, y dentro de cada año por financiador.
+ * Con `q` (o `todos`), en todos los años; si no y con `anio`, solo ese año.
+ */
+export function paraImputar(
+  subvenciones: SubvencionConResumen[],
+  { q = "", anio = null, todos = false }: { q?: string; anio?: number | null; todos?: boolean } = {},
+): SubvencionConResumen[] {
+  const texto = sinTildes(q.trim())
+  return subvenciones
+    .filter((s) => admiteGastos(s.estado))
+    .filter((s) =>
+      texto
+        ? sinTildes([s.codigo, s.nombre, s.financiador?.nombre, s.solicitante, s.ejercicio].filter(Boolean).join(" ")).includes(texto)
+        : todos || anio == null || s.ejercicio === anio,
+    )
+    .sort(
+      (a, b) =>
+        Number(b.ejercicio === anio) - Number(a.ejercicio === anio) ||
+        (b.ejercicio ?? 0) - (a.ejercicio ?? 0) ||
+        (a.financiador?.orden ?? 999) - (b.financiador?.orden ?? 999) ||
+        (a.codigo ?? a.nombre).localeCompare(b.codigo ?? b.nombre, "es"),
+    )
+}
+
+export interface FilaParaHoja {
+  id: string
+  fecha: string
+  concepto: string | null
+  importe: number
+  imputado: number | null
+}
+
+/**
+ * Los movimientos como tabla para pegar en Google Sheets: separada por
+ * tabuladores (cada dato cae en su columna) y con la coma decimal de una hoja
+ * en español, sin puntos de miles para que se lea como número.
+ */
+export function tablaParaHoja(filas: FilaParaHoja[]): string {
+  const num = (n: number | null) => (n == null ? "" : n.toFixed(2).replace(".", ","))
+  const limpio = (t: string | null) => (t ?? "").replace(/[\t\r\n]+/g, " ").trim()
+  return [
+    ["ID", "Fecha", "Concepto", "Importe", "Imputado"].join("\t"),
+    ...filas.map((f) => [f.id, f.fecha.slice(0, 10), limpio(f.concepto), num(f.importe), num(f.imputado)].join("\t")),
+  ].join("\n")
+}

@@ -1,5 +1,6 @@
 "use client"
 
+import { CodigoSubvencion } from "@/components/subvenciones/codigo-subvencion"
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -293,7 +294,7 @@ export function AsignarSubvencionDialog({ open, onOpenChange, movimientos, onDon
                         )}
                       >
                         <span className="line-clamp-2 pr-5 text-sm font-medium leading-snug">
-                          {s.codigo && <span className="mr-1.5 font-mono text-xs text-muted-foreground">{s.codigo}</span>}
+                          {s.codigo && <CodigoSubvencion codigo={s.codigo} nombre={s.nombre} className="mr-1.5 align-[1px]" />}
                           {s.nombre}
                         </span>
                         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">

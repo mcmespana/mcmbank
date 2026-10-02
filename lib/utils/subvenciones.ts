@@ -590,3 +590,43 @@ export function tablaParaHoja(filas: FilaParaHoja[]): string {
     ...filas.map((f) => [f.id, f.fecha.slice(0, 10), limpio(f.concepto), num(f.importe), num(f.imputado)].join("\t")),
   ].join("\n")
 }
+
+// ---------------------------------------------------------------------------
+// Color del código (GVA VOL, IVAJ, DIP CS…)
+// ---------------------------------------------------------------------------
+
+/**
+ * Los colores con que la oficina técnica pintaba los códigos en el Excel:
+ * se reconocen de un vistazo antes de leerlos. Va por el principio del código
+ * (y, en el Ayuntamiento de Castellón, por el nombre: la buena, Entidades
+ * Juveniles, en un verde y las demás en otro). La primera regla que encaja
+ * manda; cambiar un color o añadir uno es una línea.
+ */
+const COLORES_CODIGO: { si: (codigo: string, nombre: string) => boolean; clase: string }[] = [
+  // El IVAJ, en negro y en negrita: es el IVAJ.
+  { si: (c) => /^ivaj\b/.test(c), clase: "border-foreground bg-foreground font-bold text-background" },
+  // Conselleria: el rojo de la Generalitat.
+  { si: (c) => /^gva\b/.test(c), clase: "border-red-300 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/60 dark:text-red-200" },
+  // Diputación: otro rojo, más rosado.
+  { si: (c) => /^dip\b/.test(c), clase: "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200" },
+  {
+    si: (c, n) => /^ayto cs\b/.test(c) && /entidades juveniles/.test(n),
+    clase: "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200",
+  },
+  { si: (c) => /^ayto cs\b/.test(c), clase: "border-lime-300 bg-lime-50 text-lime-800 dark:border-lime-800 dark:bg-lime-950/50 dark:text-lime-200" },
+  { si: (c) => /^ayto vila\b/.test(c), clase: "border-yellow-300 bg-yellow-100 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/60 dark:text-yellow-200" },
+  { si: (c) => /^ayto onda\b/.test(c), clase: "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200" },
+  { si: (c) => /^ayto\b/.test(c), clase: "border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200" },
+  // Didania: el naranja de la entidad.
+  { si: (c) => /^didania\b/.test(c), clase: "border-orange-300 bg-orange-100 text-orange-800 dark:border-orange-800 dark:bg-orange-950/60 dark:text-orange-200" },
+]
+
+const CODIGO_NEUTRO = "border-border bg-muted/50 text-foreground/80"
+
+/** Clases (borde, fondo y texto) de la pastilla del código de una subvención. */
+export function colorCodigo(codigo: string | null | undefined, nombre = ""): string {
+  if (!codigo) return CODIGO_NEUTRO
+  const c = sinTildes(codigo.trim()).replace(/\s+/g, " ")
+  const n = sinTildes(nombre)
+  return COLORES_CODIGO.find((r) => r.si(c, n))?.clase ?? CODIGO_NEUTRO
+}

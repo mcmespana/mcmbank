@@ -33,6 +33,7 @@ import {
   cuandoEs,
   importeCobrado,
   proximaFecha,
+  colorCodigo,
 } from "@/lib/utils/subvenciones"
 import { formatCurrency, formatDate, toLocalDateString } from "@/lib/utils/format"
 import { cn } from "@/lib/utils"
@@ -76,7 +77,7 @@ export function SubvencionFicha({ subvencion: s, enCapa = false, acciones, mostr
             etiqueta="Código"
             vacio="Sin código"
             mono
-            className="rounded border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-foreground/80"
+            className={cn("rounded border px-1.5 py-0.5 text-[11px] font-medium", colorCodigo(s.codigo, s.nombre))}
             inputClassName="h-7 w-32 text-xs"
           />
           <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium tabular-nums text-primary">

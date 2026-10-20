@@ -759,16 +759,33 @@ export interface PorcionResumen {
   solicitado: number
   /** Lo concedido en las que tienen el dinero comprometido. */
   confirmado: number
+  /** Lo que hay en juego: ver `importeEnJuego()`. */
+  importe: number
+}
+
+/**
+ * Cuánto dinero representa una subvención, para comparar financiadores: lo
+ * concedido si ya está confirmada, lo solicitado si aún está en el aire (o lo
+ * concedido, si solo se apuntó eso), y nada si se rechazó o se renunció. Solo
+ * con lo confirmado, lo que está pendiente de resolver (y a veces es lo más
+ * gordo del año) desaparecería de la línea.
+ */
+export function importeEnJuego(s: Pick<Subvencion, "estado" | "importe_solicitado" | "importe_concedido">): number {
+  if (SUBVENCION_ESTADO_INFO[s.estado].fase === "descartada") return 0
+  if (cuentaComoConfirmada(s.estado)) return s.importe_concedido ?? 0
+  return s.importe_solicitado ?? s.importe_concedido ?? 0
 }
 
 function sumar(subvenciones: Pick<Subvencion, "estado" | "importe_solicitado" | "importe_concedido">[]) {
   let solicitado = 0
   let confirmado = 0
+  let importe = 0
   for (const s of subvenciones) {
     solicitado += s.importe_solicitado ?? 0
     if (cuentaComoConfirmada(s.estado)) confirmado += s.importe_concedido ?? 0
+    importe += importeEnJuego(s)
   }
-  return { solicitado: redondear2(solicitado), confirmado: redondear2(confirmado) }
+  return { solicitado: redondear2(solicitado), confirmado: redondear2(confirmado), importe: redondear2(importe) }
 }
 
 /** Una porción por estado, en el orden del camino. Solo los que tienen alguna. */
@@ -825,4 +842,9 @@ function codigoComun(subvenciones: Pick<Subvencion, "codigo">[]): string | null 
     comun.push(w)
   }
   return comun.length ? comun.join(" ") : null
+}
+
+/** Un importe en corto para la leyenda, en miles redondos: "67k", "7k", "923". La cifra exacta va en el `title`. */
+export function eurosCorto(n: number): string {
+  return n < 1000 ? String(Math.round(n)) : `${Math.round(n / 1000)}k`
 }

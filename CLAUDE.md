@@ -442,9 +442,14 @@ usado en cuál, y cuánto de cada uno**.
   (barra partida + pastillas) que se combinan y van a todo lo ancho de la
   tarjeta, con pastillas pequeñas y el nombre corto del financiador (lo común
   de sus códigos: "GVA Part", "DIP", "Ayto CS") para que con los de un año
-  normal quepan en una línea. El botón «Gráfico» abre un
-  donut (`subvenciones-grafico-dialog.tsx`) por financiador o por estado, en
-  número, solicitado o confirmado, que filtra la misma lista. Cada financiador
+  normal quepan en una línea. **Los financiadores se miden en euros, los
+  estados en número**: un IVAJ de 67.000 € no puede pesar en la barra lo
+  mismo que una de 2.000. El importe es `importeEnJuego()` —lo concedido si
+  está confirmada; si no, lo solicitado; nada si se rechazó o se renunció—,
+  porque solo con lo confirmado desaparecía lo pendiente de resolver. El botón
+  «Gráfico» abre un donut (`subvenciones-grafico-dialog.tsx`) por financiador
+  (en juego / confirmado / solicitado) o por estado (además, cuántas), que
+  filtra la misma lista. Cada financiador
   lleva el color del código de sus subvenciones (`coloresFinanciadores()`), y
   si varios comparten color —los cuatro GVA— cada uno su tono, alternando
   oscuro y claro (`TONOS_SUBVENCION`, comprobado contra daltonismo). Se calcula

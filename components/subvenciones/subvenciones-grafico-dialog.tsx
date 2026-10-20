@@ -17,13 +17,25 @@ import { cn } from "@/lib/utils"
 import type { SubvencionConResumen, SubvencionEstado } from "@/lib/types/database"
 
 type Vista = "financiador" | "estado"
-type Medida = "n" | "solicitado" | "confirmado"
+type Medida = "n" | "importe" | "solicitado" | "confirmado"
 
-const MEDIDAS: { value: Medida; label: string; centro: string }[] = [
-  { value: "n", label: "Cuántas", centro: "subvenciones" },
-  { value: "solicitado", label: "Solicitado", centro: "solicitado" },
-  { value: "confirmado", label: "Confirmado", centro: "confirmado" },
-]
+const MEDIDA_INFO: Record<Medida, { label: string; centro: string }> = {
+  n: { label: "Cuántas", centro: "subvenciones" },
+  importe: { label: "En juego", centro: "en juego" },
+  solicitado: { label: "Solicitado", centro: "solicitado" },
+  confirmado: { label: "Confirmado", centro: "confirmado" },
+}
+
+/**
+ * Un financiador se mide en euros (contar subvenciones pondría un IVAJ de
+ * 67.000 € al lado de una de 2.000 como si fueran iguales); un estado, en
+ * número, que es lo que se pregunta de él. La primera de cada lista es la
+ * que sale al abrir.
+ */
+const MEDIDAS: Record<Vista, Medida[]> = {
+  financiador: ["importe", "confirmado", "solicitado"],
+  estado: ["n", "importe", "confirmado", "solicitado"],
+}
 
 /**
  * El año en un gráfico circular, por financiador o por estado, contando
@@ -66,10 +78,10 @@ export function SubvencionesGraficoDialog({
   onQuitarFiltros: () => void
 }) {
   const [vista, setVista] = useState<Vista>("financiador")
-  const [medidaElegida, setMedida] = useState<Medida>("n")
+  const [medidas, setMedidas] = useState<Record<Vista, Medida>>({ financiador: "importe", estado: "n" })
   const [encima, setEncima] = useState<string | null>(null)
   // "Para estudiar" no tiene importes que repartir.
-  const medida = conDinero ? medidaElegida : "n"
+  const medida = conDinero ? medidas[vista] : "n"
 
   const activos: Set<string> = vista === "estado" ? estados : financiadores
   const alternar = (clave: string) =>
@@ -87,7 +99,7 @@ export function SubvencionesGraficoDialog({
     // si no, no habría desde dónde quitarlo.
     return repartir(subvenciones)
       .filter((p) => conBase.has(p.clave) || activos.has(p.clave))
-      .map((p) => conBase.get(p.clave) ?? { ...p, n: 0, solicitado: 0, confirmado: 0 })
+      .map((p) => conBase.get(p.clave) ?? { ...p, n: 0, solicitado: 0, confirmado: 0, importe: 0 })
   }, [vista, subvenciones, estados, financiadores, colores, activos])
 
   const valor = (p: PorcionResumen) => p[medida]
@@ -110,7 +122,7 @@ export function SubvencionesGraficoDialog({
           texto: `de ${formato(total)}`,
           pie: elegidas.length === 1 ? elegidas[0].label : `${elegidas.length} elegidos`,
         }
-      : { cifra: formato(total), texto: MEDIDAS.find((m) => m.value === medida)!.centro, pie: etiqueta }
+      : { cifra: formato(total), texto: MEDIDA_INFO[medida].centro, pie: etiqueta }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -119,6 +131,7 @@ export function SubvencionesGraficoDialog({
           <DialogTitle>Subvenciones {etiqueta}</DialogTitle>
           <DialogDescription>
             Pulsa un trozo o una fila para ver solo esas. Se combina con lo que elijas en la otra vista.
+            {medida === "importe" && " «En juego» es lo concedido si ya está confirmada y, si no, lo solicitado; las rechazadas y las renuncias no cuentan."}
           </DialogDescription>
         </DialogHeader>
 
@@ -137,15 +150,15 @@ export function SubvencionesGraficoDialog({
           {conDinero && (
             <FilterTabs
               value={medida}
-              onValueChange={(v) => setMedida(v as Medida)}
-              items={MEDIDAS.map(({ value, label }) => ({ value, label }))}
+              onValueChange={(v) => setMedidas((m) => ({ ...m, [vista]: v as Medida }))}
+              items={MEDIDAS[vista].map((value) => ({ value, label: MEDIDA_INFO[value].label }))}
             />
           )}
         </div>
 
         {conValor.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground">
-            {medida === "n" ? "No hay subvenciones con estos filtros." : `Ninguna tiene importe ${MEDIDAS.find((m) => m.value === medida)!.centro}.`}
+            {medida === "n" ? "No hay subvenciones con estos filtros." : `Ninguna tiene importe ${MEDIDA_INFO[medida].centro}.`}
           </p>
         ) : (
           <div className="grid items-center gap-6 sm:grid-cols-[16rem_minmax(0,1fr)]">

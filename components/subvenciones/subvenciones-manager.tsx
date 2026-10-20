@@ -28,6 +28,7 @@ import {
   claveFinanciador,
   coloresFinanciadores,
   cuandoEs,
+  eurosCorto,
   diasHasta,
   importeCobrado,
   porcionesPorEstado,
@@ -482,7 +483,14 @@ function ResumenDelAnio({
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
             <span className="tabular-nums">{subvenciones.length}</span>{" "}
-            {subvenciones.length === 1 ? "subvención" : "subvenciones"} · pulsa un estado o un financiador para ver solo esas
+            {subvenciones.length === 1 ? "subvención" : "subvenciones"}
+            {conDinero && (
+              <span title="Lo concedido si ya está confirmada; si no, lo solicitado. Las rechazadas y las renuncias no cuentan.">
+                {" "}
+                · financiadores por importe
+              </span>
+            )}{" "}
+            · pulsa uno para ver solo esas
           </p>
           <Button variant="outline" size="sm" className="-my-1 h-7 shrink-0 gap-1.5 px-2.5 text-xs" onClick={onAbrirGrafico}>
             <PieChart className="h-3.5 w-3.5" />
@@ -502,6 +510,7 @@ function ResumenDelAnio({
         />
         <Faceta
           titulo="Financiador"
+          porImporte={conDinero}
           porciones={porFinanciador}
           activos={financiadores}
           onAlternar={onAlternarFinanciador}
@@ -521,6 +530,11 @@ function ResumenDelAnio({
  * Las pastillas son pequeñas y llevan el nombre corto (el código, "GVA Part",
  * no "GVA Participación") para que la leyenda quepa en una línea con los
  * financiadores de un año normal. El nombre entero sale al pasar el ratón.
+ *
+ * Con `porImporte` cada trozo mide lo que hay en juego (`importeEnJuego()`) y
+ * no cuántas subvenciones son: un IVAJ de 67.000 € no puede pesar lo mismo
+ * que una de 2.000. Los estados sí van por número: ahí se pregunta en qué
+ * punto están, no cuánto dinero hay.
  */
 function Faceta({
   titulo,
@@ -529,8 +543,10 @@ function Faceta({
   onAlternar,
   onQuitar,
   estiloActivo,
+  porImporte = false,
 }: {
   titulo: string
+  porImporte?: boolean
   porciones: PorcionResumen[]
   activos: Set<string>
   onAlternar: (clave: string) => void
@@ -539,10 +555,18 @@ function Faceta({
 }) {
   const hayActivos = activos.size > 0
   const apagado = (p: PorcionResumen) => hayActivos && !activos.has(p.clave)
+  const peso = (p: PorcionResumen) => (porImporte ? p.importe : p.n)
+  const enBarra = porciones.filter((p) => peso(p) > 0)
   const resumen = (p: PorcionResumen) =>
     [
       `${p.label}: ${p.n} ${p.n === 1 ? "subvención" : "subvenciones"}`,
-      p.confirmado > 0 ? `${formatCurrency(p.confirmado)} confirmados` : p.solicitado > 0 ? `${formatCurrency(p.solicitado)} solicitados` : null,
+      porImporte
+        ? `${formatCurrency(p.importe)} en juego (${formatCurrency(p.confirmado)} confirmados)`
+        : p.confirmado > 0
+          ? `${formatCurrency(p.confirmado)} confirmados`
+          : p.solicitado > 0
+            ? `${formatCurrency(p.solicitado)} solicitados`
+            : null,
     ]
       .filter(Boolean)
       .join(" · ")
@@ -563,7 +587,7 @@ function Faceta({
       </div>
       <div className="min-w-0 space-y-1.5">
       <div className="flex gap-0.5" aria-hidden>
-        {porciones.map((p, i) => (
+        {enBarra.map((p, i) => (
           <button
             key={p.clave}
             type="button"
@@ -571,13 +595,13 @@ function Faceta({
             title={resumen(p)}
             onClick={() => onAlternar(p.clave)}
             className="group flex h-4 min-w-1.5 cursor-pointer items-center"
-            style={{ flexGrow: p.n, flexBasis: 0 }}
+            style={{ flexGrow: peso(p), flexBasis: 0 }}
           >
             <span
               className={cn(
                 "h-2.5 w-full transition-[height,opacity] duration-150 ease-out group-hover:h-4",
                 i === 0 && "rounded-l-full",
-                i === porciones.length - 1 && "rounded-r-full",
+                i === enBarra.length - 1 && "rounded-r-full",
                 apagado(p) && "opacity-25 group-hover:opacity-60",
               )}
               style={{ backgroundColor: p.color }}
@@ -585,7 +609,7 @@ function Faceta({
           </button>
         ))}
       </div>
-      <div className="-mx-[5px] flex flex-wrap gap-y-1" role="group" aria-label={`Filtrar por ${titulo.toLowerCase()}`}>
+      <div className="-mx-1 flex flex-wrap gap-y-1" role="group" aria-label={`Filtrar por ${titulo.toLowerCase()}`}>
         {porciones.map((p) => {
           const activo = activos.has(p.clave)
           const estilo = activo ? estiloActivo(p) : {}
@@ -598,7 +622,7 @@ function Faceta({
               onClick={() => onAlternar(p.clave)}
               style={estilo.style}
               className={cn(
-                "inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-[5px] py-0.5 text-[11px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "inline-flex items-center gap-[3px] whitespace-nowrap rounded-full border px-1 py-0.5 text-[11px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 activo
                   ? cn("shadow-sm", estilo.className)
                   : cn(
@@ -609,7 +633,11 @@ function Faceta({
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
               {p.corta}
-              <span className="tabular-nums opacity-60">{p.n}</span>
+              {porImporte ? (
+                p.importe > 0 && <span className="tabular-nums opacity-60">{eurosCorto(p.importe)}</span>
+              ) : (
+                <span className="tabular-nums opacity-60">{p.n}</span>
+              )}
             </button>
           )
         })}

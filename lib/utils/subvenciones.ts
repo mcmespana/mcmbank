@@ -750,6 +750,8 @@ export function coloresFinanciadores(subvenciones: Pick<SubvencionConResumen, "f
 export interface PorcionResumen {
   clave: string
   label: string
+  /** Para la leyenda del resumen, donde no cabe el nombre entero. */
+  corta: string
   /** Color CSS: un hex o `oklch(var(--foreground))`. */
   color: string
   n: number
@@ -774,6 +776,7 @@ export function porcionesPorEstado(subvenciones: SubvencionConResumen[]): Porcio
   return recuentoPorEstado(subvenciones).map(({ estado, n }) => ({
     clave: estado,
     label: SUBVENCION_ESTADO_INFO[estado].label,
+    corta: SUBVENCION_ESTADO_INFO[estado].label,
     color: SUBVENCION_ESTADO_INFO[estado].hex,
     n,
     ...sumar(subvenciones.filter((s) => s.estado === estado)),
@@ -787,11 +790,39 @@ export function porcionesPorFinanciador(subvenciones: SubvencionConResumen[], co
     const k = claveFinanciador(s)
     grupos.set(k, [...(grupos.get(k) ?? []), s])
   }
-  return [...grupos.entries()].map(([clave, ss]) => ({
-    clave,
-    label: ss[0].financiador?.nombre ?? "Sin financiador",
-    color: colores.get(clave) ?? TONOS_SUBVENCION.gris[0],
-    n: ss.length,
-    ...sumar(ss),
-  }))
+  const porciones = [...grupos.entries()].map(([clave, ss]) => {
+    const label = ss[0].financiador?.nombre ?? "Sin financiador"
+    return {
+      clave,
+      label,
+      corta: codigoComun(ss) ?? label,
+      color: colores.get(clave) ?? TONOS_SUBVENCION.gris[0],
+      n: ss.length,
+      ...sumar(ss),
+    }
+  })
+  // Dos financiadores con el mismo nombre corto ("GVA" y "GVA") no se
+  // distinguirían: esos van con el nombre entero.
+  const repetidas = new Map<string, number>()
+  for (const p of porciones) repetidas.set(p.corta.toLowerCase(), (repetidas.get(p.corta.toLowerCase()) ?? 0) + 1)
+  return porciones.map((p) => (repetidas.get(p.corta.toLowerCase())! > 1 ? { ...p, corta: p.label } : p))
+}
+
+/**
+ * Lo que comparten los códigos de un financiador, palabra a palabra: "GVA
+ * Part", "DIP" (de DIP CS y DIP NAC), "Ayto CS" (de Ayto CS, Ayto CS Cul…).
+ * Es el nombre corto de la leyenda: el mismo que se lee en las pastillas de
+ * la lista, y la mitad de largo que "GVA Participación" o "Diputación CS".
+ */
+function codigoComun(subvenciones: Pick<Subvencion, "codigo">[]): string | null {
+  const codigos = subvenciones.map((s) => s.codigo?.trim()).filter((c): c is string => Boolean(c))
+  if (codigos.length === 0) return null
+  const palabras = codigos.map((c) => c.split(/\s+/))
+  const comun: string[] = []
+  for (let i = 0; i < palabras[0].length; i++) {
+    const w = palabras[0][i]
+    if (!palabras.every((p) => p[i]?.toLowerCase() === w.toLowerCase())) break
+    comun.push(w)
+  }
+  return comun.length ? comun.join(" ") : null
 }

@@ -445,18 +445,24 @@ function ResumenDelAnio({
   const concedida = SUBVENCION_ESTADO_INFO.concedida
 
   return (
-    <section
-      aria-label={`Resumen de ${etiqueta}`}
-      className={cn(
-        "grid gap-x-8 gap-y-5 rounded-xl border bg-card p-4 shadow-sm sm:p-5",
-        conDinero && "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]",
-      )}
-    >
+    <section aria-label={`Resumen de ${etiqueta}`} className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
       {conDinero && (
-        <div className="min-w-0 space-y-3">
-          <div>
-            <p className="text-xs text-muted-foreground">Confirmado {etiqueta}</p>
-            <p className="text-2xl font-semibold tabular-nums tracking-tight">{formatCurrency(totales.confirmado)}</p>
+        <div className="space-y-2.5">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+            <div>
+              <p className="text-xs text-muted-foreground">Confirmado {etiqueta}</p>
+              <p className="text-2xl font-semibold tabular-nums tracking-tight">{formatCurrency(totales.confirmado)}</p>
+            </div>
+            <dl className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+              <Cifra punto={cobrada.dotClass} label="Cobrado" valor={totales.cobrado} />
+              <Cifra punto={concedida.dotClass} label="Por cobrar" valor={totales.porCobrar} />
+              <Cifra
+                punto="bg-muted ring-1 ring-inset ring-border"
+                label="Máximo posible"
+                valor={totales.solicitado}
+                ayuda="Lo solicitado en lo que sigue vivo (sin rechazadas ni renuncias)"
+              />
+            </dl>
           </div>
           {/* Una barra: lo cobrado, lo que falta por cobrar de lo confirmado, y de fondo el máximo posible. */}
           <div
@@ -467,22 +473,14 @@ function ResumenDelAnio({
             <div className={cn("h-full", cobrada.dotClass)} style={{ width: pct(totales.cobrado) }} />
             <div className={cn("h-full opacity-80", concedida.dotClass)} style={{ width: pct(totales.porCobrar) }} />
           </div>
-          <dl className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
-            <Cifra punto={cobrada.dotClass} label="Cobrado" valor={totales.cobrado} />
-            <Cifra punto={concedida.dotClass} label="Por cobrar" valor={totales.porCobrar} />
-            <Cifra
-              punto="bg-muted ring-1 ring-inset ring-border"
-              label="Máximo posible"
-              valor={totales.solicitado}
-              ayuda="Lo solicitado en lo que sigue vivo (sin rechazadas ni renuncias)"
-            />
-          </dl>
         </div>
       )}
 
-      <div className="min-w-0 space-y-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className="pt-0.5 text-xs text-muted-foreground">
+      {/* Las facetas van a todo lo ancho de la tarjeta: en media columna, diez
+          financiadores y siete estados ocupaban tres líneas cada uno. */}
+      <div className={cn("space-y-3", conDinero && "border-t pt-4")}>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">
             <span className="tabular-nums">{subvenciones.length}</span>{" "}
             {subvenciones.length === 1 ? "subvención" : "subvenciones"} · pulsa un estado o un financiador para ver solo esas
           </p>
@@ -519,6 +517,10 @@ function ResumenDelAnio({
  * Una barra partida en trozos y, debajo, una pastilla por trozo. Las dos cosas
  * filtran. Los trozos son para el ratón (pequeños, sin texto): el teclado y el
  * lector de pantalla van por las pastillas, que dicen lo mismo con palabras.
+ *
+ * Las pastillas son pequeñas y llevan el nombre corto (el código, "GVA Part",
+ * no "GVA Participación") para que la leyenda quepa en una línea con los
+ * financiadores de un año normal. El nombre entero sale al pasar el ratón.
  */
 function Faceta({
   titulo,
@@ -546,19 +548,20 @@ function Faceta({
       .join(" · ")
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex h-5 items-center justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{titulo}</p>
+    <div className="grid gap-x-3 gap-y-1 sm:grid-cols-[4.75rem_minmax(0,1fr)]">
+      <div className="flex items-center justify-between gap-2 sm:h-4 sm:flex-col sm:items-start sm:justify-start sm:gap-0">
+        <p className="text-[11px] font-medium uppercase leading-4 tracking-wide text-muted-foreground">{titulo}</p>
         {hayActivos && (
           <button
             type="button"
             onClick={onQuitar}
-            className="shrink-0 rounded text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="shrink-0 rounded text-[11px] font-medium leading-5 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Ver todas
           </button>
         )}
       </div>
+      <div className="min-w-0 space-y-1.5">
       <div className="flex gap-0.5" aria-hidden>
         {porciones.map((p, i) => (
           <button
@@ -582,7 +585,7 @@ function Faceta({
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Filtrar por ${titulo.toLowerCase()}`}>
+      <div className="-mx-[5px] flex flex-wrap gap-y-1" role="group" aria-label={`Filtrar por ${titulo.toLowerCase()}`}>
         {porciones.map((p) => {
           const activo = activos.has(p.clave)
           const estilo = activo ? estiloActivo(p) : {}
@@ -595,7 +598,7 @@ function Faceta({
               onClick={() => onAlternar(p.clave)}
               style={estilo.style}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-[5px] py-0.5 text-[11px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 activo
                   ? cn("shadow-sm", estilo.className)
                   : cn(
@@ -604,12 +607,13 @@ function Faceta({
                     ),
               )}
             >
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
-              {p.label}
-              <span className="tabular-nums opacity-70">{p.n}</span>
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
+              {p.corta}
+              <span className="tabular-nums opacity-60">{p.n}</span>
             </button>
           )
         })}
+      </div>
       </div>
     </div>
   )

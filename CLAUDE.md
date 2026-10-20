@@ -439,7 +439,10 @@ usado en cuál, y cuánto de cada uno**.
   `subvencion.color` (scripts/075) como **clave de la paleta**, no como hex:
   el modo oscuro lo resuelve `COLORES_SUBVENCION`.
 - **El resumen del año filtra**: estado y financiador son dos facetas
-  (barra partida + pastillas) que se combinan, y el botón «Gráfico» abre un
+  (barra partida + pastillas) que se combinan y van a todo lo ancho de la
+  tarjeta, con pastillas pequeñas y el nombre corto del financiador (lo común
+  de sus códigos: "GVA Part", "DIP", "Ayto CS") para que con los de un año
+  normal quepan en una línea. El botón «Gráfico» abre un
   donut (`subvenciones-grafico-dialog.tsx`) por financiador o por estado, en
   número, solicitado o confirmado, que filtra la misma lista. Cada financiador
   lleva el color del código de sus subvenciones (`coloresFinanciadores()`), y

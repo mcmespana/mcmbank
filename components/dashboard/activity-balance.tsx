@@ -20,15 +20,7 @@ import {
   ListOrdered,
   ArrowUpRight,
 } from "lucide-react"
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { FlujoChart, type PuntoFlujo } from "@/components/dashboard/flujo-chart"
 import { EmptyState } from "@/components/ui/empty-state"
 import {
   format,
@@ -38,6 +30,7 @@ import {
   parseISO,
   differenceInMonths,
   differenceInYears,
+  subDays,
 } from "date-fns"
 import { es } from "date-fns/locale"
 import { formatCurrency, toLocalDateString } from "@/lib/utils/format"
@@ -128,7 +121,7 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
   }, [movimientos])
 
   // Evolución temporal con saldo acumulado de la selección
-  const timelineData = useMemo(() => {
+  const timelineData = useMemo<PuntoFlujo[]>(() => {
     if (movimientos.length === 0) return []
 
     const firstTransaction = movimientos.reduce((earliest, current) =>
@@ -146,19 +139,24 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
 
     let intervals: Date[]
     let formatPattern: string
+    let unidad: "anio" | "mes" | "semanas"
 
     if (yearsDiff > 5) {
       intervals = eachYearOfInterval({ start: startDate, end: endDate })
       formatPattern = "yyyy"
+      unidad = "anio"
     } else if (monthsDiff > 6) {
       intervals = eachMonthOfInterval({ start: startDate, end: endDate })
-      formatPattern = "MMM yyyy"
+      formatPattern = yearsDiff >= 1 || startDate.getFullYear() !== endDate.getFullYear() ? "MMM yy" : "MMM"
+      unidad = "mes"
     } else if (monthsDiff > 2) {
-      intervals = eachWeekOfInterval({ start: startDate, end: endDate }, { step: 2 })
-      formatPattern = "dd MMM"
+      intervals = eachWeekOfInterval({ start: startDate, end: endDate }, { step: 2, weekStartsOn: 1 })
+      formatPattern = "d MMM"
+      unidad = "semanas"
     } else {
-      intervals = eachWeekOfInterval({ start: startDate, end: endDate })
-      formatPattern = "dd MMM"
+      intervals = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 1 })
+      formatPattern = "d MMM"
+      unidad = "semanas"
     }
 
     let acumulado = 0
@@ -180,20 +178,25 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
       })
       acumulado += ingresos - gastos
 
+      // En el tooltip, el tramo entero: "13 oct – 19 oct 2026", no solo el día en que empieza.
+      const fin = nextInterval ? subDays(nextInterval, 1) : endDate
+      const etiquetaLarga =
+        unidad === "anio"
+          ? format(interval, "yyyy")
+          : unidad === "mes"
+            ? format(interval, "MMMM yyyy", { locale: es })
+            : `${format(interval, "d MMM", { locale: es })} – ${format(fin, "d MMM yyyy", { locale: es })}`
+
       return {
-        period: format(interval, formatPattern, { locale: es }),
+        etiqueta: format(interval, formatPattern, { locale: es }),
+        etiquetaLarga,
         ingresos,
         gastos,
-        acumulado,
+        linea: acumulado,
       }
     })
   }, [movimientos])
 
-  const chartConfig = {
-    ingresos: { label: "Ingresos", color: "#10b981" },
-    gastos: { label: "Gastos", color: "#ef4444" },
-    acumulado: { label: "Saldo acumulado", color: "oklch(var(--primary))" },
-  } satisfies ChartConfig
 
   const clearFilters = () => {
     setCategoryIds([])
@@ -299,25 +302,7 @@ export const ActivityBalanceDashboard = memo(function ActivityBalanceDashboard({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[320px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={timelineData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="ingresos" stroke="var(--color-ingresos)" strokeWidth={1.5} dot={false} />
-                      <Line type="monotone" dataKey="gastos" stroke="var(--color-gastos)" strokeWidth={1.5} dot={false} />
-                      <Line
-                        type="monotone"
-                        dataKey="acumulado"
-                        stroke="var(--color-acumulado)"
-                        strokeWidth={2.5}
-                        dot={{ r: 2 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <FlujoChart datos={timelineData} lineaLabel="Saldo acumulado" />
               </CardContent>
             </Card>
           )}

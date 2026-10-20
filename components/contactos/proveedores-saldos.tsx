@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { ChevronRight, Loader2, SearchX } from "lucide-react"
-import { DateRangeFilter } from "@/components/transactions/date-range-filter"
+import { DateRangeFilter, rangoCursoActual } from "@/components/transactions/date-range-filter"
 import { CategorySelector } from "@/components/transactions/category-selector"
 import { EmptyState } from "@/components/ui/empty-state"
 import { EntityAvatar } from "@/components/ui/entity-avatar"
@@ -212,20 +212,4 @@ export function ProveedoresSaldos({ delegacionId, contactos, categorias }: Prove
       />
     </div>
   )
-}
-
-/**
- * Curso escolar en marcha, de septiembre a agosto. Es el mismo criterio que el
- * preset "Este curso escolar" del filtro de fechas; se repite aquí porque el
- * estado inicial se necesita antes de que ese componente se monte.
- */
-function rangoCursoActual(): { desde: string; hasta: string } {
-  const hoy = new Date()
-  const anio = hoy.getFullYear()
-  // Antes de septiembre, el curso en marcha empezó el septiembre anterior.
-  const anioInicio = hoy.getMonth() < 8 ? anio - 1 : anio
-  return {
-    desde: `${anioInicio}-09-01`,
-    hasta: `${anioInicio + 1}-08-31`,
-  }
 }

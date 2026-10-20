@@ -25,6 +25,22 @@ interface DateRangeFilterProps {
   defaultPreset?: string
 }
 
+/**
+ * Curso escolar en marcha, de septiembre a agosto: lo mismo que el preset
+ * "Este curso escolar". Las pantallas que arrancan en él lo necesitan para su
+ * estado inicial, antes de que este filtro se monte.
+ */
+export function rangoCursoActual(): { desde: string; hasta: string } {
+  const hoy = new Date()
+  const anio = hoy.getFullYear()
+  // Antes de septiembre, el curso en marcha empezó el septiembre anterior.
+  const anioInicio = hoy.getMonth() < 8 ? anio - 1 : anio
+  return {
+    desde: `${anioInicio}-09-01`,
+    hasta: `${anioInicio + 1}-08-31`,
+  }
+}
+
 const DATE_PRESETS = [
   { label: "Hoy", value: "today" },
   { label: "Ayer", value: "yesterday" },

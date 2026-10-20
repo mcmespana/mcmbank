@@ -45,6 +45,8 @@ export interface SubvencionEstadoInfo {
   fase: SubvencionFase
   icon: LucideIcon
   dotClass: string
+  /** El mismo color que `dotClass`, para donde no llega una clase (el gráfico). */
+  hex: string
   bgClass: string
   textClass: string
   borderClass: string
@@ -62,6 +64,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "pendiente",
     icon: CircleDashed,
     dotClass: "bg-slate-400",
+    hex: "#94a3b8",
     bgClass: "bg-muted/60",
     textClass: "text-muted-foreground",
     borderClass: "border-border",
@@ -74,6 +77,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "pendiente",
     icon: PenLine,
     dotClass: "bg-yellow-400",
+    hex: "#facc15",
     bgClass: "bg-yellow-50 dark:bg-yellow-950/30",
     textClass: "text-yellow-800 dark:text-yellow-200",
     borderClass: "border-yellow-300/70 dark:border-yellow-900/60",
@@ -86,6 +90,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "en_curso",
     icon: Send,
     dotClass: "bg-orange-400",
+    hex: "#fb923c",
     bgClass: "bg-orange-50 dark:bg-orange-950/30",
     textClass: "text-orange-800 dark:text-orange-200",
     borderClass: "border-orange-200/70 dark:border-orange-900/60",
@@ -98,6 +103,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "en_curso",
     icon: BadgeCheck,
     dotClass: "bg-lime-500",
+    hex: "#84cc16",
     bgClass: "bg-lime-50 dark:bg-lime-950/30",
     textClass: "text-lime-800 dark:text-lime-200",
     borderClass: "border-lime-200/70 dark:border-lime-900/60",
@@ -110,6 +116,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "en_curso",
     icon: ClipboardList,
     dotClass: "bg-blue-600",
+    hex: "#2563eb",
     bgClass: "bg-blue-50 dark:bg-blue-950/30",
     textClass: "text-blue-800 dark:text-blue-200",
     borderClass: "border-blue-200/70 dark:border-blue-900/60",
@@ -122,6 +129,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "en_curso",
     icon: FileCheck2,
     dotClass: "bg-emerald-600",
+    hex: "#059669",
     bgClass: "bg-emerald-50 dark:bg-emerald-950/30",
     textClass: "text-emerald-800 dark:text-emerald-200",
     borderClass: "border-emerald-200/70 dark:border-emerald-900/60",
@@ -134,6 +142,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "cerrada",
     icon: CheckCircle2,
     dotClass: "bg-teal-700",
+    hex: "#0f766e",
     bgClass: "bg-teal-50 dark:bg-teal-950/30",
     textClass: "text-teal-800 dark:text-teal-200",
     borderClass: "border-teal-300/70 dark:border-teal-900/60",
@@ -146,6 +155,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "cerrada",
     icon: PieChart,
     dotClass: "bg-cyan-400",
+    hex: "#22d3ee",
     bgClass: "bg-cyan-50 dark:bg-cyan-950/30",
     textClass: "text-cyan-800 dark:text-cyan-200",
     borderClass: "border-cyan-200/70 dark:border-cyan-900/60",
@@ -158,6 +168,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "descartada",
     icon: XCircle,
     dotClass: "bg-red-600",
+    hex: "#dc2626",
     bgClass: "bg-red-50 dark:bg-red-950/30",
     textClass: "text-red-700 dark:text-red-300",
     borderClass: "border-red-200/70 dark:border-red-900/60",
@@ -170,6 +181,7 @@ export const SUBVENCION_ESTADO_INFO: Record<SubvencionEstado, SubvencionEstadoIn
     fase: "descartada",
     icon: Ban,
     dotClass: "bg-slate-400",
+    hex: "#94a3b8",
     bgClass: "bg-muted/60",
     textClass: "text-muted-foreground",
     borderClass: "border-border",
@@ -656,4 +668,161 @@ export function colorPorReglas(codigo: string | null | undefined, nombre = ""): 
  */
 export function colorCodigo(codigo: string | null | undefined, nombre = "", color?: string | null): string {
   return COLORES_SUBVENCION[esColorSubvencion(color) ? color : colorPorReglas(codigo, nombre)].clase
+}
+
+/** El color del código de una subvención: el elegido a mano o, sin él, el de las reglas. */
+export function colorDeSubvencion(s: Pick<Subvencion, "codigo" | "nombre" | "color">): ColorSubvencion {
+  return esColorSubvencion(s.color) ? s.color : colorPorReglas(s.codigo, s.nombre)
+}
+
+// ---------------------------------------------------------------------------
+// Financiadores de un vistazo: la línea del resumen y el gráfico
+// ---------------------------------------------------------------------------
+
+/**
+ * Tonos de cada color del código para pintar financiadores uno al lado de
+ * otro. Los cuatro de la Generalitat son rojos (GVA), así que cada uno se
+ * lleva un rojo distinto, alternando oscuro y claro: dos rojos seguidos de la
+ * misma intensidad no se distinguen ni con buena vista. El de la Diputación va
+ * en granate para que no se confunda con ellos. El negro es el del texto, para
+ * que en modo oscuro no desaparezca.
+ */
+const TONOS_SUBVENCION: Record<ColorSubvencion, string[]> = {
+  rojo: ["#ef4444", "#fecaca", "#b91c1c", "#fca5a5", "#f87171"],
+  rojo_intenso: ["#7f1d1d", "#9f1239", "#450a0a"],
+  rosa: ["#f43f5e", "#fb7185", "#fda4af"],
+  naranja: ["#f97316", "#fb923c", "#ea580c"],
+  ambar: ["#f59e0b", "#fbbf24", "#d97706"],
+  amarillo: ["#facc15", "#fde047", "#eab308"],
+  lima: ["#84cc16", "#a3e635", "#65a30d"],
+  verde: ["#10b981", "#34d399", "#059669"],
+  turquesa: ["#14b8a6", "#2dd4bf", "#0d9488"],
+  azul: ["#0ea5e9", "#38bdf8", "#0284c7"],
+  indigo: ["#6366f1", "#818cf8", "#4f46e5"],
+  violeta: ["#8b5cf6", "#a78bfa", "#7c3aed"],
+  negro: ["oklch(var(--foreground))", "oklch(var(--foreground) / 0.7)", "oklch(var(--foreground) / 0.5)"],
+  gris: ["#94a3b8", "#cbd5e1", "#64748b"],
+}
+
+/** La clave de una subvención sin financiador en los filtros y el gráfico. */
+export const SIN_FINANCIADOR = "sin"
+
+export const claveFinanciador = (s: Pick<SubvencionConResumen, "financiador">) => s.financiador?.id ?? SIN_FINANCIADOR
+
+const ordenFinanciador = (s: Pick<SubvencionConResumen, "financiador">) =>
+  [
+    FINANCIADOR_AMBITOS.indexOf(s.financiador?.ambito ?? "otro"),
+    String(s.financiador?.orden ?? 999).padStart(4, "0"),
+    (s.financiador?.nombre ?? "").toLowerCase(),
+  ].join("\u0000")
+
+/**
+ * Un color por financiador, sacado del código de sus subvenciones (el que más
+ * se repite): GVA IVAJ en negro, los GVA en rojos, Ayto CS en lima… Y si dos
+ * comparten color, cada uno su tono. Se calcula sobre todas las subvenciones,
+ * no las del año, para que un financiador no cambie de tono al cambiar de año.
+ */
+export function coloresFinanciadores(subvenciones: Pick<SubvencionConResumen, "financiador" | "codigo" | "nombre" | "color">[]): Map<string, string> {
+  const votos = new Map<string, Map<ColorSubvencion, number>>()
+  const ejemplo = new Map<string, Pick<SubvencionConResumen, "financiador">>()
+  for (const s of subvenciones) {
+    const k = claveFinanciador(s)
+    if (!ejemplo.has(k)) ejemplo.set(k, s)
+    const v = votos.get(k) ?? new Map<ColorSubvencion, number>()
+    const c = s.codigo ? colorDeSubvencion(s) : "gris"
+    v.set(c, (v.get(c) ?? 0) + 1)
+    votos.set(k, v)
+  }
+
+  const usados = new Map<ColorSubvencion, number>()
+  const colores = new Map<string, string>()
+  const claves = [...ejemplo.keys()].sort((a, b) => ordenFinanciador(ejemplo.get(a)!).localeCompare(ordenFinanciador(ejemplo.get(b)!), "es"))
+  for (const k of claves) {
+    const familia = [...votos.get(k)!.entries()].sort((a, b) => b[1] - a[1])[0][0]
+    const i = usados.get(familia) ?? 0
+    usados.set(familia, i + 1)
+    const tonos = TONOS_SUBVENCION[familia]
+    colores.set(k, tonos[i % tonos.length])
+  }
+  return colores
+}
+
+export interface PorcionResumen {
+  clave: string
+  label: string
+  /** Para la leyenda del resumen, donde no cabe el nombre entero. */
+  corta: string
+  /** Color CSS: un hex o `oklch(var(--foreground))`. */
+  color: string
+  n: number
+  /** Lo solicitado, tal cual, en cualquier estado. */
+  solicitado: number
+  /** Lo concedido en las que tienen el dinero comprometido. */
+  confirmado: number
+}
+
+function sumar(subvenciones: Pick<Subvencion, "estado" | "importe_solicitado" | "importe_concedido">[]) {
+  let solicitado = 0
+  let confirmado = 0
+  for (const s of subvenciones) {
+    solicitado += s.importe_solicitado ?? 0
+    if (cuentaComoConfirmada(s.estado)) confirmado += s.importe_concedido ?? 0
+  }
+  return { solicitado: redondear2(solicitado), confirmado: redondear2(confirmado) }
+}
+
+/** Una porción por estado, en el orden del camino. Solo los que tienen alguna. */
+export function porcionesPorEstado(subvenciones: SubvencionConResumen[]): PorcionResumen[] {
+  return recuentoPorEstado(subvenciones).map(({ estado, n }) => ({
+    clave: estado,
+    label: SUBVENCION_ESTADO_INFO[estado].label,
+    corta: SUBVENCION_ESTADO_INFO[estado].label,
+    color: SUBVENCION_ESTADO_INFO[estado].hex,
+    n,
+    ...sumar(subvenciones.filter((s) => s.estado === estado)),
+  }))
+}
+
+/** Una porción por financiador, en el orden de la lista (Generalitat arriba). */
+export function porcionesPorFinanciador(subvenciones: SubvencionConResumen[], colores: Map<string, string>): PorcionResumen[] {
+  const grupos = new Map<string, SubvencionConResumen[]>()
+  for (const s of [...subvenciones].sort((a, b) => ordenFinanciador(a).localeCompare(ordenFinanciador(b), "es"))) {
+    const k = claveFinanciador(s)
+    grupos.set(k, [...(grupos.get(k) ?? []), s])
+  }
+  const porciones = [...grupos.entries()].map(([clave, ss]) => {
+    const label = ss[0].financiador?.nombre ?? "Sin financiador"
+    return {
+      clave,
+      label,
+      corta: codigoComun(ss) ?? label,
+      color: colores.get(clave) ?? TONOS_SUBVENCION.gris[0],
+      n: ss.length,
+      ...sumar(ss),
+    }
+  })
+  // Dos financiadores con el mismo nombre corto ("GVA" y "GVA") no se
+  // distinguirían: esos van con el nombre entero.
+  const repetidas = new Map<string, number>()
+  for (const p of porciones) repetidas.set(p.corta.toLowerCase(), (repetidas.get(p.corta.toLowerCase()) ?? 0) + 1)
+  return porciones.map((p) => (repetidas.get(p.corta.toLowerCase())! > 1 ? { ...p, corta: p.label } : p))
+}
+
+/**
+ * Lo que comparten los códigos de un financiador, palabra a palabra: "GVA
+ * Part", "DIP" (de DIP CS y DIP NAC), "Ayto CS" (de Ayto CS, Ayto CS Cul…).
+ * Es el nombre corto de la leyenda: el mismo que se lee en las pastillas de
+ * la lista, y la mitad de largo que "GVA Participación" o "Diputación CS".
+ */
+function codigoComun(subvenciones: Pick<Subvencion, "codigo">[]): string | null {
+  const codigos = subvenciones.map((s) => s.codigo?.trim()).filter((c): c is string => Boolean(c))
+  if (codigos.length === 0) return null
+  const palabras = codigos.map((c) => c.split(/\s+/))
+  const comun: string[] = []
+  for (let i = 0; i < palabras[0].length; i++) {
+    const w = palabras[0][i]
+    if (!palabras.every((p) => p[i]?.toLowerCase() === w.toLowerCase())) break
+    comun.push(w)
+  }
+  return comun.length ? comun.join(" ") : null
 }

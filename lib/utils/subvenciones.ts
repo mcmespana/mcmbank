@@ -761,6 +761,8 @@ export interface PorcionResumen {
   confirmado: number
   /** Lo que hay en juego: ver `importeEnJuego()`. */
   importe: number
+  /** Las subvenciones de la porción, en el orden de la lista: para decir cuáles son al pasar por encima. */
+  subvenciones: SubvencionConResumen[]
 }
 
 /**
@@ -797,6 +799,7 @@ export function porcionesPorEstado(subvenciones: SubvencionConResumen[]): Porcio
     color: SUBVENCION_ESTADO_INFO[estado].hex,
     n,
     ...sumar(subvenciones.filter((s) => s.estado === estado)),
+    subvenciones: subvenciones.filter((s) => s.estado === estado),
   }))
 }
 
@@ -816,6 +819,7 @@ export function porcionesPorFinanciador(subvenciones: SubvencionConResumen[], co
       color: colores.get(clave) ?? TONOS_SUBVENCION.gris[0],
       n: ss.length,
       ...sumar(ss),
+      subvenciones: ss,
     }
   })
   // Dos financiadores con el mismo nombre corto ("GVA" y "GVA") no se
@@ -847,4 +851,16 @@ function codigoComun(subvenciones: Pick<Subvencion, "codigo">[]): string | null 
 /** Un importe en corto para la leyenda, en miles redondos: "67k", "7k", "923". La cifra exacta va en el `title`. */
 export function eurosCorto(n: number): string {
   return n < 1000 ? String(Math.round(n)) : `${Math.round(n / 1000)}k`
+}
+
+/**
+ * El importe que se enseña de una subvención suelta en una lista corta: lo
+ * concedido si ya está confirmada y, si no, lo solicitado, diciendo cuál de
+ * los dos es. Una cifra sin decir si es concedida o pedida no sirve de nada.
+ */
+export function importeDeFila(
+  s: Pick<Subvencion, "estado" | "importe_solicitado" | "importe_concedido">,
+): { valor: number | null; que: "concedido" | "solicitado" } {
+  if (cuentaComoConfirmada(s.estado)) return { valor: s.importe_concedido, que: "concedido" }
+  return { valor: s.importe_solicitado ?? s.importe_concedido, que: "solicitado" }
 }

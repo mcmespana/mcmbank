@@ -448,8 +448,14 @@ usado en cuál, y cuánto de cada uno**.
   está confirmada; si no, lo solicitado; nada si se rechazó o se renunció—,
   porque solo con lo confirmado desaparecía lo pendiente de resolver. El botón
   «Gráfico» abre un donut (`subvenciones-grafico-dialog.tsx`) por financiador
-  (en juego / confirmado / solicitado) o por estado (además, cuántas), que
-  filtra la misma lista. Cada financiador
+  (de entrada **concedido**; también solicitado) o por estado (de entrada
+  cuántas), que filtra la misma lista. En el donut no hay "en juego": sumado
+  daba una cifra que nadie sabía de dónde salía. **Pasar por encima dice
+  cuáles son** (`ListaSubvencionesMini`, en pastillas, trozos de barra,
+  porciones y leyenda): "1 Renunciamos" no sirve sin saber que es Ayto CS Cul.
+  Debajo del donut van las que deja pasar el filtro, y cada una **se abre en la
+  hoja lateral por encima del diálogo** (la hoja va en `z-[60]` y Radix deja
+  que la capa de arriba mande: Esc cierra la hoja y se vuelve al gráfico). Cada financiador
   lleva el color del código de sus subvenciones (`coloresFinanciadores()`), y
   si varios comparten color —los cuatro GVA— cada uno su tono, alternando
   oscuro y claro (`TONOS_SUBVENCION`, comprobado contra daltonismo). Se calcula

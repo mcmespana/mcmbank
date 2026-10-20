@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { CategoryEditForm } from "./category-edit-form"
-import { DateRangeFilter } from "@/components/transactions/date-range-filter"
+import { DateRangeFilter, rangoCursoActual } from "@/components/transactions/date-range-filter"
 import { useCategorias } from "@/hooks/use-categorias"
 import { useMovimientos } from "@/hooks/use-movimientos"
 import { useDelegationContext } from "@/contexts/delegation-context"
@@ -87,8 +87,10 @@ export function CategoryList() {
       }
     | null
   >(null)
-  const [dateFrom, setDateFrom] = useState<string | undefined>()
-  const [dateTo, setDateTo] = useState<string | undefined>()
+  // Arranca en el curso en marcha: el saldo de una actividad se mira por curso
+  // (todo junio es del campamento de julio), y "desde el inicio" mezclaba años.
+  const [dateFrom, setDateFrom] = useState<string | undefined>(() => rangoCursoActual().desde)
+  const [dateTo, setDateTo] = useState<string | undefined>(() => rangoCursoActual().hasta)
   const [showInactive, setShowInactive] = useState(false)
   const [optimisticOrders, setOptimisticOrders] = useState<Record<string, string[]>>({})
   const [recentlyMovedId, setRecentlyMovedId] = useState<string | null>(null)
@@ -1058,18 +1060,13 @@ export function CategoryList() {
               <Plus className="h-4 w-4 mr-2" />
               Añadir categoría
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="flex-1 sm:flex-none sm:w-auto sm:gap-1.5 sm:px-3"
-              asChild
-              title="¿Qué añado en cada categoría?"
-            >
+            {/* Botón normal, no `size="icon"`: el de icono fija `md:w-8`, que gana a
+                cualquier `sm:w-auto`, y el texto se salía del botón por la derecha. */}
+            <Button variant="outline" className="flex-1 sm:flex-none" asChild title="¿Qué añado en cada categoría?">
               <a
                 href="https://docs.movimientoconsolacion.com/mcmespana/tesoreria/mcm-bank-guia/3.-categorias#que-pongo-en-cada-categoria"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2"
               >
                 <HelpCircle className="h-4 w-4 shrink-0" />
                 <span className="sr-only sm:not-sr-only">¿Qué añado en cada categoría?</span>
@@ -1081,7 +1078,12 @@ export function CategoryList() {
 
       <div className="flex gap-2 sm:gap-3 flex-wrap sm:flex-row items-center">
         <div className="flex-1 min-w-[200px]">
-          <DateRangeFilter dateFrom={dateFrom} dateTo={dateTo} onDateRangeChange={handleDateRangeChange} />
+          <DateRangeFilter
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onDateRangeChange={handleDateRangeChange}
+            defaultPreset="this-school-year"
+          />
         </div>
 
         <div className="flex-shrink-0 sm:flex-1">

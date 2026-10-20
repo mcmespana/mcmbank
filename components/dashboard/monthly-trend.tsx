@@ -3,10 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useMonthlyTrendData } from "@/hooks/use-monthly-trend-data"
 import { memo, useMemo } from "react"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { parse, format } from "date-fns"
 import { es } from "date-fns/locale"
+import { FlujoChart, type PuntoFlujo } from "@/components/dashboard/flujo-chart"
 
 interface Props {
   from: string
@@ -18,63 +17,32 @@ interface Props {
 export const MonthlyTrend = memo(function MonthlyTrend({ from, to }: Props) {
   const { trend } = useMonthlyTrendData(from, to)
 
-  const chartData = useMemo(() => {
-    return trend.map((row) => ({
-      // Convert YYYY-MM to display format (e.g. "ene 2025")
-      month: format(parse(row.mes, "yyyy-MM", new Date()), "MMM yyyy", { locale: es }),
-      ingresos: row.ingresos,
-      gastos: row.gastos,
-      balance: row.ingresos - row.gastos,
-    }))
+  const datos = useMemo<PuntoFlujo[]>(() => {
+    // El año solo bajo la barra cuando el periodo pasa de un año a otro: si no, es ruido.
+    const variosAnios = new Set(trend.map((r) => r.mes.slice(0, 4))).size > 1
+    return trend.map((row) => {
+      const mes = parse(row.mes, "yyyy-MM", new Date())
+      return {
+        etiqueta: format(mes, variosAnios ? "MMM yy" : "MMM", { locale: es }),
+        etiquetaLarga: format(mes, "MMMM yyyy", { locale: es }),
+        ingresos: row.ingresos,
+        gastos: row.gastos,
+        linea: row.ingresos - row.gastos,
+      }
+    })
   }, [trend])
 
-  const chartConfig = {
-    ingresos: { label: "Ingresos", color: "oklch(var(--chart-1))" },
-    gastos: { label: "Gastos", color: "oklch(var(--chart-2))" },
-    balance: { label: "Balance", color: "oklch(var(--chart-3))" },
-  } satisfies ChartConfig
-
-  if (chartData.length === 0) return null
+  if (datos.length === 0) return null
 
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Tendencia mensual</h2>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Ingresos, gastos y balance por mes</CardTitle>
+          <CardTitle className="text-base">Lo que entra y lo que sale cada mes</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line
-                  type="monotone"
-                  dataKey="ingresos"
-                  stroke="var(--color-ingresos)"
-                  strokeWidth={2}
-                  dot={{ fill: "var(--color-ingresos)" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="gastos"
-                  stroke="var(--color-gastos)"
-                  strokeWidth={2}
-                  dot={{ fill: "var(--color-gastos)" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="balance"
-                  stroke="var(--color-balance)"
-                  strokeWidth={3}
-                  dot={{ fill: "var(--color-balance)" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          <FlujoChart datos={datos} lineaLabel="Balance del mes" />
         </CardContent>
       </Card>
     </div>

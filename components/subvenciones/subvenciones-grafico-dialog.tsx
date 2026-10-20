@@ -1,11 +1,13 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as ChartTooltip } from "recharts"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { FilterTabs } from "@/components/ui/filter-tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { FilaSubvencionAbrible, ListaSubvencionesMini } from "./lista-subvenciones-mini"
 import {
   claveFinanciador,
   porcionesPorEstado,
@@ -17,24 +19,25 @@ import { cn } from "@/lib/utils"
 import type { SubvencionConResumen, SubvencionEstado } from "@/lib/types/database"
 
 type Vista = "financiador" | "estado"
-type Medida = "n" | "importe" | "solicitado" | "confirmado"
+type Medida = "n" | "confirmado" | "solicitado"
 
 const MEDIDA_INFO: Record<Medida, { label: string; centro: string }> = {
   n: { label: "Cuántas", centro: "subvenciones" },
-  importe: { label: "En juego", centro: "en juego" },
+  confirmado: { label: "Concedido", centro: "concedido" },
   solicitado: { label: "Solicitado", centro: "solicitado" },
-  confirmado: { label: "Confirmado", centro: "confirmado" },
 }
 
 /**
  * Un financiador se mide en euros (contar subvenciones pondría un IVAJ de
- * 67.000 € al lado de una de 2.000 como si fueran iguales); un estado, en
- * número, que es lo que se pregunta de él. La primera de cada lista es la
- * que sale al abrir.
+ * 67.000 € al lado de una de 2.000 como si fueran iguales), y de entrada en
+ * lo concedido, que es el dinero que hay de verdad; un estado, en número, que
+ * es lo que se pregunta de él. La primera de cada lista es la que sale al
+ * abrir. Aquí no hay "en juego" (concedido + pendiente): sumado en un donut
+ * daba una cifra que nadie sabía de dónde salía.
  */
 const MEDIDAS: Record<Vista, Medida[]> = {
-  financiador: ["importe", "confirmado", "solicitado"],
-  estado: ["n", "importe", "confirmado", "solicitado"],
+  financiador: ["confirmado", "solicitado"],
+  estado: ["n", "confirmado", "solicitado"],
 }
 
 /**
@@ -48,6 +51,10 @@ const MEDIDAS: Record<Vista, Medida[]> = {
  * filtro de la vista que se está mirando no recorta el gráfico, lo resalta: si
  * no, al elegir un trozo los demás desaparecerían y no habría con qué
  * compararlo.
+ *
+ * Debajo van las subvenciones que deja pasar el filtro, y cada una se abre en
+ * la hoja lateral, que sale por encima del diálogo: con el diálogo abierto la
+ * lista de la página no se ve, y "1 Renunciamos" no dice cuál es.
  */
 export function SubvencionesGraficoDialog({
   open,
@@ -59,6 +66,7 @@ export function SubvencionesGraficoDialog({
   estados,
   financiadores,
   visibles,
+  onAbrir,
   onAlternarEstado,
   onAlternarFinanciador,
   onQuitarFiltros,
@@ -71,14 +79,16 @@ export function SubvencionesGraficoDialog({
   conDinero: boolean
   estados: Set<SubvencionEstado>
   financiadores: Set<string>
-  /** Cuántas quedan en la lista con los filtros (y la búsqueda) de ahora. */
-  visibles: number
+  /** Las que quedan en la lista con los filtros (y la búsqueda) de ahora, en su orden. */
+  visibles: SubvencionConResumen[]
+  /** Abre una en la hoja lateral, por encima del diálogo. */
+  onAbrir: (id: string) => void
   onAlternarEstado: (e: SubvencionEstado) => void
   onAlternarFinanciador: (f: string) => void
   onQuitarFiltros: () => void
 }) {
   const [vista, setVista] = useState<Vista>("financiador")
-  const [medidas, setMedidas] = useState<Record<Vista, Medida>>({ financiador: "importe", estado: "n" })
+  const [medidas, setMedidas] = useState<Record<Vista, Medida>>({ financiador: "confirmado", estado: "n" })
   const [encima, setEncima] = useState<string | null>(null)
   // "Para estudiar" no tiene importes que repartir.
   const medida = conDinero ? medidas[vista] : "n"
@@ -99,7 +109,7 @@ export function SubvencionesGraficoDialog({
     // si no, no habría desde dónde quitarlo.
     return repartir(subvenciones)
       .filter((p) => conBase.has(p.clave) || activos.has(p.clave))
-      .map((p) => conBase.get(p.clave) ?? { ...p, n: 0, solicitado: 0, confirmado: 0, importe: 0 })
+      .map((p) => conBase.get(p.clave) ?? { ...p, n: 0, solicitado: 0, confirmado: 0, importe: 0, subvenciones: [] })
   }, [vista, subvenciones, estados, financiadores, colores, activos])
 
   const valor = (p: PorcionResumen) => p[medida]
@@ -110,6 +120,23 @@ export function SubvencionesGraficoDialog({
   const hayActivos = activos.size > 0
   const apagado = (p: PorcionResumen) => hayActivos && !activos.has(p.clave)
   const filtrando = estados.size > 0 || financiadores.size > 0
+  const porClave = new Map(porciones.map((p) => [p.clave, p]))
+
+  const detalle = (p: PorcionResumen) => (
+    <ListaSubvencionesMini
+      titulo={p.label}
+      color={p.color}
+      subvenciones={p.subvenciones}
+      resumen={[
+        `${p.n} ${p.n === 1 ? "subvención" : "subvenciones"}`,
+        p.confirmado > 0 && `${formatCurrency(p.confirmado)} concedido`,
+        p.solicitado > 0 && `${formatCurrency(p.solicitado)} solicitado`,
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+      pie={activos.has(p.clave) ? "Pulsa para dejar de filtrar" : "Pulsa para ver solo esas"}
+    />
+  )
 
   // El centro del donut: lo que hay debajo del ratón, o lo elegido, o el total.
   const sobre = encima ? porciones.find((p) => p.clave === encima) : undefined
@@ -130,8 +157,7 @@ export function SubvencionesGraficoDialog({
         <DialogHeader>
           <DialogTitle>Subvenciones {etiqueta}</DialogTitle>
           <DialogDescription>
-            Pulsa un trozo o una fila para ver solo esas. Se combina con lo que elijas en la otra vista.
-            {medida === "importe" && " «En juego» es lo concedido si ya está confirmada y, si no, lo solicitado; las rechazadas y las renuncias no cuentan."}
+            Pasa por encima para ver cuáles son y pulsa para quedarte solo con esas. Se combina con lo que elijas en la otra vista.
           </DialogDescription>
         </DialogHeader>
 
@@ -197,6 +223,16 @@ export function SubvencionesGraficoDialog({
                       />
                     ))}
                   </Pie>
+                  <ChartTooltip
+                    isAnimationActive={false}
+                    allowEscapeViewBox={{ x: true, y: true }}
+                    wrapperStyle={{ zIndex: 10, outline: "none" }}
+                    content={({ active, payload }) => {
+                      const clave = (payload?.[0]?.payload as { clave?: string } | undefined)?.clave
+                      const p = active && clave ? porClave.get(clave) : undefined
+                      return p ? <div className="rounded-md border bg-popover p-3 text-popover-foreground shadow-md">{detalle(p)}</div> : null
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-12 text-center" aria-hidden>
@@ -206,12 +242,15 @@ export function SubvencionesGraficoDialog({
               </div>
             </div>
 
+            <TooltipProvider delayDuration={300} skipDelayDuration={100}>
             <ul className="max-h-[22rem] space-y-0.5 overflow-y-auto pr-1" aria-label="Leyenda: pulsa para filtrar">
               {porciones.map((p) => {
                 const activo = activos.has(p.clave)
                 const v = valor(p)
                 return (
                   <li key={p.clave}>
+                    <Tooltip>
+                    <TooltipTrigger asChild>
                     <button
                       type="button"
                       aria-pressed={activo}
@@ -246,12 +285,37 @@ export function SubvencionesGraficoDialog({
                         />
                       </span>
                     </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" align="start" className="hidden p-3 sm:block">
+                      {detalle(p)}
+                    </TooltipContent>
+                    </Tooltip>
                   </li>
                 )
               })}
             </ul>
+            </TooltipProvider>
           </div>
         )}
+
+        <section aria-labelledby="grafico-lista" className="space-y-1.5 border-t pt-4">
+          <h3 id="grafico-lista" className="flex items-baseline gap-2 px-2 text-sm font-medium">
+            {filtrando ? "Las que estás viendo" : `Todas las de ${etiqueta}`}
+            <span className="font-normal tabular-nums text-muted-foreground">{visibles.length}</span>
+            <span className="ml-auto text-xs font-normal text-muted-foreground">Pulsa una para abrir su ficha</span>
+          </h3>
+          {visibles.length === 0 ? (
+            <p className="px-2 py-4 text-sm text-muted-foreground">Ninguna cumple estos filtros.</p>
+          ) : (
+            <ul className="max-h-72 space-y-0.5 overflow-y-auto pr-1">
+              {visibles.map((s) => (
+                <li key={s.id}>
+                  <FilaSubvencionAbrible s={s} onAbrir={() => onAbrir(s.id)} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         <DialogFooter className="gap-2 sm:items-center">
           {filtrando && (
@@ -261,7 +325,7 @@ export function SubvencionesGraficoDialog({
             </Button>
           )}
           <Button onClick={() => onOpenChange(false)}>
-            Ver {visibles} {visibles === 1 ? "subvención" : "subvenciones"}
+            Ver {visibles.length} en la lista
           </Button>
         </DialogFooter>
       </DialogContent>

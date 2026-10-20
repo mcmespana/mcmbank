@@ -18,6 +18,8 @@ import { useGuardarSubvencion } from "@/hooks/use-guardar-subvencion"
 import { SubvencionFormDialog } from "./subvencion-form-dialog"
 import { SubvencionSheet } from "./subvencion-sheet"
 import { SubvencionesGraficoDialog } from "./subvenciones-grafico-dialog"
+import { ListaSubvencionesMini } from "./lista-subvenciones-mini"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { EstadoInline, ImporteInline } from "./campos-inline"
 import {
   FINANCIADOR_AMBITO_INFO,
@@ -173,7 +175,9 @@ export function SubvencionesManager() {
   }, [subvenciones, pestana, q])
 
   const grupos = useMemo(() => agruparPorAmbito(visibles), [visibles])
-  const orden = useMemo(() => grupos.flatMap((g) => g.subvenciones.map((s) => s.id)), [grupos])
+  // Las visibles en el orden en que se pintan: el de la hoja (anterior/siguiente) y el de la lista del gráfico.
+  const ordenadas = useMemo(() => grupos.flatMap((g) => g.subvenciones), [grupos])
+  const orden = useMemo(() => ordenadas.map((s) => s.id), [ordenadas])
   const hoy = toLocalDateString(new Date())
 
   if (adminLoading) return <PageSkeleton />
@@ -376,7 +380,8 @@ export function SubvencionesManager() {
         conDinero={pestana !== PARA_ESTUDIAR}
         estados={estados}
         financiadores={financiadores}
-        visibles={visibles.length}
+        visibles={ordenadas}
+        onAbrir={(id) => abrir(id)}
         onAlternarEstado={alternarEstado}
         onAlternarFinanciador={alternarFinanciador}
         onQuitarFiltros={() => {
@@ -557,21 +562,32 @@ function Faceta({
   const apagado = (p: PorcionResumen) => hayActivos && !activos.has(p.clave)
   const peso = (p: PorcionResumen) => (porImporte ? p.importe : p.n)
   const enBarra = porciones.filter((p) => peso(p) > 0)
-  const resumen = (p: PorcionResumen) =>
-    [
-      `${p.label}: ${p.n} ${p.n === 1 ? "subvención" : "subvenciones"}`,
-      porImporte
-        ? `${formatCurrency(p.importe)} en juego (${formatCurrency(p.confirmado)} confirmados)`
-        : p.confirmado > 0
-          ? `${formatCurrency(p.confirmado)} confirmados`
-          : p.solicitado > 0
-            ? `${formatCurrency(p.solicitado)} solicitados`
-            : null,
-    ]
-      .filter(Boolean)
-      .join(" · ")
+  const pendiente = (p: PorcionResumen) => Math.max(p.importe - p.confirmado, 0)
+  // Al pasar por encima: cuáles son, no solo cuántas. Y el dinero partido en
+  // lo concedido y lo que aún no se ha resuelto, que es lo que suma la barra.
+  const conDetalle = (p: PorcionResumen, disparador: ReactNode) => (
+    <Tooltip key={p.clave}>
+      <TooltipTrigger asChild>{disparador}</TooltipTrigger>
+      <TooltipContent side="bottom" align="start" className="p-3">
+        <ListaSubvencionesMini
+          titulo={p.label}
+          color={p.color}
+          subvenciones={p.subvenciones}
+          resumen={[
+            `${p.n} ${p.n === 1 ? "subvención" : "subvenciones"}`,
+            p.confirmado > 0 && `${formatCurrency(p.confirmado)} concedido`,
+            pendiente(p) > 0 && `${formatCurrency(pendiente(p))} pendiente de resolver`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          pie={activos.has(p.clave) ? "Pulsa para dejar de filtrar" : "Pulsa para ver solo esas"}
+        />
+      </TooltipContent>
+    </Tooltip>
+  )
 
   return (
+    <TooltipProvider delayDuration={250} skipDelayDuration={100}>
     <div className="grid gap-x-3 gap-y-1 sm:grid-cols-[4.75rem_minmax(0,1fr)]">
       <div className="flex items-center justify-between gap-2 sm:h-4 sm:flex-col sm:items-start sm:justify-start sm:gap-0">
         <p className="text-[11px] font-medium uppercase leading-4 tracking-wide text-muted-foreground">{titulo}</p>
@@ -587,12 +603,10 @@ function Faceta({
       </div>
       <div className="min-w-0 space-y-1.5">
       <div className="flex gap-0.5" aria-hidden>
-        {enBarra.map((p, i) => (
+        {enBarra.map((p, i) => conDetalle(p,
           <button
-            key={p.clave}
             type="button"
             tabIndex={-1}
-            title={resumen(p)}
             onClick={() => onAlternar(p.clave)}
             className="group flex h-4 min-w-1.5 cursor-pointer items-center"
             style={{ flexGrow: peso(p), flexBasis: 0 }}
@@ -606,19 +620,17 @@ function Faceta({
               )}
               style={{ backgroundColor: p.color }}
             />
-          </button>
+          </button>,
         ))}
       </div>
       <div className="-mx-1 flex flex-wrap gap-y-1" role="group" aria-label={`Filtrar por ${titulo.toLowerCase()}`}>
         {porciones.map((p) => {
           const activo = activos.has(p.clave)
           const estilo = activo ? estiloActivo(p) : {}
-          return (
+          return conDetalle(p,
             <button
-              key={p.clave}
               type="button"
               aria-pressed={activo}
-              title={resumen(p)}
               onClick={() => onAlternar(p.clave)}
               style={estilo.style}
               className={cn(
@@ -638,12 +650,13 @@ function Faceta({
               ) : (
                 <span className="tabular-nums opacity-60">{p.n}</span>
               )}
-            </button>
+            </button>,
           )
         })}
       </div>
       </div>
     </div>
+    </TooltipProvider>
   )
 }
 

@@ -1,9 +1,9 @@
 "use client"
 
 import { CodigoSubvencion } from "@/components/subvenciones/codigo-subvencion"
-import { useCallback, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
-import { AlarmClock, CalendarClock, Check, Landmark, Plus, Repeat, Search, X } from "lucide-react"
+import { AlarmClock, CalendarClock, Check, Landmark, PieChart, Plus, Repeat, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
@@ -17,6 +17,7 @@ import { useSubvenciones } from "@/hooks/use-subvenciones"
 import { useGuardarSubvencion } from "@/hooks/use-guardar-subvencion"
 import { SubvencionFormDialog } from "./subvencion-form-dialog"
 import { SubvencionSheet } from "./subvencion-sheet"
+import { SubvencionesGraficoDialog } from "./subvenciones-grafico-dialog"
 import { EstadoInline, ImporteInline } from "./campos-inline"
 import {
   FINANCIADOR_AMBITO_INFO,
@@ -24,12 +25,16 @@ import {
   PLAZO_CERCA_DIAS,
   SUBVENCION_ESTADO_INFO,
   agruparPorAmbito,
+  claveFinanciador,
+  coloresFinanciadores,
   cuandoEs,
   diasHasta,
   importeCobrado,
+  porcionesPorEstado,
+  porcionesPorFinanciador,
   proximaFecha,
-  recuentoPorEstado,
   totalesEjercicio,
+  type PorcionResumen,
 } from "@/lib/utils/subvenciones"
 import { formatCurrency, formatDate, toLocalDateString } from "@/lib/utils/format"
 import { describirError } from "@/lib/utils/describir-error"
@@ -49,6 +54,13 @@ import type {
 const PARA_ESTUDIAR = "estudiar"
 
 const pestanaDe = (s: SubvencionConResumen) => (s.ejercicio == null ? PARA_ESTUDIAR : String(s.ejercicio))
+
+function alternar<T>(prev: Set<T>, v: T): Set<T> {
+  const next = new Set(prev)
+  if (next.has(v)) next.delete(v)
+  else next.add(v)
+  return next
+}
 
 function normalizar(t: string) {
   return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
@@ -76,6 +88,8 @@ export function SubvencionesManager() {
   const { subvenciones, loading, error, invalidar } = useSubvenciones({ enabled: isAdmin })
   const [busqueda, setBusqueda] = useState("")
   const [estados, setEstados] = useState<Set<SubvencionEstado>>(() => new Set())
+  const [financiadores, setFinanciadores] = useState<Set<string>>(() => new Set())
+  const [graficoOpen, setGraficoOpen] = useState(false)
   const [crearOpen, setCrearOpen] = useState(false)
 
   // El año y la subvención abierta viven en la URL (`?anio=2026&s=<id>`):
@@ -125,6 +139,7 @@ export function SubvencionesManager() {
     // Los estados elegidos en un año no tienen por qué existir en otro: se
     // empezaría viendo una lista vacía sin saber por qué.
     setEstados(new Set())
+    setFinanciadores(new Set())
     cambiarUrl({ anio: p })
   }
   const abrir = useCallback(
@@ -135,9 +150,16 @@ export function SubvencionesManager() {
   const delAnio = useMemo(() => subvenciones.filter((s) => pestanaDe(s) === pestana), [subvenciones, pestana])
   const q = normalizar(busqueda.trim())
   const visibles = useMemo(
-    () => delAnio.filter((s) => coincide(s, q) && (estados.size === 0 || estados.has(s.estado))),
-    [delAnio, q, estados],
+    () =>
+      delAnio.filter(
+        (s) =>
+          coincide(s, q) &&
+          (estados.size === 0 || estados.has(s.estado)) &&
+          (financiadores.size === 0 || financiadores.has(claveFinanciador(s))),
+      ),
+    [delAnio, q, estados, financiadores],
   )
+  const colores = useMemo(() => coloresFinanciadores(subvenciones), [subvenciones])
   // Si se busca algo que está en otro año, se dice dónde, sin mezclar años.
   const enOtrosAnios = useMemo(() => {
     if (!q) return []
@@ -176,19 +198,16 @@ export function SubvencionesManager() {
   ]
   const etiquetaPestana = tabs.find((t) => t.value === pestana)?.label ?? pestana
   const esAnio = /^\d{4}$/.test(pestana)
-  const filtrando = Boolean(q) || estados.size > 0
+  const facetando = estados.size > 0 || financiadores.size > 0
+  const filtrando = Boolean(q) || facetando
   const confirmadoVisible = filtrando ? totalesEjercicio(visibles).confirmado : 0
   const quitarFiltros = () => {
     setBusqueda("")
     setEstados(new Set())
+    setFinanciadores(new Set())
   }
-  const alternarEstado = (e: SubvencionEstado) =>
-    setEstados((prev) => {
-      const next = new Set(prev)
-      if (next.has(e)) next.delete(e)
-      else next.add(e)
-      return next
-    })
+  const alternarEstado = (e: SubvencionEstado) => setEstados((prev) => alternar(prev, e))
+  const alternarFinanciador = (f: string) => setFinanciadores((prev) => alternar(prev, f))
 
   return (
     <div className="space-y-5">
@@ -238,9 +257,14 @@ export function SubvencionesManager() {
               subvenciones={delAnio}
               etiqueta={etiquetaPestana}
               conDinero={pestana !== PARA_ESTUDIAR}
+              colores={colores}
               estados={estados}
+              financiadores={financiadores}
               onAlternarEstado={alternarEstado}
+              onAlternarFinanciador={alternarFinanciador}
               onQuitarEstados={() => setEstados(new Set())}
+              onQuitarFinanciadores={() => setFinanciadores(new Set())}
+              onAbrirGrafico={() => setGraficoOpen(true)}
             />
           )}
 
@@ -249,9 +273,9 @@ export function SubvencionesManager() {
               title="Ninguna subvención coincide"
               description={
                 busqueda
-                  ? `Nada con «${busqueda}» en «${etiquetaPestana}»${estados.size ? " con esos estados" : ""}.`
-                  : estados.size
-                    ? `Ninguna de «${etiquetaPestana}» está en esos estados.`
+                  ? `Nada con «${busqueda}» en «${etiquetaPestana}»${facetando ? " con esos filtros" : ""}.`
+                  : facetando
+                    ? `Ninguna de «${etiquetaPestana}» cumple esos filtros: prueba a quitar algún estado o financiador.`
                     : `No hay ninguna en «${etiquetaPestana}».`
               }
             >
@@ -342,6 +366,24 @@ export function SubvencionesManager() {
         </>
       )}
 
+      <SubvencionesGraficoDialog
+        open={graficoOpen}
+        onOpenChange={setGraficoOpen}
+        etiqueta={etiquetaPestana}
+        subvenciones={delAnio}
+        colores={colores}
+        conDinero={pestana !== PARA_ESTUDIAR}
+        estados={estados}
+        financiadores={financiadores}
+        visibles={visibles.length}
+        onAlternarEstado={alternarEstado}
+        onAlternarFinanciador={alternarFinanciador}
+        onQuitarFiltros={() => {
+          setEstados(new Set())
+          setFinanciadores(new Set())
+        }}
+      />
+
       <SubvencionSheet subvencion={abierta} orden={orden} onAbrir={abrir} />
 
       <SubvencionFormDialog
@@ -365,26 +407,38 @@ export function SubvencionesManager() {
 
 /**
  * Arriba de la lista, lo que se preguntaría del año: cuánto dinero hay
- * confirmado y cuánto ha entrado ya, y en qué punto está cada subvención.
- * Los estados son además el filtro: se pulsan para ver solo esas.
+ * confirmado y cuánto ha entrado ya, en qué punto está cada subvención y quién
+ * la paga. Los estados y los financiadores son además el filtro: se pulsa una
+ * pastilla o un trozo de su barra para ver solo esas, y se combinan.
  */
 function ResumenDelAnio({
   subvenciones,
   etiqueta,
   conDinero,
+  colores,
   estados,
+  financiadores,
   onAlternarEstado,
+  onAlternarFinanciador,
   onQuitarEstados,
+  onQuitarFinanciadores,
+  onAbrirGrafico,
 }: {
   subvenciones: SubvencionConResumen[]
   etiqueta: string
   conDinero: boolean
+  colores: Map<string, string>
   estados: Set<SubvencionEstado>
+  financiadores: Set<string>
   onAlternarEstado: (e: SubvencionEstado) => void
+  onAlternarFinanciador: (f: string) => void
   onQuitarEstados: () => void
+  onQuitarFinanciadores: () => void
+  onAbrirGrafico: () => void
 }) {
   const totales = totalesEjercicio(subvenciones)
-  const recuento = recuentoPorEstado(subvenciones)
+  const porEstado = porcionesPorEstado(subvenciones)
+  const porFinanciador = porcionesPorFinanciador(subvenciones, colores)
   const tope = Math.max(totales.solicitado, totales.confirmado, 1)
   const pct = (n: number) => `${(n / tope) * 100}%`
   const cobrada = SUBVENCION_ESTADO_INFO.cobrada
@@ -426,61 +480,138 @@ function ResumenDelAnio({
         </div>
       )}
 
-      <div className="min-w-0 space-y-3">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
+      <div className="min-w-0 space-y-4">
+        <div className="flex items-start justify-between gap-2">
+          <p className="pt-0.5 text-xs text-muted-foreground">
             <span className="tabular-nums">{subvenciones.length}</span>{" "}
-            {subvenciones.length === 1 ? "subvención" : "subvenciones"} · pulsa un estado para ver solo esas
+            {subvenciones.length === 1 ? "subvención" : "subvenciones"} · pulsa un estado o un financiador para ver solo esas
           </p>
-          {estados.size > 0 && (
-            <button
-              type="button"
-              onClick={onQuitarEstados}
-              className="shrink-0 rounded text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Ver todas
-            </button>
-          )}
+          <Button variant="outline" size="sm" className="-my-1 h-7 shrink-0 gap-1.5 px-2.5 text-xs" onClick={onAbrirGrafico}>
+            <PieChart className="h-3.5 w-3.5" />
+            Gráfico
+          </Button>
         </div>
-        <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full" aria-hidden>
-          {recuento.map(({ estado, n }) => (
-            <div
-              key={estado}
-              className={cn(
-                "h-full transition-opacity duration-150",
-                SUBVENCION_ESTADO_INFO[estado].dotClass,
-                estados.size > 0 && !estados.has(estado) && "opacity-25",
-              )}
-              style={{ flexGrow: n, flexBasis: 0 }}
-            />
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por estado">
-          {recuento.map(({ estado, n }) => {
-            const info = SUBVENCION_ESTADO_INFO[estado]
-            const activo = estados.has(estado)
-            return (
-              <button
-                key={estado}
-                type="button"
-                aria-pressed={activo}
-                onClick={() => onAlternarEstado(estado)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  activo
-                    ? cn(info.bgClass, info.textClass, info.borderClass, "shadow-sm")
-                    : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <span className={cn("h-2 w-2 shrink-0 rounded-full", info.dotClass)} aria-hidden />
-                {info.label}
-                <span className="tabular-nums opacity-70">{n}</span>
-              </button>
-            )
-          })}
-        </div>
+        <Faceta
+          titulo="Estado"
+          porciones={porEstado}
+          activos={estados as Set<string>}
+          onAlternar={(k) => onAlternarEstado(k as SubvencionEstado)}
+          onQuitar={onQuitarEstados}
+          estiloActivo={(p) => {
+            const info = SUBVENCION_ESTADO_INFO[p.clave as SubvencionEstado]
+            return { className: cn(info.bgClass, info.textClass, info.borderClass) }
+          }}
+        />
+        <Faceta
+          titulo="Financiador"
+          porciones={porFinanciador}
+          activos={financiadores}
+          onAlternar={onAlternarFinanciador}
+          onQuitar={onQuitarFinanciadores}
+          estiloActivo={(p) => ({ className: "bg-muted text-foreground", style: { borderColor: p.color } })}
+        />
       </div>
     </section>
+  )
+}
+
+/**
+ * Una barra partida en trozos y, debajo, una pastilla por trozo. Las dos cosas
+ * filtran. Los trozos son para el ratón (pequeños, sin texto): el teclado y el
+ * lector de pantalla van por las pastillas, que dicen lo mismo con palabras.
+ */
+function Faceta({
+  titulo,
+  porciones,
+  activos,
+  onAlternar,
+  onQuitar,
+  estiloActivo,
+}: {
+  titulo: string
+  porciones: PorcionResumen[]
+  activos: Set<string>
+  onAlternar: (clave: string) => void
+  onQuitar: () => void
+  estiloActivo: (p: PorcionResumen) => { className?: string; style?: CSSProperties }
+}) {
+  const hayActivos = activos.size > 0
+  const apagado = (p: PorcionResumen) => hayActivos && !activos.has(p.clave)
+  const resumen = (p: PorcionResumen) =>
+    [
+      `${p.label}: ${p.n} ${p.n === 1 ? "subvención" : "subvenciones"}`,
+      p.confirmado > 0 ? `${formatCurrency(p.confirmado)} confirmados` : p.solicitado > 0 ? `${formatCurrency(p.solicitado)} solicitados` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ")
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex h-5 items-center justify-between gap-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{titulo}</p>
+        {hayActivos && (
+          <button
+            type="button"
+            onClick={onQuitar}
+            className="shrink-0 rounded text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Ver todas
+          </button>
+        )}
+      </div>
+      <div className="flex gap-0.5" aria-hidden>
+        {porciones.map((p, i) => (
+          <button
+            key={p.clave}
+            type="button"
+            tabIndex={-1}
+            title={resumen(p)}
+            onClick={() => onAlternar(p.clave)}
+            className="group flex h-4 min-w-1.5 cursor-pointer items-center"
+            style={{ flexGrow: p.n, flexBasis: 0 }}
+          >
+            <span
+              className={cn(
+                "h-2.5 w-full transition-[height,opacity] duration-150 ease-out group-hover:h-4",
+                i === 0 && "rounded-l-full",
+                i === porciones.length - 1 && "rounded-r-full",
+                apagado(p) && "opacity-25 group-hover:opacity-60",
+              )}
+              style={{ backgroundColor: p.color }}
+            />
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Filtrar por ${titulo.toLowerCase()}`}>
+        {porciones.map((p) => {
+          const activo = activos.has(p.clave)
+          const estilo = activo ? estiloActivo(p) : {}
+          return (
+            <button
+              key={p.clave}
+              type="button"
+              aria-pressed={activo}
+              title={resumen(p)}
+              onClick={() => onAlternar(p.clave)}
+              style={estilo.style}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                activo
+                  ? cn("shadow-sm", estilo.className)
+                  : cn(
+                      "border-transparent hover:bg-muted hover:text-foreground",
+                      apagado(p) ? "text-muted-foreground/70" : "text-muted-foreground",
+                    ),
+              )}
+            >
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
+              {p.label}
+              <span className="tabular-nums opacity-70">{p.n}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 

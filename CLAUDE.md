@@ -438,6 +438,15 @@ usado en cuál, y cuánto de cada uno**.
   CS verde…) salvo que se elija a mano en la ficha (paleta), que se guarda en
   `subvencion.color` (scripts/075) como **clave de la paleta**, no como hex:
   el modo oscuro lo resuelve `COLORES_SUBVENCION`.
+- **El resumen del año filtra**: estado y financiador son dos facetas
+  (barra partida + pastillas) que se combinan, y el botón «Gráfico» abre un
+  donut (`subvenciones-grafico-dialog.tsx`) por financiador o por estado, en
+  número, solicitado o confirmado, que filtra la misma lista. Cada financiador
+  lleva el color del código de sus subvenciones (`coloresFinanciadores()`), y
+  si varios comparten color —los cuatro GVA— cada uno su tono, alternando
+  oscuro y claro (`TONOS_SUBVENCION`, comprobado contra daltonismo). Se calcula
+  sobre todos los años para que un financiador no cambie de tono con la
+  pestaña.
 - **Los colores de estado viven en `SUBVENCION_ESTADO_INFO`** (punto,
   pastilla). Se generan porque `tailwind.config.ts` escanea `lib/`, `hooks/` y
   `contexts/`; antes no lo hacía y una clase que solo salía en `lib/utils`

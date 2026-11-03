@@ -22,6 +22,10 @@ const nextConfig = {
   // `/.well-known/oauth-protected-resource/api/mcp` (RFC 9728, §3.1).
   async rewrites() {
     return [
+      // Infografía de subvenciones: página estática en public/info/ (HTML,
+      // PDF y MD descargables). Sin esto /info daría 404, porque Next solo
+      // sirve public/info/index.html con su nombre completo.
+      { source: "/info", destination: "/info/index.html" },
       {
         source: "/.well-known/oauth-authorization-server",
         destination: "/api/well-known/oauth-authorization-server",

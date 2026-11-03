@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Subvenciones MCM · de un vistazo</title>
+<meta name="description" content="Criterios, fuentes de financiación y los 5 pasos para gestionar las subvenciones de las actividades del MCM.">
+<meta name="theme-color" content="#17365d">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<!--
+  INFOGRAFÍA · Gestión técnica de las subvenciones en el MCM
+  Se publica en /info (MCM Bank). Este archivo es a la vez la web y la fuente del PDF.
+
+  CÓMO EDITARLA
+  - El texto "oficial" está también en infografia-subvenciones.md (misma carpeta).
+    Si cambias un texto aquí, cámbialo allí, y al revés.
+  - Cada <section class="page"> es una página del PDF (440 px de ancho, alto exacto).
+    En pantalla las dos páginas se ven seguidas, como una sola web.
+  - Colores: variables en :root (--navy, --teal, --coral, --violet, --amber...).
+    Cada paso usa su color con style="--c:var(--coral)" etc.
+  - Iconos: Lucide (lucide.dev), definidos UNA vez en el <svg> de símbolos de
+    arriba del <body>. Se usan con <svg class="ic"><use href="#i-nombre"/></svg>.
+    Para añadir uno, copia sus <path> en un <symbol id="i-nombre" viewBox="0 0 24 24">.
+  - .only-print solo sale en el PDF; .no-print solo en la web.
+  - Los elementos con data-slide son las diapositivas del modo «Presentar».
+  - PDF: node scripts/infografia/generar-pdf.mjs   (ver el propio script)
+-->
+<style>
+@page{size:440px 2100px;margin:0}
+
+:root{
+  --navy:#17365d; --blue:#2c6db3; --blue2:#4a8fd6; --sky:#e9f2fb; --sky2:#d5e6f7;
+  --ink:#1e2a3a; --muted:#5b6b80; --line:#d9e3ef;
+  --green:#1f9a63; --greenbg:#e5f6ee; --red:#d2453f; --redbg:#fcebea;
+  --amber:#e39a17; --amberbg:#fff4dd; --paper:#f7f8fb; --bg:#e8ecf2;
+  --coral:#e0623f; --coralbg:#fdeee8; --teal:#128a84; --tealbg:#e2f4f2; --violet:#6b4fb8; --violetbg:#efeafa;
+  --gold:#ffd77a;
+  --ease-brio:cubic-bezier(0.23,1,0.32,1);
+  --ease-vaiven:cubic-bezier(0.77,0,0.175,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+html,body{background:var(--bg)}
+body{font-family:'Poppins',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);font-size:14.5px;line-height:1.42;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+.ic{width:1em;height:1em;flex:none;vertical-align:-0.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+b,strong{font-weight:700}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2.5px solid var(--blue2);outline-offset:2px;border-radius:8px}
+.page{width:100%;padding:0 0 22px;background:var(--paper);overflow:hidden}
+[id]{scroll-margin-top:64px}
+
+/* ---------- barra superior (solo web) ---------- */
+.topnav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:8px 12px;padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--navy);font-size:13.5px;white-space:nowrap;flex:none}
+.brand .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(150deg,var(--navy),var(--teal));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px}
+.brand .bt{display:none}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;padding:2px;scroll-padding:0 24px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent)}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:5px 10px;white-space:nowrap;transition:background-color .16s var(--ease-brio),color .16s var(--ease-brio),border-color .16s var(--ease-brio)}
+.chip .n{width:18px;height:18px;border-radius:50%;background:var(--c,var(--navy));color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.chip:hover{background:var(--sky);color:var(--navy)}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.chip.on .n{background:#fff;color:var(--navy)}
+.acts{display:flex;gap:6px;flex:none;position:relative}
+.btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:13px;border-radius:10px;padding:8px 12px;white-space:nowrap;transition:background-color .16s var(--ease-brio),transform .12s var(--ease-brio)}
+.btn:active{transform:scale(.97)}
+.btn .ic{font-size:16px}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-navy:hover{background:#0f2846}
+.btn-soft{background:var(--sky);color:var(--navy)}
+.btn-soft:hover{background:var(--sky2)}
+.btn .lbl-wide{display:none}
+.dl-menu{position:absolute;right:0;top:calc(100% + 8px);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(23,54,93,.16);padding:6px;width:280px;display:none;transform-origin:top right}
+.dl-menu.open{display:block;animation:pop .2s var(--ease-brio)}
+@keyframes pop{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
+.dl-item{display:flex;gap:11px;align-items:center;padding:9px 10px;border-radius:10px;font-size:13.4px}
+.dl-item:hover{background:var(--sky)}
+.dl-item .fi{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.dl-item small{display:block;color:var(--muted);font-size:11.5px;line-height:1.3}
+.fi.pdf{background:var(--redbg);color:var(--red)} .fi.html{background:var(--sky2);color:var(--blue)} .fi.md{background:var(--tealbg);color:var(--teal)}
+
+/* ---------- cabecera ---------- */
+.hero{background:linear-gradient(150deg,var(--navy) 0%,#1f5a8f 60%,var(--teal) 100%);color:#fff;padding:26px 24px 30px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.07)}
+.hero:before{content:"";position:absolute;right:40px;bottom:-80px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06)}
+.hero > *{position:relative;z-index:1}
+.hero h1{font-size:28px;line-height:1.12;font-weight:700;letter-spacing:-.01em;margin-top:8px}
+.hero h1 span{color:var(--gold)}
+.hero .lead{margin-top:10px;font-size:13.5px;opacity:.9;max-width:520px}
+.pill-row{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:500;display:flex;align-items:center;gap:5px}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.hbtn{display:inline-flex;align-items:center;gap:7px;background:#fff;color:var(--navy);border-radius:10px;padding:8px 13px;font-weight:700;font-size:13px;transition:background-color .16s var(--ease-brio),transform .12s var(--ease-brio)}
+.hbtn:hover{background:var(--sky)}
+.hbtn:active{transform:scale(.97)}
+.hbtn.ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.hbtn.ghost:hover{background:rgba(255,255,255,.22)}
+.hbtn .ic{font-size:16px}
+
+.mini-hero{background:linear-gradient(150deg,var(--navy) 0%,#1f5a8f 60%,var(--teal) 100%);color:#fff;padding:16px 24px;justify-content:space-between;align-items:center}
+.mini-hero .t2{font-size:17px;font-weight:700;line-height:1.15}.mini-hero .t2 span{color:var(--gold)}
+.mini-hero .pg{opacity:.8;font-size:12px;font-weight:500;background:rgba(255,255,255,.15);border-radius:999px;padding:3px 10px;flex:none}
+
+/* ---------- secciones ---------- */
+.sec{margin:18px 16px 0}
+.sec-title{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sec-title .bubble{width:34px;height:34px;border-radius:10px;background:var(--c,var(--blue));color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.sec-title h2{font-size:18px;font-weight:700;color:var(--navy);line-height:1.15}
+.sec-title small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:.02em}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+
+/* criterios */
+.crit{display:flex;flex-direction:column;gap:7px}
+.crit-item{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px 9px 9px}
+.crit-num{width:30px;height:30px;border-radius:50%;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
+.crit-item .txt{flex:1;font-size:13.8px;line-height:1.35}
+.crit-item .icx{font-size:20px;color:var(--blue);opacity:.85}
+.prio{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--muted);font-weight:500}
+.prio .bar{flex:1;height:6px;border-radius:6px;background:linear-gradient(90deg,var(--navy),var(--blue2),#bcd6f1)}
+
+/* fuentes */
+.src{display:flex;flex-direction:column;gap:9px}
+.src-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.src-head{display:flex;align-items:center;gap:8px;padding:8px 14px;font-weight:700;font-size:14.5px;color:#fff}
+.src-head .ic{font-size:17px}
+.src-body{padding:10px 14px 12px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:9px;align-items:flex-start;font-size:13.8px}
+.row .ic{font-size:16px;color:var(--blue);margin-top:2px}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;margin-left:4px;vertical-align:1px;white-space:nowrap}
+.tag.age{background:var(--amberbg);color:#a26a00}
+.tag.all{background:var(--greenbg);color:var(--green)}
+.gva-item{border-left:3px solid var(--blue2);padding-left:10px}
+.gva-item .nm{font-weight:700;color:var(--navy);font-size:14px}
+.gva-item .ds{font-size:13.3px;color:var(--ink)}
+
+/* pasos */
+.step{--c:var(--navy);margin:22px 16px 0;position:relative}
+.step-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.step-num{width:46px;height:46px;border-radius:50%;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;font-size:24px;font-weight:700;line-height:1}
+.step-head .kk{display:block;font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--c);margin-bottom:1px}
+.step-head h3{font-size:18.5px;font-weight:700;color:var(--navy);line-height:1.1;text-transform:uppercase;letter-spacing:.01em}
+.step-head h3 small{display:block;text-transform:none;font-size:12px;color:var(--muted);font-weight:500;letter-spacing:0;margin-top:3px}
+.step-head .badge{margin-left:auto}
+.badge{background:var(--amber);color:#fff;border-radius:10px;padding:5px 9px;font-size:11px;font-weight:700;line-height:1.1;text-align:left;display:flex;align-items:center;gap:6px;flex:none}
+.badge .ic{font-size:15px}
+.stack{display:flex;flex-direction:column;gap:9px}
+
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center}
+.stat .ic{font-size:22px;color:var(--c)}
+.stat .big{font-weight:700;color:var(--navy);font-size:14.5px;line-height:1.15;margin-top:4px}
+.stat .lbl{font-size:11.3px;color:var(--muted);line-height:1.25;margin-top:3px}
+.stat.hot{background:var(--amberbg);border-color:#f3d390}
+.stat.hot .ic,.stat.hot .big{color:#a26a00}
+
+/* cuenta atrás (solo web) */
+.countdown{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.p1 .countdown{margin-top:9px}
+.cd-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.cd-num{font-size:30px;font-weight:700;color:var(--coral);line-height:1;font-variant-numeric:tabular-nums}
+.cd-txt{font-size:13.4px;color:var(--navy);font-weight:500}
+.cd-sub{font-size:11.8px;color:var(--muted);margin-top:4px}
+.cd-track{position:relative;height:10px;border-radius:10px;background:var(--sky);margin:26px 0 6px}
+.cd-fill{position:absolute;inset:0 auto 0 0;border-radius:10px;background:linear-gradient(90deg,var(--coral),#f0926f);transform-origin:left;width:0}
+.cd-mark{position:absolute;top:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px var(--c2,var(--coral))}
+.cd-mark.today{background:var(--coral);--c2:var(--coral)}
+.cd-mark.dead{background:var(--amber);--c2:var(--amber);border-radius:5px}
+.cd-flag{position:absolute;bottom:calc(100% + 6px);transform:translateX(-50%);font-size:10.5px;font-weight:700;white-space:nowrap;border-radius:6px;padding:1px 6px}
+.cd-flag.today{background:var(--coralbg);color:var(--coral)}
+.cd-flag.dead{background:var(--amberbg);color:#a26a00}
+.cd-ends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:500}
+
+.q{display:flex;gap:9px;align-items:flex-start;font-size:13.8px;padding:4px 0}
+.q .qi{width:22px;height:22px;border-radius:50%;background:var(--tealbg);color:var(--teal);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none;margin-top:1px}
+.tip{display:flex;gap:9px;background:var(--tealbg);border-radius:11px;padding:9px 11px;margin-top:8px;font-size:13.3px;color:var(--navy);align-items:flex-start}
+.tip .ic{font-size:18px;color:var(--teal);margin-top:1px}
+
+.p2{display:grid;grid-template-columns:1fr;gap:9px;grid-template-areas:"card" "yn" "alert"}
+.p2 > .card{grid-area:card} .p2 > .yn{grid-area:yn} .p2 > .alert{grid-area:alert}
+.yn{display:grid;grid-template-columns:1.08fr 1fr;gap:8px}
+.yn-col{border-radius:14px;overflow:hidden;border:1px solid;background:#fff}
+.yn-col.y{border-color:#bfe6d2}
+.yn-col.n{border-color:#f1c6c3}
+.yn-h{display:flex;align-items:center;gap:5px;font-weight:700;font-size:11.6px;padding:7px 9px;color:#fff;letter-spacing:.01em;white-space:nowrap}
+.yn-col.y .yn-h{background:var(--green)}
+.yn-col.n .yn-h{background:var(--red)}
+.yn-h .ic{font-size:16px}
+.yn-list{padding:7px 9px 9px;display:flex;flex-direction:column;gap:6px}
+.yn-li{display:flex;gap:7px;font-size:12.6px;line-height:1.3;align-items:flex-start}
+.yn-li .ic{font-size:15px;margin-top:1px}
+.yn-col.y .yn-li .ic{color:var(--green)}
+.yn-col.n .yn-li .ic{color:var(--red)}
+.yn-li em{font-style:normal;color:var(--muted);font-size:11.5px}
+
+.alert{display:flex;gap:10px;align-items:center;background:var(--amberbg);border:1.5px solid var(--amber);border-radius:13px;padding:10px 12px;font-size:13.5px;color:#6b4700}
+.alert .ic{font-size:24px;color:var(--amber)}
+.alert b{color:#a26a00}
+
+/* pagos */
+.pay{display:grid;grid-template-columns:1fr;gap:7px}
+.pay-row{display:flex;gap:11px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.pay-row .ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.pay-row .t{font-size:13.6px;line-height:1.35;flex:1}
+.lvl{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap;flex:none}
+.ok .ico,.ok .lvl{background:var(--greenbg);color:var(--green)}
+.mid .ico,.mid .lvl{background:var(--sky2);color:var(--blue)}
+.warn .ico,.warn .lvl{background:var(--redbg);color:var(--red)}
+.pay-row.must{background:var(--navy);color:#fff;border-color:var(--navy)}
+.must .ico{background:rgba(255,255,255,.15);color:#fff}
+.must .lvl{background:var(--gold);color:var(--navy)}
+
+/* archivar */
+.p4{display:grid;grid-template-columns:1fr;gap:0}
+.sub{font-weight:700;color:var(--navy);font-size:14.5px;display:flex;align-items:center;gap:8px;margin:12px 0 7px}
+.sub .let{width:24px;height:24px;border-radius:7px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.sub .sm{font-size:11.5px;font-weight:400;color:var(--muted);font-style:italic}
+.sub .imp{margin-left:auto;font-size:10.5px;background:var(--red);color:#fff;border-radius:999px;padding:2px 9px;letter-spacing:.04em}
+.route{display:flex;flex-direction:column;gap:7px}
+.rt{background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.rt .who{font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:6px}
+.rt .who .ic{font-size:14px}
+.rt .what{font-size:13.6px;margin-top:3px;display:flex;gap:6px;align-items:flex-start}
+.rt .what .ic{font-size:15px;color:var(--muted);margin-top:2px}
+.mail{display:inline-flex;align-items:center;gap:5px;background:var(--sky);color:var(--navy);font-weight:500;font-size:12.6px;border-radius:7px;padding:2px 7px;margin-top:4px;word-break:break-all;text-align:left;line-height:1.42}
+button.mail{transition:background-color .16s var(--ease-brio)}
+button.mail:hover{background:var(--sky2)}
+button.mail .cp{font-size:12px;opacity:.6;flex:none}
+button.mail.copied{background:var(--greenbg);color:var(--green)}
+.note{font-size:12px;color:var(--muted);margin-top:4px;display:flex;gap:5px;align-items:flex-start}
+.note .ic{font-size:13px;margin-top:2px;color:var(--green)}
+.relax{display:flex;gap:10px;align-items:center;background:var(--greenbg);border-radius:12px;padding:10px 12px;font-size:13.5px}
+.relax .ic{font-size:20px;color:var(--green)}
+.forms{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.form{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;transition:border-color .16s var(--ease-brio),background-color .16s var(--ease-brio)}
+a.form:hover{border-color:var(--blue2);background:#fbfdff}
+.form .ic{font-size:22px;color:var(--blue)}
+.form .fn{font-size:12.5px;font-weight:500;margin-top:3px;line-height:1.25}
+.form .url{display:inline-block;margin-top:5px;background:var(--blue);color:#fff;font-weight:700;font-size:12.5px;border-radius:999px;padding:3px 10px}
+.form .ex{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.25}
+.photo-tips{margin-top:7px;display:flex;flex-direction:column;gap:6px}
+.pt{display:flex;gap:9px;align-items:flex-start;border-radius:11px;padding:8px 11px;font-size:13.3px}
+.pt .ex{font-weight:700;flex:none;font-size:13px;border-radius:6px;padding:0 6px;color:#fff;margin-top:1px}
+.pt.l2{background:var(--amberbg)} .pt.l2 .ex{background:var(--amber)}
+.pt.l3{background:var(--redbg)} .pt.l3 .ex{background:var(--red)}
+
+/* checklist (solo web) */
+.check{background:#fff;border:1px dashed #b9cde6;border-radius:14px;padding:11px 13px;margin-top:12px}
+.check-h{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--navy);font-size:14px}
+.check-h .ic{color:var(--blue);font-size:18px}
+.check-h .count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--blue);background:var(--sky);border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
+.check-sub{font-size:11.5px;color:var(--muted);margin:2px 0 6px}
+.check-bar{height:5px;border-radius:5px;background:var(--sky);overflow:hidden;margin-bottom:6px}
+.check-bar i{display:block;height:100%;background:var(--green);transform-origin:left;transform:scaleX(0);transition:transform .26s var(--ease-brio)}
+.ci{display:flex;gap:10px;align-items:flex-start;padding:6px 4px;border-radius:9px;font-size:13.2px;cursor:pointer;transition:background-color .16s var(--ease-brio)}
+.ci:hover{background:var(--paper)}
+.ci input{position:absolute;opacity:0;pointer-events:none}
+.ci .box{width:20px;height:20px;border-radius:6px;border:2px solid #b9cde6;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:0;transition:background-color .16s var(--ease-brio),border-color .16s var(--ease-brio)}
+.ci .box .ic{transform:scale(0);transition:transform .2s var(--ease-brio)}
+.ci input:checked + .box{background:var(--green);border-color:var(--green)}
+.ci input:checked + .box .ic{transform:scale(1)}
+.ci input:checked ~ span{color:var(--muted);text-decoration:line-through;text-decoration-color:#9fb2c8}
+.ci input:focus-visible + .box{outline:2.5px solid var(--blue2);outline-offset:2px}
+.check-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;min-height:26px}
+.done-msg{font-size:12.5px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:6px;opacity:0;transform:translateY(4px);transition:opacity .2s var(--ease-brio),transform .2s var(--ease-brio)}
+.check.all .done-msg{opacity:1;transform:none}
+.reset{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:5px;border-radius:7px;padding:3px 6px}
+.reset:hover{background:var(--paper);color:var(--navy)}
+
+/* cobro */
+.timeline{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.tl-bar{display:flex;align-items:center;margin:6px 0 4px;position:relative}
+.tl-dot{width:14px;height:14px;border-radius:50%;background:var(--blue);flex:none;border:3px solid var(--sky2)}
+.tl-line{flex:1;height:4px;background:repeating-linear-gradient(90deg,var(--blue2) 0 8px,transparent 8px 13px)}
+.tl-dot.end{background:var(--green);border-color:var(--greenbg)}
+.tl-runner{display:none}
+.tl-lbl{display:flex;justify-content:space-between;font-size:11.3px;color:var(--muted);font-weight:500}
+.tl-mid{text-align:center;font-weight:700;color:var(--navy);font-size:15px;margin-top:2px}
+.tl-mid .ic{color:var(--amber)}
+.tl-mid .sad{color:var(--coral);font-size:19px;vertical-align:-.25em;margin-left:2px}
+.tl-txt{font-size:13.4px;margin-top:6px;text-align:center}
+.piggy{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,var(--sky),#fff);border:1px solid var(--line);border-radius:14px;padding:11px 13px;font-size:13.4px}
+.piggy .pic{width:46px;height:46px;border-radius:50%;background:#ffd9e4;color:#c2456b;display:flex;align-items:center;justify-content:center;font-size:24px;flex:none;position:relative}
+.coin{position:absolute;left:50%;top:-4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--gold);border:2px solid #e3a92b;opacity:0;pointer-events:none}
+.faq{background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 14px}
+.faq .fq{font-weight:700;color:var(--navy);font-size:14.5px;display:flex;gap:7px;align-items:center}
+.faq .fq .ic{color:var(--blue);font-size:18px}
+.dec{display:flex;gap:10px;align-items:center;margin-top:9px;background:var(--navy);color:#fff;border-radius:12px;padding:9px 11px;font-size:13px}
+.dec .cal{background:#fff;color:var(--navy);border-radius:8px;width:44px;flex:none;text-align:center;overflow:hidden;line-height:1}
+.dec .cal .m{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:3px 0;letter-spacing:.08em}
+.dec .cal .d{font-size:16px;font-weight:700;padding:4px 0 5px}
+.dec .ex{opacity:.85;font-size:12px}
+.dec .ex b{color:var(--gold)}
+.p5{display:grid;grid-template-columns:1fr;gap:8px}
+
+/* pie */
+.foot{margin:22px 16px 0;background:linear-gradient(150deg,var(--navy),var(--teal));color:#fff;border-radius:16px;padding:14px 16px}
+.foot .ft{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.8;font-weight:500}
+.foot .fn{font-size:18px;font-weight:700;margin-top:2px}
+.foot .ct{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+.foot .ct a{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.12);border-radius:10px;padding:7px 10px;font-size:13.5px;font-weight:500;transition:background-color .16s var(--ease-brio)}
+.foot .ct a:hover{background:rgba(255,255,255,.2)}
+.foot .ct .ic{font-size:18px}
+.next{margin:14px 16px 0;text-align:center;font-size:12px;color:var(--muted);align-items:center;justify-content:center;gap:6px}
+
+.only-print{display:none}
+.web-note{margin:22px 16px 0;font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+.web-note a{color:var(--blue);font-weight:500;text-decoration:underline;text-underline-offset:2px}
+
+/* aviso flotante */
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--navy);color:#fff;font-size:13px;font-weight:500;border-radius:12px;padding:9px 14px;display:flex;gap:8px;align-items:center;box-shadow:0 10px 26px rgba(23,54,93,.28);opacity:0;pointer-events:none;transition:opacity .2s var(--ease-brio),transform .2s var(--ease-brio);z-index:60;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast .ic{color:#7fe0b0;font-size:16px}
+
+@media screen and (max-width:559px){
+  .hero-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .hbtn{flex-direction:column;justify-content:center;gap:3px;padding:8px 4px;font-size:12px;text-align:center;line-height:1.15}
+  .hbtn .ic{font-size:18px}
+}
+
+/* ---------- tableta: una columna centrada ---------- */
+@media screen and (min-width:560px){
+  .wrap{max-width:600px;margin:0 auto;padding:20px 0 40px}
+  .page{border-radius:22px;box-shadow:0 10px 30px rgba(23,54,93,.10)}
+  .page + .page{margin-top:20px}
+  .brand .bt{display:inline}
+  .btn .lbl-wide{display:inline}
+}
+
+/* ---------- escritorio: usar el ancho ---------- */
+@media screen and (min-width:960px){
+  body{font-size:15px}
+  .topnav{padding:10px 24px}
+  .wrap{max-width:1200px;padding:28px 28px 56px}
+  .page{display:grid;grid-template-columns:1fr 1fr;gap:24px;background:none;box-shadow:none;border-radius:0;padding:0;overflow:visible}
+  .page + .page{margin-top:24px}
+  .hero{grid-column:1/-1;border-radius:26px;padding:44px 48px 46px}
+  .hero:after{width:340px;height:340px;right:-90px;top:-120px}
+  .hero:before{width:240px;height:240px;right:260px;bottom:-150px}
+  .hero h1{font-size:44px;max-width:820px}
+  .hero .lead{font-size:15px}
+  .hero-actions{margin-top:24px}
+  #criterios{display:flex;flex-direction:column}
+  #criterios .crit{flex:1}
+  #criterios .crit-item{flex:1}
+  .sec,.step,.foot,.web-note{margin:0}
+  .sec,.step{background:var(--paper);border-radius:22px;padding:22px 24px 24px}
+  .step,.foot,.web-note{grid-column:1/-1}
+  .sec-title h2{font-size:20px}
+  .step-head{margin-bottom:14px}
+  .step-num{width:54px;height:54px;font-size:27px}
+  .step-head h3{font-size:21px}
+  .step-head h3 small{font-size:13px}
+  .crit{gap:9px}
+  .crit-item{padding:12px 14px 12px 11px}
+  .p1{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;align-items:stretch}
+  .p1 .countdown{margin-top:0}
+  .p1 .stat{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 10px}
+  .p1 .stat .big{font-size:16px}
+  .p2{grid-template-columns:1fr 1.15fr;grid-template-rows:auto 1fr;grid-template-areas:"card yn" "alert yn";align-items:start}
+  .yn-li{font-size:13.2px}
+  .yn-h{font-size:12.5px;padding:9px 12px}
+  .yn-list{padding:10px 12px 12px;gap:8px}
+  .pay{grid-template-columns:repeat(3,1fr)}
+  .pay-row.must{grid-column:1/-1;padding:14px 16px}
+  .pay-row:not(.must){flex-wrap:wrap;align-content:flex-start}
+  .pay-row:not(.must) .t{flex-basis:calc(100% - 46px)}
+  .pay-row:not(.must) .lvl{margin-left:45px}
+  .p4{grid-template-columns:1.1fr 1fr;gap:0 24px;align-items:start}
+  .p4 .check{grid-column:1/-1;margin-top:16px}
+  .check-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:0 16px}
+  .p4 .sub:first-child{margin-top:0}
+  .p5{grid-template-columns:1.1fr 1fr;gap:12px;align-items:start}
+  .p5 .faq{grid-column:2;grid-row:1/span 2}
+  .foot{border-radius:22px;padding:22px 28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .foot .ct{flex-direction:row;margin:0 0 0 auto;flex-wrap:wrap}
+  .foot .ct a{padding:9px 14px}
+}
+
+/* ---------- modo presentación ---------- */
+.pres-bar{display:none}
+html.presenting{scroll-snap-type:y mandatory;scroll-behavior:auto}
+html.presenting body{background:#dfe5ee}
+html.presenting .topnav,html.presenting .web-note{display:none}
+html.presenting .wrap{max-width:none;padding:0;margin:0}
+html.presenting .page{display:block;background:none;box-shadow:none;border-radius:0;padding:0;overflow:visible}
+html.presenting .page + .page{margin:0}
+html.presenting [data-slide]{width:var(--sw,960px);margin:0 auto;scroll-snap-align:center;scroll-snap-stop:always;zoom:var(--z,1);border-radius:24px}
+html.presenting .slide-gap{height:calc(var(--gap,40px))}
+html.presenting .sec,html.presenting .step{background:var(--paper);padding:26px 30px 30px}
+html.presenting .hero{display:block;padding:56px 56px 60px}
+html.presenting .hero h1{font-size:46px}
+html.presenting .hero-actions,html.presenting .check{display:none}
+html.presenting .foot{padding:26px 30px}
+.pres-bar{position:fixed;right:16px;bottom:16px;z-index:50;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(23,54,93,.18);padding:5px;align-items:center;gap:2px}
+html.presenting .pres-bar{display:flex}
+.pres-bar button{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--navy);transition:background-color .16s var(--ease-brio)}
+.pres-bar button:hover{background:var(--sky)}
+.pres-bar .pc{font-size:12.5px;font-weight:700;color:var(--muted);padding:0 8px;font-variant-numeric:tabular-nums;min-width:56px;text-align:center}
+.pres-bar .sep{width:1px;height:22px;background:var(--line);margin:0 3px}
+
+/* ---------- animaciones pequeñas (solo cuando se ven) ---------- */
+.tl-bar.go .tl-runner{display:block;position:absolute;left:0;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px var(--amberbg);animation:run 1.4s var(--ease-vaiven) .15s both}
+@keyframes run{from{transform:translateX(0)}to{transform:translateX(var(--run,260px));opacity:.0}}
+.pic.drop .coin{animation:drop .5s var(--ease-brio)}
+.pic.drop{animation:wiggle .5s var(--ease-brio) .25s}
+@keyframes drop{0%{opacity:0;transform:translateY(-22px)}30%{opacity:1}100%{opacity:0;transform:translateY(8px) scale(.6)}}
+@keyframes wiggle{0%,100%{transform:none}35%{transform:rotate(-8deg)}70%{transform:rotate(6deg)}}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*:before,*:after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}
+  .tl-bar.go .tl-runner{display:none}
+}
+
+/* ---------- móvil muy estrecho ---------- */
+@media screen and (max-width:370px){ .yn{grid-template-columns:1fr} .stats{grid-template-columns:1fr} }
+
+/* ---------- impresión / PDF: 2 páginas de 440 px de ancho ---------- */
+@media print{
+  html,body{background:var(--paper)}
+  .wrap{display:block;padding:0;max-width:none}
+  .page{width:440px;max-width:440px;border-radius:0;box-shadow:none;break-after:page}
+  .page:last-child{break-after:auto}
+  .only-print{display:flex}
+  .no-print{display:none!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><path d="M12 13V2l8 4-8 4"/><path d="M20.561 10.222a9 9 0 1 1-12.55-5.29"/><path d="M8.002 9.997a5 5 0 1 0 8.9 2.02"/></symbol>
+  <symbol id="i-hand-heart" viewBox="0 0 24 24"><path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 15 6 6"/><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z"/></symbol>
+  <symbol id="i-church" viewBox="0 0 24 24"><path d="m18 7 4 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9l4-2"/><path d="M14 22v-4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v4"/><path d="M18 22V5l-6-3-6 3v17"/><path d="M12 7v5"/><path d="M10 9h4"/></symbol>
+  <symbol id="i-graduation" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></symbol>
+  <symbol id="i-landmark" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M17 14h-6"/><path d="M13 18H7"/><path d="M7 14h.01"/><path d="M17 18h.01"/></symbol>
+  <symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3 2 6"/><path d="m22 6-3-3"/><path d="M6.38 18.7 4 21"/><path d="M17.64 18.67 20 21"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/></symbol>
+  <symbol id="i-utensils" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></symbol>
+  <symbol id="i-bus" viewBox="0 0 24 24"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></symbol>
+  <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
+  <symbol id="i-shirt" viewBox="0 0 24 24"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></symbol>
+  <symbol id="i-presentation" viewBox="0 0 24 24"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></symbol>
+  <symbol id="i-hand-coins" viewBox="0 0 24 24"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></symbol>
+  <symbol id="i-image-off" viewBox="0 0 24 24"><line x1="2" x2="22" y1="2" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/><line x1="13.5" x2="6" y1="13.5" y2="21"/><line x1="18" x2="21" y1="12" y2="15"/><path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59"/><path d="M21 15V5a2 2 0 0 0-2-2H9"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="i-transfer" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></symbol>
+  <symbol id="i-banknote" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-frown" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></symbol>
+  <symbol id="i-piggy" viewBox="0 0 24 24"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-chev-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="i-file-code" viewBox="0 0 24 24"><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/></symbol>
+  <symbol id="i-list-checks" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-party" viewBox="0 0 24 24"><path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/></symbol>
+</svg>
+
+<nav class="topnav no-print" aria-label="Secciones">
+  <a class="brand" href="#inicio"><span class="dot"><svg class="ic"><use href="#i-coins"/></svg></span><span class="bt">Subvenciones MCM</span></a>
+  <div class="chips" id="chips">
+    <a class="chip" href="#criterios">Criterios</a>
+    <a class="chip" href="#fuentes">Fuentes</a>
+    <a class="chip" href="#paso-1" style="--c:var(--coral)"><span class="n">1</span>Hablar con tiempo</a>
+    <a class="chip" href="#paso-2" style="--c:var(--teal)"><span class="n">2</span>Presupuestar</a>
+    <a class="chip" href="#paso-3" style="--c:var(--violet)"><span class="n">3</span>Realizar pagos</a>
+    <a class="chip" href="#paso-4" style="--c:var(--blue)"><span class="n">4</span>Después de la actividad</a>
+    <a class="chip" href="#paso-5" style="--c:var(--amber)"><span class="n">5</span>¿Cuándo lo cobro?</a>
+    <a class="chip" href="#contacto">Contacto</a>
+  </div>
+  <div class="acts">
+    <button class="btn btn-soft" type="button" data-present title="Presentar a pantalla completa (P)"><svg class="ic"><use href="#i-presentation"/></svg><span class="lbl-wide">Presentar</span></button>
+    <button class="btn btn-navy" type="button" id="dl-btn" aria-haspopup="true" aria-expanded="false" aria-controls="dl-menu"><svg class="ic"><use href="#i-download"/></svg><span class="lbl-wide">Descargar</span></button>
+    <div class="dl-menu" id="dl-menu" role="menu">
+      <a class="dl-item" role="menuitem" data-file="Infografia_Subvenciones_MCM.pdf" href="/info/Infografia_Subvenciones_MCM.pdf" download><span class="fi pdf"><svg class="ic"><use href="#i-file-text"/></svg></span><span><b>PDF</b><small>Para imprimir o mandar por WhatsApp</small></span></a>
+      <a class="dl-item" role="menuitem" data-file="index.html" href="/info/index.html" download="infografia-subvenciones.html"><span class="fi html"><svg class="ic"><use href="#i-file-code"/></svg></span><span><b>HTML</b><small>Esta misma página, en un solo archivo</small></span></a>
+      <a class="dl-item" role="menuitem" data-file="infografia-subvenciones.md" href="/info/infografia-subvenciones.md" download><span class="fi md"><svg class="ic"><use href="#i-file-text"/></svg></span><span><b>Markdown (editable)</b><small>El texto, para cambiarlo con facilidad</small></span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section class="page">
+  <header class="hero" id="inicio" data-slide>
+    <h1>Gestión técnica de las subvenciones en el MCM <span>de un vistazo</span></h1>
+    <p class="lead no-print">Criterios, fuentes de financiación y los 5 pasos para gestionar las subvenciones de las actividades del MCM.</p>
+    <div class="pill-row">
+      <div class="pill"><svg class="ic"><use href="#i-route"/></svg> 5 pasos</div>
+    </div>
+    <div class="hero-actions no-print">
+      <button class="hbtn" type="button" data-present><svg class="ic"><use href="#i-presentation"/></svg>Presentar</button>
+      <a class="hbtn ghost" data-file="Infografia_Subvenciones_MCM.pdf" href="/info/Infografia_Subvenciones_MCM.pdf" download><svg class="ic"><use href="#i-download"/></svg>PDF</a>
+      <a class="hbtn ghost" data-file="index.html" href="/info/index.html" download="infografia-subvenciones.html"><svg class="ic"><use href="#i-file-code"/></svg>HTML</a>
+      <a class="hbtn ghost" data-file="infografia-subvenciones.md" href="/info/infografia-subvenciones.md" download><svg class="ic"><use href="#i-file-text"/></svg>MD editable</a>
+    </div>
+  </header>
+
+  <div class="sec" id="criterios" data-slide>
+    <div class="sec-title"><div class="bubble" style="--c:var(--navy)"><svg class="ic"><use href="#i-target"/></svg></div>
+      <h2>Criterios para subvención de actividades<small>Por orden de prioridad</small></h2></div>
+    <div class="crit">
+      <div class="crit-item"><div class="crit-num" style="background:#17365d">1</div><div class="txt">Que las actividades de “trabajo” de monitores/voluntarios sean <b>gratuitas</b>.</div><svg class="ic icx"><use href="#i-hand-heart"/></svg></div>
+      <div class="crit-item"><div class="crit-num" style="background:#2c6db3">2</div><div class="txt">Ajustar precios de actividades de <b>encuentro con Dios</b> (no aumentar precio).</div><svg class="ic icx"><use href="#i-church"/></svg></div>
+      <div class="crit-item"><div class="crit-num" style="background:#4a8fd6">3</div><div class="txt">Ajustar precios de <b>encuentros de formación</b> (monitores).</div><svg class="ic icx"><use href="#i-graduation"/></svg></div>
+      <div class="crit-item"><div class="crit-num" style="background:#7fb0e3">4</div><div class="txt">Reducir y controlar el coste de actividades con <b>niños/as y jóvenes</b>.</div><svg class="ic icx"><use href="#i-users"/></svg></div>
+    </div>
+    <div class="prio"><span>+ prioridad</span><div class="bar"></div><span>– prioridad</span></div>
+  </div>
+
+  <div class="sec" id="fuentes" data-slide>
+    <div class="sec-title"><div class="bubble" style="--c:var(--teal)"><svg class="ic"><use href="#i-coins"/></svg></div>
+      <h2>Fuentes de financiación<small>Distintas Administraciones Públicas</small></h2></div>
+    <div class="src">
+      <div class="src-card">
+        <div class="src-head" style="background:var(--teal)"><svg class="ic"><use href="#i-pin"/></svg> Locales</div>
+        <div class="src-body">
+          <div class="row"><svg class="ic"><use href="#i-building"/></svg><span><b>Ayuntamientos</b> (actividades locales: Castellón, Onda, Vila-real).</span></div>
+          <div class="row"><svg class="ic"><use href="#i-landmark"/></svg><span><b>Diputación de Castellón</b> (máx. dos campamentos al año).</span></div>
+        </div>
+      </div>
+      <div class="src-card">
+        <div class="src-head" style="background:#17365d"><svg class="ic"><use href="#i-landmark"/></svg> GVA</div>
+        <div class="src-body">
+          <div class="gva-item"><div class="nm">IVAJ <span class="tag age">solo 12 a 30 años</span></div>
+            <div class="ds">Actividades concretas de ocio educativo, formación o acción social.</div></div>
+          <div class="gva-item"><div class="nm">Voluntariado <span class="tag all">cualquier edad</span></div>
+            <div class="ds">Formación, intervención o sensibilización con voluntariado.</div></div>
+          <div class="gva-item" style="border-color:#bcd6f1"><div class="nm">Otras puntuales</div>
+            <div class="ds">Participación Ciudadana, GVA Educación (autobuses para actividades), IRPF...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" id="paso-1" style="--c:var(--coral)" data-slide>
+    <div class="step-head"><div class="step-num">1</div>
+      <h3><span class="kk">PASO 1</span>Hablar con tiempo<small>Hablemos las cosas para que todo salga bien :)</small></h3></div>
+    <div class="p1">
+      <div class="stats">
+        <div class="stat"><svg class="ic"><use href="#i-calendar"/></svg><div class="big">1 oct – 30 sep</div><div class="lbl">Bloque subvencionable</div></div>
+        <div class="stat hot"><svg class="ic"><use href="#i-alarm"/></svg><div class="big">Antes del 1 de marzo</div><div class="lbl">Todo planificado y presupuestado</div></div>
+        <div class="stat"><svg class="ic"><use href="#i-hourglass"/></svg><div class="big">Mín. 1 mes</div><div class="lbl">de antelación si la actividad es antes de esa fecha</div></div>
+      </div>
+      <div class="countdown no-print" id="countdown" hidden>
+        <div class="cd-top"><span class="cd-num" id="cd-num">–</span><span class="cd-txt" id="cd-txt">días para el 1 de marzo</span></div>
+        <div class="cd-sub" id="cd-sub"></div>
+        <div class="cd-track" aria-hidden="true">
+          <div class="cd-fill" id="cd-fill"></div>
+          <span class="cd-flag dead" id="cd-flag-dead">1 mar</span><span class="cd-mark dead" id="cd-mark-dead"></span>
+          <span class="cd-flag today" id="cd-flag-today">Hoy</span><span class="cd-mark today" id="cd-mark-today"></span>
+        </div>
+        <div class="cd-ends"><span id="cd-start">1 oct</span><span id="cd-end">30 sep</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" id="paso-2" style="--c:var(--teal)" data-slide>
+    <div class="step-head"><div class="step-num">2</div>
+      <h3><span class="kk">PASO 2</span>Presupuestar<small>Tienes una plantilla en el Drive MCM</small></h3></div>
+    <div class="p2">
+      <div class="card">
+        <div class="q"><div class="qi">?</div><span>¿Qué <b>ingresos</b> tendrá la actividad sin subvención? <span style="color:var(--muted)">(ajustar cuotas)</span></span></div>
+        <div class="q"><div class="qi">?</div><span>¿Qué <b>gastos</b> tendrá la actividad sin subvención?</span></div>
+        <div class="tip"><svg class="ic"><use href="#i-bulb"/></svg><span>Con tiempo, se puede prever la cantidad subvencionable para que la cuota de la actividad no sea elevada.</span></div>
+      </div>
+      <div class="yn">
+        <div class="yn-col y"><div class="yn-h"><svg class="ic"><use href="#i-circle-check"/></svg> SUBVENCIONABLE</div><div class="yn-list">
+          <div class="yn-li"><svg class="ic"><use href="#i-bed"/></svg><span>Alojamiento</span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-utensils"/></svg><span>Manutención</span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-car"/></svg><span>Transporte en coche <em>(con excepciones; en transporte público es más complicado)</em></span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-bus"/></svg><span>Transporte en autobuses propios</span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-printer"/></svg><span>Impresiones y material de promoción</span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-shirt"/></svg><span>Merchandising <em>(limitado)</em></span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-ticket"/></svg><span>Actividades concretas <em>(contratar algo tipo Láser Tag, acceso a un parque de ocio...)</em></span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-presentation"/></svg><span>Formaciones <em>(no hace falta ser autónomo)</em></span></div>
+        </div></div>
+        <div class="yn-col n"><div class="yn-h"><svg class="ic"><use href="#i-circle-x"/></svg> NO SUBVENCIONABLE</div><div class="yn-list">
+          <div class="yn-li"><svg class="ic"><use href="#i-receipt"/></svg><span>Cualquier cosa <b>sin factura</b></span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-hand-coins"/></svg><span>Donativos a un alojamiento o persona (formador)</span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-card"/></svg><span>Pagos desde cuentas o tarjetas personales que no sean de la AJ</span></div>
+          <div class="yn-li"><svg class="ic"><use href="#i-image-off"/></svg><span>Material impreso sin los logos correspondientes</span></div>
+        </div></div>
+      </div>
+      <div class="alert"><svg class="ic"><use href="#i-alert"/></svg><span><b>IMPORTANTE:</b> Incluir logos de las entidades públicas en carteles y promoción (consultar siempre).</span></div>
+    </div>
+  </div>
+  <div class="next only-print">Sigue en la página 2 <svg class="ic"><use href="#i-arrow-right"/></svg></div>
+</section>
+
+
+<section class="page">
+  <div class="mini-hero only-print"><span class="t2">Gestión técnica de las subvenciones <span>de un vistazo</span></span><span class="pg">2 / 2</span></div>
+
+  <div class="step" id="paso-3" style="--c:var(--violet)" data-slide>
+    <div class="step-head"><div class="step-num">3</div>
+      <h3><span class="kk">PASO 3</span>Realizar pagos<small>Siempre desde cuentas del MCM</small></h3></div>
+    <div class="pay">
+      <div class="pay-row must"><div class="ico"><svg class="ic"><use href="#i-landmark"/></svg></div><div class="t">Todo gasto subvencionable debe salir de las <b>cuentas del MCM en Sabadell</b> (cuentas de la AJ Central o locales).</div><span class="lvl">OBLIGATORIO</span></div>
+      <div class="pay-row ok"><div class="ico"><svg class="ic"><use href="#i-transfer"/></svg></div><div class="t"><b>Transferencia</b></div><span class="lvl">PREFERIBLE</span></div>
+      <div class="pay-row mid"><div class="ico"><svg class="ic"><use href="#i-card"/></svg></div><div class="t">Si hay que pagar con <b>tarjeta</b>, preverlo con tiempo para solicitar una.</div><span class="lvl">CON PREVISIÓN</span></div>
+      <div class="pay-row warn"><div class="ico"><svg class="ic"><use href="#i-banknote"/></svg></div><div class="t">Pago en <b>efectivo</b> SOLO CASOS EXCEPCIONALES, <b>máximo 100 €</b>. En el ticket debe constar que fue pagado en efectivo.</div><span class="lvl">EXCEPCIONAL</span></div>
+    </div>
+  </div>
+
+  <div class="step" id="paso-4" style="--c:var(--blue)" data-slide>
+    <div class="step-head"><div class="step-num">4</div>
+      <h3><span class="kk">PASO 4</span>Después de la actividad<small>Archivarlo todo bien...</small></h3>
+      <div class="badge"><svg class="ic"><use href="#i-timer"/></svg><span>Máx.<br>20 días</span></div></div>
+
+    <div class="p4">
+      <div>
+        <div class="sub"><span class="let">A</span> Facturas <span class="imp">IMPORTANTE</span></div>
+        <div class="route">
+          <div class="rt"><div class="who"><svg class="ic"><use href="#i-pin"/></svg> Pagadas por el MCM Local</div>
+            <div class="what"><svg class="ic"><use href="#i-arrow-right"/></svg><span>Archivar en <b>MCM Bank</b>. Para enviarlas a MCM Bank usar correo:<br>
+            <button type="button" class="mail" data-copy="facturas+vila-real@movimientoconsolacion.com">facturas+vila-real@movimientoconsolacion.com</button>
+            <span class="mail">facturas+nules@...</span></span></div>
+            <div class="note"><svg class="ic"><use href="#i-circle-check"/></svg><span>Se vincula automáticamente y archiva en el MCM correspondiente.</span></div></div>
+          <div class="rt"><div class="who"><svg class="ic"><use href="#i-building"/></svg> Pagada por la AJ Central</div>
+            <div class="what"><svg class="ic"><use href="#i-send"/></svg><span>Enviar a <button type="button" class="mail" data-copy="facturas+aj@movimientoconsolacion.com">facturas+aj@movimientoconsolacion.com</button></span></div></div>
+          <div class="rt"><div class="who" style="color:var(--amber)"><svg class="ic"><use href="#i-clock"/></svg> Si no está pagada (y paga la AJ Central)</div>
+            <div class="what"><svg class="ic"><use href="#i-send"/></svg><span>Enviar a <button type="button" class="mail" data-copy="ajmcm@movimientoconsolacion.com">ajmcm@movimientoconsolacion.com</button> <b>(y avisar)</b></span></div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub"><span class="let">B</span> Justificantes de pago</div>
+        <div class="relax"><svg class="ic"><use href="#i-shield"/></svg><span>Los extrae la Oficina Técnica desde el banco <b>(no hay que hacer nada)</b>.</span></div>
+
+        <div class="sub"><span class="let">C</span> Datos y fotos <span class="sm">(lo hacéis vosotros)</span></div>
+        <div class="forms">
+          <a class="form" href="https://bit.ly/datosaj" target="_blank" rel="noopener"><svg class="ic"><use href="#i-clipboard"/></svg><div class="fn">Formulario de información</div><span class="url">bit.ly/datosaj</span></a>
+          <a class="form" href="https://bit.ly/facturasaj" target="_blank" rel="noopener"><svg class="ic"><use href="#i-camera"/></svg><div class="fn">Formulario de fotos</div><span class="url">bit.ly/facturasaj</span><div class="ex">Se envían de 5 a 10 fotos o el álbum</div></a>
+        </div>
+        <div class="photo-tips">
+          <div class="pt l2"><span class="ex">!!</span><span>Hacer fotos de lo subvencionado: <b>comida, desplazamientos...</b></span></div>
+          <div class="pt l3"><span class="ex">!!!</span><span>Fotos específicas <b>con logos</b>: carteles, materiales impresos, material en uso, merchandising repartiéndose.</span></div>
+        </div>
+      </div>
+
+      <div class="check no-print" id="checklist">
+          <div class="check-h"><svg class="ic"><use href="#i-list-checks"/></svg> ¿Lo tengo todo? <span class="count" id="ck-count">0 / 5</span></div>
+          <div class="check-sub">Ve marcando. Se queda guardado en este dispositivo.</div>
+          <div class="check-bar"><i id="ck-bar"></i></div>
+          <div class="check-items">
+          <label class="ci"><input type="checkbox" value="facturas"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span>Facturas enviadas a su correo</span></label>
+          <label class="ci"><input type="checkbox" value="datos"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span>Formulario de información (bit.ly/datosaj)</span></label>
+          <label class="ci"><input type="checkbox" value="fotos"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span>De 5 a 10 fotos o el álbum (bit.ly/facturasaj)</span></label>
+          <label class="ci"><input type="checkbox" value="subvencionado"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span>Fotos de lo subvencionado: comida, desplazamientos...</span></label>
+          <label class="ci"><input type="checkbox" value="logos"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span>Fotos específicas con logos</span></label>
+          </div>
+          <div class="check-foot">
+            <span class="done-msg" aria-live="polite"><svg class="ic"><use href="#i-party"/></svg><span id="ck-done"></span></span>
+            <button type="button" class="reset" id="ck-reset"><svg class="ic"><use href="#i-reset"/></svg>Empezar otra actividad</button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" id="paso-5" style="--c:var(--amber)" data-slide>
+    <div class="step-head"><div class="step-num">5</div>
+      <h3><span class="kk">PASO 5</span>¿Cuándo lo cobro?<small>Paciencia y hucha virtual</small></h3></div>
+    <div class="p5">
+      <div class="timeline">
+        <div class="tl-lbl"><span>Actividad</span><span>Paga la administración</span></div>
+        <div class="tl-bar" id="tl-bar"><div class="tl-dot"></div><div class="tl-line"></div><div class="tl-dot end"></div><span class="tl-runner" aria-hidden="true"></span></div>
+        <div class="tl-mid"><svg class="ic"><use href="#i-hourglass"/></svg> hasta año y medio <svg class="ic sad"><use href="#i-frown"/></svg></div>
+        <div class="tl-txt">Puede pasar año y medio desde la actividad hasta que la administración paga.</div>
+      </div>
+      <div class="piggy"><button type="button" class="pic" id="piggy" aria-label="Echar una moneda a la hucha"><span class="coin" aria-hidden="true"></span><svg class="ic"><use href="#i-piggy"/></svg></button>
+        <span>La AJ guarda el dinero subvencionado en una <b>“hucha virtual”</b> a nombre de quien organiza la actividad. Gracias a eso, financiamos la estructura de la AJ hasta el final del año natural.</span></div>
+      <div class="faq">
+        <div class="fq"><svg class="ic"><use href="#i-help"/></svg> ¿Se puede adelantar el dinero?</div>
+        <div class="row" style="margin-top:6px"><svg class="ic"><use href="#i-wallet"/></svg><span>La AJ puede asumirlo en algunas circunstancias que no se puedan asumir de los “ahorros” locales <b>(consultar)</b>.</span></div>
+        <div class="dec"><div class="cal"><div class="m">DIC</div><div class="d"><svg class="ic"><use href="#i-gift"/></svg></div></div>
+          <span>En diciembre de un año se reparte lo recuperado durante el año natural <b>ANTERIOR</b><br><span class="ex"><b>Ejemplo:</b> <span id="dec-ej">en dic 2026 se reparte lo de 2025</span></span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" id="contacto" data-slide>
+    <div>
+      <div class="ft">¿Dudas? Escríbenos</div>
+      <div class="fn">Oficina Técnica MCM</div>
+    </div>
+    <div class="ct">
+      <a href="https://wa.me/34649949583" target="_blank" rel="noopener"><svg class="ic"><use href="#i-message"/></svg> WhatsApp 649 949 583</a>
+      <a href="mailto:ajmcm@movimientoconsolacion.com"><svg class="ic"><use href="#i-mail"/></svg> ajmcm@movimientoconsolacion.com</a>
+    </div>
+  </div>
+
+  <p class="web-note no-print">¿Hay que cambiar algo? Descarga el <a data-file="infografia-subvenciones.md" href="/info/infografia-subvenciones.md" download>texto en Markdown</a>, edítalo y pásaselo a la Oficina Técnica.</p>
+</section>
+
+</main>
+
+<div class="pres-bar no-print" role="toolbar" aria-label="Presentación">
+  <button type="button" id="pres-prev" aria-label="Anterior"><svg class="ic"><use href="#i-chev-up"/></svg></button>
+  <span class="pc" id="pres-count">1 / 1</span>
+  <button type="button" id="pres-next" aria-label="Siguiente"><svg class="ic"><use href="#i-chev-down"/></svg></button>
+  <span class="sep"></span>
+  <button type="button" id="pres-exit" aria-label="Salir de la presentación (Esc)"><svg class="ic"><use href="#i-x"/></svg></button>
+</div>
+
+<div class="toast no-print" id="toast" role="status" aria-live="polite"><svg class="ic"><use href="#i-check"/></svg><span id="toast-txt"></span></div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s, r) { return (r || document).querySelector(s) };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)) };
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- Enlaces de descarga: en /info van a /info/..., abierto como archivo, al lado ---- */
+  if (location.protocol === "file:") {
+    $$("[data-file]").forEach(function (a) { a.setAttribute("href", a.getAttribute("data-file")) });
+  }
+
+  /* ---- Aviso flotante ---- */
+  var toast = $("#toast"), toastTxt = $("#toast-txt"), toastT;
+  function avisar(txt) {
+    toastTxt.textContent = txt;
+    toast.classList.add("show");
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { toast.classList.remove("show") }, 2200);
+  }
+
+  /* ---- Menú de descargas ---- */
+  var dlBtn = $("#dl-btn"), dlMenu = $("#dl-menu");
+  function menu(open) {
+    dlMenu.classList.toggle("open", open);
+    dlBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  dlBtn.addEventListener("click", function (e) { e.stopPropagation(); menu(!dlMenu.classList.contains("open")) });
+  document.addEventListener("click", function (e) { if (!dlMenu.contains(e.target)) menu(false) });
+  dlMenu.addEventListener("click", function () { setTimeout(function () { menu(false) }, 50) });
+
+  /* ---- Copiar correos ---- */
+  function copiar(txt) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(txt);
+    return new Promise(function (ok, ko) {
+      var t = document.createElement("textarea");
+      t.value = txt; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+      document.body.appendChild(t); t.select();
+      try { document.execCommand("copy") ? ok() : ko() } catch (e) { ko(e) }
+      document.body.removeChild(t);
+    });
+  }
+  $$("button.mail[data-copy]").forEach(function (b) {
+    b.title = "Copiar";
+    b.insertAdjacentHTML("beforeend", '<svg class="ic cp no-print" aria-hidden="true"><use href="#i-copy"/></svg>');
+    b.addEventListener("click", function () {
+      var addr = b.getAttribute("data-copy");
+      copiar(addr).then(function () {
+        b.classList.add("copied");
+        setTimeout(function () { b.classList.remove("copied") }, 1400);
+        avisar("Copiado: " + addr);
+      }, function () { location.href = "mailto:" + addr });
+    });
+  });
+
+  /* ---- Cuenta atrás hasta el 1 de marzo y bloque 1 oct – 30 sep ---- */
+  (function () {
+    var box = $("#countdown");
+    if (!box) return;
+    var MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+    var DIA = 86400000;
+    var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    var y = hoy.getFullYear();
+    // El próximo 1 de marzo (si es hoy, hoy)
+    var marzo = new Date(y, 2, 1);
+    if (hoy > marzo) marzo = new Date(y + 1, 2, 1);
+    // El bloque al que pertenece ese 1 de marzo: 1 oct del año anterior – 30 sep
+    var ini = new Date(marzo.getFullYear() - 1, 9, 1);
+    var fin = new Date(marzo.getFullYear(), 8, 30);
+    var dias = Math.round((marzo - hoy) / DIA);
+    var total = (fin - ini) / DIA;
+    var pct = function (d) { return Math.max(0, Math.min(100, ((d - ini) / DIA) / total * 100)) };
+
+    $("#cd-num").textContent = dias === 0 ? "¡Hoy!" : dias;
+    $("#cd-txt").textContent = dias === 0 ? "es 1 de marzo: todo planificado y presupuestado"
+      : (dias === 1 ? "día" : "días") + " para el 1 de marzo de " + marzo.getFullYear();
+    $("#cd-sub").textContent = "Actividades del bloque 1 oct " + ini.getFullYear() + " – 30 sep " + fin.getFullYear() +
+      (hoy < ini ? " (el bloque aún no ha empezado)" : "");
+    $("#cd-start").textContent = "1 oct " + ini.getFullYear();
+    $("#cd-end").textContent = "30 sep " + fin.getFullYear();
+    var pHoy = pct(hoy), pMar = pct(marzo);
+    ["cd-mark-today", "cd-flag-today"].forEach(function (id) { $("#" + id).style.left = pHoy + "%" });
+    ["cd-mark-dead", "cd-flag-dead"].forEach(function (id) { $("#" + id).style.left = pMar + "%" });
+    // Si "Hoy" y "1 mar" quedan muy juntos, la etiqueta de hoy va debajo
+    if (Math.abs(pHoy - pMar) < 9) { var f = $("#cd-flag-today"); f.style.bottom = "auto"; f.style.top = "calc(100% + 6px)" }
+    var fill = $("#cd-fill");
+    fill.style.width = pHoy + "%";
+    if (!reduce) { fill.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: 260, easing: "cubic-bezier(0.23,1,0.32,1)" }) }
+    box.hidden = false;
+
+    // Ejemplo del reparto con el diciembre de este año: en dic Y se reparte lo de Y-1
+    $("#dec-ej").textContent = "en dic " + y + " se reparte lo de " + (y - 1);
+  })();
+
+  /* ---- Checklist del paso 4 (se guarda en este navegador) ---- */
+  (function () {
+    var KEY = "mcm-info-checklist";
+    var box = $("#checklist");
+    if (!box) return;
+    var inputs = $$("input[type=checkbox]", box);
+    var guardado = {};
+    try { guardado = JSON.parse(localStorage.getItem(KEY) || "{}") || {} } catch (e) {}
+    inputs.forEach(function (i) { i.checked = !!guardado[i.value] });
+    var frases = ["¡Todo listo! Gracias por hacerlo tan bien", "¡Perfecto! La Oficina Técnica te lo agradece", "¡Hecho! Una actividad más bien justificada"];
+    function pintar(celebrar) {
+      var n = inputs.filter(function (i) { return i.checked }).length;
+      $("#ck-count").textContent = n + " / " + inputs.length;
+      $("#ck-bar").style.transform = "scaleX(" + (n / inputs.length) + ")";
+      var all = n === inputs.length;
+      if (all && celebrar) $("#ck-done").textContent = frases[Math.floor(Math.random() * frases.length)];
+      else if (all && !$("#ck-done").textContent) $("#ck-done").textContent = frases[0];
+      box.classList.toggle("all", all);
+    }
+    inputs.forEach(function (i) {
+      i.addEventListener("change", function () {
+        var d = {};
+        inputs.forEach(function (x) { if (x.checked) d[x.value] = 1 });
+        try { localStorage.setItem(KEY, JSON.stringify(d)) } catch (e) {}
+        pintar(true);
+      });
+    });
+    $("#ck-reset").addEventListener("click", function () {
+      inputs.forEach(function (i) { i.checked = false });
+      try { localStorage.removeItem(KEY) } catch (e) {}
+      $("#ck-done").textContent = "";
+      pintar(false);
+    });
+    pintar(false);
+  })();
+
+  /* ---- Hucha: una moneda por toque ---- */
+  (function () {
+    var p = $("#piggy");
+    if (!p) return;
+    var n = 0;
+    p.addEventListener("click", function () {
+      p.classList.remove("drop"); void p.offsetWidth; p.classList.add("drop");
+      n++;
+      if (n === 1) avisar("¡Clinc! Una moneda más para la hucha");
+      else if (n === 5) avisar("Cinco monedas… ¡la paciencia también cuenta!");
+    });
+  })();
+
+  /* ---- Línea de tiempo: la bolita recorre el año y medio una vez ---- */
+  (function () {
+    var bar = $("#tl-bar");
+    if (!bar || reduce || !("IntersectionObserver" in window)) return;
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) {
+          bar.style.setProperty("--run", (bar.clientWidth - 12) + "px");
+          bar.classList.add("go");
+          io.disconnect();
+        }
+      });
+    }, { threshold: .8 });
+    io.observe(bar);
+  })();
+
+  /* ---- Barra de secciones: marca dónde estás ---- */
+  (function () {
+    var chips = $$("#chips .chip");
+    var map = {};
+    chips.forEach(function (c) { map[c.getAttribute("href").slice(1)] = c });
+    var secs = Object.keys(map).map(function (id) { return document.getElementById(id) }).filter(Boolean);
+    var actual = null;
+    function marcar() {
+      var y = 90, elegido = secs[0];
+      secs.forEach(function (s) { if (s.getBoundingClientRect().top - y <= 0) elegido = s });
+      if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 4) elegido = secs[secs.length - 1];
+      if (elegido === actual) return;
+      actual = elegido;
+      chips.forEach(function (c) { c.classList.remove("on") });
+      var chip = map[elegido.id];
+      if (chip) {
+        chip.classList.add("on");
+        var cont = chip.parentNode;
+        var l = chip.offsetLeft - cont.offsetLeft, r = l + chip.offsetWidth;
+        if (l < cont.scrollLeft || r > cont.scrollLeft + cont.clientWidth) cont.scrollTo({ left: l - 24, behavior: reduce ? "auto" : "smooth" });
+      }
+    }
+    var raf = 0;
+    window.addEventListener("scroll", function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; marcar() }) }, { passive: true });
+    marcar();
+  })();
+
+  /* ---- Modo presentación: una sección por pantalla, flechas para avanzar ---- */
+  (function () {
+    var root = document.documentElement;
+    var slides = $$("[data-slide]");
+    var idx = 0, gaps = [];
+    function encajar() {
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var W = vw >= 960 ? 1000 : Math.min(560, vw - 24);
+      slides.forEach(function (s) {
+        s.style.setProperty("--sw", W + "px");
+        s.style.setProperty("--z", "1");
+      });
+      slides.forEach(function (s) {
+        var h = s.offsetHeight;
+        var z = Math.min((vh - 120) / h, (vw - 48) / W, 1.7);
+        z = Math.max(z, 0.5);
+        s.style.setProperty("--z", z.toFixed(3));
+      });
+    }
+    function contador() { $("#pres-count").textContent = (idx + 1) + " / " + slides.length }
+    function ir(i) {
+      idx = Math.max(0, Math.min(slides.length - 1, i));
+      slides[idx].scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+      contador();
+    }
+    function cercana() {
+      var mid = window.innerHeight / 2, best = 0, dist = Infinity;
+      slides.forEach(function (s, i) {
+        var r = s.getBoundingClientRect(), d = Math.abs((r.top + r.bottom) / 2 - mid);
+        if (d < dist) { dist = d; best = i }
+      });
+      return best;
+    }
+    function entrar() {
+      var desde = cercana();
+      root.classList.add("presenting");
+      // Huecos entre diapositivas para que cada una ocupe su pantalla
+      slides.forEach(function (s) {
+        var g = document.createElement("div");
+        g.className = "slide-gap";
+        s.parentNode.insertBefore(g, s);
+        gaps.push(g);
+      });
+      var g2 = document.createElement("div"); g2.className = "slide-gap"; $("main").appendChild(g2); gaps.push(g2);
+      encajar();
+      var gap = Math.max(40, window.innerHeight * .5);
+      gaps.forEach(function (g) { g.style.setProperty("--gap", gap + "px") });
+      if (root.requestFullscreen && !document.fullscreenElement) { root.requestFullscreen().catch(function () {}) }
+      setTimeout(function () { idx = desde; slides[idx].scrollIntoView({ block: "center" }); contador() }, 60);
+    }
+    function salir() {
+      if (!root.classList.contains("presenting")) return;
+      var s = slides[idx];
+      root.classList.remove("presenting");
+      gaps.forEach(function (g) { g.remove() }); gaps = [];
+      slides.forEach(function (x) { x.style.removeProperty("--z"); x.style.removeProperty("--sw") });
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+      s.scrollIntoView({ block: "start" });
+    }
+    $$("[data-present]").forEach(function (b) { b.addEventListener("click", entrar) });
+    $("#pres-prev").addEventListener("click", function () { ir(idx - 1) });
+    $("#pres-next").addEventListener("click", function () { ir(idx + 1) });
+    $("#pres-exit").addEventListener("click", salir);
+    document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement) salir() });
+    window.addEventListener("resize", function () { if (root.classList.contains("presenting")) { encajar(); slides[idx].scrollIntoView({ block: "center" }) } });
+    window.addEventListener("scroll", function () { if (root.classList.contains("presenting")) { idx = cercana(); contador() } }, { passive: true });
+    document.addEventListener("keydown", function (e) {
+      var t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      var on = root.classList.contains("presenting");
+      if (!on) {
+        if (e.key === "p" || e.key === "P") { e.preventDefault(); entrar() }
+        if (e.key === "Escape") menu(false);
+        return;
+      }
+      if (["ArrowDown", "ArrowRight", "PageDown", " ", "Enter"].indexOf(e.key) >= 0) { e.preventDefault(); ir(idx + 1) }
+      else if (["ArrowUp", "ArrowLeft", "PageUp"].indexOf(e.key) >= 0) { e.preventDefault(); ir(idx - 1) }
+      else if (e.key === "Home") { e.preventDefault(); ir(0) }
+      else if (e.key === "End") { e.preventDefault(); ir(slides.length - 1) }
+      else if (e.key === "Escape") { salir() }
+    });
+  })();
+})();
+</script>
+</body>
+</html>

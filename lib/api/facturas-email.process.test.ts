@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { crearFakeAdmin, type Tablas } from "@/lib/test-utils/fake-admin"
-import { procesarCorreoEntrante, resolverDelegacionPorAlias, type EventoEmailRecibido } from "@/lib/api/facturas-email"
+import {
+  buscarReenvio,
+  procesarCorreoEntrante,
+  resolverDelegacionPorAlias,
+  reenviosConfigurados,
+  type EventoEmailRecibido,
+} from "@/lib/api/facturas-email"
 
 /**
  * `procesarCorreoEntrante` es lo que convierte un correo real —el buzón de
@@ -285,5 +291,108 @@ describe("resolverDelegacionPorAlias", () => {
     const resultado = await resolverDelegacionPorAlias(a, [])
     expect(resultado).toBeNull()
     expect(a.consultas).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+describe("reenvíos (facturas+aj@ → Holded)", () => {
+  it("por defecto, la etiqueta 'aj' va a la bandeja de Holded", () => {
+    delete process.env.FACTURAS_REENVIO
+    expect(reenviosConfigurados()).toEqual({ aj: "facturasaj@holdedbox.com" })
+    expect(buscarReenvio(["aj"])).toEqual({ alias: "aj", destino: "facturasaj@holdedbox.com" })
+    expect(buscarReenvio(["sevilla"])).toBeNull()
+  })
+
+  it("FACTURAS_REENVIO admite varias etiquetas, ignora basura y, vacía, lo apaga", () => {
+    process.env.FACTURAS_REENVIO = "AJ=a@x.com, otra = b@y.es ,mala=sin-arroba,=c@z.com"
+    expect(reenviosConfigurados()).toEqual({ aj: "a@x.com", otra: "b@y.es" })
+    process.env.FACTURAS_REENVIO = ""
+    expect(reenviosConfigurados()).toEqual({})
+  })
+
+  it("reenvía con sus adjuntos, no crea facturas y lo deja registrado como 'reenviado'", async () => {
+    delete process.env.FACTURAS_REENVIO
+    const a = admin()
+    const { fn } = fetchDeMentira({
+      cuerpo: { text: "Adjunto la factura" },
+      adjuntos: [
+        { id: "a1", filename: "factura.pdf", content_type: "application/pdf", size: 50_000, download_url: "https://dl/a1" },
+      ],
+      contenidos: { "https://dl/a1": "contenido-pdf" },
+    })
+    vi.stubGlobal("fetch", fn)
+
+    const res = await procesarCorreoEntrante(
+      a,
+      evento({ destinatarios: ["facturas+aj@movimientoconsolacion.com"] }),
+      { actorId: ACTOR },
+    )
+
+    expect(res.estado).toBe("reenviado")
+    expect(res.facturasCreadas).toEqual([])
+    expect(a.tablas.factura).toHaveLength(0)
+    expect(a.tablas.archivo_adjunto).toHaveLength(0)
+    expect(a.tablas.factura_email[0]).toMatchObject({ estado: "reenviado", alias_detectado: "aj" })
+
+    const envio = fn.mock.calls.find((c) => c[0] === "https://api.resend.com/emails") as any
+    const cuerpo = JSON.parse(envio[1].body)
+    expect(cuerpo.to).toEqual(["facturasaj@holdedbox.com"])
+    expect(cuerpo.reply_to).toBe("proveedor@ejemplo.com")
+    expect(cuerpo.subject).toBe("Factura de octubre")
+    expect(cuerpo.attachments).toHaveLength(1)
+    expect(cuerpo.attachments[0].filename).toBe("factura.pdf")
+  })
+
+  it("el reenvío manda sobre las delegaciones aunque una se llame igual", async () => {
+    delete process.env.FACTURAS_REENVIO
+    const a = admin(tablas({ delegacion: [{ id: "aj", nombre: "AJ", codigo: "AJ", alias_email: "aj" }] }))
+    const { fn } = fetchDeMentira({ adjuntos: [] })
+    vi.stubGlobal("fetch", fn)
+
+    const res = await procesarCorreoEntrante(
+      a,
+      evento({ destinatarios: ["facturas+aj@movimientoconsolacion.com"] }),
+      { actorId: ACTOR },
+    )
+    expect(res.estado).toBe("reenviado")
+    expect(a.tablas.factura).toHaveLength(0)
+  })
+
+  it("si el envío falla, queda como 'error' y se avisa a la oficina técnica (no se pierde)", async () => {
+    delete process.env.FACTURAS_REENVIO
+    const a = admin()
+    const llamadas: any[] = []
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: any) => {
+        if (url === "https://api.resend.com/emails") {
+          const cuerpo = JSON.parse(init.body)
+          llamadas.push(cuerpo)
+          // El reenvío a Holded falla; el aviso posterior sí sale.
+          if (cuerpo.to[0] === "facturasaj@holdedbox.com") {
+            return { ok: false, status: 422, text: async (): Promise<string> => "rechazado" }
+          }
+          return { ok: true, text: async (): Promise<string> => "" }
+        }
+        if (url.endsWith(`/emails/receiving/${EMAIL_ID}/attachments`)) return { ok: true, json: async () => [] }
+        if (url.endsWith(`/emails/receiving/${EMAIL_ID}`)) {
+          return { ok: true, json: async () => ({ text: "hola", html: null, headers: {} }) }
+        }
+        throw new Error(`URL no simulada: ${url}`)
+      }),
+    )
+
+    const res = await procesarCorreoEntrante(
+      a,
+      evento({ destinatarios: ["facturas+aj@movimientoconsolacion.com"] }),
+      { actorId: ACTOR },
+    )
+
+    expect(res.estado).toBe("error")
+    expect(a.tablas.factura_email[0].estado).toBe("error")
+    expect(a.tablas.factura_email[0].error).toContain("facturasaj@holdedbox.com")
+    expect(llamadas).toHaveLength(2)
+    expect(llamadas[1].subject).toContain("No se ha podido reenviar")
   })
 })

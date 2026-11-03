@@ -208,6 +208,44 @@ export async function resolverDelegacionPorAlias(
 }
 
 // ---------------------------------------------------------------------------
+// Etiquetas que no son una delegación: se reenvían a otro buzón
+// ---------------------------------------------------------------------------
+
+/**
+ * Etiquetas cuyo destino no es la bandeja de una delegación sino otro buzón de
+ * correo. La de la AJ (`facturas+aj@`) va a la bandeja de Holded, donde la
+ * contabilidad de la AJ se sigue llevando fuera de esta app.
+ *
+ * Formato de `FACTURAS_REENVIO`: `etiqueta=correo` separados por comas
+ * (`aj=facturasaj@holdedbox.com,otra=otra@ejemplo.com`). Si la variable no está
+ * definida se usa el valor por defecto; si está definida pero vacía, no hay
+ * ningún reenvío.
+ */
+const REENVIOS_POR_DEFECTO = "aj=facturasaj@holdedbox.com"
+
+export function reenviosConfigurados(): Record<string, string> {
+  const crudo = process.env.FACTURAS_REENVIO ?? REENVIOS_POR_DEFECTO
+  const reenvios: Record<string, string> = {}
+  for (const par of crudo.split(",")) {
+    const igual = par.indexOf("=")
+    if (igual <= 0) continue
+    const etiqueta = par.slice(0, igual).trim().toLowerCase().replace(/[^a-z0-9-]/g, "")
+    const destino = par.slice(igual + 1).trim().toLowerCase()
+    if (etiqueta && /^[^\s@<>,]+@[^\s@<>,]+\.[^\s@<>,]+$/.test(destino)) reenvios[etiqueta] = destino
+  }
+  return reenvios
+}
+
+/** La primera etiqueta del correo que tiene un reenvío configurado. */
+export function buscarReenvio(alias: string[]): { alias: string; destino: string } | null {
+  const reenvios = reenviosConfigurados()
+  for (const etiqueta of alias) {
+    if (reenvios[etiqueta]) return { alias: etiqueta, destino: reenvios[etiqueta] }
+  }
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // El evento de Resend
 // ---------------------------------------------------------------------------
 
@@ -372,6 +410,8 @@ export function renderNotificacionSinDelegacion(datos: {
   remitente: string | null
   asunto: string | null
   buzon: string
+  /** Si viene, el aviso no es de "sin delegación" sino de un reenvío que ha fallado. */
+  fallo?: string
 }): string {
   const remitente = escapeHtml(datos.remitente || "un remitente desconocido")
   const asunto = datos.asunto ? escapeHtml(datos.asunto) : null
@@ -383,10 +423,14 @@ export function renderNotificacionSinDelegacion(datos: {
       <tr>
         <td style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:28px;">
           <p style="margin:0 0 18px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#b45309;">
-            Factura sin delegación
+            ${datos.fallo ? "Reenvío fallido" : "Factura sin delegación"}
           </p>
           <p style="margin:0 0 16px;font-size:17px;line-height:1.6;color:#111827;">
-            Alguien ha enviado una factura a <strong>${datos.buzon}</strong> sin indicar la delegación.
+            ${
+              datos.fallo
+                ? `No se ha podido reenviar una factura recibida en <strong>${datos.buzon}</strong>: ${escapeHtml(datos.fallo)}`
+                : `Alguien ha enviado una factura a <strong>${datos.buzon}</strong> sin indicar la delegación.`
+            }
           </p>
           <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#374151;">
             El parguelilla en cuestión es: <strong>${remitente}</strong>${
@@ -429,6 +473,7 @@ export function renderNotificacionSinDelegacion(datos: {
 async function notificarSinDelegacion(
   evento: EventoEmailRecibido,
   adjuntos: { filename: string; contenido: Buffer; mime: string }[],
+  fallo?: string,
 ): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
@@ -445,11 +490,14 @@ async function notificarSinDelegacion(
       body: JSON.stringify({
         from: REMITENTE_NOTIFICACION,
         to: [destino],
-        subject: "[MCM Bank] Factura sin delegación detectada",
+        subject: fallo
+          ? "[MCM Bank] No se ha podido reenviar una factura"
+          : "[MCM Bank] Factura sin delegación detectada",
         html: renderNotificacionSinDelegacion({
           remitente: evento.remitente,
           asunto: evento.asunto,
           buzon,
+          fallo,
         }),
         attachments: adjuntos.map((a) => ({
           filename: a.filename,
@@ -471,7 +519,7 @@ async function notificarSinDelegacion(
 // ---------------------------------------------------------------------------
 
 export interface ResultadoCorreo {
-  estado: "procesado" | "sin_delegacion" | "sin_adjuntos" | "duplicado" | "error"
+  estado: "procesado" | "reenviado" | "sin_delegacion" | "sin_adjuntos" | "duplicado" | "error"
   delegacionId: string | null
   facturasCreadas: string[]
   mensaje: string
@@ -535,9 +583,19 @@ export async function procesarCorreoEntrante(
       ...evento.destinatarios,
       ...destinatariosDeCabeceras(email.cabeceras),
     ])
-    const encontrada = await resolverDelegacionPorAlias(admin, alias)
     const cuerpo = textoPlano(email)
     const extracto = cuerpo ? cuerpo.slice(0, MAX_CUERPO_GUARDADO) : null
+
+    // Una etiqueta con reenvío configurado (la de Holded) no cuelga nada de esta
+    // app: el correo sale tal cual hacia el otro buzón y aquí solo queda el
+    // registro. Se mira antes que las delegaciones a propósito: es una decisión
+    // explícita, y que una delegación se llamara igual no debe saltársela.
+    const reenvio = buscarReenvio(alias)
+    if (reenvio) {
+      return await reenviarCorreo(admin, registroId, evento, reenvio, { cuerpo, extracto })
+    }
+
+    const encontrada = await resolverDelegacionPorAlias(admin, alias)
 
     if (!encontrada) {
       await actualizarRegistro(admin, registroId, {
@@ -677,6 +735,103 @@ export async function procesarCorreoEntrante(
       error: mensaje.slice(0, 500),
     }).catch(() => undefined)
     return { estado: "error", delegacionId: null, facturasCreadas: [], mensaje }
+  }
+}
+
+const MAX_CUERPO_REENVIADO = 20000
+
+/**
+ * Reenvía un correo recibido a otro buzón (Holded) con sus adjuntos. No crea
+ * facturas ni guarda archivos: en MCM Bank solo queda la fila de
+ * `factura_email` con el estado `reenviado`.
+ *
+ * Si el envío falla no se pierde en silencio: la fila queda como `error` y se
+ * avisa a la oficina técnica con el documento adjunto, que es la única copia.
+ */
+async function reenviarCorreo(
+  admin: AdminClient,
+  registroId: string,
+  evento: EventoEmailRecibido,
+  reenvio: { alias: string; destino: string },
+  contenido: { cuerpo: string | null; extracto: string | null },
+): Promise<ResultadoCorreo> {
+  const adjuntosCrudos = await listarAdjuntos(evento.emailId).catch((err) => {
+    console.warn("No se pudieron listar los adjuntos a reenviar:", err?.message ?? err)
+    return [] as AdjuntoResend[]
+  })
+
+  const adjuntos: { filename: string; contenido: Buffer; mime: string }[] = []
+  const problemas: string[] = []
+  for (const adjunto of adjuntosDescargables(adjuntosCrudos)) {
+    try {
+      adjuntos.push({
+        filename: adjunto.filename || "adjunto",
+        contenido: await descargarAdjunto(evento.emailId, adjunto),
+        mime: adjunto.content_type,
+      })
+    } catch (err) {
+      problemas.push(`'${adjunto.filename}': ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  const apiKey = process.env.RESEND_API_KEY
+  try {
+    if (!apiKey) throw new ApiError(503, "falta RESEND_API_KEY")
+
+    const respuesta = await fetch(`${RESEND_API}/emails`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: REMITENTE_NOTIFICACION,
+        to: [reenvio.destino],
+        ...(evento.remitente ? { reply_to: soloDireccion(evento.remitente) } : {}),
+        subject: evento.asunto || "(sin asunto)",
+        text: [
+          `Correo reenviado automáticamente por MCM Bank (${buzonFacturas()}+${reenvio.alias}@).`,
+          `Remitente original: ${evento.remitente ?? "desconocido"}`,
+          "",
+          (contenido.cuerpo ?? "").slice(0, MAX_CUERPO_REENVIADO),
+        ].join("\n"),
+        attachments: adjuntos.map((a) => ({
+          filename: a.filename,
+          content: a.contenido.toString("base64"),
+          content_type: a.mime,
+        })),
+      }),
+    })
+    if (!respuesta.ok) {
+      const detalle = (await respuesta.text().catch(() => "")).slice(0, 300)
+      throw new ApiError(502, `Resend respondió ${respuesta.status}: ${detalle}`)
+    }
+  } catch (err) {
+    const mensaje = err instanceof Error ? err.message : String(err)
+    console.error(`No se pudo reenviar el correo a ${reenvio.destino}:`, mensaje)
+    await actualizarRegistro(admin, registroId, {
+      alias_detectado: reenvio.alias,
+      estado: "error",
+      error: `No se pudo reenviar a ${reenvio.destino}: ${mensaje}`.slice(0, 500),
+      cuerpo_extracto: contenido.extracto,
+    })
+    await notificarSinDelegacion(evento, adjuntos, `no se pudo reenviar a ${reenvio.destino} (${mensaje})`)
+    return {
+      estado: "error",
+      delegacionId: null,
+      facturasCreadas: [],
+      mensaje: `No se pudo reenviar a ${reenvio.destino}: ${mensaje}`,
+    }
+  }
+
+  await actualizarRegistro(admin, registroId, {
+    alias_detectado: reenvio.alias,
+    estado: "reenviado",
+    error: problemas.join(" · ") || null,
+    cuerpo_extracto: contenido.extracto,
+  })
+  return {
+    estado: "reenviado",
+    delegacionId: null,
+    facturasCreadas: [],
+    mensaje: `Reenviado a ${reenvio.destino} con ${adjuntos.length} adjunto(s).`,
   }
 }
 

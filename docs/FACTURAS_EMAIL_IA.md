@@ -132,9 +132,21 @@ FROM factura_email ORDER BY creado_en DESC LIMIT 10;
 | `estado` | Qué pasó |
 |---|---|
 | `procesado` | Bien: hay facturas nuevas en la bandeja |
+| `reenviado` | La etiqueta tiene reenvío (`facturas+aj@` → Holded): el correo salió tal cual hacia el otro buzón y aquí no se crea ninguna factura |
 | `sin_adjuntos` | Llegó sin archivos legibles; se guardó el texto |
 | `sin_delegacion` | La dirección no casa con ningún alias (mira `destinatarios`); se avisa por correo, ver abajo |
 | `error` | Fallo al descargar o guardar; el motivo está en `error` |
+
+### Etiquetas que se reenvían (Holded)
+
+`facturas+aj@` no es una delegación: la contabilidad de la AJ se lleva en Holded.
+Los correos a esa etiqueta se reenvían con sus adjuntos a
+`facturasaj@holdedbox.com` y **no dejan nada en MCM Bank** salvo la fila de
+`factura_email` (estado `reenviado`). Se configura con `FACTURAS_REENVIO`, pares
+`etiqueta=correo` separados por comas (por defecto `aj=facturasaj@holdedbox.com`;
+definida y vacía, no hay reenvíos). Manda sobre las delegaciones. Si el envío
+falla, la fila queda como `error` y se avisa a la oficina técnica con el
+documento adjunto. Requiere `RESEND_API_KEY` y `scripts/076`.
 
 ### Aviso automático de "sin delegación"
 

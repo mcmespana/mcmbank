@@ -247,6 +247,22 @@ a.form:hover{border-color:var(--blue2);background:#fbfdff}
 .pt.l2{background:var(--amberbg)} .pt.l2 .ex{background:var(--amber)}
 .pt.l3{background:var(--redbg)} .pt.l3 .ex{background:var(--red)}
 
+/* al pedir la factura */
+.pedir{background:#fff;border:1.5px solid var(--sky2);border-radius:12px;padding:10px 12px;margin-bottom:7px}
+.pedir-h{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.pedir-h .ic{font-size:15px;color:var(--blue)}
+.pedir-li{display:flex;gap:8px;align-items:flex-start;font-size:13.3px;line-height:1.35;padding:3px 0}
+.pedir-li .ic{font-size:15px;color:var(--blue);margin-top:2px}
+.pedir-li em{font-style:normal;color:var(--muted);font-size:12px}
+.pedir-li.max{background:var(--redbg);border-radius:9px;padding:6px 8px;margin:3px 0}
+.pedir-li.max .ic{color:var(--red)}
+.pedir-li.max b{color:var(--red)}
+.split3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:4px 0 2px 23px}
+.s3{border-radius:9px;padding:6px 7px;font-size:12.2px;font-weight:700;color:var(--navy);line-height:1.2;text-align:center}
+.s3 small{display:block;font-size:10.5px;font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.03em}
+.s3.low{background:var(--amberbg)} .s3.low small{color:#a26a00}
+.s3.hi{background:var(--greenbg)} .s3.hi small{color:var(--green)}
+
 /* checklist (solo web) */
 .check{background:#fff;border:1px dashed #b9cde6;border-radius:14px;padding:11px 13px;margin-top:12px}
 .check-h{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--navy);font-size:14px}
@@ -416,7 +432,7 @@ html.presenting .pres-bar{display:flex}
 }
 
 /* ---------- móvil muy estrecho ---------- */
-@media screen and (max-width:370px){ .yn{grid-template-columns:1fr} .stats{grid-template-columns:1fr} }
+@media screen and (max-width:370px){ .yn{grid-template-columns:1fr} .stats{grid-template-columns:1fr} .split3{margin-left:0} }
 
 /* ---------- impresión / PDF: 2 páginas de 440 px de ancho ---------- */
 @media print{
@@ -486,6 +502,11 @@ html.presenting .pres-bar{display:flex}
   <symbol id="i-file-code" viewBox="0 0 24 24"><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/></symbol>
   <symbol id="i-list-checks" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
   <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-clipboard-check" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></symbol>
+  <symbol id="i-id-card" viewBox="0 0 24 24"><path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/><circle cx="9" cy="11" r="2"/><rect x="2" y="5" width="20" height="14" rx="2"/></symbol>
+  <symbol id="i-calculator" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+  <symbol id="i-split" viewBox="0 0 24 24"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></symbol>
   <symbol id="i-party" viewBox="0 0 24 24"><path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/></symbol>
 </svg>
 
@@ -506,6 +527,8 @@ html.presenting .pres-bar{display:flex}
     <button class="btn btn-navy" type="button" id="dl-btn" aria-haspopup="true" aria-expanded="false" aria-controls="dl-menu"><svg class="ic"><use href="#i-download"/></svg><span class="lbl-wide">Descargar</span></button>
     <div class="dl-menu" id="dl-menu" role="menu">
       <a class="dl-item" role="menuitem" data-file="Infografia_Subvenciones_MCM.pdf" href="/info/Infografia_Subvenciones_MCM.pdf" download><span class="fi pdf"><svg class="ic"><use href="#i-file-text"/></svg></span><span><b>PDF</b><small>Para imprimir o mandar por WhatsApp</small></span></a>
+      <a class="dl-item" role="menuitem" data-file="Infografia_Subvenciones_MCM_16x9.pdf" href="/info/Infografia_Subvenciones_MCM_16x9.pdf" download><span class="fi pdf"><svg class="ic"><use href="#i-file-text"/></svg></span><span><b>PDF horizontal 16:9</b><small>Para proyectar o imprimir en apaisado</small></span></a>
+      <a class="dl-item" role="menuitem" data-file="Infografia_Subvenciones_MCM_16x9.png" href="/info/Infografia_Subvenciones_MCM_16x9.png" download><span class="fi html"><svg class="ic"><use href="#i-camera"/></svg></span><span><b>Imagen horizontal 16:9</b><small>PNG en 4K, para redes o pantallas</small></span></a>
       <a class="dl-item" role="menuitem" data-file="index.html" href="/info/index.html" download="infografia-subvenciones.html"><span class="fi html"><svg class="ic"><use href="#i-file-code"/></svg></span><span><b>HTML</b><small>Esta misma página, en un solo archivo</small></span></a>
       <a class="dl-item" role="menuitem" data-file="infografia-subvenciones.md" href="/info/infografia-subvenciones.md" download><span class="fi md"><svg class="ic"><use href="#i-file-text"/></svg></span><span><b>Markdown (editable)</b><small>El texto, para cambiarlo con facilidad</small></span></a>
     </div>
@@ -644,6 +667,18 @@ html.presenting .pres-bar{display:flex}
     <div class="p4">
       <div>
         <div class="sub"><span class="let">A</span> Facturas <span class="imp">IMPORTANTE</span></div>
+        <div class="pedir">
+          <div class="pedir-h"><svg class="ic"><use href="#i-clipboard-check"/></svg> Al pedir las facturas, revisar siempre</div>
+          <div class="pedir-li"><svg class="ic"><use href="#i-id-card"/></svg><span><b>Datos de facturación</b> correctos.</span></div>
+          <div class="pedir-li"><svg class="ic"><use href="#i-calculator"/></svg><span>Que salgan las <b>unidades y el precio por unidad</b> <em>(por ejemplo: número de noches y precio por noche)</em>.</span></div>
+          <div class="pedir-li max"><svg class="ic"><use href="#i-ban"/></svg><span>Una factura <b>nunca debe superar los 15.000 €</b>.</span></div>
+          <div class="pedir-li"><svg class="ic"><use href="#i-split"/></svg><span>En actividades grandes, conviene dividir en <b>mínimo 3 facturas</b>:</span></div>
+          <div class="split3">
+            <div class="s3 low">Niños/as<small>Poco subvencionable</small></div>
+            <div class="s3 hi">Jóvenes 12 a 30 años<small>Más fácil</small></div>
+            <div class="s3 hi">Monitores/as<small>Más fácil</small></div>
+          </div>
+        </div>
         <div class="route">
           <div class="rt"><div class="who"><svg class="ic"><use href="#i-pin"/></svg> Pagadas por el MCM Local</div>
             <div class="what"><svg class="ic"><use href="#i-arrow-right"/></svg><span>Archivar en <b>MCM Bank</b>. Para enviarlas a MCM Bank usar correo:<br>
@@ -723,7 +758,7 @@ html.presenting .pres-bar{display:flex}
     </div>
   </div>
 
-  <p class="web-note no-print">¿Hay que cambiar algo? Descarga el <a data-file="infografia-subvenciones.md" href="/info/infografia-subvenciones.md" download>texto en Markdown</a>, edítalo y pásaselo a la Oficina Técnica.</p>
+  <p class="web-note no-print">También en <a data-file="horizontal.html" href="/info/horizontal">versión horizontal 16:9</a>. ¿Hay que cambiar algo? Descarga el <a data-file="infografia-subvenciones.md" href="/info/infografia-subvenciones.md" download>texto en Markdown</a>, edítalo y pásaselo a la Oficina Técnica.</p>
 </section>
 
 </main>

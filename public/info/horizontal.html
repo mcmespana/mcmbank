@@ -1,0 +1,1172 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestión técnica de las subvenciones en el MCM · de un vistazo (16:9)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#17365d; --blue:#2c6db3; --blue2:#4a8fd6; --sky:#e9f2fb; --sky2:#d5e6f7;
+  --ink:#1e2a3a; --muted:#5d6b7e; --line:#dfe5ee;
+  --green:#1f9a63; --greenbg:#e4f5ec; --red:#d2453f; --redbg:#fcebea;
+  --amber:#e39a17; --amberbg:#fff3da; --paper:#f4f6fa;
+  --coral:#e0623f; --teal:#128a84; --tealbg:#e2f4f2; --violet:#6b4fb8; --gold:#ffd77a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#dfe4ec}
+body{font-family:'Poppins',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);font-size:15px;line-height:1.42;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+b,strong{font-weight:700} a{color:inherit;text-decoration:none}
+.ic{width:1em;height:1em;flex:none;vertical-align:-.15em}
+
+.canvas{width:2400px;height:1350px;margin:0 auto;background:var(--paper);position:relative;overflow:hidden;display:flex;flex-direction:column;
+  background-image:radial-gradient(rgba(23,54,93,.07) 1.2px,transparent 1.3px);background-size:22px 22px}
+
+/* ===== Banda superior ===== */
+.top{display:flex;align-items:center;gap:36px;padding:24px 40px 24px;background:linear-gradient(115deg,var(--navy) 0%,#1d4f86 45%,var(--teal) 100%);color:#fff;position:relative;overflow:hidden;flex:none}
+.top:before{content:"";position:absolute;left:-90px;bottom:-140px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.06)}
+.top:after{content:"";position:absolute;right:-60px;top:-120px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.07)}
+.title{flex:none;width:780px;position:relative;z-index:1}
+.title h1{font-size:41px;line-height:1.08;font-weight:700;letter-spacing:-.015em}
+.title h1 span{color:var(--gold)}
+.road{flex:1;position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;padding:0 10px}
+.road:before{content:"";position:absolute;left:70px;right:70px;top:31px;height:4px;border-radius:4px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 14px,transparent 14px 24px)}
+.rstop{width:200px;text-align:center;position:relative}
+.rdot{width:66px;height:66px;margin:0 auto;border-radius:50%;background:var(--c);border:5px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff}
+.rname{font-size:16px;font-weight:700;margin-top:8px;line-height:1.15}
+.rsub{font-size:12.5px;opacity:.8;margin-top:2px}
+.pill{display:inline-flex;align-items:center;gap:7px;margin-top:12px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:5px 14px;font-size:14px;font-weight:500}
+
+/* ===== Columnas ===== */
+.grid{flex:1;display:grid;grid-template-columns:450px 600px 790px 1fr;gap:22px;padding:22px 28px 26px;min-height:0}
+.col{display:flex;flex-direction:column;gap:18px;min-height:0;min-width:0}
+.col:last-child{gap:12px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px 20px 20px}
+.panel.soft{background:rgba(255,255,255,.75)}
+
+.ptitle{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ptitle .bubble{width:42px;height:42px;border-radius:12px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+.ptitle h2{font-size:21px;font-weight:700;color:var(--navy);line-height:1.12}
+.ptitle small{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
+
+/* step header: banda teñida con su color */
+.shead{display:flex;align-items:center;gap:14px;margin:-18px -20px 16px;padding:14px 20px;border-radius:22px 22px 0 0;background:color-mix(in srgb,var(--c) 12%,#fff);border-bottom:1px solid color-mix(in srgb,var(--c) 22%,#fff)}
+.snum{width:52px;height:52px;border-radius:50%;background:var(--c);color:#fff;font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.shead h3{font-size:22px;font-weight:700;color:var(--navy);line-height:1.08;text-transform:uppercase}
+.shead .kk{display:block;font-size:12px;letter-spacing:.16em;color:var(--c);font-weight:700;margin-bottom:2px;text-transform:uppercase}
+.shead small{display:block;font-size:13.5px;color:var(--muted);font-weight:500;text-transform:none;margin-top:3px}
+.badge{margin-left:auto;background:var(--amber);color:#fff;border-radius:12px;padding:7px 12px;font-size:13px;font-weight:700;line-height:1.1;display:flex;align-items:center;gap:7px;flex:none}
+.badge .ic{font-size:20px}
+
+/* criterios */
+.crit{display:flex;flex-direction:column;gap:9px}
+.ci{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:14px;padding:10px 14px 10px 10px}
+.ci .n{width:34px;height:34px;border-radius:50%;color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;flex:none}
+.ci .t{flex:1;font-size:14.6px;line-height:1.35}
+.ci .ic{font-size:22px;color:var(--blue);opacity:.8}
+.prio{display:flex;align-items:center;gap:9px;margin-top:11px;font-size:12px;color:var(--muted);font-weight:500}
+.prio .bar{flex:1;height:7px;border-radius:7px;background:linear-gradient(90deg,var(--navy),var(--blue2),#c6dcf3)}
+
+/* fuentes */
+.src{display:flex;flex-direction:column;gap:12px}
+.sc{border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+.sh{display:flex;align-items:center;gap:9px;padding:9px 15px;color:#fff;font-weight:700;font-size:15.5px}
+.sh .ic{font-size:18px}
+.sb{padding:11px 15px 13px;display:flex;flex-direction:column;gap:9px}
+.row{display:flex;gap:10px;align-items:flex-start;font-size:14.6px}
+.row .ic{font-size:17px;color:var(--teal);margin-top:2px}
+.gi{border-left:3px solid var(--blue2);padding-left:11px}
+.gi .nm{font-weight:700;color:var(--navy);font-size:15px}
+.gi .ds{font-size:14px}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 9px;margin-left:5px;vertical-align:1px}
+.tag.age{background:var(--amberbg);color:#a26a00}.tag.all{background:var(--greenbg);color:var(--green)}
+
+/* paso 1 */
+.stats{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px}
+.stat{background:var(--paper);border-radius:14px;padding:12px 10px;text-align:center}
+.stat .ic{font-size:26px;color:var(--c)}
+.stat .big{font-weight:700;color:var(--navy);font-size:16.5px;line-height:1.15;margin-top:5px}
+.stat .lbl{font-size:12.5px;color:var(--muted);line-height:1.25;margin-top:3px}
+.stat.hot{background:var(--amberbg);outline:1.5px solid #f3d390}
+.stat.hot .ic,.stat.hot .big{color:#a26a00}
+
+/* paso 2 */
+.q{display:flex;gap:10px;align-items:flex-start;font-size:14.8px;padding:3px 0}
+.q .qi{width:24px;height:24px;border-radius:50%;background:var(--tealbg);color:var(--teal);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none;margin-top:1px}
+.tip{display:flex;gap:10px;background:var(--tealbg);border-radius:12px;padding:10px 13px;margin-top:9px;font-size:14px;color:var(--navy);align-items:flex-start}
+.tip .ic{font-size:20px;color:var(--teal);margin-top:1px}
+.yn{display:grid;grid-template-columns:1.15fr 1fr;gap:10px;margin-top:13px}
+.yc{border-radius:16px;overflow:hidden;border:1px solid}
+.yc.y{border-color:#bfe6d2}.yc.n{border-color:#f1c6c3}
+.yh{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13.5px;padding:8px 12px;color:#fff;letter-spacing:.02em}
+.yc.y .yh{background:var(--green)}.yc.n .yh{background:var(--red)}
+.yh .ic{font-size:18px}
+.yl{padding:9px 11px 11px;display:flex;flex-direction:column;gap:7px}
+.yi{display:flex;gap:8px;font-size:13.8px;line-height:1.3;align-items:flex-start}
+.yi .ic{font-size:17px;margin-top:1px}
+.yc.y .yi .ic{color:var(--green)}.yc.n .yi .ic{color:var(--red)}
+.yi em{font-style:normal;color:var(--muted);font-size:12.5px}
+.alert{display:flex;gap:12px;align-items:center;background:var(--amberbg);border:1.5px solid var(--amber);border-radius:14px;padding:11px 14px;margin-top:12px;font-size:14.4px;color:#6b4700}
+.alert .ic{font-size:28px;color:var(--amber)} .alert b{color:#a26a00}
+
+/* paso 3 */
+.pay{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pr{display:flex;flex-direction:column;gap:7px;background:var(--paper);border-radius:14px;padding:12px 13px;position:relative}
+.pr .top2{display:flex;align-items:center;justify-content:space-between}
+.pr .ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.pr .t{font-size:14.2px;line-height:1.35}
+.lvl{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;letter-spacing:.03em}
+.ok .ico,.ok .lvl{background:var(--greenbg);color:var(--green)}
+.mid .ico,.mid .lvl{background:var(--sky2);color:var(--blue)}
+.warn .ico,.warn .lvl{background:var(--redbg);color:var(--red)}
+.must{grid-column:1/-1;background:var(--navy);color:#fff;flex-direction:row;align-items:center;gap:13px}
+.must .ico{background:rgba(255,255,255,.15);color:#fff;flex:none}
+.must .t{flex:1}
+.must .lvl{background:var(--gold);color:var(--navy);flex:none}
+
+/* paso 4 */
+.sub{font-weight:700;color:var(--navy);font-size:15.5px;display:flex;align-items:center;gap:9px;margin:4px 0 8px}
+.sub .let{width:26px;height:26px;border-radius:8px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px}
+.sub .sm{font-size:12.5px;font-weight:400;color:var(--muted);font-style:italic}
+.sub .imp{margin-left:auto;font-size:11px;background:var(--red);color:#fff;border-radius:999px;padding:2px 10px;letter-spacing:.05em}
+.routes{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.rt{background:var(--paper);border-radius:14px;padding:10px 13px}
+.rt.wide{grid-column:1/-1}
+.rt .who{font-size:12.5px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:6px}
+.rt .who .ic{font-size:15px}
+.rt .what{font-size:14.2px;margin-top:4px;line-height:1.38}
+.mail{display:inline-block;background:#fff;border:1px solid var(--line);color:var(--navy);font-weight:500;font-size:13px;border-radius:8px;padding:2px 8px;margin:4px 4px 0 0;word-break:break-all}
+.note{font-size:12.8px;color:var(--muted);margin-top:5px;display:flex;gap:6px;align-items:flex-start}
+.note .ic{font-size:14px;margin-top:2px;color:var(--green)}
+.relax{display:flex;gap:11px;align-items:center;background:var(--greenbg);border-radius:13px;padding:10px 13px;font-size:14.4px}
+.relax .ic{font-size:22px;color:var(--green)}
+.sep{height:9px}
+.forms{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.fm{display:flex;gap:11px;align-items:center;background:var(--paper);border-radius:14px;padding:10px 12px}
+.fm .qr{width:78px;height:78px;flex:none;background:#fff;padding:5px;border-radius:9px;border:1px solid var(--line)}
+.fm .fn{font-size:13.6px;font-weight:700;color:var(--navy);line-height:1.2;display:flex;gap:6px;align-items:center}
+.fm .fn .ic{font-size:17px;color:var(--c)}
+.fm .url{display:inline-block;margin-top:5px;background:var(--c);color:#fff;font-weight:700;font-size:12.5px;border-radius:999px;padding:2px 10px}
+.fm .ex{font-size:11.8px;color:var(--muted);margin-top:4px;line-height:1.25}
+.pts{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
+.pt{display:flex;gap:9px;align-items:flex-start;border-radius:12px;padding:9px 12px;font-size:13.8px;line-height:1.35}
+.pt .ex{font-weight:700;flex:none;font-size:13px;border-radius:6px;padding:0 6px;color:#fff;margin-top:1px}
+.pt.l2{background:var(--amberbg)}.pt.l2 .ex{background:var(--amber)}
+.pt.l3{background:var(--redbg)}.pt.l3 .ex{background:var(--red)}
+
+/* paso 5 */
+.tl{background:var(--paper);border-radius:16px;padding:14px 16px}
+.tlb{display:flex;align-items:center;margin:8px 0 6px}
+.tld{width:18px;height:18px;border-radius:50%;background:var(--blue);border:4px solid var(--sky2);flex:none}
+.tld.end{background:var(--green);border-color:var(--greenbg)}
+.tll{flex:1;height:4px;background:repeating-linear-gradient(90deg,var(--blue2) 0 9px,transparent 9px 15px)}
+.tlx{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);font-weight:500}
+.tlm{text-align:center;font-weight:700;color:var(--navy);font-size:19px;margin-top:4px}
+.tlm .ic{color:var(--amber)} .tlm .sad{color:var(--coral);font-size:24px;vertical-align:-.25em;margin-left:3px}
+.tlt{font-size:14.2px;margin-top:5px;text-align:center}
+.piggy{display:flex;gap:14px;align-items:center;background:linear-gradient(135deg,#fdeef3,#fff);border:1px solid #f6d3df;border-radius:16px;padding:13px 15px;margin-top:11px;font-size:14.2px}
+.piggy .pic{width:58px;height:58px;border-radius:50%;background:#ffd9e4;color:#c2456b;display:flex;align-items:center;justify-content:center;font-size:30px;flex:none}
+.faq{margin-top:11px;background:var(--paper);border-radius:16px;padding:13px 15px}
+.faq .fq{font-weight:700;color:var(--navy);font-size:15.5px;display:flex;gap:8px;align-items:center}
+.faq .fq .ic{color:var(--c);font-size:20px}
+.dec{display:flex;gap:12px;align-items:center;margin-top:10px;background:var(--navy);color:#fff;border-radius:13px;padding:10px 13px;font-size:14px}
+.dec .cal{background:#fff;color:var(--navy);border-radius:9px;width:52px;flex:none;text-align:center;overflow:hidden;line-height:1}
+.dec .cal .m{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:4px 0;letter-spacing:.08em}
+.dec .cal .d{font-size:20px;padding:6px 0 7px}
+.dec .ex{opacity:.9;font-size:13px}.dec .ex b{color:var(--gold)}
+
+
+/* paso 4 · A · al pedir las facturas (columna 4) */
+.pedir .ptag{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.pedir .ptag .let{width:26px;height:26px;border-radius:8px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:none}
+.pedir .ptag b{font-size:15.5px;color:var(--navy);line-height:1.15}
+.pedir .ptag small{display:block;font-size:11.5px;font-weight:700;color:var(--c);letter-spacing:.12em;text-transform:uppercase}
+.pli{display:flex;gap:9px;align-items:flex-start;font-size:13.8px;line-height:1.33;padding:3px 0}
+.pli .ic{font-size:17px;color:var(--c);margin-top:1px}
+.pli em{font-style:normal;color:var(--muted);font-size:12.5px}
+.pli.max{background:var(--redbg);border-radius:10px;padding:6px 9px;margin:3px 0}
+.pli.max .ic,.pli.max b{color:var(--red)}
+.split3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:5px 0 0 26px}
+.s3{border-radius:10px;padding:6px 6px;font-size:12.8px;font-weight:700;color:var(--navy);line-height:1.2;text-align:center}
+.s3 small{display:block;font-size:10.5px;font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.03em}
+.s3.low{background:var(--amberbg)}.s3.low small{color:#a26a00}
+.s3.hi{background:var(--greenbg)}.s3.hi small{color:var(--green)}
+/* contacto */
+.foot{background:linear-gradient(140deg,var(--navy),var(--teal));color:#fff;border-radius:22px;padding:13px 20px;display:flex;flex-direction:column;justify-content:center;gap:8px;flex:1;min-height:0;position:relative;overflow:hidden}
+.foot:after{content:"";position:absolute;right:-70px;top:-70px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.07)}
+.foot .mid2{display:flex;gap:16px;align-items:center}
+.foot .ft{font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.8;font-weight:500}
+.foot .fn{font-size:22px;font-weight:700;margin-top:2px;line-height:1.15}
+.foot .ct{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+.foot a{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.13);border-radius:11px;padding:8px 12px;font-size:13.2px;font-weight:500;white-space:nowrap}
+.foot a .ic{font-size:20px}
+.foot .qrbox{flex:none;text-align:center;font-size:11.5px;font-weight:500;opacity:.95}
+.foot .qr{width:92px;height:92px;background:#fff;padding:8px;border-radius:12px;display:block;margin-bottom:6px}
+.fill{flex:1;display:flex;flex-direction:column}
+.fill .src{flex:1}
+.fill .sc{flex:1 1 auto;display:flex;flex-direction:column}
+.fill .sb{flex:1;justify-content:space-evenly}
+.p2body{flex:1;display:flex;flex-direction:column;justify-content:space-evenly}
+.p2body .yl{gap:9px}
+
+/* ===== Web: escalar el lienzo a la pantalla ===== */
+@media screen{
+  body{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:24px 0}
+  .stage{width:calc(2400px * var(--s,1));height:calc(1350px * var(--s,1))}
+  .canvas{transform:scale(var(--s,1));transform-origin:0 0;border-radius:18px;box-shadow:0 14px 40px rgba(23,54,93,.18)}
+}
+@media print{
+  @page{size:2400px 1350px;margin:0}
+  html,body{background:var(--paper)}
+  .canvas{transform:none!important;border-radius:0}
+}
+</style>
+</head>
+<body>
+<!--
+  INFOGRAFÍA 16:9 · Gestión técnica de las subvenciones en el MCM
+  - Lienzo fijo de 2400×1350 px (16:9). En pantalla se escala solo para caber en el ancho.
+  - 4 columnas: ancho en .grid (grid-template-columns). Si añades texto y algo se sale,
+    reparte ancho entre columnas o baja un poco font-size.
+  - Colores en :root; cada bloque usa su color con style="--c:var(--teal)".
+  - Iconos: SVG de Lucide (lucide.dev) con class="ic". QR: SVG generados (segno).
+  - Se publica en /info/horizontal (MCM Bank). El texto "oficial" está en infografia-subvenciones.md.
+  - PDF/PNG: node scripts/infografia/generar-pdf.mjs  (genera vertical y horizontal)
+-->
+<div class="stage">
+<div class="canvas">
+  <header class="top">
+    <div class="title">
+      <h1>Gestión técnica de las subvenciones en el MCM <span>de un vistazo</span></h1>
+      <div class="pill"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="6" cy="19" r="3" />
+  <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" />
+  <circle cx="18" cy="5" r="3" />
+</svg> 5 pasos</div>
+    </div>
+    <div class="road"><div class="rstop" style="--c:var(--coral)"><div class="rdot">1</div><div class="rname">Hablar con tiempo</div><div class="rsub">Antes del 1 de marzo</div></div><div class="rstop" style="--c:var(--teal)"><div class="rdot">2</div><div class="rname">Presupuestar</div><div class="rsub">Ingresos y gastos</div></div><div class="rstop" style="--c:var(--violet)"><div class="rdot">3</div><div class="rname">Realizar pagos</div><div class="rsub">Desde cuentas del MCM</div></div><div class="rstop" style="--c:var(--blue2)"><div class="rdot">4</div><div class="rname">Después de la actividad</div><div class="rsub">Máx. 20 días</div></div><div class="rstop" style="--c:var(--amber)"><div class="rdot">5</div><div class="rname">¿Cuándo lo cobro?</div><div class="rsub">Hucha virtual</div></div></div>
+  </header>
+
+  <div class="grid">
+    <!-- COLUMNA 1 · Criterios y fuentes -->
+    <div class="col">
+      <div class="panel" style="--c:var(--navy)">
+        <div class="ptitle"><div class="bubble"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M12 13V2l8 4-8 4" />
+  <path d="M20.561 10.222a9 9 0 1 1-12.55-5.29" />
+  <path d="M8.002 9.997a5 5 0 1 0 8.9 2.02" />
+</svg></div><h2>Criterios para subvención de actividades<small>Por orden de prioridad</small></h2></div>
+        <div class="crit"><div class="ci"><div class="n" style="background:#17365d">1</div><div class="t">Que las actividades de “trabajo” de monitores/voluntarios sean <b>gratuitas</b>.</div><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16" />
+  <path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9" />
+  <path d="m2 15 6 6" />
+  <path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z" />
+</svg></div><div class="ci"><div class="n" style="background:#2c6db3">2</div><div class="t">Ajustar precios de actividades de <b>encuentro con Dios</b> (no aumentar precio).</div><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="m18 7 4 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9l4-2" />
+  <path d="M14 22v-4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v4" />
+  <path d="M18 22V5l-6-3-6 3v17" />
+  <path d="M12 7v5" />
+  <path d="M10 9h4" />
+</svg></div><div class="ci"><div class="n" style="background:#4a8fd6">3</div><div class="t">Ajustar precios de <b>encuentros de formación</b> (monitores).</div><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+  <path d="M22 10v6" />
+  <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+</svg></div><div class="ci"><div class="n" style="background:#7fb0e3">4</div><div class="t">Reducir y controlar el coste de actividades con <b>niños/as y jóvenes</b>.</div><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+  <circle cx="9" cy="7" r="4" />
+  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+</svg></div></div>
+        <div class="prio"><span>+ prioridad</span><div class="bar"></div><span>– prioridad</span></div>
+      </div>
+      <div class="panel fill" style="--c:var(--teal)">
+        <div class="ptitle"><div class="bubble"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="8" cy="8" r="6" />
+  <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
+  <path d="M7 6h1v4" />
+  <path d="m16.71 13.88.7.71-2.82 2.82" />
+</svg></div><h2>Fuentes de financiación<small>Distintas Administraciones Públicas</small></h2></div>
+        <div class="src">
+          <div class="sc"><div class="sh" style="background:var(--teal)"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+  <circle cx="12" cy="10" r="3" />
+</svg> Locales</div>
+            <div class="sb">
+              <div class="row"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+  <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+  <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+  <path d="M10 6h4" />
+  <path d="M10 10h4" />
+  <path d="M10 14h4" />
+  <path d="M10 18h4" />
+</svg><span><b>Ayuntamientos</b> (actividades locales: Castellón, Onda, Vila-real).</span></div>
+              <div class="row"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="3" x2="21" y1="22" y2="22" />
+  <line x1="6" x2="6" y1="18" y2="11" />
+  <line x1="10" x2="10" y1="18" y2="11" />
+  <line x1="14" x2="14" y1="18" y2="11" />
+  <line x1="18" x2="18" y1="18" y2="11" />
+  <polygon points="12 2 20 7 4 7" />
+</svg><span><b>Diputación de Castellón</b> (máx. dos campamentos al año).</span></div>
+            </div></div>
+          <div class="sc"><div class="sh" style="background:var(--navy)"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="3" x2="21" y1="22" y2="22" />
+  <line x1="6" x2="6" y1="18" y2="11" />
+  <line x1="10" x2="10" y1="18" y2="11" />
+  <line x1="14" x2="14" y1="18" y2="11" />
+  <line x1="18" x2="18" y1="18" y2="11" />
+  <polygon points="12 2 20 7 4 7" />
+</svg> GVA</div>
+            <div class="sb">
+              <div class="gi"><div class="nm">IVAJ <span class="tag age">solo 12 a 30 años</span></div><div class="ds">Actividades concretas de ocio educativo, formación o acción social.</div></div>
+              <div class="gi"><div class="nm">Voluntariado <span class="tag all">cualquier edad</span></div><div class="ds">Formación, intervención o sensibilización con voluntariado.</div></div>
+              <div class="gi" style="border-color:#bcd6f1"><div class="nm">Otras puntuales</div><div class="ds">Participación Ciudadana, GVA Educación (autobuses para actividades), IRPF...</div></div>
+            </div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA 2 · Pasos 1 y 2 -->
+    <div class="col">
+      <div class="panel" style="--c:var(--coral)">
+        <div class="shead"><div class="snum">1</div><h3><span class="kk">Paso 1</span>Hablar con tiempo<small>Hablemos las cosas para que todo salga bien :)</small></h3></div>
+        <div class="stats">
+          <div class="stat"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect width="18" height="18" x="3" y="4" rx="2" />
+  <path d="M16 2v4" />
+  <path d="M3 10h18" />
+  <path d="M8 2v4" />
+  <path d="M17 14h-6" />
+  <path d="M13 18H7" />
+  <path d="M7 14h.01" />
+  <path d="M17 18h.01" />
+</svg><div class="big">1 oct – 30 sep</div><div class="lbl">Bloque subvencionable</div></div>
+          <div class="stat hot"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="12" cy="13" r="8" />
+  <path d="M12 9v4l2 2" />
+  <path d="M5 3 2 6" />
+  <path d="m22 6-3-3" />
+  <path d="M6.38 18.7 4 21" />
+  <path d="M17.64 18.67 20 21" />
+</svg><div class="big">Antes del 1 de marzo</div><div class="lbl">Todo planificado y presupuestado</div></div>
+          <div class="stat"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M5 22h14" />
+  <path d="M5 2h14" />
+  <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" />
+  <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />
+</svg><div class="big">Mín. 1 mes</div><div class="lbl">de antelación si la actividad es antes de esa fecha</div></div>
+        </div>
+      </div>
+      <div class="panel fill" style="--c:var(--teal)">
+        <div class="shead"><div class="snum">2</div><h3><span class="kk">Paso 2</span>Presupuestar<small>Tienes una plantilla en el Drive MCM</small></h3></div>
+        <div class="p2body">
+        <div class="q"><div class="qi">?</div><span>¿Qué <b>ingresos</b> tendrá la actividad sin subvención? <span style="color:var(--muted)">(ajustar cuotas)</span></span></div>
+        <div class="q"><div class="qi">?</div><span>¿Qué <b>gastos</b> tendrá la actividad sin subvención?</span></div>
+        <div class="tip"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+  <path d="M9 18h6" />
+  <path d="M10 22h4" />
+</svg><span>Con tiempo, se puede prever la cantidad subvencionable para que la cuota de la actividad no sea elevada.</span></div>
+        <div class="yn">
+          <div class="yc y"><div class="yh"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="12" cy="12" r="10" />
+  <path d="m9 12 2 2 4-4" />
+</svg> SUBVENCIONABLE</div><div class="yl"><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8" />
+  <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+  <path d="M12 4v6" />
+  <path d="M2 18h20" />
+</svg><span>Alojamiento</span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+  <path d="M7 2v20" />
+  <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+</svg><span>Manutención</span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+  <circle cx="7" cy="17" r="2" />
+  <path d="M9 17h6" />
+  <circle cx="17" cy="17" r="2" />
+</svg><span>Transporte en coche <em>(con excepciones; en transporte público es más complicado)</em></span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M8 6v6" />
+  <path d="M15 6v6" />
+  <path d="M2 12h19.6" />
+  <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3" />
+  <circle cx="7" cy="18" r="2" />
+  <path d="M9 18h5" />
+  <circle cx="16" cy="18" r="2" />
+</svg><span>Transporte en autobuses propios</span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+  <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" />
+  <rect x="6" y="14" width="12" height="8" rx="1" />
+</svg><span>Impresiones y material de promoción</span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" />
+</svg><span>Merchandising <em>(limitado)</em></span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+  <path d="M13 5v2" />
+  <path d="M13 17v2" />
+  <path d="M13 11v2" />
+</svg><span>Actividades concretas <em>(contratar algo tipo Láser Tag, acceso a un parque de ocio...)</em></span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg><span>Formaciones <em>(no hace falta ser autónomo)</em></span></div></div></div>
+          <div class="yc n"><div class="yh"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="12" cy="12" r="10" />
+  <path d="m15 9-6 6" />
+  <path d="m9 9 6 6" />
+</svg> NO SUBVENCIONABLE</div><div class="yl"><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+  <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+  <path d="M12 17.5v-11" />
+</svg><span>Cualquier cosa <b>sin factura</b></span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17" />
+  <path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9" />
+  <path d="m2 16 6 6" />
+  <circle cx="16" cy="9" r="2.9" />
+  <circle cx="6" cy="5" r="3" />
+</svg><span>Donativos a un alojamiento o persona (formador)</span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect width="20" height="14" x="2" y="5" rx="2" />
+  <line x1="2" x2="22" y1="10" y2="10" />
+</svg><span>Pagos desde cuentas o tarjetas personales que no sean de la AJ</span></div><div class="yi"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="2" x2="22" y1="2" y2="22" />
+  <path d="M10.41 10.41a2 2 0 1 1-2.83-2.83" />
+  <line x1="13.5" x2="6" y1="13.5" y2="21" />
+  <line x1="18" x2="21" y1="12" y2="15" />
+  <path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59" />
+  <path d="M21 15V5a2 2 0 0 0-2-2H9" />
+</svg><span>Material impreso sin los logos correspondientes</span></div></div></div>
+        </div>
+        <div class="alert"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+  <path d="M12 9v4" />
+  <path d="M12 17h.01" />
+</svg><span><b>IMPORTANTE:</b> Incluir logos de las entidades públicas en carteles y promoción (consultar siempre).</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA 3 · Pasos 3 y 4 -->
+    <div class="col">
+      <div class="panel" style="--c:var(--violet)">
+        <div class="shead"><div class="snum">3</div><h3><span class="kk">Paso 3</span>Realizar pagos<small>Siempre desde cuentas del MCM</small></h3></div>
+        <div class="pay">
+          <div class="pr must"><div class="ico"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="3" x2="21" y1="22" y2="22" />
+  <line x1="6" x2="6" y1="18" y2="11" />
+  <line x1="10" x2="10" y1="18" y2="11" />
+  <line x1="14" x2="14" y1="18" y2="11" />
+  <line x1="18" x2="18" y1="18" y2="11" />
+  <polygon points="12 2 20 7 4 7" />
+</svg></div><div class="t">Todo gasto subvencionable debe salir de las <b>cuentas del MCM en Sabadell</b> (cuentas de la AJ Central o locales).</div><span class="lvl">OBLIGATORIO</span></div>
+          <div class="pr ok"><div class="top2"><div class="ico"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="m16 3 4 4-4 4" />
+  <path d="M20 7H4" />
+  <path d="m8 21-4-4 4-4" />
+  <path d="M4 17h16" />
+</svg></div><span class="lvl">PREFERIBLE</span></div><div class="t"><b>Transferencia</b></div></div>
+          <div class="pr mid"><div class="top2"><div class="ico"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect width="20" height="14" x="2" y="5" rx="2" />
+  <line x1="2" x2="22" y1="10" y2="10" />
+</svg></div><span class="lvl">CON PREVISIÓN</span></div><div class="t">Si hay que pagar con <b>tarjeta</b>, preverlo con tiempo para solicitar una.</div></div>
+          <div class="pr warn" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:13px"><div class="ico" style="flex:none"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect width="20" height="12" x="2" y="6" rx="2" />
+  <circle cx="12" cy="12" r="2" />
+  <path d="M6 12h.01M18 12h.01" />
+</svg></div><div class="t" style="flex:1">Pago en <b>efectivo</b> SOLO CASOS EXCEPCIONALES, <b>máximo 100 €</b>. En el ticket debe constar que fue pagado en efectivo.</div><span class="lvl" style="flex:none">EXCEPCIONAL</span></div>
+        </div>
+      </div>
+      <div class="panel fill" style="--c:var(--blue)">
+        <div class="shead"><div class="snum">4</div><h3><span class="kk">Paso 4</span>Después de la actividad<small>Archivarlo todo bien...</small></h3><div class="badge"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="10" x2="14" y1="2" y2="2" />
+  <line x1="12" x2="15" y1="14" y2="11" />
+  <circle cx="12" cy="14" r="8" />
+</svg><span>Máx.<br>20 días</span></div></div>
+        <div class="sub"><span class="let">A</span> Facturas <span class="imp">IMPORTANTE</span></div>
+        <div class="routes">
+          <div class="rt wide"><div class="who"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+  <circle cx="12" cy="10" r="3" />
+</svg> Pagadas por el MCM Local</div>
+            <div class="what">Archivar en <b>MCM Bank</b>. Para enviarlas a MCM Bank usar correo:<br><span class="mail">facturas+vila-real@movimientoconsolacion.com</span><span class="mail">facturas+nules@...</span></div>
+            <div class="note"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="12" cy="12" r="10" />
+  <path d="m9 12 2 2 4-4" />
+</svg><span>Se vincula automáticamente y archiva en el MCM correspondiente.</span></div></div>
+          <div class="rt"><div class="who"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+  <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+  <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+  <path d="M10 6h4" />
+  <path d="M10 10h4" />
+  <path d="M10 14h4" />
+  <path d="M10 18h4" />
+</svg> Pagada por la AJ Central</div>
+            <div class="what">Enviar a <a class="mail" href="mailto:facturas+aj@movimientoconsolacion.com">facturas+aj@movimientoconsolacion.com</a></div></div>
+          <div class="rt"><div class="who" style="color:var(--amber)"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="12" cy="12" r="10" />
+  <polyline points="12 6 12 12 16 14" />
+</svg> Si no está pagada (y paga la AJ Central)</div>
+            <div class="what">Enviar a <a class="mail" href="mailto:ajmcm@movimientoconsolacion.com">ajmcm@movimientoconsolacion.com</a> <b>(y avisar)</b></div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="sub"><span class="let">B</span> Justificantes de pago</div>
+        <div class="relax"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+  <path d="m9 12 2 2 4-4" />
+</svg><span>Los extrae la Oficina Técnica desde el banco <b>(no hay que hacer nada)</b>.</span></div>
+        <div class="sep"></div>
+        <div class="sub"><span class="let">C</span> Datos y fotos <span class="sm">(lo hacéis vosotros)</span></div>
+        <div class="forms">
+          <a class="fm" href="https://bit.ly/datosaj"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 25" shape-rendering="crispEdges" class="qr"><path class="qrline" stroke="#17365d" d="M0 0.5h7m1 0h2m2 0h2m4 0h7m-25 1h1m5 0h1m2 0h1m2 0h1m1 0h1m1 0h1m1 0h1m5 0h1m-25 1h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h4m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m3 0h1m2 0h2m3 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m2 0h1m1 0h1m2 0h1m3 0h1m1 0h3m1 0h1m-25 1h1m5 0h1m1 0h3m1 0h3m3 0h1m5 0h1m-25 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-16 1h2m1 0h1m1 0h1m1 0h1m-17 1h1m1 0h1m3 0h2m1 0h2m1 0h1m2 0h2m2 0h1m2 0h1m1 0h1m-25 1h2m3 0h1m1 0h3m1 0h1m2 0h3m1 0h2m1 0h1m1 0h2m-23 1h2m2 0h1m1 0h4m2 0h2m1 0h1m1 0h1m1 0h2m1 0h1m-25 1h4m5 0h2m1 0h1m1 0h4m3 0h1m-22 1h1m1 0h5m1 0h1m1 0h3m3 0h1m1 0h2m4 0h1m-24 1h1m1 0h1m5 0h1m2 0h1m2 0h1m1 0h3m3 0h2m-25 1h2m2 0h3m3 0h1m1 0h4m2 0h1m2 0h2m1 0h1m-23 1h3m2 0h1m1 0h1m1 0h2m1 0h1m4 0h3m-22 1h2m1 0h6m1 0h1m5 0h5m2 0h1m-16 1h3m2 0h1m1 0h2m3 0h1m3 0h1m-25 1h7m1 0h4m2 0h1m1 0h1m1 0h1m1 0h1m3 0h1m-25 1h1m5 0h1m3 0h1m4 0h2m3 0h1m3 0h1m-25 1h1m1 0h3m1 0h1m2 0h12m3 0h1m-25 1h1m1 0h3m1 0h1m3 0h1m1 0h1m7 0h1m1 0h2m-24 1h1m1 0h3m1 0h1m1 0h1m3 0h3m2 0h1m1 0h3m1 0h2m-25 1h1m5 0h1m2 0h1m1 0h2m3 0h5m-21 1h7m1 0h1m1 0h1m1 0h3m1 0h2m3 0h1m2 0h1"/></svg>
+<div><div class="fn"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+  <path d="M12 11h4" />
+  <path d="M12 16h4" />
+  <path d="M8 11h.01" />
+  <path d="M8 16h.01" />
+</svg> Formulario de información</div><span class="url">bit.ly/datosaj</span></div></a>
+          <a class="fm" href="https://bit.ly/facturasaj"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 25" shape-rendering="crispEdges" class="qr"><path class="qrline" stroke="#17365d" d="M0 0.5h7m5 0h3m3 0h7m-25 1h1m5 0h1m1 0h1m1 0h4m2 0h1m1 0h1m5 0h1m-25 1h1m1 0h3m1 0h1m1 0h5m1 0h2m2 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m1 0h2m1 0h3m2 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m3 0h3m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m5 0h1m2 0h1m1 0h1m2 0h1m3 0h1m5 0h1m-25 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-17 1h1m1 0h1m1 0h1m2 0h2m-17 1h1m5 0h1m1 0h3m1 0h4m1 0h2m2 0h3m-24 1h2m3 0h1m5 0h1m3 0h1m3 0h5m-23 1h3m2 0h2m1 0h1m2 0h1m1 0h3m3 0h2m1 0h2m-25 1h1m1 0h2m4 0h4m2 0h5m2 0h1m2 0h1m-25 1h2m1 0h7m2 0h1m3 0h1m1 0h2m4 0h1m-25 1h2m1 0h1m1 0h1m3 0h1m2 0h1m1 0h2m1 0h1m1 0h1m3 0h1m-24 1h1m1 0h1m1 0h1m1 0h1m1 0h1m3 0h2m1 0h7m1 0h2m-25 1h1m1 0h1m1 0h2m1 0h1m1 0h2m1 0h1m1 0h1m1 0h1m1 0h2m1 0h2m1 0h1m-25 1h1m1 0h1m1 0h1m1 0h1m1 0h2m2 0h3m1 0h5m1 0h1m-15 1h3m1 0h1m2 0h2m3 0h1m-21 1h7m2 0h1m1 0h4m1 0h1m1 0h1m1 0h1m3 0h1m-25 1h1m5 0h1m3 0h3m1 0h3m3 0h1m2 0h2m-25 1h1m1 0h3m1 0h1m2 0h1m1 0h10m1 0h1m-23 1h1m1 0h3m1 0h1m3 0h2m4 0h1m1 0h1m4 0h2m-25 1h1m1 0h3m1 0h1m2 0h2m2 0h1m2 0h1m4 0h2m1 0h1m-25 1h1m5 0h1m2 0h2m1 0h1m1 0h1m1 0h2m1 0h2m3 0h1m-25 1h7m1 0h1m1 0h3m3 0h2m3 0h1m2 0h1"/></svg>
+<div><div class="fn"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+  <circle cx="12" cy="13" r="3" />
+</svg> Formulario de fotos</div><span class="url">bit.ly/facturasaj</span><div class="ex">Se envían de 5 a 10 fotos o el álbum</div></div></a>
+        </div>
+        <div class="pts">
+          <div class="pt l2"><span class="ex">!!</span><span>Hacer fotos de lo subvencionado: <b>comida, desplazamientos...</b></span></div>
+          <div class="pt l3"><span class="ex">!!!</span><span>Fotos específicas <b>con logos</b>: carteles, materiales impresos, material en uso, merchandising repartiéndose.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA 4 · Paso 5 y contacto -->
+    <div class="col">
+      <div class="panel" style="--c:var(--amber)">
+        <div class="shead"><div class="snum">5</div><h3><span class="kk">Paso 5</span>¿Cuándo lo cobro?<small>Paciencia y hucha virtual</small></h3></div>
+        <div class="tl">
+          <div class="tlx"><span>Actividad</span><span>Paga la administración</span></div>
+          <div class="tlb"><div class="tld"></div><div class="tll"></div><div class="tld end"></div></div>
+          <div class="tlm"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M5 22h14" />
+  <path d="M5 2h14" />
+  <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" />
+  <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />
+</svg> hasta año y medio <svg
+  class="ic sad"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="12" cy="12" r="10" />
+  <path d="M16 16s-1.5-2-4-2-4 2-4 2" />
+  <line x1="9" x2="9.01" y1="9" y2="9" />
+  <line x1="15" x2="15.01" y1="9" y2="9" />
+</svg></div>
+          <div class="tlt">Puede pasar año y medio desde la actividad hasta que la administración paga.</div>
+        </div>
+        <div class="piggy"><div class="pic"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z" />
+  <path d="M2 9v1c0 1.1.9 2 2 2h1" />
+  <path d="M16 11h.01" />
+</svg></div><span>La AJ guarda el dinero subvencionado en una <b>“hucha virtual”</b> a nombre de quien organiza la actividad. Gracias a eso, financiamos la estructura de la AJ hasta el final del año natural.</span></div>
+        <div class="faq">
+          <div class="fq"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="12" cy="12" r="10" />
+  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+  <path d="M12 17h.01" />
+</svg> ¿Se puede adelantar el dinero?</div>
+          <div class="row" style="margin-top:7px"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+  <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+</svg><span>La AJ puede asumirlo en algunas circunstancias que no se puedan asumir de los “ahorros” locales <b>(consultar)</b>.</span></div>
+          <div class="dec"><div class="cal"><div class="m">DIC</div><div class="d"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="3" y="8" width="18" height="4" rx="1" />
+  <path d="M12 8v13" />
+  <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" />
+  <path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
+</svg></div></div>
+            <span>En diciembre de un año se reparte lo recuperado durante el año natural <b>ANTERIOR</b><br><span class="ex"><b>Ejemplo:</b> en dic 2026 se reparte lo de 2025</span></span></div>
+        </div>
+      </div>
+      <div class="panel pedir" style="--c:var(--blue)">
+        <div class="ptag"><span class="let">A</span><span><small>Paso 4 · Facturas</small><b>Al pedir las facturas, revisar siempre</b></span></div>
+        <div class="pli"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/><circle cx="9" cy="11" r="2"/><rect x="2" y="5" width="20" height="14" rx="2"/></svg><span><b>Datos de facturación</b> correctos.</span></div>
+        <div class="pli"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg><span>Que salgan las <b>unidades y el precio por unidad</b> <em>(p. ej.: nº de noches y precio por noche)</em>.</span></div>
+        <div class="pli max"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg><span>Una factura <b>nunca debe superar los 15.000 €</b>.</span></div>
+        <div class="pli"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg><span>En actividades grandes, <b>mínimo 3 facturas</b>:</span></div>
+        <div class="split3"><div class="s3 low">Niños/as<small>Poco subv.</small></div><div class="s3 hi">Jóvenes 12–30<small>Más fácil</small></div><div class="s3 hi">Monitores/as<small>Más fácil</small></div></div>
+      </div>
+      <div class="foot">
+        <div><div class="ft">¿Dudas? Escríbenos</div><div class="fn">Oficina Técnica MCM</div></div>
+        <div class="mid2">
+          <div class="qrbox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 25" shape-rendering="crispEdges" class="qr"><path class="qrline" stroke="#17365d" d="M0 0.5h7m2 0h2m3 0h1m3 0h7m-25 1h1m5 0h1m3 0h3m1 0h2m2 0h1m5 0h1m-25 1h1m1 0h3m1 0h1m1 0h1m1 0h2m4 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m1 0h2m3 0h1m1 0h2m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m1 0h7m3 0h1m1 0h3m1 0h1m-25 1h1m5 0h1m1 0h1m1 0h3m2 0h1m2 0h1m5 0h1m-25 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-17 1h1m1 0h2m2 0h3m-17 1h1m1 0h5m2 0h5m1 0h2m1 0h5m-23 1h2m1 0h1m1 0h1m1 0h1m2 0h1m2 0h2m4 0h1m3 0h1m-21 1h2m1 0h1m2 0h3m3 0h2m1 0h4m1 0h2m-25 1h2m5 0h1m1 0h1m1 0h1m2 0h1m2 0h3m4 0h1m-25 1h1m3 0h4m2 0h4m1 0h2m1 0h3m1 0h3m-25 1h1m2 0h1m1 0h1m2 0h2m2 0h1m1 0h1m4 0h1m1 0h1m1 0h1m-24 1h1m1 0h8m2 0h1m1 0h4m1 0h3m1 0h2m-25 1h1m1 0h2m1 0h1m2 0h2m2 0h1m3 0h1m2 0h2m3 0h1m-25 1h1m2 0h2m1 0h2m4 0h2m2 0h5m1 0h1m-15 1h3m1 0h5m3 0h2m-22 1h7m9 0h1m1 0h1m1 0h1m1 0h3m-25 1h1m5 0h1m1 0h5m1 0h3m3 0h2m1 0h2m-25 1h1m1 0h3m1 0h1m1 0h2m3 0h1m1 0h6m1 0h1m-23 1h1m1 0h3m1 0h1m1 0h1m1 0h3m1 0h1m2 0h2m1 0h5m-25 1h1m1 0h3m1 0h1m1 0h1m3 0h1m1 0h1m6 0h2m1 0h1m-25 1h1m5 0h1m5 0h1m1 0h4m1 0h3m2 0h1m-25 1h7m1 0h1m1 0h2m1 0h1m3 0h8"/></svg>
+WhatsApp</div>
+          <div class="ct">
+            <a href="https://wa.me/34649949583"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+</svg> 649 949 583</a>
+            <a href="mailto:ajmcm@movimientoconsolacion.com"><svg
+  class="ic"
+  xmlns="http://www.w3.org/2000/svg"
+ 
+ 
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect width="20" height="16" x="2" y="4" rx="2" />
+  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+</svg> ajmcm@<br>movimientoconsolacion.com</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+  // Escala el lienzo para que quepa en el ancho de la ventana (no afecta al PDF)
+  function fit(){const s=Math.min(1,(window.innerWidth-24)/2400);document.documentElement.style.setProperty('--s',s);}
+  addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>

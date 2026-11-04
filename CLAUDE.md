@@ -552,7 +552,7 @@ docs/                       # End-user documentation in Spanish
 | `/auth/sign-up` | Registration page |
 | `/auth/callback` | OAuth callback |
 | `/subvenciones`, `/subvenciones/[id]` | Grants and their imputed movements (gestor_central only) |
-| `/info` | Public static infographic "Subvenciones de un vistazo" (`public/info/`: `index.html` is both the web page and the PDF source; the `.md` is the editable text; PDF via `node scripts/infografia/generar-pdf.mjs`). Rewrite in `next.config.mjs` |
+| `/info`, `/info/horizontal` | Public static infographic "Subvenciones de un vistazo" (`public/info/`: `index.html` vertical web + PDF source, `horizontal.html` 16:9 canvas; the `.md` is the editable text; PDFs + 4K PNG via `node scripts/infografia/generar-pdf.mjs`). Rewrites in `next.config.mjs` |
 | `/api/avisos/notificar` | Sends a notice/task by email via Resend |
 | `/api/facturas/entrantes` | Resend inbound webhook: the per-delegation invoice mailbox |
 | `/api/facturas/ia` | Reads an invoice with AI / accepts its category suggestion (session-authenticated) |

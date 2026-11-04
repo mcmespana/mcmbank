@@ -26,6 +26,7 @@ const nextConfig = {
       // PDF y MD descargables). Sin esto /info daría 404, porque Next solo
       // sirve public/info/index.html con su nombre completo.
       { source: "/info", destination: "/info/index.html" },
+      { source: "/info/horizontal", destination: "/info/horizontal.html" },
       {
         source: "/.well-known/oauth-authorization-server",
         destination: "/api/well-known/oauth-authorization-server",

@@ -2,10 +2,10 @@
 
 > Texto de la infografía que se publica en **/info** (MCM Bank).
 > Es la versión editable: si cambias algo aquí, cámbialo también en
-> `public/info/index.html` y vuelve a generar el PDF con
-> `node scripts/infografia/generar-pdf.mjs`.
+> `public/info/index.html` (vertical) y `public/info/horizontal.html` (16:9)
+> y vuelve a generar PDF y PNG con `node scripts/infografia/generar-pdf.mjs`.
 >
-> Última revisión del texto: noviembre 2026.
+> Última revisión del texto: 4 de noviembre de 2026.
 
 **5 pasos**
 
@@ -90,6 +90,18 @@
 *Archivarlo todo bien...* · ⏱ **Máx. 20 días**
 
 ### A) Facturas — IMPORTANTE
+
+**Al pedir las facturas, revisar siempre:**
+
+- **Datos de facturación** correctos.
+- Que salgan las **unidades y el precio por unidad** (por ejemplo: número de noches y precio por noche).
+- Una factura **nunca debe superar los 15.000 €**.
+- En actividades grandes, conviene dividir en **mínimo 3 facturas**:
+  - Niños/as — *poco subvencionable*
+  - Jóvenes 12 a 30 años — *más fácil*
+  - Monitores/as — *más fácil*
+
+**A dónde se mandan:**
 
 - **Pagadas por el MCM Local** → Archivar en **MCM Bank**. Para enviarlas a MCM Bank usar correo:
   `facturas+vila-real@movimientoconsolacion.com`, `facturas+nules@...`
